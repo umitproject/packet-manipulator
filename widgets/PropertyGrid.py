@@ -67,27 +67,25 @@ class BitEditor(Editor):
         self.pack_start(self.btn)
         self.btn.show()
 
-    def render(self, window, bounds, state):
-        if self.value:
+    def render(self, window, widget, bounds, state):
+        if not self.value:
             sh = gtk.SHADOW_IN
         else:
             sh = gtk.SHADOW_OUT
 
-        size = 20
+        size = 15
         
         if size > bounds.height:
             size = bounds.height
         if size > bounds.width:
             size = bounds.width
-
-        print window
-
-        self.style.paint_check(window, state, sh, bounds, self.btn, "checkbutton", \
-                bounds.x, bounds.y, bounds.width, bounds.height)
-
-        cr = window.cairo_create()
-        cr.set_source_rgb(1, 0, 0)
-        cr.rectangle(bounds.x, bounds.y, bounds.width, bounds.height)
+            
+        # Paint a center check button
+        widget.style.paint_check(window, state, sh, bounds, widget, \
+            "checkbutton",                                          \
+            bounds.x + (bounds.width - size) / 2,                   \
+            bounds.y + (bounds.height - size) / 2,                  \
+            size, size)
 
 class StrEditor(Editor):
     def create_widgets(self):
@@ -144,23 +142,22 @@ class HackEntry(gtk.Entry):
         self.box.size_request()
         self.box.size_allocate(alloc)
 
-class CellRendererProperty(gtk.CellRendererText):
-    __gtype_name__ = "CellRendererProperty"
-
+class CellRendererGroup(gtk.CellRendererText):
+    __gtype_name__ = "CellRendererGroup"
+    
     def __init__(self, tree):
-        super(CellRendererProperty, self).__init__()
+        super(CellRendererGroup, self).__init__()
 
         self.tree = tree
         self.set_property('xalign', 0)
         self.set_property('xpad', 3)
-        self.set_property('mode', gtk.CELL_RENDERER_MODE_EDITABLE)
 
         self.painter = None
 
         dummy_entry = gtk.Entry()
         dummy_entry.set_has_frame(False)
         self.row_height = dummy_entry.size_request()[1]
-
+    
     def do_get_size(self, widget, area):
         w, h = 0, 0
 
@@ -196,11 +193,20 @@ class CellRendererProperty(gtk.CellRendererText):
             else:
                 state = gtk.STATE_NORMAL
 
-            self.painter.render(window, cell_area, state)
+            self.painter.render(window, widget, cell_area, state)
         else:
             return gtk.CellRendererText.do_render( \
                 self, window, widget, background_area, cell_area, expose_area, flags
             )
+
+gobject.type_register(CellRendererGroup)
+   
+class CellRendererProperty(CellRendererGroup):
+    __gtype_name__ = "CellRendererProperty"
+    
+    def __init__(self, tree):
+        super(CellRendererProperty, self).__init__(tree)
+        self.set_property('mode', gtk.CELL_RENDERER_MODE_EDITABLE)
 
     def do_start_editing(self, event, widget, path, \
                          background_area, cell_area, flags):
@@ -229,15 +235,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
         col = gtk.TreeViewColumn('Property')
 
-        crt = CellRendererProperty(self.tree)
-        crt.xpad = 0
+        crt = CellRendererGroup(self.tree)
+
+        crt.set_property('xpad', 0)
+        crt.set_property('cell-background-gdk',
+                         self.style.base[gtk.STATE_INSENSITIVE])
 
         col.pack_start(crt, True)
         col.set_resizable(True)
         col.set_expand(True)
         col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         col.set_fixed_width(180)
-        col.set_attributes(crt, text=0)
+        col.set_attributes(crt, markup=0)
 
         col.set_cell_data_func(crt, self.__group_cell_func)
         self.tree.append_column(col)
@@ -254,17 +263,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
         col.set_cell_data_func(crt, self.__property_cell_func)
         self.tree.append_column(col)
         #self.tree.set_headers_visible(False)
+        self.tree.set_enable_tree_lines(True) # This don't work with cell back
 
         self.add(self.tree)
 
-        it = self.store.append(None, ["test", None, True, True])
+        it = self.store.append(None, ["<b>test</b>", None, True, True])
         self.store.append(it, ["test", None, True, None])
         self.store.append(it, ["test", None, True, None])
         self.store.append(None, ["test", None, True, None])
 
     def __property_cell_func(self, col, cell, model, iter):
-        if isinstance(model.get_value(iter, 3), bool):
-            cell.painter = BitEditor(None)
+        #if isinstance(model.get_value(iter, 3), bool):
+        cell.painter = BitEditor(None)
 
     def __group_cell_func(self, col, cell, model, iter):
         pass
