@@ -23,7 +23,6 @@ import pango
 import gobject
 
 class Editor(gtk.HBox):
-    painter = None
 
     def __init__(self, field):
         gtk.HBox.__init__(self, 0, False)
@@ -40,10 +39,13 @@ class Editor(gtk.HBox):
     def connect_signals(self): pass
 
     def get_value(self):
-        return self.field
+        return self.field.value
 
     def set_value(self, value):
-        self.field = value
+        self.field.value = value
+    
+    def render(self, window, widget, bounds, state):
+        return False
 
     value = property(get_value, set_value)
 
@@ -51,24 +53,58 @@ class IntEditor(Editor):
     # Check the tipe in __init__
 
     def create_widgets(self):
-        self.adj = gtk.Adjustment()
-        self.spin = gtk.SpinButton(self.adj)
+        self.calc_bounds()
+        self.adj = gtk.Adjustment(self.value, self.min, self.max, 1, 2)
+        self.spin = gtk.SpinButton(self.adj, digits=self.digits)
 
     def pack_widgets(self):
         self.pack_start(self.spin)
         self.spin.set_has_frame(False)
         self.spin.show()
+    
+    def connect_signals(self):
+        self.spin.connect('value-changed', self.__on_changed)
+    
+    def calc_bounds(self):
+        import sys
+        
+        if isinstance(self.value, int):
+            self.min = -sys.maxint - 1
+            self.max = sys.maxint
+            self.digits = 0
+        elif isinstance(self.value, float):
+            # FIXME: i dunno here
+            self.min = -sys.maxint - 1
+            self.max = sys.maxint
+            self.digits = 2
+        else:
+            self.min = 0
+            self.max = 10
+            self.digits = 0
+    
+    def __on_changed(self, spin):
+        if isinstance(self.value, int):
+            self.value = self.spin.get_value_as_int()
+        else:
+            self.value = self.spin.get_value()
 
 class BitEditor(Editor):
     def create_widgets(self):
         self.btn = gtk.CheckButton()
+        self.btn.set_active(self.value)
 
     def pack_widgets(self):
         self.pack_start(self.btn)
         self.btn.show()
-
+    
+    def connect_signals(self):
+        self.btn.connect('toggled', self.__on_changed)
+    
+    def __on_changed(self, btn):
+        self.value = self.btn.get_active()
+    
     def render(self, window, widget, bounds, state):
-        if not self.value:
+        if self.value:
             sh = gtk.SHADOW_IN
         else:
             sh = gtk.SHADOW_OUT
@@ -86,10 +122,13 @@ class BitEditor(Editor):
             bounds.x + (bounds.width - size) / 2,                   \
             bounds.y + (bounds.height - size) / 2,                  \
             size, size)
+        
+        return True
 
 class StrEditor(Editor):
     def create_widgets(self):
         self.entry = gtk.Entry()
+        self.entry.set_text(self.value)
         self.btn = gtk.Button("...")
 
     def pack_widgets(self):
@@ -99,6 +138,10 @@ class StrEditor(Editor):
 
     def connect_signals(self):
         self.btn.connect('clicked', self.__on_edit)
+        self.entry.connect('changed', self.__on_changed)
+    
+    def __on_changed(self, entry):
+        self.value = self.entry.get_text()
 
     def __on_edit(self, widget):
         print "Yeah launch a dialog to edit the field"
@@ -152,7 +195,7 @@ class CellRendererGroup(gtk.CellRendererText):
         self.set_property('xalign', 0)
         self.set_property('xpad', 3)
 
-        self.painter = None
+        self.editor = None
 
         dummy_entry = gtk.Entry()
         dummy_entry.set_has_frame(False)
@@ -187,17 +230,18 @@ class CellRendererGroup(gtk.CellRendererText):
             background_area.x + background_area.width - 1
         )
 
-        if self.painter != None:
+        if self.editor:
             if self.flags() & gtk.CELL_RENDERER_SELECTED:
                 state = gtk.STATE_SELECTED
             else:
                 state = gtk.STATE_NORMAL
 
-            self.painter.render(window, widget, cell_area, state)
-        else:
-            return gtk.CellRendererText.do_render( \
-                self, window, widget, background_area, cell_area, expose_area, flags
-            )
+            if self.editor.render(window, widget, cell_area, state):
+                return
+                
+        return gtk.CellRendererText.do_render( \
+            self, window, widget, background_area, cell_area, expose_area, flags
+        )
 
 gobject.type_register(CellRendererGroup)
    
@@ -213,7 +257,7 @@ class CellRendererProperty(CellRendererGroup):
 
         entry = HackEntry()
 
-        entry.box.add(StrEditor(None))
+        entry.box.add(self.editor)
         entry.box.show_all()
 
         entry.size_allocate(background_area)
@@ -226,15 +270,14 @@ gobject.type_register(CellRendererProperty)
 class PropertyGridTree(gtk.ScrolledWindow):
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)
-
-        self.store = gtk.TreeStore(str, object, bool, object)
+        
+        self.store = gtk.TreeStore(object, object)
         self.tree = gtk.TreeView(self.store)
 
         self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         col = gtk.TreeViewColumn('Property')
-
         crt = CellRendererGroup(self.tree)
 
         crt.set_property('xpad', 0)
@@ -246,8 +289,8 @@ class PropertyGridTree(gtk.ScrolledWindow):
         col.set_expand(True)
         col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         col.set_fixed_width(180)
-        col.set_attributes(crt, markup=0)
-
+        col.set_attributes(crt)
+        
         col.set_cell_data_func(crt, self.__group_cell_func)
         self.tree.append_column(col)
 
@@ -258,7 +301,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         col.set_resizable(False)
         col.set_expand(True)
-        col.set_attributes(crt, text=2, editable=2)
+        col.set_attributes(crt)
 
         col.set_cell_data_func(crt, self.__property_cell_func)
         self.tree.append_column(col)
@@ -266,19 +309,48 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.tree.set_enable_tree_lines(True) # This don't work with cell back
 
         self.add(self.tree)
+        
+        class G(object):
+            def __init__(self, name):
+                self.name = name
+        
+        class P(object):
+            def __init__(self, name, value):
+                self.name = name
+                self.value = value
 
-        it = self.store.append(None, ["<b>test</b>", None, True, True])
-        self.store.append(it, ["test", None, True, None])
-        self.store.append(it, ["test", None, True, None])
-        self.store.append(None, ["test", None, True, None])
+        it = self.store.append(None, [G("Generals fields"), None])
+        self.store.append(it, [None, P("string", "miao")])
+        self.store.append(it, [None, P("boolean", True)])
+        self.store.append(it, [None, P("integer", 1)])
 
     def __property_cell_func(self, col, cell, model, iter):
-        #if isinstance(model.get_value(iter, 3), bool):
-        cell.painter = BitEditor(None)
+        cell.editor = None
+        cell.set_property('editable', False)
+        cell.set_property('text', '')
+        
+        obj = model.get_value(iter, 1)
+        
+        if obj != None:
+            cell.set_property('editable', True)
+            cell.set_property('markup', '<tt>%s</tt>' % obj.value)
+            
+            if isinstance(obj.value, bool):
+                cell.editor = BitEditor(obj)
+            elif isinstance(obj.value, str):
+                cell.editor = StrEditor(obj)
+            elif isinstance(obj.value, int) or \
+                 isinstance(obj.value, float):
+                cell.editor = IntEditor(obj)
 
     def __group_cell_func(self, col, cell, model, iter):
-        pass
-
+        obj = model.get_value(iter, 0)
+        
+        if not obj:
+            obj = model.get_value(iter, 1)
+        
+        if obj:
+            cell.set_property('markup', '<b>%s</b>' % obj.name)
 
 class PropertyGrid(gtk.VBox):
     def __init__(self):
