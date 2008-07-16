@@ -22,390 +22,271 @@ import gtk
 import pango
 import gobject
 
-class BaseText(gtk.TextView):
-    __gtype_name__ = "BaseText"
+class Editor(gtk.HBox):
+    painter = None
 
-    def __init__(self, parent):
-        self.buffer = gtk.TextBuffer(parent.table)
-        gtk.TextView.__init__(self, self.buffer)
+    def __init__(self, field):
+        gtk.HBox.__init__(self, 0, False)
 
-        self._parent = parent
-        self.modify_font(pango.FontDescription(parent.font))
-        self.set_editable(False)
+        self.field = field
+        self.create_widgets()
+        self.pack_widgets()
+        self.connect_signals()
 
-gobject.type_register(BaseText)
+        self.show()
 
-class OffsetText(BaseText):
-    def __init__(self, parent):
-        BaseText.__init__(self, parent)
+    def create_widgets(self):  pass
+    def pack_widgets(self):    pass
+    def connect_signals(self): pass
 
-        self.off_len = 1
-        self.connect('button-press-event', self.__on_button_press)
-        self.connect('size-request', self.__on_size_request)
-        self.connect('realize', self.__on_realize)
+    def get_value(self):
+        return self.field
 
-        self.set_cursor_visible(False)
+    def set_value(self, value):
+        self.field = value
 
-    def __on_button_press(self, widget, evt):
-        return True
+    value = property(get_value, set_value)
 
-    def __on_realize(self, widget):
-        self.modify_base(gtk.STATE_NORMAL, self.style.dark[gtk.STATE_NORMAL])
+class IntEditor(Editor):
+    # Check the tipe in __init__
 
-    def render(self, txt):
-        self.buffer.set_text('')
+    def create_widgets(self):
+        self.adj = gtk.Adjustment()
+        self.spin = gtk.SpinButton(self.adj)
 
-        bpl = self._parent.bpl
-        tot_lines = len(txt) / bpl
+    def pack_widgets(self):
+        self.pack_start(self.spin)
+        self.spin.set_has_frame(False)
+        self.spin.show()
 
-        if len(txt) % bpl != 0:
-            tot_lines += 1
+class BitEditor(Editor):
+    def create_widgets(self):
+        self.btn = gtk.CheckButton()
 
-        self.off_len = len(str(tot_lines)) + 1
-        output = []
+    def pack_widgets(self):
+        self.pack_start(self.btn)
+        self.btn.show()
 
-        for i in xrange(tot_lines):
-            output.append(("%0" + str(self.off_len) + "d") % i)
+    def render(self, window, bounds, state):
+        if self.value:
+            sh = gtk.SHADOW_IN
+        else:
+            sh = gtk.SHADOW_OUT
 
-        if output:
-            self.buffer.insert_with_tags(
-                self.buffer.get_end_iter(),
-                "\n".join(output),
-                self._parent.tag_offset
-            )
+        size = 20
+        
+        if size > bounds.height:
+            size = bounds.height
+        if size > bounds.width:
+            size = bounds.width
 
-    def __on_size_request(self, widget, alloc):
-        ctx = self.get_pango_context()
-        font = ctx.load_font(pango.FontDescription(self._parent.font))
-        metric = font.get_metrics(ctx.get_language())
+        print window
 
-        w = pango.PIXELS(metric.get_approximate_char_width()) * (self.off_len + 1)
-        w += 2
+        self.style.paint_check(window, state, sh, bounds, self.btn, "checkbutton", \
+                bounds.x, bounds.y, bounds.width, bounds.height)
 
-        if alloc.width < w:
-            alloc.width = w
+        cr = window.cairo_create()
+        cr.set_source_rgb(1, 0, 0)
+        cr.rectangle(bounds.x, bounds.y, bounds.width, bounds.height)
 
-class AsciiText(BaseText):
-    def __init__(self, parent):
-        BaseText.__init__(self, parent)
-        self.connect('size-request', self.__on_size_request)
+class StrEditor(Editor):
+    def create_widgets(self):
+        self.entry = gtk.Entry()
+        self.btn = gtk.Button("...")
 
-        self.prev_start = None
-        self.prev_end = None
+    def pack_widgets(self):
+        self.entry.set_has_frame(False)
+        self.pack_start(self.entry)
+        self.pack_start(self.btn, False, False, 0)
 
-    def render(self, txt):
-        self.buffer.set_text('')
+    def connect_signals(self):
+        self.btn.connect('clicked', self.__on_edit)
 
-        bpl = self._parent.bpl
-        tot_lines = len(txt) / bpl
+    def __on_edit(self, widget):
+        print "Yeah launch a dialog to edit the field"
 
-        if len(txt) % bpl != 0:
-            tot_lines += 1
-
-        output = []
-
-        for i in xrange(tot_lines):
-            to_fill = 0
-
-            if i * bpl + bpl > len(txt):
-                to_fill = (i * bpl) + bpl - len(txt)
-                output.append(
-                    txt[i * bpl:]
-                )
-            else:
-                output.append(
-                    txt[i * bpl:(i * bpl) + bpl]
-                )
-
-        if output:
-            self.buffer.insert_with_tags(
-                self.buffer.get_end_iter(),
-                "\n".join(output),
-                self._parent.tag_ascii
-            )
-
-    def __on_size_request(self, widget, alloc):
-        ctx = self.get_pango_context()
-        font = ctx.load_font(pango.FontDescription(self._parent.font))
-        metric = font.get_metrics(ctx.get_language())
-
-        w = pango.PIXELS(metric.get_approximate_char_width()) * self._parent.bpl
-        w += 2
-
-        if alloc.width < w:
-            alloc.width = w
-
-    def select_blocks(self, start=None, end=None):
-        if self.prev_start and self.prev_end:
-            self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start, self.prev_end)
-
-        if not start and not end:
-            return
-
-        start_iter = self.buffer.get_iter_at_line(start / self._parent.bpl)
-        start_iter.forward_chars(start % self._parent.bpl)
-
-        end_iter = self.buffer.get_iter_at_line(end / self._parent.bpl)
-        end_iter.forward_chars(end % self._parent.bpl)
-
-        self.buffer.apply_tag(self._parent.tag_sec_sel, start_iter, end_iter)
-        self.prev_start, self.prev_end = start_iter, end_iter
-
-
-class HexText(BaseText):
-    def __init__(self, parent):
-        BaseText.__init__(self, parent)
-        self.connect('size-request', self.__on_size_request)
-        self.connect('realize', self.__on_realize)
-
-        self.prev_start = None
-        self.prev_end = None
-
-    def __on_realize(self, widget):
-        self.modify_base(gtk.STATE_NORMAL, self.style.mid[gtk.STATE_NORMAL])
-
-    def render(self, txt):
-        self.buffer.set_text('')
-
-        bpl = self._parent.bpl
-        tot_lines = len(txt) / bpl
-
-        if len(txt) % bpl != 0:
-            tot_lines += 1
-
-        output = []
-
-        for i in xrange(tot_lines):
-            to_fill = 0
-
-            if i * bpl + bpl > len(txt):
-                to_fill = (i * bpl) + bpl - len(txt)
-                output.append(
-                    " ".join(map(lambda x: str(hex(ord(x)))[2:], txt[i * bpl:]))
-                )
-            else:
-                output.append(
-                    " ".join(map(lambda x: str(hex(ord(x)))[2:], txt[i * bpl:(i * bpl) + bpl]))
-                )
-
-        if output:
-            self.buffer.insert_with_tags(
-                self.buffer.get_end_iter(),
-                "\n".join(output).upper(),
-                self._parent.tag_hex
-            )
-
-    def __on_size_request(self, widget, alloc):
-        ctx = self.get_pango_context()
-        font = ctx.load_font(pango.FontDescription(self._parent.font))
-        metric = font.get_metrics(ctx.get_language())
-
-        w = pango.PIXELS(metric.get_approximate_char_width()) * (self._parent.bpl * 3 - 1)
-        w += 2
-
-        if alloc.width < w:
-            alloc.width = w
-
-    def select_blocks(self, start=None, end=None):
-        if self.prev_start and self.prev_end:
-            self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start, self.prev_end)
-
-        if not start and not end:
-            return
-
-        start_iter = self.buffer.get_iter_at_line(start / self._parent.bpl)
-        start_iter.forward_chars(3 * (start % self._parent.bpl))
-
-        end_iter = self.buffer.get_iter_at_line(end / self._parent.bpl)
-        end_iter.forward_chars(3 * (end % self._parent.bpl) - 1)
-
-        self.buffer.apply_tag(self._parent.tag_sec_sel, start_iter, end_iter)
-        self.prev_start, self.prev_end = start_iter, end_iter
-
-
-class HexView(gtk.HBox):
-    __gtype_name__ = "HexView"
+class HackEntry(gtk.Entry):
+    __gtype_name__ = "HackEntry"
 
     def __init__(self):
-        gtk.HBox.__init__(self, False, 4)
-        self.set_border_width(4)
+        gtk.Entry.__init__(self)
 
-        self.table = gtk.TextTagTable()
-        self.tag_offset = gtk.TextTag('hex-o-view')       # offset view
-        self.tag_hex = gtk.TextTag('hex-x-view')          # hex view
-        self.tag_ascii = gtk.TextTag('hex-a-view')        # ascii view
-        self.tag_sec_sel = gtk.TextTag('hex-s-selection') # secondary selection
+        self.box = gtk.EventBox()
+        self.box.modify_bg(gtk.STATE_NORMAL, self.style.white)
+        self.box.connect('button-press-event', lambda *w: True)
 
-        self.table.add(self.tag_offset)
-        self.table.add(self.tag_hex)
-        self.table.add(self.tag_ascii)
-        self.table.add(self.tag_sec_sel)
+        self.connect('parent-set', self.__on_parent_set)
 
-        self.bpl = 16
-        self.font = "mono 10"
-        self.payload = ""
+    def do_show(self):
+        return
 
-        vadj, hadj = gtk.Adjustment(), gtk.Adjustment()
-        self.vscroll = gtk.VScrollbar(vadj)
-
-        self.offset_text = OffsetText(self)
-        self.hex_text = HexText(self)
-        self.ascii_text = AsciiText(self)
-
-        self.offset_text.set_scroll_adjustments(hadj, vadj)
-        self.hex_text.set_scroll_adjustments(hadj, vadj)
-        self.ascii_text.set_scroll_adjustments(hadj, vadj)
-
-        self.hex_text.buffer.connect('mark-set', self.__on_hex_change)
-        self.ascii_text.buffer.connect('mark-set', self.__on_ascii_change)
-
-        self.hex_text.connect('populate-popup', self.__on_menu_popup)
-        self.ascii_text.connect('populate-popup', self.__on_menu_popup)
-
-        def scroll(widget):
-            widget.set_size_request(-1, 80)
-            frame = gtk.Frame()
-            frame.set_shadow_type(gtk.SHADOW_IN)
-            frame.add(widget)
-            return frame
-
-        self.pack_start(scroll(self.offset_text), False, False)
-        self.pack_start(scroll(self.hex_text), False, False)
-        self.pack_start(scroll(self.ascii_text), False, False)
-        self.pack_end(self.vscroll, False, False)
-
-    def do_realize(self):
-        gtk.HBox.do_realize(self)
-
-        # Offset view
-        self.tag_offset.set_property('weight', pango.WEIGHT_BOLD)
-
-        # Hex View
-        self.tag_hex.set_property(
-            'background-gdk',
-            self.style.mid[gtk.STATE_NORMAL]
-        )
-
-        # Selection tags
-        self.tag_sec_sel.set_property(
-            'background-gdk',
-            self.style.text_aa[gtk.STATE_NORMAL]
-        )
-
-    def show_payload(self, txt):
-        self.payload = txt
-
-        self.offset_text.render(txt)
-        self.hex_text.render(txt)
-        self.ascii_text.render(txt)
-
-    def __on_menu_popup(self, widget, menu):
-        item = gtk.SeparatorMenuItem()
-        item.show()
-        
-        menu.append(item)
-
-        action = gtk.Action('', 'Copy from both', '', gtk.STOCK_COPY)
-        item = action.create_menu_item()
-        item.connect('activate', self.__on_copy_from_both)
-        
-        menu.append(item)
-
-    def __on_copy_from_both(self, widget):
-        if self.hex_text.buffer.get_selection_bounds():
-            # Hex active
-
-            start, end = self.hex_text.buffer.get_selection_bounds()
-            txt = self.hex_text.buffer.get_text(start, end).replace("\n", " ")
-
-            hex_s = filter(lambda x: len(x) == 2, txt.split(" "))
-            ascii = map(lambda x: chr(int(x, 16)), hex_s)
-
-            extend = self.bpl - len(hex_s) % self.bpl
-
-            hex_s.extend(["  "] * extend)
-            ascii.extend([" "] * extend)
-
-            output = ""
-
-            for i in xrange(len(hex_s) / self.bpl):
-                output += "%s %s\n" % (
-                    " ".join(hex_s[i * self.bpl:(i * self.bpl) + self.bpl]),
-                    "".join(ascii[i * self.bpl:(i * self.bpl) + self.bpl])
-                )
-
-        elif self.ascii_text.buffer.get_selection_bounds():
-            # Ascii active
-
-            start, end = self.ascii_text.buffer.get_selection_bounds()
-            ascii = list(self.ascii_text.buffer.get_text(start, end).replace("\n", ""))
-            hex_s = map(lambda x: str(hex(ord(x)))[2:], ascii)
-
-            extend = self.bpl - len(ascii) % self.bpl
-
-            hex_s.extend(["  "] * extend)
-            ascii.extend([" "] * extend)
-
-            output = ""
-
-            for i in xrange(len(hex_s) / self.bpl):
-                output += "%s %s\n" % (
-                    " ".join(hex_s[i * self.bpl:i * self.bpl + self.bpl]),
-                    "".join(ascii[i * self.bpl:i * self.bpl + self.bpl])
-                )
-
-    def __on_hex_change(self, buffer, iter, mark):
-        if not self.hex_text.buffer.get_selection_bounds():
-            self.ascii_text.select_blocks() # Deselect
-            return
-
-        start, end = buffer.get_selection_bounds()
-
-        if start.get_line() == end.get_line():
-            tmp = buffer.get_iter_at_line(start.get_line())
-            txt = buffer.get_text(tmp, start)
-            s_off = len(filter(lambda x: x != '', txt.split(" ")))
-
-            txt = buffer.get_text(start, end)
-            e_off = len(filter(lambda x: len(x) == 2, txt.split(" ")))
-
-            self.ascii_text.select_blocks(
-                (self.bpl * start.get_line()) + s_off,
-                (self.bpl * start.get_line()) + s_off + e_off
-            )
+    def __on_parent_set(self, widget, parent):
+        if self.get_parent():
+            if self.get_parent_window():
+                self.box.set_parent_window(self.get_parent_window())
+            self.box.set_parent(self.get_parent())
+            self.box.show()
         else:
-            tmp = buffer.get_iter_at_line(start.get_line())
-            txt = buffer.get_text(tmp, start)
-            s_off = len(filter(lambda x: x != '', txt.split(" ")))
+            self.box.unparent()
 
-            tmp = buffer.get_iter_at_line(end.get_line())
-            txt = buffer.get_text(tmp, end)
-            e_off = len(filter(lambda x: len(x) == 2, txt.split(" ")))
-
-            self.ascii_text.select_blocks(
-                (self.bpl * start.get_line()) + s_off,
-                (self.bpl * end.get_line()) + e_off
-            )
-
-    def __on_ascii_change(self, buffer, iter, mark):
-        if not self.ascii_text.buffer.get_selection_bounds():
-            self.hex_text.select_blocks() # Deselect
+    def do_size_allocate(self, alloc):
+        # I wanna be extra large! mc donalds rules
+        if self.allocation.width >= alloc.width and \
+           self.allocation.height >= alloc.height:
             return
 
-        start, end = self.ascii_text.buffer.get_selection_bounds()
-        self.hex_text.select_blocks(
-            (self.bpl * start.get_line()) + start.get_line_index(),
-            (self.bpl * end.get_line()) + end.get_line_index()
+        gtk.Entry.do_size_allocate(self, alloc)
+
+        # Reserving space for borders
+        alloc.height -= 1
+        alloc.width -= 1
+
+        self.box.size_request()
+        self.box.size_allocate(alloc)
+
+class CellRendererProperty(gtk.CellRendererText):
+    __gtype_name__ = "CellRendererProperty"
+
+    def __init__(self, tree):
+        super(CellRendererProperty, self).__init__()
+
+        self.tree = tree
+        self.set_property('xalign', 0)
+        self.set_property('xpad', 3)
+        self.set_property('mode', gtk.CELL_RENDERER_MODE_EDITABLE)
+
+        self.painter = None
+
+        dummy_entry = gtk.Entry()
+        dummy_entry.set_has_frame(False)
+        self.row_height = dummy_entry.size_request()[1]
+
+    def do_get_size(self, widget, area):
+        w, h = 0, 0
+
+        if h < self.row_height:
+            h = self.row_height
+
+        w += self.get_property('xpad') * 2
+        h += self.get_property('ypad') * 2
+
+        return (0, 0, w, h)
+
+    def do_render(self, window, widget, background_area, \
+                  cell_area, expose_area, flags):
+
+        # We draw two lines for emulating a box _|
+        widget.style.paint_hline(
+            window, gtk.STATE_NORMAL,
+            background_area, widget, "cell-line",
+            background_area.x, background_area.x + background_area.width,
+            background_area.y + background_area.height - 1)
+
+        widget.style.paint_vline( \
+            window, gtk.STATE_NORMAL,
+            background_area, widget, "cell-line",
+            background_area.y,
+            background_area.y + background_area.height - 1,
+            background_area.x + background_area.width - 1
         )
 
-gobject.type_register(HexView)
+        if self.painter != None:
+            if self.flags() & gtk.CELL_RENDERER_SELECTED:
+                state = gtk.STATE_SELECTED
+            else:
+                state = gtk.STATE_NORMAL
+
+            self.painter.render(window, cell_area, state)
+        else:
+            return gtk.CellRendererText.do_render( \
+                self, window, widget, background_area, cell_area, expose_area, flags
+            )
+
+    def do_start_editing(self, event, widget, path, \
+                         background_area, cell_area, flags):
+
+        entry = HackEntry()
+
+        entry.box.add(StrEditor(None))
+        entry.box.show_all()
+
+        entry.size_allocate(background_area)
+
+        # Yes type error - PyGTK bug #542583
+        return entry
+
+gobject.type_register(CellRendererProperty)
+
+class PropertyGridTree(gtk.ScrolledWindow):
+    def __init__(self):
+        gtk.ScrolledWindow.__init__(self)
+
+        self.store = gtk.TreeStore(str, object, bool, object)
+        self.tree = gtk.TreeView(self.store)
+
+        self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+
+        col = gtk.TreeViewColumn('Property')
+
+        crt = CellRendererProperty(self.tree)
+        crt.xpad = 0
+
+        col.pack_start(crt, True)
+        col.set_resizable(True)
+        col.set_expand(True)
+        col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+        col.set_fixed_width(180)
+        col.set_attributes(crt, text=0)
+
+        col.set_cell_data_func(crt, self.__group_cell_func)
+        self.tree.append_column(col)
+
+        col = gtk.TreeViewColumn('Value')
+        crt = CellRendererProperty(self.tree)
+
+        col.pack_start(crt, True)
+        col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+        col.set_resizable(False)
+        col.set_expand(True)
+        col.set_attributes(crt, text=2, editable=2)
+
+        col.set_cell_data_func(crt, self.__property_cell_func)
+        self.tree.append_column(col)
+        #self.tree.set_headers_visible(False)
+
+        self.add(self.tree)
+
+        it = self.store.append(None, ["test", None, True, True])
+        self.store.append(it, ["test", None, True, None])
+        self.store.append(it, ["test", None, True, None])
+        self.store.append(None, ["test", None, True, None])
+
+    def __property_cell_func(self, col, cell, model, iter):
+        if isinstance(model.get_value(iter, 3), bool):
+            cell.painter = BitEditor(None)
+
+    def __group_cell_func(self, col, cell, model, iter):
+        pass
+
+
+class PropertyGrid(gtk.VBox):
+    def __init__(self):
+        gtk.VBox.__init__(self)
+
+        self.__create_toolbar()
+        self.__create_widgets()
+
+    def __create_widgets(self):
+        self.tree = PropertyGridTree()
+        self.pack_end(self.tree)
+
+    def __create_toolbar(self):
+        pass
 
 if __name__ == "__main__":
     w = gtk.Window()
-    view = HexView()
-    view.show_payload("Woo welcome this is a simple read/only"
-                      " HexView widget for PacketManipulator")
-    w.add(view)
+    w.add(PropertyGrid())
     w.show_all()
     w.connect('delete-event', lambda *w: gtk.main_quit())
     gtk.main()
