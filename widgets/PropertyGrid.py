@@ -116,13 +116,13 @@ class BitEditor(Editor):
         if size > bounds.width:
             size = bounds.width
             
-        # Paint a center check button
-        widget.style.paint_check(window, state, sh, bounds, widget, \
-            "checkbutton",                                          \
-            bounds.x                                                \
-            bounds.y + (bounds.height - size) / 2,                  \
-            size, size)
+        # Paint a right aligned checkbox
+        widget.style.paint_check(window, state, sh, bounds, widget,
+                                 "checkbutton", bounds.x,
+                                 bounds.y + (bounds.height - size) / 2, 
+                                 size, size)
         
+        # Yes we handle the drawing
         return True
 
 class StrEditor(Editor):
