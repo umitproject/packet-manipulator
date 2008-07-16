@@ -119,7 +119,8 @@ class BitEditor(Editor):
         # Paint a center check button
         widget.style.paint_check(window, state, sh, bounds, widget, \
             "checkbutton",                                          \
-            bounds.x + (bounds.width - size) / 2,                   \
+            #bounds.x + (bounds.width - size) / 2,                   \
+            bounds.x                                                \
             bounds.y + (bounds.height - size) / 2,                  \
             size, size)
         
