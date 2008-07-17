@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import cairo
 import pango
 import gobject
 
@@ -216,19 +217,26 @@ class CellRendererGroup(gtk.CellRendererText):
                   cell_area, expose_area, flags):
 
         # We draw two lines for emulating a box _|
-        widget.style.paint_hline(
-            window, gtk.STATE_NORMAL,
-            background_area, widget, "cell-line",
-            background_area.x, background_area.x + background_area.width,
-            background_area.y + background_area.height - 1)
-
-        widget.style.paint_vline( \
-            window, gtk.STATE_NORMAL,
-            background_area, widget, "cell-line",
-            background_area.y,
-            background_area.y + background_area.height - 1,
-            background_area.x + background_area.width - 1
-        )
+        cr = window.cairo_create()
+        cr.save()
+        
+        cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
+        cr.set_operator(cairo.OPERATOR_OVER)
+        cr.set_line_width(0.25)
+        
+        area = background_area
+        
+        # Horiz
+        cr.move_to(area.x, area.y + area.height - 1)
+        cr.rel_line_to(area.width, 0)
+        cr.stroke()
+        
+        # Vert
+        cr.move_to(area.x + area.width - 1, area.y)
+        cr.rel_line_to(0, area.height - 1)
+        cr.stroke()
+        
+        cr.restore()
 
         if self.editor:
             if self.flags() & gtk.CELL_RENDERER_SELECTED:
@@ -238,10 +246,10 @@ class CellRendererGroup(gtk.CellRendererText):
 
             if self.editor.render(window, widget, cell_area, state):
                 return
-                
-        return gtk.CellRendererText.do_render( \
-            self, window, widget, background_area, cell_area, expose_area, flags
-        )
+        
+        return gtk.CellRendererText.do_render(self, window, widget,
+                                              background_area, cell_area,
+                                              expose_area, flags)
 
 gobject.type_register(CellRendererGroup)
    
@@ -251,6 +259,7 @@ class CellRendererProperty(CellRendererGroup):
     def __init__(self, tree):
         super(CellRendererProperty, self).__init__(tree)
         self.set_property('mode', gtk.CELL_RENDERER_MODE_EDITABLE)
+        self.set_property('ellipsize', pango.ELLIPSIZE_END)
 
     def do_start_editing(self, event, widget, path, \
                          background_area, cell_area, flags):
@@ -267,6 +276,35 @@ class CellRendererProperty(CellRendererGroup):
 
 gobject.type_register(CellRendererProperty)
 
+class CellRendererIcon(gtk.CellRendererPixbuf):
+    __gtype_name__ = "CellRendererIcon"
+    
+    def __init__(self):
+        super(CellRendererIcon, self).__init__()
+    
+    def do_render(self, window, widget, background_area, \
+                  cell_area, expose_area, flags):
+        
+        ret = gtk.CellRendererPixbuf.do_render(self, window, widget,
+                                               background_area, cell_area,
+                                               expose_area, flags)
+        
+        area = background_area
+        cr = window.cairo_create()
+        cr.save()
+        
+        cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
+        cr.set_operator(cairo.OPERATOR_OVER)
+        cr.set_line_width(0.25)
+        
+        cr.move_to(area.x, area.y + area.height - 1)
+        cr.rel_line_to(area.width, 0)
+        cr.stroke()
+        
+        cr.restore()
+
+gobject.type_register(CellRendererIcon)
+
 class PropertyGridTree(gtk.ScrolledWindow):
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)
@@ -282,8 +320,13 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
         crt.set_property('xpad', 0)
         crt.set_property('cell-background-gdk',
-                         self.style.base[gtk.STATE_INSENSITIVE])
-
+                         self.style.mid[gtk.STATE_NORMAL])
+        
+        pix = CellRendererIcon()
+        pix.set_property('xpad', 0)
+        pix.set_property('ypad', 0)
+        
+        col.pack_start(pix, False)
         col.pack_start(crt, True)
         col.set_resizable(True)
         col.set_expand(True)
@@ -292,6 +335,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         col.set_attributes(crt)
         
         col.set_cell_data_func(crt, self.__group_cell_func)
+        col.set_cell_data_func(pix, self.__pixbuf_cell_func)
         self.tree.append_column(col)
 
         col = gtk.TreeViewColumn('Value')
@@ -315,14 +359,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
                 self.name = name
         
         class P(object):
-            def __init__(self, name, value):
+            def __init__(self, name, value, read=True):
                 self.name = name
                 self.value = value
+                self.readonly = read
 
         it = self.store.append(None, [G("Generals fields"), None])
+        self.store.append(it, [None, P("string", "miao", False)])
+        self.store.append(it, [None, P("boolean", True, False)])
+        self.store.append(it, [None, P("integer", 1)])
+        it = self.store.append(it, [G("testing nested"), None])
         self.store.append(it, [None, P("string", "miao")])
         self.store.append(it, [None, P("boolean", True)])
-        self.store.append(it, [None, P("integer", 1)])
 
     def __property_cell_func(self, col, cell, model, iter):
         cell.editor = None
@@ -342,15 +390,47 @@ class PropertyGridTree(gtk.ScrolledWindow):
             elif isinstance(obj.value, int) or \
                  isinstance(obj.value, float):
                 cell.editor = IntEditor(obj)
+            
+            cell.set_property('cell-background-gdk', None)
+        else:
+            cell.set_property('cell-background-gdk',
+                              self.style.mid[gtk.STATE_NORMAL])
 
     def __group_cell_func(self, col, cell, model, iter):
         obj = model.get_value(iter, 0)
+        color = self.style.mid[gtk.STATE_NORMAL]
+        markup = None
         
         if not obj:
+            # This is not a group but a property
             obj = model.get_value(iter, 1)
+            
+            if obj:
+                color = None
+                
+                if obj.readonly:
+                    markup = '<i>%s</i>' % obj.name
+                else:
+                    markup = '<b>%s</b>' % obj.name
+        else:
+            markup = '<b>%s</b>' % obj.name
+        
+        # Setting the values
+        cell.set_property('cell-background-gdk', color)
+        cell.set_property('markup', markup)
+    
+    def __pixbuf_cell_func(self, col, cell, model, iter):
+        obj = model.get_value(iter, 1)
+        
+        icon, color = None, self.style.mid[gtk.STATE_NORMAL]
         
         if obj:
-            cell.set_property('markup', '<b>%s</b>' % obj.name)
+            color = None
+            if hasattr(obj, "readonly") and obj.readonly:
+                icon = gtk.gdk.pixbuf_new_from_file_at_size("icon_lock.png", 16, 16)
+        
+        cell.set_property('cell-background-gdk', color)
+        cell.set_property('pixbuf', icon)
 
 class PropertyGrid(gtk.VBox):
     def __init__(self):
@@ -361,7 +441,11 @@ class PropertyGrid(gtk.VBox):
 
     def __create_widgets(self):
         self.tree = PropertyGridTree()
-        self.pack_end(self.tree)
+        self.frame = gtk.Frame("Description")
+        self.frame.add(gtk.Label("Here goes description of fields"))
+        
+        self.pack_start(self.tree)
+        self.pack_start(self.frame, False, False)
 
     def __create_toolbar(self):
         pass
