@@ -1,6 +1,7 @@
 import gtk
 import Backend
 
+from widgets.HexView import HexView
 from views import UmitView
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
@@ -78,7 +79,7 @@ class SessionPage(gtk.VBox):
 
     def __pack_widgets(self):
         self.hpaned.pack1(self.proto_hierarchy)
-        self.hpaned.pack2(gtk.Label("yup I'm here"))
+        self.hpaned.pack2(HexView())
         self.pack_start(self.hpaned)
 
         self.show_all()
