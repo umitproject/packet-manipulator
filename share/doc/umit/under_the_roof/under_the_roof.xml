@@ -1,0 +1,78 @@
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook v4.4//EN"
+  "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<article>
+  <artheader>
+    <title>Under Umit's Roof</title>
+    <author>
+      <firstname>Adriano</firstname>
+      <surname>Marques</surname>
+      <copyright>
+        <year>2006</year>
+    <holder>Adriano Monteiro Marques</holder>
+      </copyright>
+    </author>
+  </artheader>
+
+  <section>
+    <title>Warning</title>
+    <para>
+      This documentation is not finished! Part or all of it's content may be missing 
+      or inaccurate. As Umit is under constant development and improvement, expect
+      changes in this documentation at upcoming releases.
+    </para>
+  </section>
+
+  <section>
+    <title>Configuration Files</title>
+
+    <para><application>Umit</application> will always try to create a HOME/.umit
+    configuration directory if it doesn't exists yet.</para>
+
+    <para>The steps bellow, describes how Umit is going to behave on every
+    startup in order to load the configuration files:</para>
+
+    <procedure>
+      <title>Check if the location of the hardcoded paths does exist</title>
+    </procedure>
+
+    <procedure>
+      <title>Check if HOME/.umit does exist</title>
+    </procedure>
+
+    <procedure>
+      <title>If HOME/.umit does exist, than check the version of the files</title>
+    </procedure>
+
+    <procedure>
+      <title>If the version of the files is older than the current Umit
+      version, update the config files</title>
+    </procedure>
+
+    <procedure>
+      <title>If HOME/.umit doesn't exist, tries to create one</title>
+    </procedure>
+
+    <procedure>
+      <title>If it is not possible to create the HOME/.umit, than Umit will
+      use the factory-made files</title>
+    </procedure>
+  </section>
+
+  <section>
+    <title>Checking out the Repository</title>
+    
+    <para>Install the subversion client, and them run the command bellow:</para>
+
+    <procedure>
+      <title>The svn command</title>
+      <step>svn co https://umit.svn.sourceforge.net/svnroot/umit</step>
+    </procedure>
+  </section>
+
+  <section>
+    <title>Easter Eggs</title>
+    <para>Yes, there are easter eggs in Umit. Go find them!</para>
+  </section>
+
+</article>

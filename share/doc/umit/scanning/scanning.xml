@@ -1,0 +1,151 @@
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook v4.4//EN"
+  "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<article>
+  <artheader>
+    <title>Scanning</title>
+    <author>
+      <firstname>Adriano</firstname>
+      <surname>Marques</surname>
+      <copyright>
+        <year>2006</year>
+	<holder>Adriano Monteiro Marques</holder>
+      </copyright>
+    </author>
+  </artheader>
+
+  <section>
+    <title>Warning</title>
+    <para>
+      This documentation is not finished! Part or all of it's content may be missing 
+      or inaccurate. As Umit is under constant development and improvement, expect
+      changes in this documentation at upcoming releases.
+    </para>
+  </section>
+
+  <section>
+    <title>Introduction</title>
+
+    <para><application>Umit</application> was designed to accomodate and run more than one
+    scan at time. Each scan is executed and shown inside a <emphasis>Scan Tab</emphasis>,
+    which has a title and organize every information obtained in the scan result.</para>
+    <para>The <emphasis>Scan Tab</emphasis> tries to facilitate your life, by making the 
+    informations easier to navigate and search for a given information. Usually, if you wanted
+    to scan an entire network using <application>Nmap</application>, you would have to open
+    up your favorite terminal, type an entire <application>Nmap</application> command, like
+    this one: <command>nmap -A -F -n -T4 192.168.1.1-254</command> and when it finally finishes
+    you'll end up with a bunch of lines in the terminal that can hardly be searched and 
+    read. If your goal was to know which of the 200 hosts found are serving ssh, what were 
+    you going to do? Maybe it won't seen impossible for you, (and it's not) but surely it's
+    a boring task that gets worst when you have to do that more than once.</para>
+    <para>An answer to your problem is <application>Umit</application>, that can handle this
+    task easily, with just a couple of clicks.</para>
+    <para>So, if you're wondering if you should retire the command line, I would say 
+    <emphasis>NO!</emphasis>. The <application>Nmap's</application> command interface
+    is very usefull when you want to scan a few hosts, and skim the result quickly to make
+    a decision. Every good network administrator know how usefull is it to simply call
+    <command>nmap localhost</command> to know which services are up, for example. If you're
+    at the command line, you won't want to open a graphical application to do so, if you can
+    quickly pull off your doubt about what is up or down from were you stand.</para>
+    <para><application>Umit</application> is intended to help you manage your network,
+    by giving you a better way to examine carefully your network peers. If your intention
+    is to <emphasis>know</emphasis> better your network, then <application>
+    Umit</application> is what you need.</para>
+  </section>
+
+  <section>
+    <title>Starting a scan</title>
+    
+    <para>To start a scan, you need an empty <emphasis>Scan Tab</emphasis>. At the time you
+    starts <application>Umit</application>, a new <emphasis>Scan Tab</emphasis> is made 
+    available, and as soon as the main interface is shown, you can start typing the target
+    address. If you already used this <emphasis>Scan Tab</emphasis>, you can create a new
+    one, by doing one of the following:</para>
+
+    <procedure>
+      <title>Use the key-stroke</title>
+      <step>The key-stroke that creates a new Scan Tab is <accel>CTRL + T</accel>.</step>
+    </procedure>
+
+    <procedure>
+      <title>Single click on the Create new Scan Tab button Icon in the Main Toolbar</title>
+      <step>The Create new Scan Tab button is the <guibutton>1st button in the Main Toolbar
+      from left to right.</guibutton></step>
+    </procedure>
+
+    <procedure>
+      <title>Acces from the Main Menu</title>
+      <step>Go to the <emphasis>Main Menu</emphasis> (the one on the top of the application),
+	<guimenu>File</guimenu>-&gt;<guimenuitem>New Scan</guimenuitem>.</step>
+    </procedure>
+  </section>
+
+  <section>
+    <title>Setting a Target</title>
+
+    <para>By the moment you start <application>Umit</application> or create a new scan tab,
+    you can start typing the address of the target(s) that you want to scan. Every target
+    inserted into the Target field is recorded and remembered in case you need it in the 
+    future. As this field features an auto-completation, it's going to be easy the reuse of
+    targets.</para>
+  </section>
+
+  <section>
+    <title>Conducting a scan</title>
+    
+    <para># Selecting the profile</para>
+    <para># Customizing the command that is going to be executed</para>
+    <para># Nmap Output refresh</para>
+    <section>
+      <title>Known issues</title>
+
+      <para># Non-root user</para>
+      <para># Overlapping two scans, by clicking twice on the Start Scan button</para>
+    </section>
+  </section>
+
+  <section>
+    <title>Making Umit usefull enough for your every-day scanning</title>
+
+    <para># Quick list of usefull features for network administrators</para>
+
+    <section>
+      <title>The Hosts/Services View</title>
+
+      <para># What does it show</para>
+      <para># How to put in order?</para>
+    </section>
+
+    <section>
+      <title>The Ports/Hosts Page</title>
+
+      <para># What does it show</para>
+      <para># Sorting</para>
+      <para># Grouping</para>
+    </section>
+
+    <section>
+      <title>Nmap Output Page</title>
+
+      <para># The Highlight mode</para>
+      <para># How to change colors</para>
+      <para># How does it works the automatic refresh</para>
+    </section>
+
+    <section>
+      <title>Scan Details Page</title>
+
+      <para># What informations are expected to be there</para>
+    </section>
+
+    <section>
+      <title>Host Details Page</title>
+
+      <para># How does it works</para>
+      <para># Comments</para>
+      <para># The Host Status</para>
+      <para># The icons (os and vl)</para>
+    </section>
+  </section>
+
+</article>

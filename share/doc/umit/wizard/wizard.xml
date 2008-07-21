@@ -1,0 +1,96 @@
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook v4.4//EN"
+  "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<article>
+  <artheader>
+    <title>Command Constructor Wizard</title>
+    <author>
+      <firstname>Adriano</firstname>
+      <surname>Marques</surname>
+      <copyright>
+        <year>2006</year>
+	<holder>Adriano Monteiro Marques</holder>
+      </copyright>
+    </author>
+  </artheader>
+
+  <section>
+    <title>Warning</title>
+    <para>
+      This documentation is not finished! Part or all of it's content may be missing 
+      or inaccurate. As Umit is under constant development and improvement, expect
+      changes in this documentation at upcoming releases.
+    </para>
+  </section>
+
+  <section>
+    <title>Introduction</title>
+    <para>
+      # What is the command constructor wizard?
+    </para>
+
+    <para>
+      # What do it does?
+    </para>
+      
+    <para>
+      # The customization advantage
+    </para>
+
+  </section>
+
+  <section>
+    <title>The profile editor modes</title>
+    <para># New profile</para>
+    <para># Edit profile</para>
+  </section>
+
+  <section>
+    <title>Creating a simple scan profile</title>
+    <para># The profile descriptions (name, hint, description, etc.)</para>
+    <para># The default options</para>
+    <para># Saving the profile</para>
+    <para># How to use the recently created profile?</para>
+  </section>
+
+  <section>
+    <title>Editing a profile</title>
+    <para># The profile editor's edit mode</para>
+  </section>
+
+  <section>
+    <title>Creating a new profile based on an old one</title>
+    <para># The profile editor's create new from profile mode</para>
+  </section>
+
+  <section>
+    <title>The profile editor structure</title>
+    <para># The profile_editor.xml and the options.xml</para>
+    <para># The xml sintax</para>
+    <para># The widgets available for options</para>
+    <para># Positioning rules</para>
+  </section>
+
+  <section>
+    <title>Adding new options to profile editor</title>
+    <para># Adding the option to options.xml</para>
+    <para># Calling the option in profile_editor.xml</para>
+    <para># Watching the show</para>
+  </section>
+
+  <section>
+    <title>Removing an undesired option</title>
+    <para># Removing from profile_editor.xml</para>
+    <para># Removing from options.xml (If you really don't want it anymore)</para>
+    <para># Verifying if the options is not called at wizard.xml, else, the lack of an option
+		called inside the wizard.xml will break it.</para>
+  </section>
+
+  <section>
+    <title>Sharing options, and profile editors</title>
+    <para># Which files do you have to share?</para>
+    <para># Where to save?</para>
+    <para># How to share?</para>
+  </section>
+</article>
+

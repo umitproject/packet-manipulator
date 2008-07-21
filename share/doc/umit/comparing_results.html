@@ -1,0 +1,103 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>Comparing Results</title><meta name="generator" content="DocBook XSL Stylesheets V1.71.0"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="article" lang="en"><div class="titlepage"><div><div><h1 class="title"><a name="id2500872"></a>Comparing Results</h1></div><div><div class="author"><h3 class="author"><span class="firstname">Adriano</span> <span class="surname">Marques</span></h3></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="section"><a href="#id2522768">Introduction</a></span></dt><dd><dl><dt><span class="section"><a href="#open_instruc">Openning Instructions</a></span></dt></dl></dd><dt><span class="section"><a href="#id2522254">Loaded/Loading Results</a></span></dt><dt><span class="section"><a href="#id2478395">Comparing Results</a></span></dt><dt><span class="section"><a href="#id2478434"></a></span></dt><dt><span class="section"><a href="#id2478999">The Text Diff Mode</a></span></dt><dd><dl><dt><span class="section"><a href="#id2479055">Reading and Understanding</a></span></dt><dt><span class="section"><a href="#id2479379">Changing colors</a></span></dt></dl></dd><dt><span class="section"><a href="#id2479444">The Comparison Mode</a></span></dt><dd><dl><dt><span class="section"><a href="#id2479457">Reading and Understanding</a></span></dt><dt><span class="section"><a href="#id2479579">Changing colors</a></span></dt></dl></dd><dt><span class="section"><a href="#id2479631">Openning in Browser</a></span></dt><dd><dl><dt><span class="section"><a href="#id2479652">Known issues</a></span></dt></dl></dd></dl></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2522768"></a>Introduction</h2></div></div></div><p>The Compare Results Window, is a tool that allows you to compare two
+    distinct scan results, highlighting any difference that may occour between
+    one to another in a easy to read manner. This feature is intended to let you compare
+    two given scans, let's say one made in the morning and other made in the evening, and not
+    if in the mean time a given host has left the network, or if a given host is still serving
+    on the same port as in the morning, for example. It can be really usefull for network
+    administrators, as with regular scans of it's network can be compared to show abnormalities.
+    </p><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="open_instruc"></a>Openning Instructions</h3></div></div></div><p>To reach the Compare Results Window, make sure that <span class="application">Umit</span> 
+      is open, and then do one of  the following:</p><div class="procedure"><a name="id2522191"></a><p class="title"><b>Procedure 1. Use the key-stroke</b></p><ul><li>The key-stroke that shows the Compare Results Window is 
+	<span class="accel">CTRL + D</span>.</li></ul></div><div class="procedure"><a name="id2522207"></a><p class="title"><b>Procedure 2. Single click on the Compare Results Icon in the Main Toolbar</b></p><ul><li>The Compare Results Icon in the Main Toolbar may differ from theme to theme, but 
+	it is always the <span class="guibutton">6th icon counting from left to right.</span></li></ul></div><div class="procedure"><a name="id2522224"></a><p class="title"><b>Procedure 3. Access from the Main Menu</b></p><ul><li>Go to the <span class="emphasis"><em>Main Menu</em></span> (the one on the top of the application),
+	<span class="guimenu">File</span>-&gt;<span class="guimenuitem">Compare Results</span>.</li></ul></div></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2522254"></a>Loaded/Loading Results</h2></div></div></div><p>To avoid too much user interaction, and usability problems, 
+    <span class="application">Umit</span> automatically make available at the <span class="emphasis"><em>Compare 
+    Results Window</em></span> combo boxes, the scan results currently loaded in the 
+    main interface. As you may have already noted, scans are loaded separatedly inside scan
+    tabs, that are describe with a title that may be the scan result file name, a combination 
+    of the Profile Name + Target used in the scan or something else. Thoose scan tabs titles, 
+    are used as identifiers that loads the respective scan result for comparison when 
+    selected at those combo boxes.</p><p>If one or both of the scan results that you wish to compare are not loaded in 
+    <span class="application">Umit's</span> main interface, you can compare then by loading then 
+    inside the <span class="emphasis"><em>Compare Results Window</em></span> without the need of closing the
+    window, loading the results into scan tabs, and then openning the <span class="emphasis"><em>Compare 
+    Results Window</em></span> again. To load then directly, use the <span class="guibutton">Open</span>
+    button that resides on the right of each combo box.</p><p>You may also want to compare results that are not saved into files, but inside the
+    <span class="application">Umit's</span> search data base. To load those results, you'll have 
+    to load then into scan tabs first, and then open the <span class="emphasis"><em>Compare Results 
+    Window</em></span> to compare them. It's a bit cumbersome, but loading then directly 
+    from the <span class="emphasis"><em>Compare Results Window</em></span> would implicate on creating 
+    more widgets inside the window and making it more complex, thus lowing it's 
+    usability anyway.</p></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2478395"></a>Comparing Results</h2></div></div></div><p>To quickly start comparing two given resuls, simply select the results you wish to 
+    compare at the &#8220;<span class="quote"><span class="emphasis"><em>Scan Result 1</em></span></span>&#8221; and 
+    &#8220;<span class="quote"><span class="emphasis"><em>Scan Result 2</em></span></span>&#8221; combo boxes. The only thing you 
+    should pay attention while selecting the scan results, is that the comparison is 
+    done by highlighting what has changed (or is not present) in the second result when 
+    compared to the first one. So, if you chage the order of the scan results selection, 
+    you'll end up with a different comparison result, that probably won't show what you're 
+    looking for.</p><p>If you just want to compare changes on your network, a simple rule that won't let you
+    get in trouble always select the older result first, and then the newest one. By following 
+    this, you'll get a comparison that shows which hosts has left your network in the mean time,
+    or, which ports appeared or disappeared, etc. By selecting the newest one first, you'll have
+    a not so usefull comparison.
+    </p></div><div class="section" lang="en"><div class="titlepage"></div><p>Let's say that you have two different scans loaded in <span class="application">Umit</span>,
+    and you wish to compare then. The first one, called &#8220;<span class="quote"><span class="emphasis"><em>Quick Scan on 
+    192.168.204.128</em></span></span>&#8221; is a scan result made 2 days ago, and the second 
+    one, called &#8220;<span class="quote"><span class="emphasis"><em>Regular Scan on 192.168.204.128</em></span></span>&#8221; is 
+    a just finished scan result. The goal is to verify if something has changed during this
+    2 days, like if a service has been put up, or down in the mean while.</p><p>Having those scans already loaded, simply open the <span class="emphasis"><em>Compare Results 
+    Window</em></span>, by following <a href="#open_instruc" title="Openning Instructions">the section called &#8220;Openning Instructions&#8221;</a> mentioned in the 
+    beginning. Doing so, you'll end up with a window like this:</p><div class="screenshot"><div align="center"><img src="screenshots/comparing_results1.png" align="middle"></div></div><p>The screenshot above shows the appearance of the <span class="emphasis"><em>Compare Results 
+    Window</em></span> running the &#8220;<span class="quote"><span class="emphasis"><em>Compare Mode</em></span></span>&#8221;
+    just after it's openning.</p><p>At <span class="emphasis"><em>Scan Result 1</em></span> combo box, select &#8220;<span class="quote"><span class="emphasis"><em>Quick Scan on 
+    192.168.204.128</em></span></span>&#8221; and at <span class="emphasis"><em>Scan Result 2</em></span>, select 
+    &#8220;<span class="quote"><span class="emphasis"><em>Regular Scan on 192.168.204.128</em></span></span>&#8221;. In the moment you 
+    finish the selection of the results you want to compare, <span class="application">Umit</span>
+    detects your choices and generates automatically the comparison result.</p><div class="screenshot"><div align="center"><img src="screenshots/comparing_results2.png" align="middle"></div></div><p>The <span class="emphasis"><em>Compare Results Window</em></span> with selected results and the 
+    comparison generated automatically by <span class="application">Umit</span></p><div class="screenshot"><div align="center"><img src="screenshots/comparing_results3.png" align="middle"></div></div><p>The same window, now showing the &#8220;<span class="quote"><span class="emphasis"><em>Text mode</em></span></span>&#8221;
+    comparison result.</p></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2478999"></a>The Text Diff Mode</h2></div></div></div><p>If you're an old Umit user, you won't be surprised with the text mode. But maybe,
+    if you are a new user, you will probably be questionning why there is a 
+    &#8220;<span class="quote"><span class="emphasis"><em>Text mode</em></span></span>&#8221;, if you've got the &#8220;<span class="quote"><span class="emphasis"><em>Compare 
+    mode</em></span></span>&#8221;, that is easier to read and understand. Here goes the answer: 
+    The &#8220;<span class="quote"><span class="emphasis"><em>Text mode</em></span></span>&#8221; is the first comparison mode, and it's
+    quite usefull in some situations. If you simply want to visually compare two different scans,
+    the &#8220;<span class="quote"><span class="emphasis"><em>Compare mode</em></span></span>&#8221; is just what you need. But, if you need
+    to report changes and save them for historical purposes, the &#8220;<span class="quote"><span class="emphasis"><em>Text 
+    mode</em></span></span>&#8221; will generate for you a text diff that can be copied and pasted
+    anywhere. This mode is not so complete as the &#8220;<span class="quote"><span class="emphasis"><em>Compare 
+    mode</em></span></span>&#8221;, but it's the only one that you can save for latter analysis. In the 
+    future, <span class="application">Umit</span> will feature a report generation tool, to ease this
+    task.</p><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2479055"></a>Reading and Understanding</h3></div></div></div><p>The text diff is basically the first result plus extra lines that describes what
+      is missing or what has changed in the second one. Those extra lines are marked up with
+      symbols that describes what happenned in that part of the text result.</p><div class="table"><a name="id2479068"></a><p class="title"><b>Table 1. Text diff symbols and their meanings</b></p><div class="table-contents"><table summary="Text diff symbols and their meanings" border="1"><colgroup><col align="center"><col align="center"></colgroup><thead><tr><th align="center">Symbol</th><th align="center">Meaning</th></tr></thead><tbody><tr><td align="center">+</td><td align="center">The line has appeared/changed in the second result</td></tr><tr><td align="center">-</td><td align="center">The line was removed/changed from the first result</td></tr><tr><td align="center">?</td><td align="center">Indicates that this line contains symbols that show what was modified 
+	      in the line above</td></tr><tr><td align="center">^</td><td align="center">Indicates what was modified in the line above</td></tr></tbody></table></div></div><br class="table-break"></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2479379"></a>Changing colors</h3></div></div></div><p>If you like the colored highlight mode, you may want to change the colors to those
+      which you may feel better with, or that may show better in a given situation. Doing so,
+      is quite easy and every change is automatically saved, so you'll won't have to worry
+      about changing the colors everytime you use this window.</p><p>Click once on the <span class="guibutton"><span class="emphasis"><em>Color Descriptions</em></span></span> 
+      button. The folowing dialog will show up:</p><div class="screenshot"><div align="center"><img src="screenshots/comparing_results4.png" align="middle"></div></div><p>If you're running the &#8220;<span class="quote"><span class="emphasis"><em>Text mode</em></span></span>&#8221;,
+      there is only two colors that you may want to change here (as this mode only uses two). 
+      Those colors are describe as <span class="emphasis"><em>Property was Added</em></span> and 
+      <span class="emphasis"><em>Property is Not Present</em></span>. Click once in the button that holds the
+      current color you want to change, and a color selection dialog will be shown.</p><p>The colors will be automatically updated as soon as you leave the <span class="emphasis"><em>Color 
+      Descriptions</em></span> dialog.</p></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2479444"></a>The Comparison Mode</h2></div></div></div><p>Yet the best comparison mode for quick verification of changes betwen results, this
+    mode shows informations that doesn't exist in the regular nmap output. Thus, this mode
+    gives you more informations than the text one.</p><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2479457"></a>Reading and Understanding</h3></div></div></div><p>Reading and understanding this mode is easy and intuitive, as it shows only one
+      information (or property) per line, and the symbol before each property describes 
+      it's state in the second result. If you have the colored highlight mode enabled, 
+      you'll have a more intuitive experience, as you won't have to bother about 
+      understanding those symbols.</p><p>Here follows a list of symbols, followed by their meannings:</p><div class="table"><a name="id2479476"></a><p class="title"><b>Table 2. Compare mode symbols and their meanings</b></p><div class="table-contents"><table summary="Compare mode symbols and their meanings" border="1"><colgroup><col align="center"><col align="center"></colgroup><thead><tr><th align="center">Symbol</th><th align="center">Meaning</th></tr></thead><tbody><tr><td align="center">U</td><td align="center">The property remained <span class="emphasis"><em>U</em></span>nchanged in the second 
+	      result.</td></tr><tr><td align="center">A</td><td align="center">The property was <span class="emphasis"><em>A</em></span>dded in the second result.</td></tr><tr><td align="center">M</td><td align="center">The property was <span class="emphasis"><em>M</em></span>odified in the second 
+	      result.</td></tr><tr><td align="center">N</td><td align="center">The property is <span class="emphasis"><em>N</em></span>ot present in the second 
+	      result.</td></tr></tbody></table></div></div><br class="table-break"></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2479579"></a>Changing colors</h3></div></div></div><p>If you like the colored highlight mode, you may want to change the colors to those
+      which you may feel better with, or that may show better in a given situation. Doing so,
+      is quite easy and every change is automatically saved, so you'll won't have to worry
+      about changing the colors everytime you use this window.</p><p>Click once on the <span class="guibutton"><span class="emphasis"><em>Color Descriptions</em></span></span> 
+      button. The folowing dialog will show up:</p><div class="screenshot"><div align="center"><img src="screenshots/comparing_results4.png" align="middle"></div></div><p>If you're running the &#8220;<span class="quote"><span class="emphasis"><em>Compare mode</em></span></span>&#8221;, you can
+      change any color that you feel like, by clicking in the button that holds the color you
+      wish to change, and they will be update as soon as you leave the <span class="emphasis"><em>Color 
+      Descriptions</em></span> dialog.</p></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2479631"></a>Openning in Browser</h2></div></div></div><p>If you want to generate a quick HTML report of the generated diff, and view in you 
+    default web browser, just click once in the <span class="guibutton"><span class="emphasis"><em>Open in 
+    Browser</em></span></span> button. The HTML report holds another diff visualization
+    mode, followed by the text one. After openned in the browser, you can simply save it
+    for latter view, or historical purposes, if needed.</p><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2479652"></a>Known issues</h3></div></div></div><p>There's a bug that avoids the use of this feature when 
+      <span class="application">Umit</span> is been executed with <span class="emphasis"><em>sudo</em></span> in Linux.
+      </p></div></div></div></body></html>

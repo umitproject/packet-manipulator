@@ -1,0 +1,31 @@
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook v4.4//EN"
+  "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd">
+
+<article>
+  <artheader>
+    <title>Searching</title>
+    <author>
+      <firstname>Adriano</firstname>
+      <surname>Marques</surname>
+      <copyright>
+        <year>2006</year>
+	<holder>Adriano Monteiro Marques</holder>
+      </copyright>
+    </author>
+  </artheader>
+
+  <section>
+    <title>Warning</title>
+    <para>
+      This documentation is not finished! Part or all of it's content may be missing 
+      or inaccurate. As Umit is under constant development and improvement, expect
+      changes in this documentation at upcoming releases.
+    </para>
+  </section>
+
+  <section>
+    <title>Introduction</title>
+    <para>Nothing yet</para>
+
+  </section>
+</article>
