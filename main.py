@@ -1,4 +1,4 @@
-import gtk
+ import gtk
 
 try:
     from paned import *
@@ -12,7 +12,8 @@ from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
 from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
-_ = str
+from umitCore.I18N import _
+from umitCore.Paths import Path
 
 class MainWindow(gtk.Window):
     def __init__(self):
@@ -97,7 +98,10 @@ class MainWindow(gtk.Window):
     def __connect_signals(self):
         "Connect signals"
         self.connect('delete-event', lambda *w: gtk.main_quit())
+    
+    def run(self):
+        gtk.main()
 
 if __name__ == "__main__":
-    MainWindow()
-    gtk.main()
+    app = MainWindow()
+    app.run()

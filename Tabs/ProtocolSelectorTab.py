@@ -85,24 +85,12 @@ class ProtocolTree(gtk.VBox):
     
     def populate(self, fill=True):
         self.store.clear()
-        import random
-        
-        class Proto:
-            def __init__(self, name):
-                self.name = name
-                self.layer = random.randint(1, 7)
-            def get_layer(self):
-                return self.layer
-        
-        l = []
-        for i in xrange(random.randint(1, 255)):
-            l.append(Proto(chr(random.randint(41, 41 + 26)) * random.randint(1, 20)))
         
         if fill:
-            for i in l:
-                self.store.append(None, [i.name, i])
+            for i in Backend.get_protocols():
+                self.store.append(None, [i.__name__, i])
         else:
-            return l
+            return Backend.get_protocols()
         
     def __on_sort_descending(self, item):
         self.populate()
@@ -122,7 +110,7 @@ class ProtocolTree(gtk.VBox):
         dct = defaultdict(list)
         
         for proto in lst:
-            dct[proto.get_layer()].append(proto)
+            dct[proto.layer].append(proto)
         
         for i in xrange(1, 8, 1):
             it = self.store.append(None, ["Layer %d" % i, None])
@@ -131,7 +119,7 @@ class ProtocolTree(gtk.VBox):
                 continue
             
             for proto in dct[i]:
-                self.store.append(it, [proto.name, proto])
+                self.store.append(it, [proto.__name__, proto])
         
         self.tree.set_model(self.store)
     

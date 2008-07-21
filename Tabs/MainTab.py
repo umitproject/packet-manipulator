@@ -67,20 +67,23 @@ class SessionPage(gtk.VBox):
     def __init__(self, proto_name):
         gtk.VBox.__init__(self)
 
-        self.__create_widgets(getattr(Backend, proto_name))
+        self.__create_widgets(Backend.get_proto(proto_name))
         self.__pack_widgets()
         self.__connect_signals()
 
     def __create_widgets(self, proto):
-        self._label = gtk.Label("test")
+        self._label = gtk.Label("*" + proto.__name__)
 
-        self.hpaned = gtk.HPaned()
+        self.protocol = proto()
+
+        self.vpaned = gtk.VPaned()
         self.proto_hierarchy = ProtocolHierarchy(proto)
+        self.hexview = HexView()
 
     def __pack_widgets(self):
-        self.hpaned.pack1(self.proto_hierarchy)
-        self.hpaned.pack2(HexView())
-        self.pack_start(self.hpaned)
+        self.vpaned.pack1(self.proto_hierarchy)
+        self.vpaned.pack2(self.hexview)
+        self.pack_start(self.vpaned)
 
         self.show_all()
 
@@ -140,8 +143,7 @@ class MainTab(UmitView):
         if data and data.format == 8:
             proto = data.data
 
-            if hasattr(Backend, proto) and \
-               issubclass(getattr(Backend, proto), Backend.Packet):
+            if Backend.get_proto(proto):
                 self.session_notebook.create_session(data.data)
                 ctx.finish(True, False, time)
                 return True
