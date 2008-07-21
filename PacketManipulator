@@ -89,7 +89,7 @@ def main(args):
     Path.set_umit_conf(os.path.split(args[0])[0])
 
     try:
-        from Mainwindow import MainWindow
+        from MainWindow import MainWindow
         app = MainWindow()
         app.run()
     except KeyboardInterrupt:
