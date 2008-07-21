@@ -1,4 +1,4 @@
- import gtk
+import gtk
 
 try:
     from paned import *
