@@ -19,6 +19,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import Backend
+
+from views import UmitView
 from collections import defaultdict
    
 class ProtocolTree(gtk.VBox):
@@ -165,6 +168,17 @@ class ProtocolTree(gtk.VBox):
         sel.set_text(model.get_value(iter, ProtocolTree.COL_STR))
 
         return True
+
+class ProtocolSelectorTab(UmitView):
+    "The protocol selector tab"
+
+    icon_name = gtk.STOCK_CONNECT
+    label_text = "Protocols"
+
+    def create_ui(self):
+        self.tree = ProtocolTree()
+        self._main_widget.add(self.tree)
+        self._main_widget.show_all()
 
 if __name__ == "__main__":
     w = gtk.Window()
