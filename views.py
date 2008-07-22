@@ -112,3 +112,7 @@ class UmitView(UmitViewMixin):
 
     def add_main_widget(self, widget, *args, **kw):
         self._main_widget.pack_start(widget, *args, **kw)
+
+    def connect_tab_signals(self):
+        "Ovveride this if you need to connect signals between tabs"
+        print "Not implemented for", self.__class__.__name__

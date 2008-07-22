@@ -23,6 +23,8 @@ import cairo
 import pango
 import gobject
 
+from Icons import get_pixbuf
+
 class Editor(gtk.HBox):
 
     def __init__(self, field):
@@ -149,15 +151,19 @@ class StrEditor(Editor):
 
 class HackEntry(gtk.Entry):
     __gtype_name__ = "HackEntry"
+    __gsignals__ = {
+        'finish-edit' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, ))
+    }
 
     def __init__(self):
         gtk.Entry.__init__(self)
 
         self.box = gtk.EventBox()
         self.box.modify_bg(gtk.STATE_NORMAL, self.style.white)
-        self.box.connect('button-press-event', lambda *w: True)
-
         self.connect('parent-set', self.__on_parent_set)
+
+    def do_button_press_event(self, event):
+        return True
 
     def do_show(self):
         return
@@ -169,6 +175,7 @@ class HackEntry(gtk.Entry):
             self.box.set_parent(self.get_parent())
             self.box.show()
         else:
+            self.emit('finish-edit', self.box.get_child())
             self.box.unparent()
 
     def do_size_allocate(self, alloc):
@@ -185,6 +192,8 @@ class HackEntry(gtk.Entry):
 
         self.box.size_request()
         self.box.size_allocate(alloc)
+
+gobject.type_register(HackEntry)
 
 class CellRendererGroup(gtk.CellRendererText):
     __gtype_name__ = "CellRendererGroup"
@@ -269,6 +278,9 @@ class CellRendererProperty(CellRendererGroup):
         entry.box.add(self.editor)
         entry.box.show_all()
 
+        # Yeah. NAT our signal :)
+        entry.connect('finish-edit', self.tree.finish_callback)
+
         entry.size_allocate(background_area)
 
         # Yes type error - PyGTK bug #542583
@@ -306,6 +318,10 @@ class CellRendererIcon(gtk.CellRendererPixbuf):
 gobject.type_register(CellRendererIcon)
 
 class PropertyGridTree(gtk.ScrolledWindow):
+    __gsignals__ = {
+        'finish-edit' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, ))
+    }
+
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)
         
@@ -316,7 +332,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         col = gtk.TreeViewColumn('Property')
-        crt = CellRendererGroup(self.tree)
+        crt = CellRendererGroup(self)
 
         crt.set_property('xpad', 0)
         crt.set_property('cell-background-gdk',
@@ -339,7 +355,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.tree.append_column(col)
 
         col = gtk.TreeViewColumn('Value')
-        crt = CellRendererProperty(self.tree)
+        crt = CellRendererProperty(self)
 
         col.pack_start(crt, True)
         col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
@@ -353,6 +369,9 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.tree.set_enable_tree_lines(True) # This don't work with cell back
 
         self.add(self.tree)
+
+        self.icon_locked = get_pixbuf("locked_small")
+        self.finish_callback = self.__on_finish_edit
         
         class G(object):
             def __init__(self, name):
@@ -371,6 +390,9 @@ class PropertyGridTree(gtk.ScrolledWindow):
         it = self.store.append(it, [G("testing nested"), None])
         self.store.append(it, [None, P("string", "miao")])
         self.store.append(it, [None, P("boolean", True)])
+
+    def __on_finish_edit(self, entry, editor):
+        self.emit('finish-edit', entry)
 
     def __property_cell_func(self, col, cell, model, iter):
         cell.editor = None
@@ -427,10 +449,30 @@ class PropertyGridTree(gtk.ScrolledWindow):
         if obj:
             color = None
             if hasattr(obj, "readonly") and obj.readonly:
-                icon = gtk.gdk.pixbuf_new_from_file_at_size("icon_lock.png", 16, 16)
+                icon = self.icon_locked
         
         cell.set_property('cell-background-gdk', color)
         cell.set_property('pixbuf', icon)
+
+    def clear(self):
+        "Clear the store"
+        self.store.clear()
+
+    def populate(self, proto_inst):
+        """
+        Populate the store with the fields of Protocol
+        @param proto_inst a Protocol object instance
+        """
+
+        # TODO: implement me
+        
+        print "Populating", proto_inst
+
+        # We have to use the get_fields method
+        for field in proto_inst.get_fields():
+            print "Adding field", field
+
+gobject.type_register(PropertyGridTree)
 
 class PropertyGrid(gtk.VBox):
     def __init__(self):
@@ -446,6 +488,9 @@ class PropertyGrid(gtk.VBox):
         
         self.pack_start(self.tree)
         self.pack_start(self.frame, False, False)
+
+        self.clear = self.tree.clear
+        self.populate = self.tree.populate
 
     def __create_toolbar(self):
         pass

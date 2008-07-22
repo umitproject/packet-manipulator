@@ -1,3 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
 import gtk
 
 try:
@@ -21,6 +41,8 @@ class MainWindow(gtk.Window):
 
         self.set_title("Packet Manipulator")
         self.set_size_request(600, 400)
+        
+        self.registered_tabs = []
 
         self.__create_widgets()
         self.__pack_widgets()
@@ -71,7 +93,14 @@ class MainWindow(gtk.Window):
         self.protocols_tab = ProtocolSelectorTab()
         self.property_tab = PropertyTab()
         self.console_tab = ConsoleTab()
-        
+
+        # This should be moved to UmitPaned btw...
+        self.registered_tabs.append(self.main_tab)
+        self.registered_tabs.append(self.vte_tab)
+        self.registered_tabs.append(self.protocols_tab)
+        self.registered_tabs.append(self.property_tab)
+        self.registered_tabs.append(self.console_tab)
+
         self.vbox = gtk.VBox(False, 2)
 
     def __pack_widgets(self):
@@ -98,9 +127,12 @@ class MainWindow(gtk.Window):
     def __connect_signals(self):
         "Connect signals"
         self.connect('delete-event', lambda *w: gtk.main_quit())
-    
-    def run(self):
-        gtk.main()
+
+    def connect_tabs_signals(self):
+        "Used to connect signals between tabs"
+
+        for tab in self.registered_tabs:
+            tab.connect_tab_signals()
 
 if __name__ == "__main__":
     app = MainWindow()
