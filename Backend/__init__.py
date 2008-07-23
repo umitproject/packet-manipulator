@@ -50,4 +50,24 @@ def get_proto(proto_name):
     print "Protocol named %s not found." % proto_name
     return None
 
+def get_proto_name(proto_inst):
+    return proto_inst.__class__.__name__
+
+def get_field_name(proto_inst, field, trim_underscore=True):
+    # TODO: we should ask for a name attribute in field object
+    
+    ret = None
+
+    for f in proto_inst._ordered_fields:
+        if proto_inst._fields[f] is field:
+            ret = f
+            break
+
+    if ret and trim_underscore:
+        return ret.replace("_", "")
+    return ret
+
+def get_field_desc(field):
+    return field.__doc__
+
 gprotos = load_gprotocols()
