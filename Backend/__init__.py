@@ -1,7 +1,7 @@
 import os, os.path
 
 from umpa import protocols
-from umpa.protocols.base import Protocol
+from umpa.protocols._ import Protocol
 
 # Globals UMPA protocols
 gprotos = []
@@ -15,22 +15,27 @@ lprotos = []
 
 def load_gprotocols():
     path = protocols.__path__[0]
+    glob = []
 
     for fname in os.listdir(path):
-        if not fname.lower().endswith(".py"):
+        if not fname.lower().endswith(".py") or fname[0] == "_":
             continue
 
         try:
             # We'll try to load this
-            module = __import__("%s.%s" % (protocols.__name__,
-                                fname.replace(".py", "")))
+            module = __import__(
+                "%s.%s" % (protocols.__name__, fname.replace(".py", "")),
+                fromlist=[protocols]
+            )
+
+            glob.extend(
+                filter(lambda x: not isinstance(x, Protocol), module.protocols)
+            )
+
         except Exception, err:
             print "Ignoring exception", err
 
-    # This is a dirty hack becouse we could have multiple
-    # objects that derives protocols but aren't protocols
-    # like private classes.
-    return Protocol.__subclasses__()
+    return glob
 
 def get_protocols():
     """
@@ -69,5 +74,9 @@ def get_field_name(proto_inst, field, trim_underscore=True):
 
 def get_field_desc(field):
     return field.__doc__
+
+def get_flag_keys(flag_inst):
+    for key in flag_inst._ordered_fields:
+        yield key
 
 gprotos = load_gprotocols()
