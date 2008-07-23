@@ -209,7 +209,11 @@ class CellRendererGroup(gtk.CellRendererText):
         self.set_property('xalign', 0)
         self.set_property('xpad', 3)
 
+        # We use two fields (to avoid creating instances)
+        # - editor : containing the class for editor
+        # - field  : is the object to edit
         self.editor = None
+        self.field = None
 
         dummy_entry = gtk.Entry()
         dummy_entry.set_has_frame(False)
@@ -251,13 +255,13 @@ class CellRendererGroup(gtk.CellRendererText):
         
         cr.restore()
 
-        if self.editor:
+        if self.editor != None and self.field != None:
             if self.flags() & gtk.CELL_RENDERER_SELECTED:
                 state = gtk.STATE_SELECTED
             else:
                 state = gtk.STATE_NORMAL
 
-            if self.editor.render(window, widget, cell_area, state):
+            if self.editor(self.field).render(window, widget, cell_area, state):
                 return
         
         return gtk.CellRendererText.do_render(self, window, widget,
@@ -277,18 +281,22 @@ class CellRendererProperty(CellRendererGroup):
     def do_start_editing(self, event, widget, path, \
                          background_area, cell_area, flags):
 
-        entry = HackEntry()
+        if self.editor != None and self.field != None:
+            entry = HackEntry()
 
-        entry.box.add(self.editor)
-        entry.box.show_all()
+            entry.box.add(self.editor(self.field))
+            entry.box.show_all()
 
-        # Yeah. NAT our signal :)
-        entry.connect('finish-edit', self.tree.finish_callback)
+            entry.connect('finish-edit', self.tree.finish_callback)
+            entry.size_allocate(background_area)
 
-        entry.size_allocate(background_area)
+            self.editor = None
+            self.field = None
+
+            return entry
 
         # Yes type error - PyGTK bug #542583
-        return entry
+        return None
 
 gobject.type_register(CellRendererProperty)
 
@@ -397,7 +405,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.emit('finish-edit', entry)
 
     def __property_cell_func(self, col, cell, model, iter):
-        cell.editor = None
+        cell.editor, cell.field = None, None
         cell.set_property('editable', False)
         cell.set_property('text', '')
         
@@ -407,7 +415,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
             cell.set_property('editable', True)
             #FIXME: stringify?
             cell.set_property('markup', '<tt>%s</tt>' % obj.get())
-            
+
             #if isinstance(obj.value, bool):
             #    cell.editor = BitEditor(obj)
             #elif isinstance(obj.value, str):
