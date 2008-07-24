@@ -58,7 +58,7 @@ def get_proto(proto_name):
 def get_proto_name(proto_inst):
     return proto_inst.__class__.__name__
 
-def get_field_name(field, trim_underscore=True):
+def get_field_name(field):
     return field.name
 
 def get_field_desc(field):
@@ -68,4 +68,11 @@ def get_flag_keys(flag_inst):
     for key in flag_inst._ordered_fields:
         yield key
 
+def get_field_key(proto_inst, field_inst):
+    for key in proto_inst.__class__.get_fields_keys():
+        if field_inst == getattr(proto_inst, key, None):
+            return key
+
+    return None
+        
 gprotos = load_gprotocols()

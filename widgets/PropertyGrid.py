@@ -23,6 +23,9 @@ import cairo
 import pango
 import gobject
 
+# App
+import App
+
 # Protocol stuff
 import Backend
 from umpa.protocols import _ as base
@@ -348,7 +351,7 @@ gobject.type_register(CellRendererIcon)
 class PropertyGridTree(gtk.ScrolledWindow):
     __gsignals__ = {
         'finish-edit' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, )),
-        'desc-changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_STRING, ))
+        'desc-changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_STRING, )),
     }
 
     def __init__(self):
@@ -418,8 +421,25 @@ class PropertyGridTree(gtk.ScrolledWindow):
         else:
             proto = model.get_value(model.iter_parent(iter), 0)
             field = model.get_value(iter, 1)
+
+            if not isinstance(field, base.Field) or \
+               not isinstance(proto, base.Protocol):
+                return
             
             self.emit('desc-changed', Backend.get_field_desc(field))
+
+            # We should select also the bounds in HexView
+            nb = App.PMApp().main_window.main_tab.session_notebook
+            page = nb.get_nth_page(nb.get_current_page())
+
+            # The page *MUST* be a SessionPage otherwise the signal
+            # we cannot be here becouse this widget is insentive
+            # so no worry about it.
+
+            print Backend.get_field_key(proto, field)
+
+            print page.hexview, proto.get_offset(field)
+            
 
     def __on_finish_edit(self, entry, editor):
         self.emit('finish-edit', entry)
@@ -517,8 +537,6 @@ class PropertyGridTree(gtk.ScrolledWindow):
             flag_iter = self.store.append(root_iter, [None, field])
 
             if isinstance(field, base.Flags):
-                print field.get()
-
                 for flag in Backend.get_flag_keys(field):
                     self.store.append(flag_iter,
                         [None, BitField(field, flag, field.get(flag)[0])]

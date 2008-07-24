@@ -42,10 +42,10 @@ class UmitPaned(gtk.VBox):
         self.vnotebook.set_tab_pos(gtk.POS_BOTTOM)
 
         self.pack_start(self.vpaned)
-        self.vpaned.add2(self.vnotebook) # bottom
+        self.vpaned.pack2(self.vnotebook, False, True) # bottom
         
         self.vpaned.add1(self.hpaned)
-        self.hpaned.add1(self.hnotebook) # left
+        self.hpaned.pack1(self.hnotebook, False, True) # left
         
         self.show_all()
 
@@ -54,7 +54,7 @@ class UmitPaned(gtk.VBox):
 
         if pos == PANE_CENTER:
             if not self.hpaned.get_child2():
-                self.hpaned.add2(widget)
+                self.hpaned.pack2(widget, True, False)
                 return
 
         label = gtk.HBox()
