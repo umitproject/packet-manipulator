@@ -25,6 +25,7 @@ import gobject
 
 # Protocol stuff
 import Backend
+from umpa.protocols import _ as base
 
 # For the icons
 from Icons import get_pixbuf
@@ -46,10 +47,10 @@ class Editor(gtk.HBox):
     def connect_signals(self): pass
 
     def get_value(self):
-        return self.field.value
+        return self.field.get()
 
     def set_value(self, value):
-        self.field.value = value
+        self.field.set(value)
     
     def render(self, window, widget, bounds, state):
         return False
@@ -60,6 +61,10 @@ class IntEditor(Editor):
     # Check the tipe in __init__
 
     def create_widgets(self):
+        # Manage the None type
+        if not self.value:
+            self.value = 0
+
         self.calc_bounds()
         self.adj = gtk.Adjustment(self.value, self.min, self.max, 1, 2)
         self.spin = gtk.SpinButton(self.adj, digits=self.digits)
@@ -73,20 +78,14 @@ class IntEditor(Editor):
         self.spin.connect('value-changed', self.__on_changed)
     
     def calc_bounds(self):
-        import sys
-        
-        if isinstance(self.value, int):
-            self.min = -sys.maxint - 1
-            self.max = sys.maxint
-            self.digits = 0
-        elif isinstance(self.value, float):
-            # FIXME: i dunno here
-            self.min = -sys.maxint - 1
-            self.max = sys.maxint
-            self.digits = 2
-        else:
+        # Unsigned int / Int? :(
+        if self.field.bits:
             self.min = 0
-            self.max = 10
+            self.max = (2 ** self.field.bits) - 1 # (2 ^ n) - 1
+            self.digits = 0
+        elif isinstance(self.value, int):
+            self.min = -sys.maxint - 1
+            self.max = sys.maxint
             self.digits = 0
     
     def __on_changed(self, spin):
@@ -94,6 +93,21 @@ class IntEditor(Editor):
             self.value = self.spin.get_value_as_int()
         else:
             self.value = self.spin.get_value()
+
+class BitField(base.Field):
+    bits = 1
+    auto = False
+
+    def __init__(self, flag, name, value):
+        self.flag = flag
+        super(BitField, self).__init__(name, value, 1)
+
+    def set_value(self, val):
+        # Set to parent
+
+        self.set(val)
+
+    value = property(base.Field.get, set_value)
 
 class BitEditor(Editor):
     def create_widgets(self):
@@ -181,6 +195,8 @@ class HackEntry(gtk.Entry):
         else:
             self.emit('finish-edit', self.box.get_child())
             self.box.unparent()
+            self.box.hide()
+            self.box.destroy()
 
     def do_size_allocate(self, alloc):
         # I wanna be extra large! mc donalds rules
@@ -341,7 +357,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.store = gtk.TreeStore(object, object)
         self.tree = gtk.TreeView(self.store)
 
-        self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         col = gtk.TreeViewColumn('Property')
@@ -359,7 +375,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         col.pack_start(crt, True)
         col.set_resizable(True)
         col.set_expand(True)
-        col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+        #col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         col.set_fixed_width(180)
         col.set_attributes(crt)
         
@@ -371,7 +387,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         crt = CellRendererProperty(self)
 
         col.pack_start(crt, True)
-        col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+        #col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         col.set_resizable(False)
         col.set_expand(True)
         col.set_attributes(crt)
@@ -390,6 +406,10 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
     def __on_selection_changed(self, selection):
         model, iter = selection.get_selected()
+
+        if not iter:
+            return
+
         proto = model.get_value(iter, 0)
 
         if proto != None:
@@ -411,18 +431,22 @@ class PropertyGridTree(gtk.ScrolledWindow):
         
         obj = model.get_value(iter, 1)
         
-        if obj != None:
+        if isinstance(obj, base.Flags):
+            cell.set_property('cell-background-gdk',
+                              self.style.mid[gtk.STATE_NORMAL])
+        elif isinstance(obj, base.Field):
+            cell.field = obj
             cell.set_property('editable', True)
+
             #FIXME: stringify?
             cell.set_property('markup', '<tt>%s</tt>' % obj.get())
 
-            #if isinstance(obj.value, bool):
-            #    cell.editor = BitEditor(obj)
-            #elif isinstance(obj.value, str):
-            #    cell.editor = StrEditor(obj)
-            #elif isinstance(obj.value, int) or \
-            #     isinstance(obj.value, float):
-            #    cell.editor = IntEditor(obj)
+            if getattr(obj.__class__, 'bits', None) == 1:
+                cell.editor = BitEditor
+            elif isinstance(obj, base.IntField):
+                cell.editor = IntEditor
+            else:
+                cell.field = None
             
             cell.set_property('cell-background-gdk', None)
         else:
@@ -439,14 +463,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
             obj = model.get_value(iter, 1)
             proto = model.get_value(model.iter_parent(iter), 0)
             
-            if obj:
-                color = None
+            if isinstance(obj, base.Field):
+
+                if isinstance(obj, base.Flags):
+                    color = self.style.mid[gtk.STATE_NORMAL]
+                else:
+                    color = None
                 
-                # FIXME: how to know if the field is autogenerated? :(
-                #if obj.readonly:
-                #    markup = '<i>%s</i>' % Backend.get_field_name(proto, obj)
-                #else:
-                markup = '<b>%s</b>' % Backend.get_field_name(proto, obj)
+                if getattr(obj, 'auto', False) or \
+                   getattr(obj.__class__, 'auto', False):
+                    markup = '<i>%s</i>' % Backend.get_field_name(obj)
+                else:
+                    markup = '<b>%s</b>' % Backend.get_field_name(obj)
         else:
             markup = '<b>%s</b>' % Backend.get_proto_name(obj)
         
@@ -459,9 +487,15 @@ class PropertyGridTree(gtk.ScrolledWindow):
         
         icon, color = None, self.style.mid[gtk.STATE_NORMAL]
         
-        if obj:
-            color = None
-            if hasattr(obj, "readonly") and obj.readonly:
+        if isinstance(obj, base.Field):
+
+            if isinstance(obj, base.Flags):
+                color = self.style.mid[gtk.STATE_NORMAL]
+            else:
+                color = None
+
+            if getattr(obj, 'auto', False) or \
+               getattr(obj.__class__, 'auto', False):
                 icon = self.icon_locked
         
         cell.set_property('cell-background-gdk', color)
@@ -476,16 +510,19 @@ class PropertyGridTree(gtk.ScrolledWindow):
         Populate the store with the fields of Protocol
         @param proto_inst a Protocol object instance
         """
-
-        # TODO: implement me
-        
-        print "Populating", proto_inst
-        
         root_iter = self.store.append(None, [proto_inst, None])
 
         # We have to use the get_fields method
         for field in proto_inst.get_fields():
-            self.store.append(root_iter, [None, field])
+            flag_iter = self.store.append(root_iter, [None, field])
+
+            if isinstance(field, base.Flags):
+                print field.get()
+
+                for flag in Backend.get_flag_keys(field):
+                    self.store.append(flag_iter,
+                        [None, BitField(field, flag, field.get(flag)[0])]
+                    )
 
 gobject.type_register(PropertyGridTree)
 
@@ -501,14 +538,18 @@ class PropertyGrid(gtk.VBox):
     def __create_widgets(self):
         self.tree = PropertyGridTree()
 
-        self.frame = gtk.Frame("Description")
+        self.expander = gtk.Expander("Description")
+
         self.desc_label = gtk.Label()
         self.desc_label.set_alignment(0, 0.5)
         self.desc_label.set_single_line_mode(False)
-        self.frame.add(self.desc_label)
+        self.desc_label.set_line_wrap(True)
+        self.desc_label.modify_bg(gtk.STATE_NORMAL, self.style.base[gtk.STATE_SELECTED])
+        #self.desc_label.set_ellipsize(pango.ELLIPSIZE_END)
+        self.expander.add(self.desc_label)
         
         self.pack_start(self.tree)
-        self.pack_start(self.frame, False, False)
+        self.pack_start(self.expander, False, False)
 
         self.clear = self.tree.clear
         self.populate = self.tree.populate
@@ -517,6 +558,9 @@ class PropertyGrid(gtk.VBox):
         pass
 
     def __on_update_desc(self, tree, desc):
+        if not desc:
+            desc = ""
+
         self.desc_label.set_text("<tt>%s</tt>" % desc)
         self.desc_label.set_use_markup(True)
 

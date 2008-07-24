@@ -100,6 +100,8 @@ class SessionPage(gtk.VBox):
         self.proto_hierarchy = ProtocolHierarchy(proto)
         self.hexview = HexView()
 
+        self.hexview.show_payload(self.protocol.get_raw())
+
     def __pack_widgets(self):
         self.vpaned.pack1(self.proto_hierarchy)
         self.vpaned.pack2(self.hexview)
