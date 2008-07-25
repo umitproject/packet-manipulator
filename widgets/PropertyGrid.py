@@ -461,7 +461,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
             #FIXME: stringify?
             cell.set_property('markup', '<tt>%s</tt>' % obj.get())
 
-            if getattr(obj.__class__, 'bits', None) == 1:
+            if obj.bits == 1:
                 cell.editor = BitEditor
             elif isinstance(obj, base.IntField):
                 cell.editor = IntEditor
@@ -490,8 +490,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
                 else:
                     color = None
                 
-                if getattr(obj, 'auto', False) or \
-                   getattr(obj.__class__, 'auto', False):
+                if obj.auto:
                     markup = '<i>%s</i>' % Backend.get_field_name(obj)
                 else:
                     markup = '<b>%s</b>' % Backend.get_field_name(obj)
@@ -514,8 +513,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
             else:
                 color = None
 
-            if getattr(obj, 'auto', False) or \
-               getattr(obj.__class__, 'auto', False):
+            if obj.auto:
                 icon = self.icon_locked
         
         cell.set_property('cell-background-gdk', color)
