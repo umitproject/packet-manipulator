@@ -33,6 +33,9 @@ from umpa.protocols import _ as base
 # For the icons
 from Icons import get_pixbuf
 
+# Higwidgets
+from higwidgets.hignetwidgets import HIGIpEntry
+
 class Editor(gtk.HBox):
 
     def __init__(self, field):
@@ -74,7 +77,7 @@ class IntEditor(Editor):
 
     def pack_widgets(self):
         self.pack_start(self.spin)
-        self.spin.set_has_frame(False)
+        #self.spin.set_has_frame(False)
         self.spin.show()
     
     def connect_signals(self):
@@ -87,6 +90,8 @@ class IntEditor(Editor):
             self.max = (2 ** self.field.bits) - 1 # (2 ^ n) - 1
             self.digits = 0
         elif isinstance(self.value, int):
+            import sys
+            print "Hei man we are falling back to sys.maxint for", self.field
             self.min = -sys.maxint - 1
             self.max = sys.maxint
             self.digits = 0
@@ -102,15 +107,19 @@ class BitField(base.Field):
     auto = False
 
     def __init__(self, flag, name, value):
-        self.flag = flag
+        self.name = name
+        self.parent = flag
         super(BitField, self).__init__(name, value, 1)
 
-    def set_value(self, val):
-        # Set to parent
+    def set(self, val):
+        if val:
+            self.parent.set(self.name)
+        else:
+            self.parent.unset(self.name)
+        super(BitField, self).set(val)
 
-        self.set(val)
-
-    value = property(base.Field.get, set_value)
+    def _is_valid(self, val):
+        return True
 
 class BitEditor(Editor):
     def create_widgets(self):
@@ -169,6 +178,20 @@ class StrEditor(Editor):
 
     def __on_edit(self, widget):
         print "Yeah launch a dialog to edit the field"
+
+class IPv4Editor(Editor):
+    def create_widgets(self):
+        self.entry = HIGIpEntry()
+        #self.entry.set_has_frame(False)
+
+    def pack_widgets(self):
+        self.pack_start(self.entry)
+
+    def connect_signals(self):
+        self.entry.connect('changed', self.__on_changed)
+
+    def __on_changed(self, entry):
+        self.value = self.entry.get_text()
 
 class HackEntry(gtk.Entry):
     __gtype_name__ = "HackEntry"
@@ -458,13 +481,17 @@ class PropertyGridTree(gtk.ScrolledWindow):
             cell.field = obj
             cell.set_property('editable', True)
 
-            #FIXME: stringify?
-            cell.set_property('markup', '<tt>%s</tt>' % obj.get())
+            if not obj.get() is None:
+                cell.set_property('markup', '<tt>%s</tt>' % obj.get())
+            else:
+                cell.set_property('markup', '<tt>N/A</tt>')
 
             if obj.bits == 1:
                 cell.editor = BitEditor
             elif isinstance(obj, base.IntField):
                 cell.editor = IntEditor
+            elif isinstance(obj, base.IPv4Field):
+                cell.editor = IPv4Editor
             else:
                 cell.field = None
             

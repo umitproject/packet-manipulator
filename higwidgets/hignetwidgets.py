@@ -23,14 +23,18 @@ This module includes:
 - HIGIpEntry a simple IP widget
 """
 
-import gtk
 import re
+import gtk
+import gobject
 
 class HIGIpEntry(gtk.HBox):
     """
     A simple IP widget Entry
     """
     __gtype_name__ = "HIGIpEntry"
+    __gsignals__ = {
+        'changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
+    }
     regex = re.compile("\\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b")
 
     def __init__(self):
@@ -44,6 +48,8 @@ class HIGIpEntry(gtk.HBox):
         self._img_ok = gtk.image_new_from_stock(
                 gtk.STOCK_APPLY, gtk.ICON_SIZE_MENU
         )
+
+        self.has_frame = True
 
         redraw = lambda x, y, root: root.queue_draw() 
 
@@ -125,17 +131,10 @@ class HIGIpEntry(gtk.HBox):
         if HIGIpEntry.regex.match(self.text):
             self._img_error.hide()
             self._img_ok.show()
+            self.emit('changed')
         else:
             self._img_error.show()
             self._img_ok.hide()
-    def do_size_allocate(self, alloc):
-        x, y, w, h = alloc.x, alloc.y, alloc.width, alloc.height
-
-        alloc.width, alloc.height = self.size_request()
-        alloc.x = (w - alloc.width ) / 2 + x
-        alloc.y = (h - alloc.height) / 2 + y
-
-        return gtk.HBox.do_size_allocate(self, alloc)
 
     def do_expose_event(self, evt):
         alloc = self.allocation
@@ -144,25 +143,26 @@ class HIGIpEntry(gtk.HBox):
         if not self._current:
             self._current = self._entries[0]
 
-        self.style.paint_flat_box(
-            self.window, 
-            self._current.state,
-            self._current.get_property('shadow_type'),
-            alloc,
-            self._current,
-            'entry_bg',
-            rect.x, rect.y, rect.width, rect.height
-        )
+        if self.has_frame:
+            self.style.paint_flat_box(
+                self.window, 
+                self._current.state,
+                self._current.get_property('shadow_type'),
+                alloc,
+                self._current,
+                'entry_bg',
+                rect.x, rect.y, rect.width, rect.height
+            )
 
-        self.style.paint_shadow(
-            self.window, 
-            self._current.state,
-            self._current.get_property('shadow_type'),
-            alloc,
-            self._current,
-            'entry',
-            rect.x, rect.y, rect.width, rect.height
-        )
+            self.style.paint_shadow(
+                self.window, 
+                self._current.state,
+                self._current.get_property('shadow_type'),
+                alloc,
+                self._current,
+                'entry',
+                rect.x, rect.y, rect.width, rect.height
+            )
 
         return gtk.Bin.do_expose_event(self, evt)
 
@@ -175,7 +175,15 @@ class HIGIpEntry(gtk.HBox):
         if len(t) == 4:
             [e.set_text(v) for e, v in zip(self._entries, t)]
 
+    def set_has_frame(self, val):
+        self.has_frame = val
+
+    def get_has_frame(self):
+        return self.has_frame
+
     text = property(get_text, set_text)
+
+gobject.type_register(HIGIpEntry)
 
 if __name__ == "__main__":
     w = gtk.Window()
