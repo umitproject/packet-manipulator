@@ -32,6 +32,8 @@ from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
 from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
+from Dialogs.Preferences import PreferenceDialog
+
 from umitCore.I18N import _
 from umitCore.Paths import Path
 
@@ -54,18 +56,38 @@ class MainWindow(gtk.Window):
         "Create widgets"
 
         self.main_actions = [
-            ('File', None, _('_File'), None),
-            ('Import', gtk.STOCK_CONVERT, _('_Import'), None),
+            ('File', None, _('File'), None),
+            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o'),
+            ('Save', gtk.STOCK_SAVE, _('_Save packet'), '<Control>s', None, self.__on_save_template),
+            ('SaveAs', gtk.STOCK_SAVE, _('Save as'), None),
+            ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q'),
+
+            ('Options', None, ('Options'), None),
+            ('Preferences', gtk.STOCK_PREFERENCES, ('_Preferences'), '<Control>p', None, self.__on_preferences),
+
+            ('Help', None, _('Help'), None),
+            ('About', gtk.STOCK_ABOUT, _('About'), None, None, self.__on_about),
         ]
 
         self.default_ui = """<menubar>
             <menu action='File'>
-                <menuitem action='Import'/>
+                <menuitem action='Open'/>
+                <menuitem action='Save'/>
+                <menuitem action='SaveAs'/>
+                <separator/>
+                <menuitem action='Quit'/>
+            </menu>
+            <menu action='Options'>
+                <menuitem action='Preferences'/>
+            </menu>
+            <menu action='Help'>
+                <menuitem action='About'/>
             </menu>
             </menubar>
 
             <toolbar>
-            <toolitem action='Import'/>
+                <toolitem action='Open'/>
+                <toolitem action='Save'/>
             </toolbar>
             """
 
@@ -116,7 +138,7 @@ class MainWindow(gtk.Window):
 
         self.main_paned.add_view(PANE_CENTER, self.main_tab, False)
 
-        self.main_paned.add_view(PANE_LEFT, self.protocols_tab, False)
+        self.main_paned.add_view(PANE_RIGHT, self.protocols_tab, False)
         self.main_paned.add_view(PANE_RIGHT, self.property_tab, False)
 
         self.main_paned.add_view(PANE_BOTTOM, self.vte_tab, False)
@@ -133,6 +155,31 @@ class MainWindow(gtk.Window):
 
         for tab in self.registered_tabs:
             tab.connect_tab_signals()
+
+    def __on_save_template(self, action):
+        session = self.main_tab.get_current_session()
+
+        if not session:
+            return
+
+        print "Dumping XML structure for protocol", session.protocol
+
+    def __on_preferences(self, action):
+        dialog = PreferenceDialog(self)
+
+        dialog.run()
+        dialog.hide()
+        dialog.destroy()
+
+    def __on_about(self, action):
+        dialog = gtk.AboutDialog()
+
+        dialog.set_version("0.1")
+        dialog.set_comments("PacketManipulator is a visual packet forger")
+
+        dialog.run()
+        dialog.hide()
+        dialog.destroy()
 
 if __name__ == "__main__":
     app = MainWindow()

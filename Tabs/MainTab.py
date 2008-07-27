@@ -157,6 +157,20 @@ class MainTab(UmitView):
         self.__pack_widgets()
         self.__connect_signals()
 
+    def get_current_session(self):
+        "@returns the current SessionPage or None"
+        page = self.get_current_page()
+
+        if page and isinstance(page, SessionPage):
+            return page
+        return None
+
+    def get_current_page(self):
+        "@return the current page in notebook or None"
+
+        idx = self.session_notebook.get_current_page()
+        return self.session_notebook.get_nth_page(idx)
+
     #===========================================================================
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):

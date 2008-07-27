@@ -406,7 +406,6 @@ class PropertyGridTree(gtk.ScrolledWindow):
         col.set_expand(True)
         #col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         col.set_fixed_width(180)
-        col.set_attributes(crt)
         
         col.set_cell_data_func(crt, self.__group_cell_func)
         col.set_cell_data_func(pix, self.__pixbuf_cell_func)
@@ -423,6 +422,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
         col.set_cell_data_func(crt, self.__property_cell_func)
         self.tree.append_column(col)
+
         #self.tree.set_headers_visible(False)
         self.tree.set_enable_tree_lines(True) # This don't work with cell back
 
@@ -432,6 +432,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.finish_callback = self.__on_finish_edit
 
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
+        self.tree.connect('button-release-event', self.__on_button_release)
 
     def __on_selection_changed(self, selection):
         model, iter = selection.get_selected()
@@ -462,10 +463,29 @@ class PropertyGridTree(gtk.ScrolledWindow):
             # we cannot be here becouse this widget is insentive
             # so no worry about it.
 
-            print Backend.get_field_key(proto, field)
+            print page.hexview, proto.get_offset(field), field.bits
+    
+    def __on_button_release(self, widget, event):
+        # We should get the selection and show the popup
 
-            print page.hexview, proto.get_offset(field)
-            
+        if event.button != 3:
+            return
+
+        if not self.tree.get_selection().get_selected():
+            return
+
+        model, iter = self.tree.get_selection().get_selected()
+        field = model.get_value(iter, 1)
+
+        if not field or not isinstance(field, base.Field):
+            return
+
+        menu = gtk.Menu()
+        item = gtk.MenuItem("Toggle editability of %s" % field.name)
+        menu.append(item)
+
+        menu.show_all()
+        menu.popup(None, None, None, event.button, event.time)
 
     def __on_finish_edit(self, entry, editor):
         self.emit('finish-edit', entry)
