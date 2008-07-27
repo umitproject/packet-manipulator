@@ -58,7 +58,8 @@ class Editor(gtk.HBox):
     def set_value(self, value):
         self.field.set(value)
     
-    def render(self, window, widget, bounds, state):
+    @staticmethod
+    def render(field, window, widget, bounds, state):
         return False
 
     value = property(get_value, set_value)
@@ -136,8 +137,9 @@ class BitEditor(Editor):
     def __on_changed(self, btn):
         self.value = self.btn.get_active()
     
-    def render(self, window, widget, bounds, state):
-        if self.value:
+    @staticmethod
+    def render(field, window, widget, bounds, state):
+        if field.get():
             sh = gtk.SHADOW_IN
         else:
             sh = gtk.SHADOW_OUT
@@ -303,7 +305,8 @@ class CellRendererGroup(gtk.CellRendererText):
             else:
                 state = gtk.STATE_NORMAL
 
-            if self.editor(self.field).render(window, widget, cell_area, state):
+            # Don't create any instance. Use the static method instead
+            if self.editor.render(self.field, window, widget, cell_area, state):
                 return
         
         return gtk.CellRendererText.do_render(self, window, widget,
@@ -583,13 +586,19 @@ class PropertyGrid(gtk.VBox):
 
         self.expander = gtk.Expander("Description")
 
-        self.desc_label = gtk.Label()
-        self.desc_label.set_alignment(0, 0.5)
-        self.desc_label.set_single_line_mode(False)
-        self.desc_label.set_line_wrap(True)
-        self.desc_label.modify_bg(gtk.STATE_NORMAL, self.style.base[gtk.STATE_SELECTED])
-        #self.desc_label.set_ellipsize(pango.ELLIPSIZE_END)
-        self.expander.add(self.desc_label)
+        self.desc_text = gtk.TextView()
+        self.desc_text.set_wrap_mode(gtk.WRAP_WORD)
+        self.desc_text.set_size_request(1, 70)
+        self.desc_text.set_editable(False)
+        self.desc_text.set_left_margin(5)
+        self.desc_text.set_right_margin(5)
+
+        sw = gtk.ScrolledWindow()
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        sw.add(self.desc_text)
+
+        self.expander.add(sw)
         
         self.pack_start(self.tree)
         self.pack_start(self.expander, False, False)
@@ -604,8 +613,7 @@ class PropertyGrid(gtk.VBox):
         if not desc:
             desc = ""
 
-        self.desc_label.set_text("<tt>%s</tt>" % desc)
-        self.desc_label.set_use_markup(True)
+        self.desc_text.get_buffer().set_text(desc)
 
 if __name__ == "__main__":
     w = gtk.Window()
