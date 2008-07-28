@@ -18,12 +18,15 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import gtk
+from umitCore.I18N import _
+
 class InterfaceList(gtk.VBox):
     def __init__(self):
         super(InterfaceList, self).__init__(False, 2)
         self.set_border_width(4)
 
-        self.frame = gtk.Frame("Interfaces:")
+        self.frame = gtk.Frame(_('Interfaces:'))
 
         # Stock, Name, Desc, IP, Packets
         self.store = gtk.ListStore(str, str, str, str, int)
@@ -32,7 +35,7 @@ class InterfaceList(gtk.VBox):
         pix_renderer = gtk.CellRendererPixbuf()
         txt_renderer = gtk.CellRendererText()
 
-        col = gtk.TreeViewColumn('Name')
+        col = gtk.TreeViewColumn(_('Name'))
         col.pack_start(pix_renderer, False)
         col.pack_start(txt_renderer)
         
@@ -41,14 +44,11 @@ class InterfaceList(gtk.VBox):
 
         self.tree.append_column(col)
         
-        col = gtk.TreeViewColumn('Description', gtk.CellRendererText(), text=2)
-        self.tree.append_column(col)
-        
-        col = gtk.TreeViewColumn('IP', gtk.CellRendererText(), text=3)
-        self.tree.append_column(col)
-        
-        col = gtk.TreeViewColumn('Packets', gtk.CellRendererText(), text=4)
-        self.tree.append_column(col)
+        idx = 2
+        for name in (_('Description'), _('IP'), _('Packets')):
+            col = gtk.TreeViewColumn(name, gtk.CellRendererText(), text=idx)
+            self.tree.append_column(col)
+            idx += 1
         
         self.tree.set_rules_hint(True)
         
@@ -79,7 +79,7 @@ class InterfaceList(gtk.VBox):
 class InterfaceDialog(gtk.Dialog):
     def __init__(self, parent):
         super(InterfaceDialog, self).__init__(
-            "Interfaces - PacketManipulator", parent,
+            _('Interfaces - PacketManipulator'), parent,
             gtk.DIALOG_DESTROY_WITH_PARENT,
             (gtk.STOCK_CLOSE, gtk.RESPONSE_REJECT,
              gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT)
