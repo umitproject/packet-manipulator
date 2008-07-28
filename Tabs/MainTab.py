@@ -133,11 +133,25 @@ class MainTab(UmitView):
     def __create_widgets(self):
         "Create the widgets"
         self.vbox = gtk.VBox()
+
+        self.sniff_expander = gtk.Expander("Sniff perspective")
+        self.packet_expander = gtk.Expander("Packet perspective")
+
         self.session_notebook = SessionNotebook()
 
     def __pack_widgets(self):
         "Pack the widgets"
-        self.vbox.pack_start(self.session_notebook)
+
+        # In the main window we have a perspective like
+        # + Sniff (expander)
+        # |- Protocol Hierarchy (like wireshark)
+        # |_ Hex View (containing the dump of the packet)
+        
+        self.vbox.pack_start(self.sniff_expander, False, False)
+        self.vbox.pack_start(self.packet_expander)
+
+        self.packet_expander.add(self.session_notebook)
+        #self.vbox.pack_start(self.session_notebook)
 
         self.session_notebook.drag_dest_set(
             gtk.DEST_DEFAULT_ALL,
