@@ -26,7 +26,13 @@ class InterfaceList(gtk.VBox):
         super(InterfaceList, self).__init__(False, 2)
         self.set_border_width(4)
 
-        self.frame = gtk.Frame(_('Interfaces:'))
+        self.frame = gtk.Frame()
+        self.frame.set_shadow_type(gtk.SHADOW_NONE)
+
+        lbl = gtk.Label(_('<b>Avaiable Interfaces:</b>'))
+        lbl.set_use_markup(True)
+
+        self.frame.set_label_widget(lbl)
 
         # Stock, Name, Desc, IP, Packets
         self.store = gtk.ListStore(str, str, str, str, int)
@@ -88,7 +94,8 @@ class InterfaceDialog(gtk.Dialog):
         self.if_list = InterfaceList()
         self.vbox.pack_start(self.if_list)
         
-        self.if_list.show()
+        self.if_list.show_all()
+        self.set_size_request(500, 200)
     
     def get_selected(self):
         "@return the selected interface for sniffing or None"

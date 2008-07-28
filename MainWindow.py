@@ -32,6 +32,7 @@ from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
 from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
+from Dialogs.Interface import InterfaceDialog
 from Dialogs.Preferences import PreferenceDialog
 
 from umitCore.I18N import _
@@ -61,9 +62,12 @@ class MainWindow(gtk.Window):
             ('Save', gtk.STOCK_SAVE, _('_Save packet'), '<Control>s', None, self.__on_save_template),
             ('SaveAs', gtk.STOCK_SAVE, _('Save as'), None),
             ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q'),
+            
+            ('Capture', None, _('Capture'), None),
+            ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i', None, self.__on_select_iface),
 
-            ('Options', None, ('Options'), None),
-            ('Preferences', gtk.STOCK_PREFERENCES, ('_Preferences'), '<Control>p', None, self.__on_preferences),
+            ('Options', None, _('Options'), None),
+            ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'), '<Control>p', None, self.__on_preferences),
 
             ('Help', None, _('Help'), None),
             ('About', gtk.STOCK_ABOUT, _('About'), None, None, self.__on_about),
@@ -76,6 +80,9 @@ class MainWindow(gtk.Window):
                 <menuitem action='SaveAs'/>
                 <separator/>
                 <menuitem action='Quit'/>
+            </menu>
+            <menu action='Capture'>
+                <menuitem action='Interface'/>
             </menu>
             <menu action='Options'>
                 <menuitem action='Preferences'/>
@@ -176,6 +183,13 @@ class MainWindow(gtk.Window):
 
         dialog.set_version("0.1")
         dialog.set_comments("PacketManipulator is a visual packet forger")
+
+        dialog.run()
+        dialog.hide()
+        dialog.destroy()
+
+    def __on_select_iface(self, action):
+        dialog = InterfaceDialog(self)
 
         dialog.run()
         dialog.hide()
