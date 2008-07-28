@@ -94,5 +94,20 @@ def get_field_key(proto_inst, field_inst):
             return key
 
     return None
-        
+
+class VirtualIFace:
+    def __init__(self, name, desc, ip):
+        self.name = name
+        self.description = desc
+        self.ip = ip
+
+def find_all_devs():
+    "@return a list of avaiable devices to sniff from (use generators)"
+    
+    # TODO: implement real code
+    
+    for i in (VirtualIFace("eth0", "Ethernet", "192.168.1.0"),
+               VirtualIFace("wlan0", "Wireless", "172.16.0.1")):
+        yield i
+
 gprotos = load_gprotocols()

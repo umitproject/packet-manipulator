@@ -192,6 +192,8 @@ class MainWindow(gtk.Window):
         dialog = InterfaceDialog(self)
 
         dialog.run()
+        
+        print "IFace selected:", dialog.get_selected()
         dialog.hide()
         dialog.destroy()
 

@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import Backend
+
 from umitCore.I18N import _
 
 class InterfaceList(gtk.VBox):
@@ -34,8 +36,8 @@ class InterfaceList(gtk.VBox):
 
         self.frame.set_label_widget(lbl)
 
-        # Stock, Name, Desc, IP, Packets
-        self.store = gtk.ListStore(str, str, str, str, int)
+        # Stock, Name, Desc, IP
+        self.store = gtk.ListStore(str, str, str, str)
         self.tree = gtk.TreeView(self.store)
 
         pix_renderer = gtk.CellRendererPixbuf()
@@ -51,7 +53,7 @@ class InterfaceList(gtk.VBox):
         self.tree.append_column(col)
         
         idx = 2
-        for name in (_('Description'), _('IP'), _('Packets')):
+        for name in (_('Description'), _('IP')):
             col = gtk.TreeViewColumn(name, gtk.CellRendererText(), text=idx)
             self.tree.append_column(col)
             idx += 1
@@ -71,8 +73,10 @@ class InterfaceList(gtk.VBox):
         self.__populate()
 
     def __populate(self):
-        # TODO: implement me
-        pass
+        for iface in Backend.find_all_devs():
+            self.store.append(
+                [gtk.STOCK_CONNECT, iface.name, iface.description, iface.ip]
+            )
     
     def get_selected(self):
         if not self.tree.get_selection().get_selected():
