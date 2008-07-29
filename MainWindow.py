@@ -26,7 +26,7 @@ except ImportError:
     print "moo not installed. Using fallback UmitPaned .."
     from fallbackpaned import *
 
-from Tabs.VteTab import VteTab
+#from Tabs.VteTab import VteTab
 from Tabs.MainTab import MainTab
 from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
@@ -118,14 +118,14 @@ class MainWindow(gtk.Window):
         self.main_tab = MainTab()
 
         # Tabs
-        self.vte_tab = VteTab()
+        #self.vte_tab = VteTab()
         self.protocols_tab = ProtocolSelectorTab()
         self.property_tab = PropertyTab()
         self.console_tab = ConsoleTab()
 
         # This should be moved to UmitPaned btw...
         self.registered_tabs.append(self.main_tab)
-        self.registered_tabs.append(self.vte_tab)
+        #self.registered_tabs.append(self.vte_tab)
         self.registered_tabs.append(self.protocols_tab)
         self.registered_tabs.append(self.property_tab)
         self.registered_tabs.append(self.console_tab)
@@ -148,7 +148,7 @@ class MainWindow(gtk.Window):
         self.main_paned.add_view(PANE_RIGHT, self.protocols_tab, False)
         self.main_paned.add_view(PANE_RIGHT, self.property_tab, False)
 
-        self.main_paned.add_view(PANE_BOTTOM, self.vte_tab, False)
+        #self.main_paned.add_view(PANE_BOTTOM, self.vte_tab, False)
         self.main_paned.add_view(PANE_BOTTOM, self.console_tab, False)
 
         self.add(self.vbox)
