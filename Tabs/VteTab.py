@@ -18,36 +18,54 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-import vte
 import gtk
 import gobject
 
 from views import UmitView
 
 class TerminalWidget(gtk.Bin):
+    __gtype_name__ = "TerminalWidget"
+
     def __init__(self):
         super(TerminalWidget, self).__init__()
-
-        self.term = vte.Terminal()
-        self.term.fork_command()
-
         self.__termbox = gtk.HBox()
-        self.__scroll = gtk.VScrollbar(self.term.get_adjustment())
-        border = gtk.Frame()
-        border.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        border.add(self.term)
-        self.__termbox.pack_start(border)
-        self.__termbox.pack_start(self.__scroll, False)
         self.add(self.__termbox)
 
+        try:
+            import vtesd
+
+            self.term = vte.Terminal()
+            self.term.fork_command()
+
+            self.__scroll = gtk.VScrollbar(self.term.get_adjustment())
+            border = gtk.Frame()
+            border.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+            border.add(self.term)
+
+            self.__termbox.pack_start(border)
+            self.__termbox.pack_start(self.__scroll, False)
+
+            self.term.set_size_request(0, 0)
+        except ImportError:
+            label = gtk.Label(
+                "<b>Loser!</b> You don't have vte python bindings installed.\n"
+                "Download it from <tt>http://ftp.acc.umu.se/pub/GNOME/sources/vte/</tt>"
+            )
+
+            label.set_use_markup(True)
+            label.set_selectable(True)
+
+            self.__termbox.pack_start(label)
+
+        self.show_all()
+
     def do_size_request(self, req):
-        (w,h) = self.__termbox.size_request()
+        w, h = self.__termbox.size_request()
         req.width = w
         req.height = h
 
     def do_size_allocate(self, alloc):
-        self.allocation = alloc
-        wid_req = self.__termbox.size_allocate(alloc)
+        return self.__termbox.size_allocate(alloc)
 
 gobject.type_register(TerminalWidget)
 
