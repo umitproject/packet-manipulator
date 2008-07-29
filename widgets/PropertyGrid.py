@@ -513,7 +513,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
                 cell.editor = BitEditor
             elif isinstance(obj, base.IntField):
                 cell.editor = IntEditor
-            elif isinstance(obj, base.IPv4Field):
+            elif isinstance(obj, base.IPv4AddrField):
                 cell.editor = IPv4Editor
             else:
                 cell.field = None
