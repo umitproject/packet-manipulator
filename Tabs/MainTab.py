@@ -22,6 +22,8 @@ import gtk
 import Backend
 
 from widgets.HexView import HexView
+from widgets.Expander import AnimatedExpander
+
 from views import UmitView
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
@@ -134,8 +136,8 @@ class MainTab(UmitView):
         "Create the widgets"
         self.vbox = gtk.VBox()
 
-        self.sniff_expander = gtk.Expander("Sniff perspective")
-        self.packet_expander = gtk.Expander("Packet perspective")
+        self.sniff_expander = AnimatedExpander("<b>Sniff perspective</b>")
+        self.packet_expander = AnimatedExpander("<b>Packet perspective</b>")
 
         self.session_notebook = SessionNotebook()
 
@@ -151,6 +153,7 @@ class MainTab(UmitView):
         self.vbox.pack_start(self.packet_expander)
 
         self.packet_expander.add(self.session_notebook)
+        self.sniff_expander.add(gtk.Button("Miao"))
         #self.vbox.pack_start(self.session_notebook)
 
         self.session_notebook.drag_dest_set(

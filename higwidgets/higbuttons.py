@@ -26,7 +26,7 @@ higwidgets/higbuttons.py
    button related classes
 """
 
-__all__ = ['HIGMixButton', 'HIGButton']
+__all__ = ['HIGMixButton', 'HIGButton', 'HIGArrowButton']
 
 import gtk
 import gobject
@@ -74,7 +74,7 @@ class HIGToggleButton(gtk.ToggleButton):
         else:
             gtk.ToggleButton.__init__(self)
 
-class HIGArrowButton(gtk.ToggleButton):
+class HIGArrowButton(gtk.Button):
     __gtype_name__ = "HIGArrowButton"
 
     def __init__(self, orient, label=None):
@@ -82,20 +82,23 @@ class HIGArrowButton(gtk.ToggleButton):
         
         # Fascist mode!
         self.arrow = gtk.Arrow(gtk.ARROW_RIGHT, gtk.SHADOW_ETCHED_IN)
+
+        # No genocide yet :)
+        self._active = False
         self.orientation = orient
 
-        self.label = gtk.Label(label)
+        self.label = gtk.Label()
+        
+        if label:
+            self.label.set_text(label)
+            self.label.set_use_markup(True)
 
         hbox = gtk.HBox(False, 2)
         hbox.pack_start(self.arrow)
         hbox.pack_start(self.label)
         hbox.show_all()
 
-        self.add(self.arrow)
-
-    def do_toggled(self):
-        # Simply trigget the set_orientation
-        self.orientation = self.orientation
+        self.add(hbox)
 
     def set_orientation(self, orient):
         shadow = self.arrow.get_property("shadow-type")
@@ -125,7 +128,15 @@ class HIGArrowButton(gtk.ToggleButton):
     def get_shadow(self, value):
         return self.arrow.get_property("shadow-type")
 
+    def get_active(self):
+        return self._active
+
+    def set_active(self, val):
+        self._active = val
+        self.orientation = self.orientation
+
     orientation = property(get_orientation, set_orientation)
     shadow_type = property(get_shadow, set_shadow)
+    active      = property(get_active, set_active)
 
 gobject.type_register(HIGArrowButton)
