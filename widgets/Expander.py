@@ -85,7 +85,9 @@ class AnimatedExpander(gtk.VBox):
     def do_size_allocate(self, allocation):
         ret = gtk.VBox.do_size_allocate(self, allocation)
 
-        if self.child:
+        if self.animating:
+            self.layout.show()
+        elif self.child and not self.animating:
             alloc = self.layout.get_allocation()
             w, h = alloc.width, alloc.height
             
@@ -105,13 +107,10 @@ class AnimatedExpander(gtk.VBox):
 
             self.child.size_allocate(alloc)
             
-            if self.animating:
+            if self.to_show:
                 self.layout.show()
             else:
-                if self.to_show:
-                    self.layout.show()
-                else:
-                    self.layout.hide()
+                self.layout.hide()
         
         return ret
 

@@ -32,7 +32,7 @@ class TerminalWidget(gtk.Bin):
         self.add(self.__termbox)
 
         try:
-            import vtesd
+            import vte
 
             self.term = vte.Terminal()
             self.term.fork_command()
