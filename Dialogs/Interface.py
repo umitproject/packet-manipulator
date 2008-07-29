@@ -79,11 +79,12 @@ class InterfaceList(gtk.VBox):
             )
     
     def get_selected(self):
-        if not self.tree.get_selection().get_selected():
-            return None
+        model, iter = self.tree.get_selection().get_selected()
+
+        if not iter:
+            return
         
         # The first column is the name
-        model, iter = self.tree.get_selection().get_selected()
         return model.get_value(iter, 1)
 
 class InterfaceDialog(gtk.Dialog):

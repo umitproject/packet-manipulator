@@ -28,6 +28,7 @@ except ImportError:
 
 from Tabs.VteTab import VteTab
 from Tabs.MainTab import MainTab
+from Tabs.HackTab import HackTab
 from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
 from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
@@ -119,6 +120,7 @@ class MainWindow(gtk.Window):
 
         # Tabs
         self.vte_tab = VteTab()
+        self.hack_tab = HackTab()
         self.protocols_tab = ProtocolSelectorTab()
         self.property_tab = PropertyTab()
         self.console_tab = ConsoleTab()
@@ -126,6 +128,7 @@ class MainWindow(gtk.Window):
         # This should be moved to UmitPaned btw...
         self.registered_tabs.append(self.main_tab)
         self.registered_tabs.append(self.vte_tab)
+        self.registered_tabs.append(self.hack_tab)
         self.registered_tabs.append(self.protocols_tab)
         self.registered_tabs.append(self.property_tab)
         self.registered_tabs.append(self.console_tab)
@@ -150,6 +153,7 @@ class MainWindow(gtk.Window):
 
         self.main_paned.add_view(PANE_BOTTOM, self.vte_tab, False)
         self.main_paned.add_view(PANE_BOTTOM, self.console_tab, False)
+        self.main_paned.add_view(PANE_BOTTOM, self.hack_tab, False)
 
         self.add(self.vbox)
 
