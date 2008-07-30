@@ -173,13 +173,16 @@ class HackBar(gtk.VBox):
             if not txt or txt == "":
                 return False
 
-            txt = func(args[0], txt)
+            try:
+                txt = func(args[0], txt)
 
-            if txt:
-                args[0].set_selection(txt)
-                return True
-
-            return False
+                if txt:
+                    args[0].set_selection(txt)
+                    return True
+                
+                return False
+            except Exception:
+                return False
 
         return get_text
 
