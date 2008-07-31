@@ -35,6 +35,7 @@ from Icons import get_pixbuf
 
 # Higwidgets
 from higwidgets.hignetwidgets import HIGIpEntry
+from widgets.Expander import AnimatedExpander
 
 class Editor(gtk.HBox):
 
@@ -594,7 +595,9 @@ gobject.type_register(PropertyGridTree)
 
 class PropertyGrid(gtk.VBox):
     def __init__(self):
-        gtk.VBox.__init__(self)
+        gtk.VBox.__init__(self, False, 2)
+
+        self.set_border_width(2)
 
         self.__create_toolbar()
         self.__create_widgets()
@@ -604,11 +607,9 @@ class PropertyGrid(gtk.VBox):
     def __create_widgets(self):
         self.tree = PropertyGridTree()
 
-        self.expander = gtk.Expander("Description")
-
         self.desc_text = gtk.TextView()
         self.desc_text.set_wrap_mode(gtk.WRAP_WORD)
-        self.desc_text.set_size_request(1, 70)
+        #self.desc_text.set_size_request(1, 70)
         self.desc_text.set_editable(False)
         self.desc_text.set_left_margin(5)
         self.desc_text.set_right_margin(5)
@@ -618,10 +619,15 @@ class PropertyGrid(gtk.VBox):
         sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         sw.add(self.desc_text)
 
-        self.expander.add(sw)
-        
-        self.pack_start(self.tree)
-        self.pack_start(self.expander, False, False)
+        expander = AnimatedExpander('Protocol')
+        expander.add(self.tree)
+
+        self.pack_start(expander)
+
+        expander = AnimatedExpander('Description')
+        expander.add(sw)
+
+        self.pack_start(expander, False, False)
 
         self.clear = self.tree.clear
         self.populate = self.tree.populate
