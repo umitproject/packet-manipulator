@@ -82,6 +82,7 @@ class Layout(gtk.Container):
         self._vadj_changed_id = -1
 
         self._animating = False
+        self._stupid = False
         self._to_show = True
 
         self._current = 0
@@ -152,11 +153,14 @@ class Layout(gtk.Container):
         self._bin_window.set_user_data(self)
 
         self.set_style(self.style.attach(self.window))
-        self.style.set_background(self.window, gtk.STATE_NORMAL)
-        self.style.set_background(self._bin_window, gtk.STATE_NORMAL)
+        self.style.set_background(self.window, gtk.STATE_INSENSITIVE)
+        self.style.set_background(self._bin_window, gtk.STATE_SELECTED)
 
         if self._child:
             self._child.widget.set_parent_window(self._bin_window)
+
+        if not self._to_show:
+            self.hide()
 
         self.queue_resize()
 
@@ -196,12 +200,14 @@ class Layout(gtk.Container):
         req.width = 0
         req.height = 0
 
-        if self._child and (self._animating or self._to_show):
-        #if self._child:
+        #if self._child and (self._animating or self._to_show):
+        if self._child:
             req.width, req.height = self._child.widget.size_request()
 
     def do_size_allocate(self, allocation):
         self.allocation = allocation
+
+        print "do_size_allocate", allocation.width, allocation.height
 
         if self._child:
             rect = gdk.Rectangle(self._child.x, self._child.y,
@@ -225,6 +231,33 @@ class Layout(gtk.Container):
         self._vadj.upper = max(allocation.height, self._height)
         set_adjustment_upper(self._vadj,
                              max(allocation.height, self._height), True)
+
+        # We should move also the child
+        if self._child and self._stupid:
+            if self._to_show:
+                self._current = 0
+            else:
+                self._current = -max(self._height, allocation.height)
+
+            self._move(0, self._current)
+
+        if self._stupid:
+            self._stupid = False
+
+            self._to_show = not self._to_show
+            self._speed = max(max(self._height, allocation.height) / (self._time_tot / self._time_int), 1)
+            self._child.widget.set_sensitive(False)
+
+            if self._to_show:
+                self._dest = 0
+            else:
+                self._dest = -self.allocation.height
+                self._dest = -max(self._height, allocation.height)
+
+            print self._current, "to", self._dest
+            print self.size_request()
+
+            gobject.timeout_add(self._time_int, self._do_animation)
 
     def do_set_scroll_adjustments(self, hadj, vadj):
         self._set_adjustments(hadj, vadj)
@@ -313,9 +346,6 @@ class Layout(gtk.Container):
                 self._move(0, self._current)
 
                 return True
-
-            self._current = 0
-            self._move(0, self._current)
         else:
             if self._current > self._dest:
                 self._current -= self._speed
@@ -323,34 +353,52 @@ class Layout(gtk.Container):
 
                 return True
 
+        self._animating = False
+        self._set_expanded()
+        self.emit('animation-end', self._to_show)
+        self._child.widget.set_sensitive(True)
+
+        return False
+
+    def set_expanded(self, val):
+        if self._animating:
+            return False
+
+        self._to_show = val
+        self._set_expanded()
+
+        return True
+
+    def _set_expanded(self):
+        print "_set_expanded ", self._to_show
+
+        if self._to_show:
+            self._current = 0
+            self._move(0, self._current)
+
+            self.show()
+        else:
             self._current = -self.allocation.height
             self._move(0, self._current)
 
             self.hide()
 
-        self.emit('animation-end', self._to_show)
-        self._child.widget.set_sensitive(True)
-        return False
+        print "Current:", self._current
 
     def toggle_animation(self):
         if self._animating or not self._child:
             return False
 
-        self._to_show = not self._to_show
-        self._speed = max(self.allocation.height / (self._time_tot / self._time_int), 1)
-        self._child.widget.set_sensitive(False)
+        self._animating = True
+        self._stupid = True
 
-        if self._to_show:
-            self.show()
-            self.set_size_request(-1, -1)
-            self._dest = 0
-        else:
-            self.set_size_request(0, 0)
-            self._dest = -self.allocation.height
-
-        gobject.timeout_add(self._time_int, self._do_animation)
+        self.show()
+        self.queue_resize()
 
         return True
+
+    def get_active(self):
+        return self._to_show
 
 Layout.set_set_scroll_adjustments_signal('set-scroll-adjustments')
 
@@ -365,7 +413,7 @@ class AnimatedExpander(gtk.VBox):
         
         self._arrow = HIGArrowButton(gtk.ORIENTATION_VERTICAL)
         self._arrow.set_relief(gtk.RELIEF_NONE)
-        self._arrow.connect('clicked', self.__on_toggle)
+        self._arrow.connect('clicked', self.do_toggle_animation)
         
         self._label = gtk.Label()
         self._label.set_alignment(0, 0.5)
@@ -410,8 +458,8 @@ class AnimatedExpander(gtk.VBox):
         @param show if the widget should be showed
         """
 
-        #FIXME: this
         self._layout.add(widget)
+        self._layout.set_expanded(show)
 
     def add(self, widget):
         self.add_widget(widget, True)
@@ -426,7 +474,7 @@ class AnimatedExpander(gtk.VBox):
         self._label.set_text(txt)
         self._label.set_use_markup(True)
 
-    def __on_toggle(self, btn):
+    def do_toggle_animation(self, btn):
         if self._layout.toggle_animation():
             self._arrow.set_active(not self._arrow.get_active())
     
@@ -448,14 +496,30 @@ class ToolPage(AnimatedExpander):
         self._parent = parent
         self._active = False
 
-        self._layout.connect('animation-end', lambda w, v: self.set_active(v))
+        self._layout.connect('animation-end', self.__on_end_anim)
 
-    def get_active(self):
-        return self._active
+    def __on_end_anim(self, blah, val):
+        if self._parent._active_page == self and \
+           not self._layout.get_active():
+            # Second stage! :(
+            self._parent.set_active_page(None)
 
-    def set_active(self, val):
-        self._active = val
-        self._parent.realloc(self)
+    def do_toggle_animation(self, btn):
+        if self._layout.get_active():
+            # We are active so we have our children naked!
+            # what should we do?
+
+            # animation -> repack to false false
+
+            if self._parent._active_page != self:
+                raise Excepion("Bad day baby!")
+
+            self._layout.toggle_animation()
+        else:
+            # Show you!
+
+            self._parent.set_active_page(self)
+            self._layout.toggle_animation()
 
 class ToolBox(gtk.VBox):
     def __init__(self):
@@ -467,23 +531,29 @@ class ToolBox(gtk.VBox):
 
     def append_page(self, child, txt):
         page = ToolPage(self, txt)
-        page.add(child)
+        page.add_widget(child, False)
 
+        self.pack_start(page)
         self._pages.append(page)
+        self.set_active_page(page)
 
+    def set_expanded(self, page, val):
+        """
+        Change the packing of the page
+        @param page the page for changes
+        @param val if should be expanded
+        """
+        page._layout.set_expanded(val)
+        self.set_child_packing(page, val, val, 0, gtk.PACK_START)
+
+    def set_active_page(self, page=None):
+        if self._active_page:
+            self.set_expanded(self._active_page, False)
 
         self._active_page = page
-        self.pack_start(page, True, True)
 
-    def realloc(self, page):
-        if page.get_active():
+        if page:
             self.set_child_packing(page, True, True, 0, gtk.PACK_START)
-
-            if self._active_page:
-                self._active_page.set_active(False)
-                self._active_page = page
-        else:
-            self.set_child_packing(page, False, False, 0, gtk.PACK_START)
 
 def main(klass):
     w = gtk.Window()
@@ -492,7 +562,7 @@ def main(klass):
     sw = gtk.ScrolledWindow()
     sw.add(gtk.TextView())
     sw.set_size_request(400, 400)
-    
+
     exp = klass("miao")
     exp.add(sw)
 
@@ -500,7 +570,7 @@ def main(klass):
 
     sw = gtk.ScrolledWindow()
     sw.add(gtk.TextView())
-    
+
     exp = klass("miao")
     exp.add(sw)
     vbox.pack_start(exp)
