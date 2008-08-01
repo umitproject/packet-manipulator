@@ -489,7 +489,7 @@ class AnimatedExpander(gtk.VBox):
         return self._image
     
     def set_image(self, stock):
-        self._image.set_from_stock(stock, gtk.ICON_SIZE_BUTTON)
+        self._image.set_from_stock(stock, gtk.ICON_SIZE_MENU)
 
     label = property(get_label, set_label)
     image = property(get_image, set_image)

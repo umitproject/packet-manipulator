@@ -609,7 +609,6 @@ class PropertyGrid(gtk.VBox):
 
         self.desc_text = gtk.TextView()
         self.desc_text.set_wrap_mode(gtk.WRAP_WORD)
-        #self.desc_text.set_size_request(1, 70)
         self.desc_text.set_editable(False)
         self.desc_text.set_left_margin(5)
         self.desc_text.set_right_margin(5)
@@ -619,10 +618,12 @@ class PropertyGrid(gtk.VBox):
         sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         sw.add(self.desc_text)
 
+        sw.set_size_request(30, 100)
+
         if True:
             toolbox = ToolBox()
-            toolbox.append_page(self.tree, 'Protocol')
-            toolbox.append_page(sw, 'Description', expand=False)
+            toolbox.append_page(self.tree, '<b>Protocol</b>', gtk.STOCK_CONNECT)
+            toolbox.append_page(sw, '<b>Description</b>', gtk.STOCK_JUSTIFY_FILL, expand=False)
             self.pack_start(toolbox)
         else:
 
