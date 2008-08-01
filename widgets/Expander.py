@@ -36,6 +36,8 @@ from higwidgets.higbuttons import HIGArrowButton
 #
 # Requires PyGTK 2.8.0 or later
 
+__all__ = ['AnimatedExpander', 'ToolBox']
+
 class Child:
     widget = None
     x = 0
@@ -177,6 +179,17 @@ class Layout(gtk.Container):
             self.style.set_background(self._bin_window, gtk.STATE_NORMAL)
 
     def do_expose_event(self, event):
+        if self._animating:
+            if not self.flags() & gtk.VISIBLE:
+                self.show()
+        else:
+            if self._to_show:
+                if not self.flags() & gtk.VISIBLE:
+                    self.show()
+            else:
+                if self.flags() & gtk.VISIBLE:
+                    self.hide()
+
         if event.window != self._bin_window:
             return False
 
@@ -443,14 +456,7 @@ class AnimatedExpander(gtk.VBox):
         self.pack_start(self._happy_box, False, False)
         self.pack_start(self._layout)
         
-        self.set_size_request(40, 100)
         self.show_all()
-
-    def do_size_allocate(self, allocation):
-        # We should force a size allocate to avoid bugs
-        # when the widget is getting too small!
-        gtk.VBox.do_size_allocate(self, allocation)
-        self._layout.size_allocate(self._layout.allocation)
 
     def do_realize(self):
         gtk.VBox.do_realize(self)
@@ -459,6 +465,10 @@ class AnimatedExpander(gtk.VBox):
         gtk.gdk.colormap_get_system().alloc_color(bg_color)
 
         self._happy_box.modify_bg(gtk.STATE_NORMAL, bg_color)
+
+        # Uhmma uhmma bad trick!
+        if not self._layout._to_show:
+            self._layout.hide()
 
     def add_widget(self, widget, show=False):
         """
@@ -472,7 +482,7 @@ class AnimatedExpander(gtk.VBox):
         self._layout.set_expanded(show)
 
     def add(self, widget):
-        self.add_widget(widget, False) #FIXME
+        self.add_widget(widget, True)
 
     def get_label(self):
         return self._label.get_text()
@@ -585,7 +595,7 @@ class ToolBox(gtk.VBox):
 
         self.pack_start(page, False, False)
         self._pages.append(page)
-        #self.set_active_page(page)
+        #self._set_active_page(page)
     
     # Private API
 
@@ -666,10 +676,7 @@ class ToolBox(gtk.VBox):
             # Here we should check if there's a child with True as packing options
             # if not ignore the page._expand and set the packing to True
 
-            print "yuuuuuuuuu"
-
             for child in self.get_children():
-                print "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
                 print self.query_child_packing(child)
 
                 if 1 in self.query_child_packing(child)[0:2]:
@@ -699,7 +706,7 @@ def main(klass):
     sw.set_size_request(400, 400)
 
     exp = klass("miao")
-    exp.add(sw)
+    exp.add_widget(sw, False)
 
     vbox.pack_start(exp, False, False)
 
@@ -707,7 +714,7 @@ def main(klass):
     sw.add(gtk.TextView())
 
     exp = klass("miao")
-    exp.add(sw)
+    exp.add_widget(sw, False)
     vbox.pack_start(exp)
 
     vbox.pack_start(gtk.Label("mias"), False, False)
@@ -724,7 +731,7 @@ def toolbox():
     w.show_all()
 
 if __name__ == "__main__":
-    #main(AnimatedExpander)
+    main(AnimatedExpander)
     #main(gtk.Expander)
     toolbox()
     gtk.main()
