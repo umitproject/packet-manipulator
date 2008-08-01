@@ -49,10 +49,10 @@ class UmitPaned(gtk.VBox):
         
         self.show_all()
 
-    def add_view(self, pos, tab, unused=False):
+    def add_view(self, tab, unused=False):
         widget = tab.get_toplevel()
 
-        if pos == PANE_CENTER:
+        if not tab.tab_position:
             if not self.hpaned.get_child2():
                 self.hpaned.pack2(widget, True, False)
                 return
@@ -61,16 +61,32 @@ class UmitPaned(gtk.VBox):
 
         image = gtk.image_new_from_stock(tab.icon_name, gtk.ICON_SIZE_MENU)
 
+        pos = tab.tab_position
+
         label.pack_start(image, False, False)
         label.pack_start(gtk.Label(tab.label_text))
         label.show_all()
 
         print "Adding widget", widget, "to", pos
 
-        if pos == PANE_RIGHT or pos == PANE_LEFT:
+        if pos == gtk.POS_RIGHT or pos == gtk.POS_LEFT:
             self.hnotebook.append_page(widget, label)
-        elif pos == PANE_TOP or pos == PANE_BOTTOM:
+        elif pos == gtk.POS_TOP or pos == gtk.POS_BOTTOM:
             self.vnotebook.append_page(widget, label)
+
+    def remove_view(self, tab):
+        pos = tab.tab_position
+
+        if pos == gtk.POS_RIGHT or pos == gtk.POS_LEFT:
+            nb = self.hnotebook
+        elif pos == gtk.POS_TOP or pos == gtk.POS_BOTTOM:
+            nb = self.vnotebook
+
+        num = nb.page_num(tab.get_toplevel())
+        if num > -1:
+            nb.remove_page(num)
+        else:
+            raise Exception("Cannot found the widget")
 
 if __name__ == "__main__":
     w = gtk.Window()

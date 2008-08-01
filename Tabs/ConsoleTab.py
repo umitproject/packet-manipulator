@@ -25,6 +25,7 @@ from views import UmitView
 
 class ConsoleTab(UmitView):
     label_text = "Packet Shell"
+    tab_position = gtk.POS_BOTTOM
 
     def __create_widgets(self):
         self.console = Console()

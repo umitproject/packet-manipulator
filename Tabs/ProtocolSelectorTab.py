@@ -162,6 +162,7 @@ class ProtocolSelectorTab(UmitView):
 
     icon_name = gtk.STOCK_CONNECT
     label_text = "Protocols"
+    tab_position = gtk.POS_RIGHT
 
     def create_ui(self):
         self.tree = ProtocolTree()

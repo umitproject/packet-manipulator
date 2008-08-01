@@ -133,6 +133,9 @@ class SessionNotebook(gtk.Notebook):
         self.set_tab_reorderable(session, True)
 
 class MainTab(UmitView):
+    tab_position = None
+    label_text = "MainTab"
+
     def __create_widgets(self):
         "Create the widgets"
         self.vbox = gtk.VBox()

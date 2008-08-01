@@ -26,6 +26,7 @@ from Tabs.MainTab import SessionPage
 class PropertyTab(UmitView):
     label_text = "Properties"
     icon_name = gtk.STOCK_INDEX
+    tab_position = gtk.POS_RIGHT
 
     def create_ui(self):
         self.grid = PropertyGrid()
@@ -41,7 +42,8 @@ class PropertyTab(UmitView):
         # overriden this method to avoid errors
 
         from App import PMApp
-        tab = PMApp().main_window.main_tab
+        tab = PMApp().main_window.get_tab("MainTab")
+        print tab
         tab.session_notebook.connect('switch-page', self.__on_repopulate)
 
     def __on_repopulate(self, sess_nb, page, num):

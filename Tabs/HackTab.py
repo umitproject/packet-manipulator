@@ -246,6 +246,7 @@ class HackBar(gtk.VBox):
 
 class HackTab(UmitView):
     icon_name = gtk.STOCK_CONVERT
+    tab_position = gtk.POS_BOTTOM
     label_text = "Hack Tab"
 
     def create_ui(self):

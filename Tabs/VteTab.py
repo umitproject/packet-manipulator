@@ -72,6 +72,7 @@ gobject.type_register(TerminalWidget)
 class VteTab(UmitView):
     icon_name = gtk.STOCK_OK
     label_text = "Terminal"
+    tab_position = gtk.POS_BOTTOM
 
     def create_ui(self):
         self._main_widget.add(TerminalWidget())

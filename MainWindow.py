@@ -21,7 +21,7 @@
 import gtk
 
 try:
-    from paned import *
+    from panedz import *
 except ImportError:
     print "moo not installed. Using fallback UmitPaned .."
     from fallbackpaned import *
@@ -46,7 +46,7 @@ class MainWindow(gtk.Window):
         self.set_title("Packet Manipulator")
         self.set_size_request(600, 400)
         
-        self.registered_tabs = []
+        self.registered_tabs = {}
 
         self.__create_widgets()
         self.__pack_widgets()
@@ -70,6 +70,8 @@ class MainWindow(gtk.Window):
             ('Options', None, _('Options'), None),
             ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'), '<Control>p', None, self.__on_preferences),
 
+            ('Views', None, _('Views'), None),
+
             ('Help', None, _('Help'), None),
             ('About', gtk.STOCK_ABOUT, _('About'), None, None, self.__on_about),
         ]
@@ -88,6 +90,7 @@ class MainWindow(gtk.Window):
             <menu action='Options'>
                 <menuitem action='Preferences'/>
             </menu>
+            <menu action='Views'/>
             <menu action='Help'>
                 <menuitem action='About'/>
             </menu>
@@ -116,24 +119,44 @@ class MainWindow(gtk.Window):
 
         # Central widgets
         self.main_paned = UmitPaned()
-        self.main_tab = MainTab()
-
-        # Tabs
-        self.vte_tab = VteTab()
-        self.hack_tab = HackTab()
-        self.protocols_tab = ProtocolSelectorTab()
-        self.property_tab = PropertyTab()
-        self.console_tab = ConsoleTab()
-
-        # This should be moved to UmitPaned btw...
-        self.registered_tabs.append(self.main_tab)
-        self.registered_tabs.append(self.vte_tab)
-        self.registered_tabs.append(self.hack_tab)
-        self.registered_tabs.append(self.protocols_tab)
-        self.registered_tabs.append(self.property_tab)
-        self.registered_tabs.append(self.console_tab)
 
         self.vbox = gtk.VBox(False, 2)
+
+    def get_tab(self, name):
+        return self.registered_tabs[name]
+
+    def register_tab(self, tab, show=True):
+        item = self.ui_manager.get_widget('/menubar/Views')
+        menu = item.get_submenu()
+
+        item.show()
+
+        if not menu:
+            menu = gtk.Menu()
+            item.set_submenu(menu)
+
+        if tab.label_text in self.registered_tabs:
+            raise Exception("Tab already present")
+
+        # Ok we should add a CheckMenuItem to this fucking menu
+        self.registered_tabs[tab.label_text] = tab
+
+        print "Tab %s registered" % tab.label_text
+
+        if not tab.tab_position:
+            # This is the central widget so it should be added
+            # with no MenuItem
+            self.main_paned.add_view(tab)
+            return
+
+        new_item = gtk.CheckMenuItem(tab.label_text)
+        new_item.connect('toggled', self.__on_toggle_tab_menu, tab)
+
+        if show:
+            new_item.set_active(True)
+
+        menu.append(new_item)
+        menu.show_all()
 
     def __pack_widgets(self):
         "Pack widgets"
@@ -146,14 +169,13 @@ class MainWindow(gtk.Window):
         
         self.vbox.pack_start(self.main_paned)
 
-        self.main_paned.add_view(PANE_CENTER, self.main_tab, False)
-
-        self.main_paned.add_view(PANE_RIGHT, self.protocols_tab, False)
-        self.main_paned.add_view(PANE_RIGHT, self.property_tab, False)
-
-        self.main_paned.add_view(PANE_BOTTOM, self.vte_tab, False)
-        self.main_paned.add_view(PANE_BOTTOM, self.console_tab, False)
-        self.main_paned.add_view(PANE_BOTTOM, self.hack_tab, False)
+        # Tabs
+        self.register_tab(MainTab())
+        self.register_tab(VteTab())
+        self.register_tab(HackTab())
+        self.register_tab(ProtocolSelectorTab())
+        self.register_tab(PropertyTab())
+        self.register_tab(ConsoleTab())
 
         self.add(self.vbox)
 
@@ -164,11 +186,17 @@ class MainWindow(gtk.Window):
     def connect_tabs_signals(self):
         "Used to connect signals between tabs"
 
-        for tab in self.registered_tabs:
+        for key, tab in self.registered_tabs.items():
             tab.connect_tab_signals()
 
+    def __on_toggle_tab_menu(self, menuitem, tab):
+        if menuitem.get_active():
+            self.main_paned.add_view(tab)
+        else:
+            self.main_paned.remove_view(tab)
+
     def __on_save_template(self, action):
-        session = self.main_tab.get_current_session()
+        session = self.get_tab("MainTab").get_current_session()
 
         if not session:
             return

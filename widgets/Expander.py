@@ -443,7 +443,14 @@ class AnimatedExpander(gtk.VBox):
         self.pack_start(self._happy_box, False, False)
         self.pack_start(self._layout)
         
+        self.set_size_request(40, 100)
         self.show_all()
+
+    def do_size_allocate(self, allocation):
+        # We should force a size allocate to avoid bugs
+        # when the widget is getting too small!
+        gtk.VBox.do_size_allocate(self, allocation)
+        self._layout.size_allocate(self._layout.allocation)
 
     def do_realize(self):
         gtk.VBox.do_realize(self)
@@ -465,7 +472,7 @@ class AnimatedExpander(gtk.VBox):
         self._layout.set_expanded(show)
 
     def add(self, widget):
-        self.add_widget(widget, True)
+        self.add_widget(widget, False) #FIXME
 
     def get_label(self):
         return self._label.get_text()

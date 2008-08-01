@@ -66,9 +66,9 @@ class UmitViewWidget(gtk.VBox):
 
 
 class UmitViewMixin(object):
-
     icon_name = gtk.STOCK_INFO
     label_text = 'Umit View'
+    tab_position = gtk.POS_RIGHT
 
     def __init__(self, toplevel=None):
         self._toplevel = toplevel

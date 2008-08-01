@@ -31,11 +31,11 @@ class UmitPaned(BigPaned):
         for pos in self.get_all_pos():
             yield self.get_paned(pos)
 
-    def add_view(self, name, view, removable=True):
-        if name == PANE_CENTER:
+    def add_view(self, view, removable=True):
+        if not view.tab_position:
             self.add_child(view.get_toplevel())
         else:
-            POS = POS_MAP[name]
+            POS = view.tab_position
             lab = PaneLabel(view.icon_name, None, view.label_text)
             pane = self.insert_pane(view.get_toplevel(), lab, POS, POS)
             if not removable:
