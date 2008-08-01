@@ -76,8 +76,11 @@ class HIGToggleButton(gtk.ToggleButton):
 
 class HIGArrowButton(gtk.Button):
     __gtype_name__ = "HIGArrowButton"
+    __gsignals__ = {
+        'force-clicked' : (gobject.SIGNAL_RUN_LAST, None, ())
+    }
 
-    def __init__(self, orient, label=None):
+    def __init__(self, orient):
         super(HIGArrowButton, self).__init__()
         
         # Fascist mode!
@@ -87,18 +90,7 @@ class HIGArrowButton(gtk.Button):
         self._active = False
         self.orientation = orient
 
-        self.label = gtk.Label()
-        
-        if label:
-            self.label.set_text(label)
-            self.label.set_use_markup(True)
-
-        hbox = gtk.HBox(False, 2)
-        hbox.pack_start(self.arrow)
-        hbox.pack_start(self.label)
-        hbox.show_all()
-
-        self.add(hbox)
+        self.add(self.arrow)
 
     def set_orientation(self, orient):
         shadow = self.arrow.get_property("shadow-type")
@@ -117,6 +109,12 @@ class HIGArrowButton(gtk.Button):
                 self.arrow.set(gtk.ARROW_UP, shadow)
             else:
                 self.arrow.set(gtk.ARROW_DOWN, shadow)
+
+    def do_button_press_event(self, event):
+        if event.button == 3:
+            self.emit('force-clicked')
+
+        return gtk.Button.do_button_press_event(self, event)
 
     def get_orientation(self):
         return self.orient

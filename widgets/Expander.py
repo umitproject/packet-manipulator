@@ -413,7 +413,10 @@ class AnimatedExpander(gtk.VBox):
         
         self._arrow = HIGArrowButton(gtk.ORIENTATION_VERTICAL)
         self._arrow.set_relief(gtk.RELIEF_NONE)
+        self._arrow.set_size_request(20, 20)
+
         self._arrow.connect('clicked', self.do_toggle_animation)
+        self._arrow.connect('force-clicked', self.do_force_animation)
         
         self._label = gtk.Label()
         self._label.set_alignment(0, 0.5)
@@ -474,6 +477,10 @@ class AnimatedExpander(gtk.VBox):
         self._label.set_text(txt)
         self._label.set_use_markup(True)
 
+    def do_force_animation(self, btn):
+        "override me!"
+        pass
+
     def do_toggle_animation(self, btn):
         if self._layout.toggle_animation():
             self._arrow.set_active(not self._arrow.get_active())
@@ -513,7 +520,13 @@ class ToolPage(AnimatedExpander):
                 # Second stage! :(
                 self._parent._unset_page(self)
 
-    def do_toggle_animation(self, btn):
+    def do_force_animation(self, btn):
+        # The user clicked with the right so we must force the hide
+        # no repack man!!!
+
+        self.do_toggle_animation(btn, False)
+
+    def do_toggle_animation(self, btn, repack=True):
         if self._layout.get_active():
 
             # Here we could be too small and user press the button
@@ -522,7 +535,7 @@ class ToolPage(AnimatedExpander):
             # if it was packed with False False. If this function
             # returns False this mean that the widget is at the max
             # size right now so we should do the hide animation stuff
-            if self._parent._repack(self):
+            if repack and self._parent._repack(self):
                 return
 
             # We are active so we have our children naked!
@@ -533,15 +546,15 @@ class ToolPage(AnimatedExpander):
             # static check
             if self._parent._one_page:
                 assert(self._parent._active_page == self)
-            
-            # Because the animation is async we should 
-            # repack in a second stage (__on_end_anim)
-            self._layout.toggle_animation()
+
+            # the repack is on __end_anim
         else:
             # repack -> animation (show)
 
             self._parent._set_active_page(self)
-            self._layout.toggle_animation()
+
+        if self._layout.toggle_animation():
+            self._arrow.set_active(not self._arrow.get_active())
 
 class ToolBox(gtk.VBox):
     """
