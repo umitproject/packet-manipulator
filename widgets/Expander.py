@@ -490,7 +490,14 @@ class AnimatedExpander(gtk.VBox):
 gobject.type_register(AnimatedExpander)
 
 class ToolPage(AnimatedExpander):
+    """
+    A ToolPage for ToolBox.
+
+    (friend of ToolBox. Don't use in other widgets)
+    """
     def __init__(self, parent, label=None, image=gtk.STOCK_PROPERTIES):
+        assert(isinstance(parent, ToolBox))
+
         super(ToolPage, self).__init__(label, image)
 
         self._parent = parent
@@ -499,61 +506,143 @@ class ToolPage(AnimatedExpander):
         self._layout.connect('animation-end', self.__on_end_anim)
 
     def __on_end_anim(self, blah, val):
-        if self._parent._active_page == self and \
-           not self._layout.get_active():
-            # Second stage! :(
-            self._parent.set_active_page(None)
+        if not self._layout.get_active():
+            if not self._parent._one_page or \
+               (self._parent._one_page and self._parent._active_page == self):
+
+                # Second stage! :(
+                self._parent._unset_page(self)
 
     def do_toggle_animation(self, btn):
         if self._layout.get_active():
+
+            # Here we could be too small and user press the button
+            # not to hide but to increase the size allocate so
+            # we need to handle this situation and repack our page
+            # if it was packed with False False. If this function
+            # returns False this mean that the widget is at the max
+            # size right now so we should do the hide animation stuff
+            if self._parent._repack(self):
+                return
+
             # We are active so we have our children naked!
             # what should we do?
 
-            # animation -> repack to false false
+            # animation (hide) -> repack
 
-            if self._parent._active_page != self:
-                raise Excepion("Bad day baby!")
-
+            # static check
+            if self._parent._one_page:
+                assert(self._parent._active_page == self)
+            
+            # Because the animation is async we should 
+            # repack in a second stage (__on_end_anim)
             self._layout.toggle_animation()
         else:
-            # Show you!
+            # repack -> animation (show)
 
-            self._parent.set_active_page(self)
+            self._parent._set_active_page(self)
             self._layout.toggle_animation()
 
 class ToolBox(gtk.VBox):
+    """
+    A Simple widget that implements a Qt ToolBox
+    like behaviour.
+    """
+
     def __init__(self):
         super(ToolBox, self).__init__(False, 2)
         self.set_border_width(4)
 
+        self._one_page = False
         self._active_page = None
         self._pages = []
+
+    # Public API
 
     def append_page(self, child, txt):
         page = ToolPage(self, txt)
         page.add_widget(child, False)
 
-        self.pack_start(page)
+        self.pack_start(page, False, False)
         self._pages.append(page)
-        self.set_active_page(page)
+        #self.set_active_page(page)
+    
+    # Private API
 
-    def set_expanded(self, page, val):
+    def _set_expanded(self, page, val):
         """
         Change the packing of the page
         @param page the page for changes
         @param val if should be expanded
         """
-        page._layout.set_expanded(val)
+        #page._layout.set_expanded(val)
         self.set_child_packing(page, val, val, 0, gtk.PACK_START)
 
-    def set_active_page(self, page=None):
+    def _unset_page(self, page):
+        self._set_expanded(page, False)
+
+        #if self._active_page == page:
+        # We should do a reverse foreach to find a page
+        # that is active but packed with False False
+        
+        children = self.get_children()
+        children.reverse()
+
+        for child in children:
+            if page == child or \
+               not isinstance(child, ToolPage) or \
+               not child._layout.get_active():
+                   continue
+
+            info = self.query_child_packing(page)
+            print info
+
+            # We should check with not because it returns 0 instead
+            # of python boolean
+            if not info[0] or not info[1]:
+                self._active_page = child
+                self.set_child_packing(child, True, True, 0, gtk.PACK_START)
+                print "HERE"
+                return
+
+        self._active_page = None
+    
+    def _repack(self, page):
+        info = self.query_child_packing(page)
+
+        if not info[0] or not info[1]:
+
+            if self._active_page:
+                self.set_child_packing(self._active_page, False, False, 0, gtk.PACK_START)
+
+            self._active_page = page
+            self.set_child_packing(page, True, True, 0, gtk.PACK_START)
+
+            return True
+
+        return False
+
+    def _set_active_page(self, page=None):
         if self._active_page:
-            self.set_expanded(self._active_page, False)
+            if self._one_page:
+                self._set_expanded(self._active_page, False)
+            else:
+                self.set_child_packing(self._active_page, False, False, 0, gtk.PACK_START)
 
         self._active_page = page
 
         if page:
             self.set_child_packing(page, True, True, 0, gtk.PACK_START)
+
+    # Public stuff
+
+    def get_single_page(self):
+        return self._one_page
+
+    def set_single_page(self, val):
+        self._one_page = val
+    
+    single_page = property(get_single_page, set_single_page)
 
 def main(klass):
     w = gtk.Window()
@@ -582,6 +671,7 @@ def main(klass):
 def toolbox():
     w = gtk.Window()
     box = ToolBox()
+    box.append_page(gtk.Label("Testing"), "miao")
     box.append_page(gtk.Label("Testing"), "miao")
     box.append_page(gtk.Label("Testing"), "miao")
     w.add(box)

@@ -35,7 +35,7 @@ from Icons import get_pixbuf
 
 # Higwidgets
 from higwidgets.hignetwidgets import HIGIpEntry
-from widgets.Expander import AnimatedExpander
+from widgets.Expander import ToolBox
 
 class Editor(gtk.HBox):
 
@@ -619,15 +619,22 @@ class PropertyGrid(gtk.VBox):
         sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         sw.add(self.desc_text)
 
-        expander = AnimatedExpander('Protocol')
-        expander.add(self.tree)
+        if True:
+            toolbox = ToolBox()
+            toolbox.append_page(self.tree, 'Protocol')
+            toolbox.append_page(sw, 'Description')
+            self.pack_start(toolbox)
+        else:
 
-        self.pack_start(expander)
+            expander = AnimatedExpander('Protocol')
+            expander.add(self.tree)
 
-        expander = AnimatedExpander('Description')
-        expander.add(sw)
+            self.pack_start(expander)
 
-        self.pack_start(expander, False, False)
+            expander = AnimatedExpander('Description')
+            expander.add(sw)
+
+            self.pack_start(expander, False, False)
 
         self.clear = self.tree.clear
         self.populate = self.tree.populate
