@@ -622,7 +622,7 @@ class PropertyGrid(gtk.VBox):
         if True:
             toolbox = ToolBox()
             toolbox.append_page(self.tree, 'Protocol')
-            toolbox.append_page(sw, 'Description')
+            toolbox.append_page(sw, 'Description', expand=False)
             self.pack_start(toolbox)
         else:
 

@@ -502,13 +502,13 @@ class ToolPage(AnimatedExpander):
 
     (friend of ToolBox. Don't use in other widgets)
     """
-    def __init__(self, parent, label=None, image=gtk.STOCK_PROPERTIES):
+    def __init__(self, parent, label=None, image=gtk.STOCK_PROPERTIES, expand=True):
         assert(isinstance(parent, ToolBox))
 
         super(ToolPage, self).__init__(label, image)
 
         self._parent = parent
-        self._active = False
+        self._expand = expand
 
         self._layout.connect('animation-end', self.__on_end_anim)
 
@@ -572,8 +572,8 @@ class ToolBox(gtk.VBox):
 
     # Public API
 
-    def append_page(self, child, txt):
-        page = ToolPage(self, txt)
+    def append_page(self, child, txt=None, image=gtk.STOCK_PROPERTIES, expand=True):
+        page = ToolPage(self, txt, image, expand)
         page.add_widget(child, False)
 
         self.pack_start(page, False, False)
@@ -601,6 +601,11 @@ class ToolBox(gtk.VBox):
         children = self.get_children()
         children.reverse()
 
+        spulciato = filter(lambda x: x._expand and x._layout.get_active(), children)
+
+        if spulciato:
+            children = spulciato
+
         for child in children:
             if page == child or \
                not isinstance(child, ToolPage) or \
@@ -618,9 +623,13 @@ class ToolBox(gtk.VBox):
                 print "HERE"
                 return
 
+        print "nothing setted", children
         self._active_page = None
     
     def _repack(self, page):
+        if not page._expand:
+            return False
+
         info = self.query_child_packing(page)
 
         if not info[0] or not info[1]:
@@ -635,8 +644,9 @@ class ToolBox(gtk.VBox):
 
         return False
 
-    def _set_active_page(self, page=None):
-        if self._active_page:
+    def _set_active_page(self, page):
+
+        if page._expand and self._active_page:
             if self._one_page:
                 self._set_expanded(self._active_page, False)
             else:
@@ -645,7 +655,23 @@ class ToolBox(gtk.VBox):
         self._active_page = page
 
         if page:
+
+            # Here we should check if there's a child with True as packing options
+            # if not ignore the page._expand and set the packing to True
+
+            print "yuuuuuuuuu"
+
+            for child in self.get_children():
+                print "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+                print self.query_child_packing(child)
+
+                if 1 in self.query_child_packing(child)[0:2]:
+                    self.set_child_packing(page, page._expand, page._expand, 0, gtk.PACK_START)
+                    return
+
+            # If we are here not True :D
             self.set_child_packing(page, True, True, 0, gtk.PACK_START)
+
 
     # Public stuff
 
@@ -685,7 +711,7 @@ def toolbox():
     w = gtk.Window()
     box = ToolBox()
     box.append_page(gtk.Label("Testing"), "miao")
-    box.append_page(gtk.Label("Testing"), "miao")
+    box.append_page(gtk.Label("Testing"), "miao", expand=False)
     box.append_page(gtk.Label("Testing"), "miao")
     w.add(box)
     w.show_all()
