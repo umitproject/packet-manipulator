@@ -377,8 +377,9 @@ gobject.type_register(CellRendererIcon)
 
 class PropertyGridTree(gtk.ScrolledWindow):
     __gsignals__ = {
-        'finish-edit' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, )),
-        'desc-changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_STRING, )),
+        'finish-edit'    : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, )),
+        'field-selected' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT)),
+        'desc-changed'   : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_STRING, )),
     }
 
     def __init__(self):
@@ -434,6 +435,32 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.tree.connect('button-release-event', self.__on_button_release)
+    
+    def get_selected_field(self):
+        """
+        Get the selected field
+
+        @return a tuple (proto, field) containing the parent
+                protocol for field and the field or None, None
+        """
+
+        model, iter = self.tree.get_selection().get_selected()
+
+        if not iter:
+            return (None, None)
+        
+        # If there's a object than it's a parent so return None, None
+        if model.get_value(iter, 0):
+            return (None, None)
+
+        proto = model.get_value(model.iter_parent(iter), 0)
+        field = model.get_value(iter, 1)
+
+        if not isinstance(field, base.Field) or \
+           not isinstance(proto, base.Protocol):
+            return (None, None)
+
+        return (proto, field)
 
     def __on_selection_changed(self, selection):
         model, iter = selection.get_selected()
@@ -447,25 +474,11 @@ class PropertyGridTree(gtk.ScrolledWindow):
             # We have selected the protocol
             self.emit('desc-changed', "%s protocol." % Backend.get_proto_name(proto))
         else:
-            proto = model.get_value(model.iter_parent(iter), 0)
-            field = model.get_value(iter, 1)
+            proto, field = self.get_selected_field()
 
-            if not isinstance(field, base.Field) or \
-               not isinstance(proto, base.Protocol):
-                return
-            
+            self.emit('field-selected', proto, field)
             self.emit('desc-changed', Backend.get_field_desc(field))
 
-            # We should select also the bounds in HexView
-            nb = App.PMApp().main_window.get_tab("MainTab").session_notebook
-            page = nb.get_nth_page(nb.get_current_page())
-
-            # The page *MUST* be a SessionPage otherwise the signal
-            # we cannot be here becouse this widget is insentive
-            # so no worry about it.
-
-            print page.hexview, proto.get_offset(field), field.bits
-    
     def __on_button_release(self, widget, event):
         # We should get the selection and show the popup
 

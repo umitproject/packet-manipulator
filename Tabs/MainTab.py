@@ -128,7 +128,7 @@ class SessionPage(gtk.VBox):
         self.proto_hierarchy = ProtocolHierarchy(self.packet)
         self.hexview = HexView()
 
-        self.hexview.payload = self.packet.get_raw()
+        self.redraw_hexview()
 
     def __pack_widgets(self):
         self.vpaned.pack1(self.proto_hierarchy)
@@ -139,6 +139,16 @@ class SessionPage(gtk.VBox):
 
     def __connect_signals(self):
         pass
+
+    def redraw_hexview(self):
+        """
+        Redraws the hexview
+        """
+        if self.packet:
+            self.hexview.payload = self.packet.get_raw()
+        else:
+            print "redraw_hexview(): no packet!!!"
+            self.hexview.payload = ""
 
     def get_label(self):
         return self._label
@@ -156,6 +166,21 @@ class SessionNotebook(gtk.Notebook):
         session = SessionPage(proto_name)
         self.append_page(session, session.label)
         self.set_tab_reorderable(session, True)
+
+    def get_current_session(self):
+        """
+        Get the current SessionPage
+
+        @return a SessionPage instance or None
+        """
+
+        idx = self.get_current_page()
+        obj = self.get_nth_page(idx)
+
+        if obj and isinstance(obj, SessionPage):
+            return obj
+
+        return None
 
 class MainTab(UmitView):
     tab_position = None

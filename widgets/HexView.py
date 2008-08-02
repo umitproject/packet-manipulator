@@ -141,7 +141,7 @@ class AsciiText(BaseText):
             alloc.width = w
 
     def select_blocks(self, start=None, end=None):
-        if self.prev_start and self.prev_end:
+        if self.prev_start and self.prev_end and self.prev_start != self.prev_end:
             self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start, self.prev_end)
 
         if not start and not end:
@@ -213,7 +213,7 @@ class HexText(BaseText):
             alloc.width = w
 
     def select_blocks(self, start=None, end=None):
-        if self.prev_start and self.prev_end:
+        if self.prev_start and self.prev_end and self.prev_start != self.prev_end:
             self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start, self.prev_end)
 
         if not start and not end:
@@ -397,12 +397,42 @@ class HexView(gtk.HBox):
             (self.bpl * end.get_line()) + end.get_line_index()
         )
 
+    def select_block(self, offset, len, ascii=True):
+        """
+        Select a block of data in the HexView
+
+        @param offset the offset byte
+        @param len the lenght of selection
+        @param ascii True to set primary selection on ASCII otherwise on HEX
+        """
+
+        start = offset
+        end = offset + len
+
+        if start > end:
+            start, end = end, start
+
+        if ascii:
+            # We need to get a fucking iter!
+            buffer = self.ascii_text.get_buffer()
+            start_iter = buffer.get_iter_at_offset(start)
+            end_iter   = buffer.get_iter_at_offset(end)
+
+            buffer.select_range(end_iter, start_iter)
+
     def get_payload(self):
         return self._payload
     def set_payload(self, val):
         self._payload = val
 
         for view in (self.offset_text, self.hex_text, self.ascii_text):
+            
+            # Invalidate previous iters
+            if hasattr(view, 'prev_start'):
+                view.prev_start = None
+            if hasattr(view, 'prev_end'):
+                view.prev_end = None
+
             view.render(self._payload)
 
     def get_font(self):

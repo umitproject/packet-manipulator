@@ -30,6 +30,9 @@ class PropertyTab(UmitView):
 
     def create_ui(self):
         self.grid = PropertyGrid()
+        self.grid.tree.connect('finish-edit', self.__redraw_hex_view)
+        self.grid.tree.connect('field-selected', self.__on_field_selected)
+
         self._main_widget.add(self.grid)
         self._main_widget.show_all()
 
@@ -61,3 +64,30 @@ class PropertyTab(UmitView):
             
             self.grid.populate(proto)
             self._main_widget.set_sensitive(True)
+
+    def __redraw_hex_view(self, tree, entry_destroyed):
+        # This is called when the user end the edit action on the PropertyGrid
+        # and we could redraw the entire hexview to show changes
+        # The tree argument is the PropertyGridTree object
+
+        from App import PMApp
+        tab = PMApp().main_window.get_tab("MainTab")
+        page = tab.session_notebook.get_current_session()
+
+        if page:
+            page.redraw_hexview()
+
+            # Now reselect the blocks
+            self.__on_field_selected(self.grid.tree, *self.grid.tree.get_selected_field())
+
+    def __on_field_selected(self, tree, proto=None, field=None):
+        if not proto or not field:
+            return
+
+        # We should select also the bounds in HexView
+        from App import PMApp
+        tab = PMApp().main_window.get_tab("MainTab")
+        page = tab.session_notebook.get_current_session()
+
+        if page:
+            page.hexview.select_block(proto.get_offset(field) / 8, max(field.bits / 8, 1))
