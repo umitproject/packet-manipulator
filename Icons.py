@@ -27,6 +27,8 @@ from umitCore.Paths import Path
 
 icons = (
     'locked',
+    'packet',
+    'sniff'
 )
 
 def register_icons():

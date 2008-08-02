@@ -138,10 +138,10 @@ class MainTab(UmitView):
 
     def __create_widgets(self):
         "Create the widgets"
-        self.vbox = gtk.VBox()
+        self.vbox = gtk.VBox(False, 2)
 
-        self.sniff_expander = AnimatedExpander("<b>Sniff perspective</b>")
-        self.packet_expander = AnimatedExpander("<b>Packet perspective</b>")
+        self.sniff_expander = AnimatedExpander("<b>Sniff perspective</b>", 'sniff_small')
+        self.packet_expander = AnimatedExpander("<b>Packet perspective</b>", 'packet_small')
 
         self.session_notebook = SessionNotebook()
 
