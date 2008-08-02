@@ -20,19 +20,40 @@
 
 import gtk
 
-class Page(gtk.VBox):
+class Page(gtk.Table):
+    widgets = [
+
+    ]
     def __init__(self):
-        super(Page, self).__init__(False, 4)
+        super(Page, self).__init__(max(len(self.widgets), 1), 2)
+
         self.set_border_width(4)
         self.create_ui()
         self.show_all()
 
     def create_ui(self):
-        pass
+        idx = 0
+
+        for (lbl, widget) in self.widgets:
+
+            if lbl:
+                label = gtk.Label(lbl)
+                label.set_use_markup(True)
+                label.set_alignment(0, 0.5)
+
+                self.attach(label, 0, 1, idx, idx + 1, yoptions=gtk.SHRINK)
+                self.attach(widget, 1, 2, idx, idx + 1, yoptions=gtk.SHRINK)
+            else:
+                self.attach(widget, 0, 2, idx, idx + 1, yoptions=gtk.SHRINK)
+
+            idx += 1
 
 class GUIPage(Page):
-    def create_ui(self):
-        self.pack_start(gtk.CheckButton("Use docking windows"), False, False)
+    widgets = [
+        (None, gtk.CheckButton('Use docking windows')),
+        ('HexView Font:', gtk.FontButton()),
+        ('Bytes per line:', gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1)))
+    ]
 
 class PreferenceDialog(gtk.Dialog):
     def __init__(self, parent):
