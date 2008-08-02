@@ -21,7 +21,7 @@
 import gtk
 
 try:
-    from panedz import *
+    from paned import *
 except ImportError:
     print "moo not installed. Using fallback UmitPaned .."
     from fallbackpaned import *
@@ -155,8 +155,8 @@ class MainWindow(gtk.Window):
         if show:
             new_item.set_active(True)
 
+        new_item.show()
         menu.append(new_item)
-        menu.show_all()
 
     def __pack_widgets(self):
         "Pack widgets"
@@ -166,16 +166,21 @@ class MainWindow(gtk.Window):
 
         self.toolbar = self.ui_manager.get_widget("/toolbar")
         self.vbox.pack_start(self.toolbar, False, False, 0)
+
+        item = self.ui_manager.get_widget('/menubar/Views')
+        item.remove_submenu()
         
         self.vbox.pack_start(self.main_paned)
 
         # Tabs
         self.register_tab(MainTab())
-        self.register_tab(VteTab())
-        self.register_tab(HackTab())
         self.register_tab(ProtocolSelectorTab())
         self.register_tab(PropertyTab())
-        self.register_tab(ConsoleTab())
+
+        # Hidden tabs
+        self.register_tab(VteTab(), False)
+        self.register_tab(HackTab(), False)
+        self.register_tab(ConsoleTab(), False)
 
         self.add(self.vbox)
 

@@ -153,7 +153,7 @@ class MainTab(UmitView):
         # |- Protocol Hierarchy (like wireshark)
         # |_ Hex View (containing the dump of the packet)
         
-        self.vbox.pack_start(self.sniff_expander, False, False)
+        self.vbox.pack_start(self.sniff_expander)
         self.vbox.pack_start(self.packet_expander)
 
         self.packet_expander.add(self.session_notebook)

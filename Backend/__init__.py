@@ -21,7 +21,7 @@
 import os, os.path
 
 from umpa import protocols
-from umpa.protocols._ import Protocol
+from umpa.protocols import Protocol
 
 # Globals UMPA protocols
 gprotos = []

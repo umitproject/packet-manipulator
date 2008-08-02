@@ -91,7 +91,7 @@ class Layout(gtk.Container):
         self._dest = 0
         self._speed = 5
 
-        self._time_int = 10
+        self._time_int = 20
         self._time_tot = 300
 
         gtk.Container.__init__(self)
@@ -220,7 +220,7 @@ class Layout(gtk.Container):
     def do_size_allocate(self, allocation):
         self.allocation = allocation
 
-        print "do_size_allocate", allocation.width, allocation.height
+        #print "do_size_allocate", allocation.width, allocation.height
 
         if self._child:
             rect = gdk.Rectangle(self._child.x, self._child.y,
@@ -258,17 +258,21 @@ class Layout(gtk.Container):
             self._stupid = False
 
             self._to_show = not self._to_show
-            self._speed = max(max(self._height, allocation.height) / (self._time_tot / self._time_int), 1)
+
+            self._speed = max(self._height, allocation.height)
+            self._speed /= self._time_tot / self._time_int
+            self._speed = int(max(self._speed, 5))
+
             self._child.widget.set_sensitive(False)
 
             if self._to_show:
                 self._dest = 0
             else:
-                self._dest = -self.allocation.height
                 self._dest = -max(self._height, allocation.height)
 
-            print self._current, "to", self._dest
-            print self.size_request()
+            #print "Using a speed of ", self._speed
+            #print self._current, "to", self._dest
+            #print self.size_request()
 
             gobject.timeout_add(self._time_int, self._do_animation)
 

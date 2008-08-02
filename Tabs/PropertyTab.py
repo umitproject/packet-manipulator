@@ -43,7 +43,6 @@ class PropertyTab(UmitView):
 
         from App import PMApp
         tab = PMApp().main_window.get_tab("MainTab")
-        print tab
         tab.session_notebook.connect('switch-page', self.__on_repopulate)
 
     def __on_repopulate(self, sess_nb, page, num):

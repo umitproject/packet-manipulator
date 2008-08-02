@@ -28,7 +28,7 @@ import App
 
 # Protocol stuff
 import Backend
-from umpa.protocols import _ as base
+from umpa import protocols as base
 
 # For the icons
 from Icons import get_pixbuf
@@ -457,7 +457,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
             self.emit('desc-changed', Backend.get_field_desc(field))
 
             # We should select also the bounds in HexView
-            nb = App.PMApp().main_window.main_tab.session_notebook
+            nb = App.PMApp().main_window.get_tab("MainTab").session_notebook
             page = nb.get_nth_page(nb.get_current_page())
 
             # The page *MUST* be a SessionPage otherwise the signal

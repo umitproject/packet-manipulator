@@ -115,4 +115,4 @@ class UmitView(UmitViewMixin):
 
     def connect_tab_signals(self):
         "Ovveride this if you need to connect signals between tabs"
-        print "Not implemented for", self.__class__.__name__
+        print "connect_tab_signals(): Not implemented for", self.__class__.__name__
