@@ -53,7 +53,11 @@ class PropertyTab(UmitView):
 
         if isinstance(page, SessionPage):
             # We need to get the protocol instance
+            # from selection or from the first iter
             # so we can repopulate the PropertyGrid
-
-            self.grid.populate(page.protocol)
+            
+            proto = page.proto_hierarchy.get_active_protocol()
+            print proto
+            
+            self.grid.populate(proto)
             self._main_widget.set_sensitive(True)

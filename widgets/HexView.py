@@ -86,6 +86,8 @@ class OffsetText(BaseText):
             alloc.width = w
 
 class AsciiText(BaseText):
+    _printable = """0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""
+
     def __init__(self, parent):
         BaseText.__init__(self, parent)
         self.connect('size-request', self.__on_size_request)
@@ -104,17 +106,20 @@ class AsciiText(BaseText):
 
         output = []
 
+        convert = lambda i: "".join(
+            map(lambda x: (x in AsciiText._printable) and (x) or ('.'), list(i)))
+
         for i in xrange(tot_lines):
             to_fill = 0
 
             if i * bpl + bpl > len(txt):
                 to_fill = (i * bpl) + bpl - len(txt)
                 output.append(
-                    txt[i * bpl:]
+                    convert(txt[i * bpl:])
                 )
             else:
                 output.append(
-                    txt[i * bpl:(i * bpl) + bpl]
+                    convert(txt[i * bpl:(i * bpl) + bpl])
                 )
 
         if output:
@@ -174,6 +179,7 @@ class HexText(BaseText):
             tot_lines += 1
 
         output = []
+        convert = lambda x: (len(x) == 1) and ("0%s" % x) or (x)
 
         for i in xrange(tot_lines):
             to_fill = 0
@@ -181,11 +187,11 @@ class HexText(BaseText):
             if i * bpl + bpl > len(txt):
                 to_fill = (i * bpl) + bpl - len(txt)
                 output.append(
-                    " ".join(map(lambda x: str(hex(ord(x)))[2:], txt[i * bpl:]))
+                    " ".join(map(lambda x: convert(str(hex(ord(x)))[2:]), txt[i * bpl:]))
                 )
             else:
                 output.append(
-                    " ".join(map(lambda x: str(hex(ord(x)))[2:], txt[i * bpl:(i * bpl) + bpl]))
+                    " ".join(map(lambda x: convert(str(hex(ord(x)))[2:]), txt[i * bpl:(i * bpl) + bpl]))
                 )
 
         if output:

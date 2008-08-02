@@ -21,6 +21,7 @@
 import os, os.path
 
 from umpa import protocols
+from umpa.packets import Packet
 from umpa.protocols import Protocol
 
 # Globals UMPA protocols
@@ -94,6 +95,10 @@ def get_field_key(proto_inst, field_inst):
             return key
 
     return None
+
+def get_packet_protos(packet):
+    for proto in packet.protos:
+        yield proto
 
 class VirtualIFace:
     def __init__(self, name, desc, ip):

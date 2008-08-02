@@ -27,7 +27,7 @@ from widgets.Expander import AnimatedExpander
 from views import UmitView
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
-    def __init__(self, proto):
+    def __init__(self, packet):
         gtk.ScrolledWindow.__init__(self)
 
         self.__create_widgets()
@@ -35,10 +35,16 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         self.__connect_signals()
 
         self.proto_icon = None
-        self.store.append(None, [self.proto_icon, proto, proto, proto])
+
+        root = None
+
+        # We pray to be ordered :(
+        for proto in Backend.get_packet_protos(packet):
+            root = self.store.append(root, [self.proto_icon, "blahh", proto])
 
     def __create_widgets(self):
-        self.store = gtk.TreeStore(gtk.gdk.Pixbuf, str, str, object)
+        # Icon / string (like TCP packet with some info?) / hidden
+        self.store = gtk.TreeStore(gtk.gdk.Pixbuf, str, object)
         self.view = gtk.TreeView(self.store)
 
         pix = gtk.CellRendererPixbuf()
@@ -52,9 +58,6 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         col.set_attributes(pix, pixbuf=0)
         col.set_attributes(txt, text=1)
 
-        self.view.append_column(col)
-
-        col = gtk.TreeViewColumn('Value', gtk.CellRendererText(), text=2)
         self.view.append_column(col)
 
         self.view.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
@@ -85,6 +88,29 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         else:
             ctx.finish(False, False, time)
 
+    def get_active_protocol(self):
+        """
+        Return the selected protocol or the most
+        important protocol if no selection.
+
+        @return an instance of Protocol or None
+        """
+
+        model, iter = self.view.get_selection().get_selected()
+
+        if not iter:
+            iter = model.get_iter_first()
+
+            if not iter:
+                return None
+
+        obj = model.get_value(iter, 2)
+        
+        assert (isinstance(obj, Backend.Protocol), "Should be a Protocol instance.")
+
+        return obj
+
+
 class SessionPage(gtk.VBox):
     def __init__(self, proto_name):
         gtk.VBox.__init__(self)
@@ -96,14 +122,13 @@ class SessionPage(gtk.VBox):
     def __create_widgets(self, proto):
         self._label = gtk.Label("*" + proto.__name__)
 
-        self.protocol = proto()
+        self.packet = Backend.Packet(proto())
 
         self.vpaned = gtk.VPaned()
-        self.proto_hierarchy = ProtocolHierarchy(proto)
+        self.proto_hierarchy = ProtocolHierarchy(self.packet)
         self.hexview = HexView()
 
-        # We are waiting for getxsick to complete that stuff
-        #self.hexview.payload = self.protocol.get_raw()
+        self.hexview.payload = self.packet.get_raw()
 
     def __pack_widgets(self):
         self.vpaned.pack1(self.proto_hierarchy)
