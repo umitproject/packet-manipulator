@@ -241,9 +241,9 @@ class HexView(gtk.HBox):
         self.table.add(self.tag_ascii)
         self.table.add(self.tag_sec_sel)
 
-        self.bpl = 16
-        self.font = "mono 10"
-        self.payload = ""
+        self._bpl = 16
+        self._font = "mono 10"
+        self._payload = ""
 
         vadj, hadj = gtk.Adjustment(), gtk.Adjustment()
         self.vscroll = gtk.VScrollbar(vadj)
@@ -291,13 +291,6 @@ class HexView(gtk.HBox):
             'background-gdk',
             self.style.text_aa[gtk.STATE_NORMAL]
         )
-
-    def show_payload(self, txt):
-        self.payload = txt
-
-        self.offset_text.render(txt)
-        self.hex_text.render(txt)
-        self.ascii_text.render(txt)
 
     def __on_menu_popup(self, widget, menu):
         item = gtk.SeparatorMenuItem()
@@ -397,6 +390,36 @@ class HexView(gtk.HBox):
             (self.bpl * start.get_line()) + start.get_line_index(),
             (self.bpl * end.get_line()) + end.get_line_index()
         )
+
+    def get_payload(self):
+        return self._payload
+    def set_payload(self, val):
+        self._payload = val
+
+        for view in (self.offset_text, self.hex_text, self.ascii_text):
+            view.render(self._payload)
+
+    def get_font(self):
+        return self._font
+    def modify_font(self, val):
+        self._font = val
+
+        desc = pango.FontDescription(self._font)
+
+        for view in (self.offset_text, self.hex_text, self.ascii_text):
+            view.modify_font(desc)
+
+    def get_bpl(self):
+        return self._bpl
+    def set_bpl(self, val):
+        self._bpl = val
+
+        # Redraw!
+        self.payload = self.payload
+
+    payload = property(get_payload, set_payload)
+    font = property(get_font, modify_font)
+    bpl = property(get_bpl, set_bpl)
 
 gobject.type_register(HexView)
 

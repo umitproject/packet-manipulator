@@ -103,7 +103,7 @@ class SessionPage(gtk.VBox):
         self.hexview = HexView()
 
         # We are waiting for getxsick to complete that stuff
-        #self.hexview.show_payload(self.protocol.get_raw())
+        #self.hexview.payload = self.protocol.get_raw()
 
     def __pack_widgets(self):
         self.vpaned.pack1(self.proto_hierarchy)
