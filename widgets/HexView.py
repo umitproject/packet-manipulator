@@ -242,7 +242,7 @@ class HexView(gtk.HBox):
         self.table.add(self.tag_sec_sel)
 
         self._bpl = 16
-        self._font = "mono 10"
+        self._font = "Monospace 10"
         self._payload = ""
 
         vadj, hadj = gtk.Adjustment(), gtk.Adjustment()
@@ -402,12 +402,14 @@ class HexView(gtk.HBox):
     def get_font(self):
         return self._font
     def modify_font(self, val):
-        self._font = val
+        try:
+            desc = pango.FontDescription(val)
+            self._font = val
 
-        desc = pango.FontDescription(self._font)
-
-        for view in (self.offset_text, self.hex_text, self.ascii_text):
-            view.modify_font(desc)
+            for view in (self.offset_text, self.hex_text, self.ascii_text):
+                view.modify_font(desc)
+        except Exception:
+            pass
 
     def get_bpl(self):
         return self._bpl
