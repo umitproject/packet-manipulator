@@ -49,6 +49,7 @@ pygtk.require('2.0')
 
 import gtk
 import pango
+import gobject
 
 # Completions stuff
 import re
@@ -211,6 +212,10 @@ def commonprefix(m):
 class Console (gtk.ScrolledWindow):
     """ Interactive GTK console class """
 
+    __gsignals__ = {
+        'eval' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_BOOLEAN, (gobject.TYPE_STRING, ))
+    }
+
     def __init__(self, namespace={}, quit_handler = None):
         """ Initialize console
         """
@@ -352,7 +357,7 @@ class Console (gtk.ScrolledWindow):
         text = self.current_line()
 
         iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
-        self.buffer.insert(iter, '\n')
+        self.buffer.insert_with_tags_by_name(iter, '\n', 'normal')
 
         width = max(self.get_width(), 4)
         max_width = max([len(s) for s in completions])
@@ -377,8 +382,9 @@ class Console (gtk.ScrolledWindow):
                         n_spaces = 0
                     else:
                         n_spaces = col_width - len(completions[ind])
-                    self.buffer.insert(iter, completions[ind] + " " * n_spaces)
-            self.buffer.insert(iter, "\n")
+                    self.buffer.insert_with_tags_by_name( \
+                            iter, completions[ind] + " " * n_spaces, 'normal')
+            self.buffer.insert_with_tags_by_name(iter, '\n', 'normal')
 
         self.write (self.prompt, 'prompt')
         self.replace(text)
@@ -388,7 +394,7 @@ class Console (gtk.ScrolledWindow):
         
         iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
         self.buffer.insert_with_tags_by_name(iter,
-                'Welcome to UMIT Python Shell (running on %s)\n' % os.uname()[0],
+                'Welcome to UMIT Python Shell (running on %s)\n' % os.name,
                 'center', 'extern'
         )
         iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
@@ -399,6 +405,10 @@ class Console (gtk.ScrolledWindow):
         self.text.scroll_to_mark (self.buffer.get_insert(), 0)
         self.prompt1()
 
+    def append_text(self, txt):
+        iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
+        self.buffer.insert_with_tags_by_name(iter, txt, 'normal')
+        self.text.scroll_to_mark (self.buffer.get_insert(), 0)
 
     def prompt1 (self):
         """ Display normal prompt """
@@ -516,7 +526,7 @@ class Console (gtk.ScrolledWindow):
         """ Evaluate if current line is ready for execution """
         
         l = self.current_line()
-        self.write ('\n')
+        self.write ('\n', 'normal')
         self.history.append (l)
         end = self.buffer.get_end_iter()
         self.buffer.place_cursor(end)
@@ -559,6 +569,9 @@ class Console (gtk.ScrolledWindow):
 
     def execute (self, cmd):
         """ Execute a given command """
+
+        if self.emit('eval', cmd):
+            return
 
         sys.stdout, self.stdout = self.stdout, sys.stdout
         sys.stderr, self.stderr = self.stderr, sys.stderr
@@ -608,7 +621,7 @@ class Console (gtk.ScrolledWindow):
             self.write ("Executing '%s'\n\n" % filename, 'extern')
             for line in f:
                 self.write ('\t'+line, 'script')
-            self.write ('\n')
+            self.write ('\n', 'normal')
             self.execute ("execfile('%s')" % filename)
             self.prompt1()
         finally:
@@ -647,7 +660,7 @@ class Console (gtk.ScrolledWindow):
                 self.buffer.remove_all_tags(start, end)
                 self.buffer.apply_tag_by_name('script', start, end)
 
-                self.write('\n')
+                self.write('\n', 'normal')
             else:
                 start, end = self.current_line_bounds()
                 self.buffer.remove_all_tags(start, end)
@@ -671,6 +684,13 @@ class Console (gtk.ScrolledWindow):
         
         # Left arrow (control cursor position relative to prompt)
         elif event.keyval in (gtk.keysyms.KP_Left, gtk.keysyms.Left):
+            iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
+            if iter.get_offset() == self.linestart:
+                return True
+            return False
+        
+        # Backspace
+        elif event.keyval == gtk.keysyms.BackSpace:
             iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
             if iter.get_offset() == self.linestart:
                 return True
@@ -725,7 +745,7 @@ class Console (gtk.ScrolledWindow):
                 return True
         return False
 
-
+gobject.type_register(Console)
 
 # =============================================================================
 class ConsoleWindow:
