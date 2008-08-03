@@ -161,6 +161,51 @@ class BitEditor(Editor):
         # Yes we handle the drawing
         return True
 
+class EnumEditor(Editor):
+    def create_widgets(self):
+        self.store = gtk.ListStore(gtk.gdk.Pixbuf, str)
+        self.combo = gtk.ComboBox(self.store)
+
+        self.icon = None
+
+        pix = gtk.CellRendererPixbuf()
+        txt = gtk.CellRendererText()
+
+        self.combo.pack_start(pix, False)
+        self.combo.pack_start(txt)
+
+        self.combo.set_attributes(pix, pixbuf=0)
+        self.combo.set_attributes(txt, text=1)
+
+        for option in self.field.enumerable:
+            self.store.append([self.icon, option])
+
+        self.store.append([self.icon, "Set manually"])
+
+        self.int_editor = IntEditor(self.field)
+        self.undo_btn = gtk.Button("...")
+        self.int_editor.pack_start(self.undo_btn)
+        self.int_editor.show()
+
+    def pack_widgets(self):
+        self.pack_start(self.combo)
+
+    def connect_signals(self):
+        self.last = len(self.store) - 1
+        self.combo.connect('changed', self.__on_changed)
+        self.undo_btn.connect('clicked', self.__on_switch_back)
+
+    def __on_changed(self, combo):
+        if self.combo.get_active() == self.last:
+            self.remove(self.combo)
+            self.pack_start(self.int_editor)
+            self.int_editor.show_all()
+
+    def __on_switch_back(self, btn):
+        self.remove(self.int_editor)
+        self.pack_start(self.combo)
+        self.combo.show_all()
+
 class StrEditor(Editor):
     def create_widgets(self):
         self.entry = gtk.Entry()
@@ -229,15 +274,17 @@ class HackEntry(gtk.Entry):
 
     def do_size_allocate(self, alloc):
         # I wanna be extra large! mc donalds rules
-        if self.allocation.width >= alloc.width and \
-           self.allocation.height >= alloc.height:
-            return
+        if self.allocation.width > alloc.width and \
+           self.allocation.height > alloc.height:
+            alloc.width, alloc.height = self.allocation.width, self.allocation.height
 
         gtk.Entry.do_size_allocate(self, alloc)
 
         # Reserving space for borders
         alloc.height -= 1
         alloc.width -= 1
+        alloc.x -= 1
+        alloc.y -= 1
 
         self.box.size_request()
         self.box.size_allocate(alloc)
@@ -518,17 +565,21 @@ class PropertyGridTree(gtk.ScrolledWindow):
             cell.field = obj
             cell.set_property('editable', True)
 
-            if not obj.get() is None:
+            if hasattr(obj, 'get_human') and obj.get_human() != None:
+                cell.set_property('markup', '<tt>%s</tt>' % obj.get_human())
+            elif obj.get() != None:
                 cell.set_property('markup', '<tt>%s</tt>' % obj.get())
             else:
                 cell.set_property('markup', '<tt>N/A</tt>')
 
             if obj.bits == 1:
                 cell.editor = BitEditor
-            elif isinstance(obj, base.IntField):
-                cell.editor = IntEditor
-            elif isinstance(obj, base.IPv4AddrField):
+            elif issubclass(obj.__class__, base.EnumField):
+                cell.editor = EnumEditor
+            elif issubclass(obj.__class__, base.IPv4AddrField):
                 cell.editor = IPv4Editor
+            elif issubclass(obj.__class__, base.IntField):
+                cell.editor = IntEditor
             else:
                 cell.field = None
             
@@ -660,6 +711,7 @@ class PropertyGrid(gtk.VBox):
         if not desc:
             desc = ""
 
+        desc = desc.replace("  ", "").replace("\n", "").replace("\t", "")
         self.desc_text.get_buffer().set_text(desc)
 
 if __name__ == "__main__":
