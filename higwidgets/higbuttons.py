@@ -26,7 +26,7 @@ higwidgets/higbuttons.py
    button related classes
 """
 
-__all__ = ['HIGMixButton', 'HIGButton', 'HIGArrowButton']
+__all__ = ['HIGMixButton', 'HIGButton', 'HIGArrowButton', 'MiniButton']
 
 import gtk
 import gobject
@@ -73,6 +73,19 @@ class HIGToggleButton(gtk.ToggleButton):
             self.set_use_stock(True)
         else:
             gtk.ToggleButton.__init__(self)
+
+class MiniButton(gtk.Button):
+    def __init__(self, stock, size=gtk.ICON_SIZE_MENU):
+        super(MiniButton, self).__init__()
+
+        self.img = gtk.image_new_from_stock(stock, size)
+
+        hbox = gtk.HBox(False, 2)
+        hbox.pack_start(self.img)
+        hbox.show_all()
+
+        self.add(hbox)
+        self.set_size_request(*self.img.size_request())
 
 class HIGArrowButton(gtk.Button):
     __gtype_name__ = "HIGArrowButton"

@@ -30,10 +30,14 @@ import App
 import Backend
 from umpa import protocols as base
 
+# I18N
+from umitCore.I18N import _
+
 # For the icons
 from Icons import get_pixbuf
 
 # Higwidgets
+from higwidgets.higbuttons import MiniButton
 from higwidgets.hignetwidgets import HIGIpEntry
 from widgets.Expander import ToolBox
 
@@ -163,7 +167,7 @@ class BitEditor(Editor):
 
 class EnumEditor(Editor):
     def create_widgets(self):
-        self.store = gtk.ListStore(gtk.gdk.Pixbuf, str)
+        self.store = gtk.ListStore(gtk.gdk.Pixbuf, str, int)
         self.combo = gtk.ComboBox(self.store)
 
         self.icon = None
@@ -177,14 +181,33 @@ class EnumEditor(Editor):
         self.combo.set_attributes(pix, pixbuf=0)
         self.combo.set_attributes(txt, text=1)
 
-        for option in self.field.enumerable:
-            self.store.append([self.icon, option])
+        self.odict = [(v, k) for k, v in self.field.enumerable.items()]
+        self.odict.sort()
 
-        self.store.append([self.icon, "Set manually"])
+        idx = 0
+        set = False
+
+        for value, key in self.odict:
+            self.store.append([self.icon, key, value])
+
+            if not set: 
+                if self.value == value:
+                    set = True
+                    continue
+
+                idx += 1
+
+        if set:
+            self.combo.set_active(idx)
+
+        self.store.append([self.icon, _("Set manually"), -1])
 
         self.int_editor = IntEditor(self.field)
-        self.undo_btn = gtk.Button("...")
-        self.int_editor.pack_start(self.undo_btn)
+        
+        self.undo_btn = MiniButton(stock=gtk.STOCK_UNDO)
+        self.undo_btn.set_size_request(24, 24)
+
+        self.int_editor.pack_start(self.undo_btn, False, False)
         self.int_editor.show()
 
     def pack_widgets(self):
@@ -200,6 +223,12 @@ class EnumEditor(Editor):
             self.remove(self.combo)
             self.pack_start(self.int_editor)
             self.int_editor.show_all()
+        else:
+            iter = self.combo.get_active_iter()
+
+            if iter:
+                model = self.combo.get_model()
+                self.value = model.get_value(iter, 2)
 
     def __on_switch_back(self, btn):
         self.remove(self.int_editor)
@@ -309,7 +338,7 @@ class CellRendererGroup(gtk.CellRendererText):
 
         dummy_entry = gtk.Entry()
         dummy_entry.set_has_frame(False)
-        self.row_height = dummy_entry.size_request()[1]
+        self.row_height = dummy_entry.size_request()[1] + 2
     
     def do_get_size(self, widget, area):
         w, h = 0, 0
