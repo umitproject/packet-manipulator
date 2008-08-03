@@ -25,6 +25,7 @@ from widgets.HexView import HexView
 from widgets.Expander import AnimatedExpander
 
 from views import UmitView
+from Icons import get_pixbuf
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
     def __init__(self, packet):
@@ -34,13 +35,13 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         self.__pack_widgets()
         self.__connect_signals()
 
-        self.proto_icon = None
+        self.proto_icon = get_pixbuf('protocol_small')
 
         root = None
 
         # We pray to be ordered :(
         for proto in Backend.get_packet_protos(packet):
-            root = self.store.append(root, [self.proto_icon, "blahh", proto])
+            root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), proto])
 
     def __create_widgets(self):
         # Icon / string (like TCP packet with some info?) / hidden

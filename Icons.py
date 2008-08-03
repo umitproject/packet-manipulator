@@ -26,8 +26,10 @@ import gobject
 from umitCore.Paths import Path
 
 icons = (
+    'protocol',
     'locked',
     'packet',
+    'layer',
     'sniff'
 )
 

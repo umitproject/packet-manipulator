@@ -23,10 +23,12 @@ import Backend
 
 from views import UmitView
 from collections import defaultdict
+from Icons import get_pixbuf
    
 class ProtocolTree(gtk.VBox):
-    COL_STR = 0
-    COL_OBJ = 1
+    COL_PIX = 0
+    COL_STR = 1
+    COL_OBJ = 2
 
     def __init__(self):
         super(ProtocolTree, self).__init__(False, 2)
@@ -51,12 +53,24 @@ class ProtocolTree(gtk.VBox):
             
             toolbar.insert(item, -1)
         
-        self.store = gtk.TreeStore(str, object)
+        self.store = gtk.TreeStore(gtk.gdk.Pixbuf, str, object)
         self.tree = gtk.TreeView()
         
-        rend = gtk.CellRendererText()
-        col = gtk.TreeViewColumn('Protocols', rend, text=0)
-        col.set_cell_data_func(rend, self.__cell_data_func)
+        txt = gtk.CellRendererText()
+        pix = gtk.CellRendererPixbuf()
+
+        col = gtk.TreeViewColumn('Protocols')
+        col.pack_start(pix, False)
+        col.pack_start(txt)
+
+        col.set_attributes(pix, pixbuf=ProtocolTree.COL_PIX)
+        col.set_attributes(txt, text=ProtocolTree.COL_STR)
+
+        col.set_cell_data_func(pix, self.__pix_cell_data_func)
+        col.set_cell_data_func(txt, self.__txt_cell_data_func)
+        
+        txt.set_property('xpad', 6)
+        pix.set_property('xpad', 0)
         
         self.tree.append_column(col)
         self.tree.set_enable_tree_lines(True)
@@ -79,6 +93,9 @@ class ProtocolTree(gtk.VBox):
         
         self.pack_start(toolbar, False, False)
         self.pack_start(sw)
+
+        self.proto_icon = get_pixbuf('protocol_small')
+        self.layer_icon = get_pixbuf('layer_small')
         
         self.populate()
         self.__on_sort_descending(None)
@@ -88,20 +105,20 @@ class ProtocolTree(gtk.VBox):
         
         if fill:
             for i in Backend.get_protocols():
-                self.store.append(None, [i.__name__, i])
+                self.store.append(None, [self.proto_icon, i.__name__, i])
         else:
             return Backend.get_protocols()
         
     def __on_sort_descending(self, item):
         self.populate()
         model = gtk.TreeModelSort(self.store)
-        model.set_sort_column_id(0, gtk.SORT_DESCENDING)
+        model.set_sort_column_id(ProtocolTree.COL_STR, gtk.SORT_DESCENDING)
         self.tree.set_model(model)
     
     def __on_sort_ascending(self, item):
         self.populate()
         model = gtk.TreeModelSort(self.store)
-        model.set_sort_column_id(0, gtk.SORT_ASCENDING)
+        model.set_sort_column_id(ProtocolTree.COL_STR, gtk.SORT_ASCENDING)
         self.tree.set_model(model)
     
     def __on_sort_layer(self, item):
@@ -113,17 +130,27 @@ class ProtocolTree(gtk.VBox):
             dct[proto.layer].append(proto)
         
         for i in xrange(1, 8, 1):
-            it = self.store.append(None, ["Layer %d" % i, None])
+            it = self.store.append(None, [self.layer_icon, "Layer %d" % i, None])
             
             if not i in dct:
                 continue
             
             for proto in dct[i]:
-                self.store.append(it, [proto.__name__, proto])
+                self.store.append(it, [self.proto_icon, proto.__name__, proto])
         
         self.tree.set_model(self.store)
     
-    def __cell_data_func(self, column, cell, model, iter):
+    def __pix_cell_data_func(self, column, cell, model, iter):
+        val = model.get_value(iter, ProtocolTree.COL_STR)
+        obj = model.get_value(iter, ProtocolTree.COL_OBJ)
+        
+        if not obj:
+            cell.set_property('cell-background-gdk',
+                              self.style.base[gtk.STATE_INSENSITIVE])
+        else:
+            cell.set_property('cell-background-gdk', None)
+
+    def __txt_cell_data_func(self, column, cell, model, iter):
         val = model.get_value(iter, ProtocolTree.COL_STR)
         obj = model.get_value(iter, ProtocolTree.COL_OBJ)
         
