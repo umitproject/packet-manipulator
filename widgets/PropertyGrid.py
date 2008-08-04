@@ -28,7 +28,6 @@ import App
 
 # Protocol stuff
 import Backend
-from umpa import protocols as base
 
 # I18N
 from umitCore.I18N import _
@@ -120,25 +119,6 @@ class IntEditor(Editor):
         else:
             self.value = self.spin.get_value()
 
-class BitField(base.Field):
-    bits = 1
-    auto = False
-
-    def __init__(self, flag, name, value):
-        self.name = name
-        self.parent = flag
-        super(BitField, self).__init__(name, value, 1)
-
-    def set(self, val):
-        if val:
-            self.parent.set(self.name)
-        else:
-            self.parent.unset(self.name)
-        super(BitField, self).set(val)
-
-    def _is_valid(self, val):
-        return True
-
 class BitEditor(Editor):
     def create_widgets(self):
         self.btn = gtk.CheckButton()
@@ -158,8 +138,6 @@ class BitEditor(Editor):
     def render(field, window, widget, bounds, state):
         if len(field) == 3:
             proto, field, name = field
-
-            print proto, field, name
 
             if Backend.get_keyflag_value(proto, field, name):
                 sh = gtk.SHADOW_IN
@@ -543,21 +521,24 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
         if not iter:
             return (None, None)
-        
-        # If there's a object than it's a parent so return None, None
-        if model.get_value(iter, 0):
+
+        if isinstance(model.get_value(iter, 1), str):
+            iter = model.iter_parent(iter)
+
+        if not iter:
             return (None, None)
 
-        proto = model.get_value(model.iter_parent(iter), 0)
-        field = model.get_value(iter, 1)
-
-        if not isinstance(field, base.Field) or \
-           not isinstance(proto, base.Protocol):
+        proto, field = self.__get_parent_field(model, iter)
+        
+        if not proto or not field or \
+            not isinstance(field, Backend.PMField):
+            #or not isinstance(proto, base.Protocol):
             return (None, None)
 
         return (proto, field)
 
     def __on_selection_changed(self, selection):
+        return
         model, iter = selection.get_selected()
 
         if not iter:
@@ -586,7 +567,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         model, iter = self.tree.get_selection().get_selected()
         field = model.get_value(iter, 1)
 
-        if not field or not isinstance(field, base.Field):
+        if not field or not isinstance(field, Backend.PMField):
             return
 
         menu = gtk.Menu()
@@ -606,6 +587,16 @@ class PropertyGridTree(gtk.ScrolledWindow):
             return model.get_value(root, idx)
 
         return None
+
+    def __get_parent_field(self, model, iter):
+        proto = self.__get_parent_protocol(model, iter)
+
+        if proto:
+            field = model.get_value(iter, 1)
+
+            return proto, field
+
+        return None, None
 
     def __get_parent_flags_field(self, model, iter):
         root = model.iter_parent(iter)
@@ -653,8 +644,6 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
                 if value is None:
                     value = "N/A"
-                else:
-                    value = repr(value)
 
                 cell.set_property('markup', '<tt>%s</tt>' % value)
                 
@@ -694,8 +683,6 @@ class PropertyGridTree(gtk.ScrolledWindow):
             obj = model.get_value(iter, 1)
             proto = model.get_value(model.iter_parent(iter), 0)
 
-            print obj
-            
             if isinstance(obj, str) or \
                isinstance(obj, Backend.PMField):
 
