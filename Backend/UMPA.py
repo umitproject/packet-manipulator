@@ -24,6 +24,8 @@ from umpa import protocols
 from umpa.packets import Packet
 from umpa.protocols import Protocol
 
+from inspect import isclass
+
 # Globals UMPA protocols
 gprotos = []
 
@@ -76,8 +78,11 @@ def get_proto(proto_name):
     print "Protocol named %s not found." % proto_name
     return None
 
+def get_proto_class_name(protok):
+    return protok.__name__
+
 def get_proto_name(proto_inst):
-    return proto_inst.__class__.__name__
+    return get_proto_class_name(proto_inst.__class__)
 
 def get_field_name(field):
     return field.name
@@ -96,9 +101,25 @@ def get_field_key(proto_inst, field_inst):
 
     return None
 
+def get_proto_fields(proto_inst):
+    return proto_inst.get_fields()
+
 def get_packet_protos(packet):
-    for proto in packet.protos:
+    for proto in packet.root.protos:
         yield proto
+
+def get_proto_layer(proto):
+    return proto.layer
+
+def get_packet_raw(metapack):
+    return metapack.root.get_raw()
+
+class MetaPacket:
+    def __init__(self, proto=None):
+        self.root = Packet(proto)
+
+    def include(self, proto):
+        self.root.include(proto)
 
 class VirtualIFace:
     def __init__(self, name, desc, ip):

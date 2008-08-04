@@ -107,7 +107,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
         obj = model.get_value(iter, 2)
         
-        assert (isinstance(obj, Backend.Protocol), "Should be a Protocol instance.")
+        #assert (isinstance(obj, Backend.Protocol), "Should be a Protocol instance.")
 
         return obj
 
@@ -123,7 +123,7 @@ class SessionPage(gtk.VBox):
     def __create_widgets(self, proto):
         self._label = gtk.Label("*" + proto.__name__)
 
-        self.packet = Backend.Packet(proto())
+        self.packet = Backend.MetaPacket(proto())
 
         self.vpaned = gtk.VPaned()
         self.proto_hierarchy = ProtocolHierarchy(self.packet)
@@ -146,7 +146,7 @@ class SessionPage(gtk.VBox):
         Redraws the hexview
         """
         if self.packet:
-            self.hexview.payload = self.packet.get_raw()
+            self.hexview.payload = Backend.get_packet_raw(self.packet)
         else:
             print "redraw_hexview(): no packet!!!"
             self.hexview.payload = ""

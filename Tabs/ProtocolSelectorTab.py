@@ -105,7 +105,8 @@ class ProtocolTree(gtk.VBox):
         
         if fill:
             for i in Backend.get_protocols():
-                self.store.append(None, [self.proto_icon, i.__name__, i])
+                self.store.append(None,
+                    [self.proto_icon, Backend.get_proto_class_name(i), i])
         else:
             return Backend.get_protocols()
         
@@ -127,16 +128,23 @@ class ProtocolTree(gtk.VBox):
         dct = defaultdict(list)
         
         for proto in lst:
-            dct[proto.layer].append(proto)
+            dct[Backend.get_proto_layer(proto)].append(proto)
         
-        for i in xrange(1, 8, 1):
-            it = self.store.append(None, [self.layer_icon, "Layer %d" % i, None])
-            
+        for i in xrange(2, 8, 1):
             if not i in dct:
                 continue
+
+            it = self.store.append(None, [self.layer_icon, "Layer %d" % i, None])
             
             for proto in dct[i]:
-                self.store.append(it, [self.proto_icon, proto.__name__, proto])
+                self.store.append(it, [self.proto_icon, Backend.get_proto_class_name(proto), proto])
+
+        if None in dct:
+            it = self.store.append(None, [self.layer_icon, "Unknown layer" % i, None])
+
+            for proto in dct[None]:
+                self.store.append(it, [self.proto_icon, Backend.get_proto_class_name(proto), proto])
+
         
         self.tree.set_model(self.store)
     

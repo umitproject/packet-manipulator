@@ -675,7 +675,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         root_iter = self.store.append(None, [proto_inst, None])
 
         # We have to use the get_fields method
-        for field in proto_inst.get_fields():
+        for field in Backend.get_proto_fields(proto_inst):
             flag_iter = self.store.append(root_iter, [None, field])
 
             if isinstance(field, base.Flags):

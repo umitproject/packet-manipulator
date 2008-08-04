@@ -155,8 +155,8 @@ class Layout(gtk.Container):
         self._bin_window.set_user_data(self)
 
         self.set_style(self.style.attach(self.window))
-        self.style.set_background(self.window, gtk.STATE_INSENSITIVE)
-        self.style.set_background(self._bin_window, gtk.STATE_SELECTED)
+        self.style.set_background(self.window, gtk.STATE_NORMAL)
+        self.style.set_background(self._bin_window, gtk.STATE_NORMAL)
 
         if self._child:
             self._child.widget.set_parent_window(self._bin_window)
