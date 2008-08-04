@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import Backend
+
 from views import UmitView
 from widgets.PropertyGrid import PropertyGrid
 from Tabs.MainTab import SessionPage
@@ -60,7 +62,6 @@ class PropertyTab(UmitView):
             # so we can repopulate the PropertyGrid
             
             proto = page.proto_hierarchy.get_active_protocol()
-            print proto
             
             self.grid.populate(proto)
             self._main_widget.set_sensitive(True)
@@ -90,4 +91,7 @@ class PropertyTab(UmitView):
         page = tab.session_notebook.get_current_session()
 
         if page:
-            page.hexview.select_block(proto.get_offset(field) / 8, max(field.bits / 8, 1))
+            start  = Backend.get_field_offset(proto, field)
+            length = Backend.get_field_size(proto, field)
+
+            page.hexview.select_block(start / 8, max(length / 8, 1))

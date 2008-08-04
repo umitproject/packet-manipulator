@@ -115,6 +115,18 @@ def get_field_value_repr(proto, field):
 
     return str(ret)
 
+def get_field_size(proto, field):
+    return field.bits
+
+def get_field_offset(proto, field):
+    return proto.get_offset(field)
+
+def get_field_enumeration_s2i(field):
+    return field.enumerable.items()
+
+def get_field_enumeration_i2s(field):
+    return [(v, k) for (k, v) in field.enumerable.items()]
+
 def get_keyflag_value(proto, flag, key):
     return flag.get()[key].get()
 
@@ -151,6 +163,21 @@ def get_proto_layer(proto):
 def get_packet_raw(metapack):
     return metapack.root.get_raw()
 
+# Checking stuff
+
+def is_field(field):
+    return isinstance(field, Field)
+
+def is_flags(field):
+    return isinstance(field, Flags)
+
+def is_proto(proto):
+    return isinstance(proto, Protocol)
+
+def implements(obj, klass):
+    return isinstance(obj, klass)
+
+
 class MetaPacket:
     def __init__(self, proto=None):
         self.root = Packet(proto)
@@ -173,7 +200,26 @@ def find_all_devs():
                VirtualIFace("wlan0", "Wireless", "172.16.0.1")):
         yield i
 
+
 gprotos = load_gprotocols()
 
 PMField = Field
 PMFlagsField = Flags
+
+PMBitField          = BitField
+PMIPField           = IPv4AddrField
+PMByteField         = None
+PMShortField        = None
+PMLEShortField      = None
+PMIntField          = IntField
+PMSignedIntField    = None
+PMLEIntField        = None
+PMLESignedIntField  = None
+PMLongField         = None
+PMLELongField       = None
+PMStrField          = None
+PMLenField          = None
+PMRDLenField        = None
+PMFieldLenField     = None
+PMBCDFloatField     = None
+PMEnumField         = EnumField

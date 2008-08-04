@@ -85,11 +85,14 @@ class IntEditor(Editor):
 
     def create_widgets(self):
         # Manage the None type
-        if not self.value:
-            self.value = 0
+
+        value = self.value
+
+        if value is None:
+            value = 0
 
         self.calc_bounds()
-        self.adj = gtk.Adjustment(self.value, self.min, self.max, 1, 2)
+        self.adj = gtk.Adjustment(value, self.min, self.max, 1, 2)
         self.spin = gtk.SpinButton(self.adj, digits=self.digits)
 
     def pack_widgets(self):
@@ -102,11 +105,11 @@ class IntEditor(Editor):
     
     def calc_bounds(self):
         # Unsigned int / Int? :(
-        if self.field.bits:
+        if Backend.get_field_size(self.protocol, self.field) != None:
             self.min = 0
-            self.max = (2 ** self.field.bits) - 1 # (2 ^ n) - 1
+            self.max = (2 ** Backend.get_field_size(self.protocol, self.field)) - 1 # (2 ^ n) - 1
             self.digits = 0
-        elif isinstance(self.value, int):
+        else:
             import sys
             print "Hei man we are falling back to sys.maxint for", self.field
             self.min = -sys.maxint - 1
@@ -178,7 +181,7 @@ class EnumEditor(Editor):
         self.combo.set_attributes(pix, pixbuf=0)
         self.combo.set_attributes(txt, text=1)
 
-        self.odict = [(v, k) for k, v in self.field.enumerable.items()]
+        self.odict = Backend.get_field_enumeration_i2s(self.field)
         self.odict.sort()
 
         idx = 0
@@ -199,7 +202,7 @@ class EnumEditor(Editor):
 
         self.store.append([self.icon, _("Set manually"), -1])
 
-        self.int_editor = IntEditor(self.field)
+        self.int_editor = IntEditor((self.protocol, self.field))
         
         self.undo_btn = MiniButton(stock=gtk.STOCK_UNDO)
         self.undo_btn.set_size_request(24, 24)
@@ -266,6 +269,39 @@ class IPv4Editor(Editor):
 
     def __on_changed(self, entry):
         self.value = self.entry.get_text()
+
+def get_editor(field):
+    "@return the corresponding editor class for field or None"
+
+    assert Backend.is_field(field)
+
+    # MACField
+    # IPField
+
+    # We use a list because order is important here
+    table = [#(Backend.PMMACField, MACEditor),
+             (Backend.PMStrField, StrEditor),
+             (Backend.PMIPField, IPv4Editor),
+             (Backend.PMEnumField, EnumEditor),
+             (Backend.PMByteField, IntEditor),
+             (Backend.PMShortField, IntEditor),
+             (Backend.PMLEShortField, IntEditor),
+             (Backend.PMIntField, IntEditor),
+             (Backend.PMSignedIntField, IntEditor),
+             (Backend.PMLEIntField, IntEditor),
+             (Backend.PMLESignedIntField, IntEditor),
+             (Backend.PMLongField, IntEditor),
+             (Backend.PMLELongField, IntEditor),
+             (Backend.PMLenField, IntEditor),
+             (Backend.PMRDLenField, IntEditor),
+             (Backend.PMFieldLenField, IntEditor),
+             (Backend.PMBCDFloatField, IntEditor),
+             (Backend.PMBitField, IntEditor),
+    ]
+
+    for it in table:
+        if it[0] != None and Backend.implements(field, it[0]):
+            return it[1]
 
 class HackEntry(gtk.Entry):
     __gtype_name__ = "HackEntry"
@@ -529,16 +565,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
             return (None, None)
 
         proto, field = self.__get_parent_field(model, iter)
+
+        print proto, field
         
         if not proto or not field or \
-            not isinstance(field, Backend.PMField):
-            #or not isinstance(proto, base.Protocol):
+           not Backend.is_field(field) or \
+           not Backend.is_proto(proto):
+
             return (None, None)
 
         return (proto, field)
 
     def __on_selection_changed(self, selection):
-        return
         model, iter = selection.get_selected()
 
         if not iter:
@@ -567,7 +605,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         model, iter = self.tree.get_selection().get_selected()
         field = model.get_value(iter, 1)
 
-        if not field or not isinstance(field, Backend.PMField):
+        if not Backend.is_field(field):
             return
 
         menu = gtk.Menu()
@@ -617,7 +655,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         
         obj = model.get_value(iter, 1)
 
-        if isinstance(obj, Backend.PMFlagsField):
+        if Backend.is_flags(obj):
             cell.set_property('cell-background-gdk',
                               self.style.mid[gtk.STATE_NORMAL])
 
@@ -630,12 +668,13 @@ class PropertyGridTree(gtk.ScrolledWindow):
                     cell.set_property('markup', '<tt>%s</tt>' % value)
 
         # If we are a field or a string (a sub field of flags)
-        elif isinstance(obj, Backend.PMField) or \
-             isinstance(obj, str):
+        elif Backend.is_field(obj) or isinstance(obj, str):
 
-            cell.field = obj
+            cell.field = None
             cell.set_property('editable', True)
             cell.set_property('cell-background-gdk', None)
+
+            # We have a standard field
 
             protocol = self.__get_parent_protocol(model, iter)
 
@@ -646,9 +685,14 @@ class PropertyGridTree(gtk.ScrolledWindow):
                     value = "N/A"
 
                 cell.set_property('markup', '<tt>%s</tt>' % value)
+                cell.editor = get_editor(obj)
+
+                if cell.editor:
+                    cell.field = (protocol, obj)
                 
                 return
 
+            # We have a subkey of Flags
             
             proto, flags = self.__get_parent_flags_field(model, iter)
 
@@ -657,17 +701,6 @@ class PropertyGridTree(gtk.ScrolledWindow):
                 cell.field = (proto, flags, model.get_value(iter, 1))
                 
                 return
-
-            if obj.bits == 1:
-                cell.editor = BitEditor
-            elif issubclass(obj.__class__, base.EnumField):
-                cell.editor = EnumEditor
-            elif issubclass(obj.__class__, base.IPv4AddrField):
-                cell.editor = IPv4Editor
-            elif issubclass(obj.__class__, base.IntField):
-                cell.editor = IntEditor
-            else:
-                cell.field = None
             
         else:
             cell.set_property('cell-background-gdk',
@@ -683,21 +716,21 @@ class PropertyGridTree(gtk.ScrolledWindow):
             obj = model.get_value(iter, 1)
             proto = model.get_value(model.iter_parent(iter), 0)
 
-            if isinstance(obj, str) or \
-               isinstance(obj, Backend.PMField):
+            if Backend.is_field(obj):
 
-                if isinstance(obj, Backend.PMFlagsField):
+                if Backend.is_flags(obj):
                     color = self.style.mid[gtk.STATE_NORMAL]
                 else:
                     color = None
                 
-                if isinstance(obj, Backend.PMField):
-                    if Backend.is_field_autofilled(obj):
-                        markup = '<i>%s</i>' % Backend.get_field_name(obj)
-                    else:
-                        markup = '<b>%s</b>' % Backend.get_field_name(obj)
+                if Backend.is_field_autofilled(obj):
+                    markup = '<i>%s</i>' % Backend.get_field_name(obj)
                 else:
-                    markup = '<b>%s</b>' % obj
+                    markup = '<b>%s</b>' % Backend.get_field_name(obj)
+
+            elif isinstance(obj, str):
+                color = None
+                markup = '<b>%s</b>' % obj
         else:
             markup = '<b>%s</b>' % Backend.get_proto_name(obj)
         
@@ -710,16 +743,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
         
         icon, color = None, self.style.mid[gtk.STATE_NORMAL]
         
-        if isinstance(obj, str) or isinstance(obj, Backend.PMField):
+        if Backend.is_field(obj):
 
-            if isinstance(obj, Backend.PMFlagsField):
+            if Backend.is_flags(obj):
                 color = self.style.mid[gtk.STATE_NORMAL]
             else:
                 color = None
 
-            if isinstance(obj, Backend.PMField):
-                if Backend.is_field_autofilled(obj):
-                    icon = self.icon_locked
+            if Backend.is_field_autofilled(obj):
+                icon = self.icon_locked
+
+        elif isinstance(obj, str):
+            color = None
         
         cell.set_property('cell-background-gdk', color)
         cell.set_property('pixbuf', icon)
@@ -739,7 +774,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         for field in Backend.get_proto_fields(proto_inst):
             flag_iter = self.store.append(root_iter, [None, field])
 
-            if isinstance(field, Backend.PMFlagsField):
+            if Backend.is_flags(field):
                 for flag in Backend.get_flag_keys(field):
                     self.store.append(flag_iter, [None, flag])
 
