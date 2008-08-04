@@ -140,7 +140,7 @@ class ProtocolTree(gtk.VBox):
                 self.store.append(it, [self.proto_icon, Backend.get_proto_class_name(proto), proto])
 
         if None in dct:
-            it = self.store.append(None, [self.layer_icon, "Unknown layer" % i, None])
+            it = self.store.append(None, [self.layer_icon, "Unknown layer", None])
 
             for proto in dct[None]:
                 self.store.append(it, [self.proto_icon, Backend.get_proto_class_name(proto), proto])

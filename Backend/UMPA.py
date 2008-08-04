@@ -23,6 +23,7 @@ import os, os.path
 from umpa import protocols
 from umpa.packets import Packet
 from umpa.protocols import Protocol
+from umpa.protocols._fields import *
 
 from inspect import isclass
 
@@ -84,8 +85,44 @@ def get_proto_class_name(protok):
 def get_proto_name(proto_inst):
     return get_proto_class_name(proto_inst.__class__)
 
+# Fields section
+
 def get_field_name(field):
     return field.name
+
+def get_field_value(proto, field):
+    return field.get()
+
+def set_field_value(proto, field, value):
+    field.set(value)
+
+def get_field_value_repr(proto, field):
+    ret = get_field_value(proto, field)
+    out = ""
+
+    if isinstance(ret, dict):
+        for it in ret:
+            if ret[it].get():
+                out += "+%s" % it 
+
+        return out[1:]
+
+    if isinstance(ret, (list, tuple)):
+        for it in ret:
+            out += "+%s" % it
+
+        return out[1:]
+
+    return str(ret)
+
+def get_keyflag_value(proto, flag, key):
+    return flag.get()[key].get()
+
+def set_keyflag_value(proto, flag, key, value):
+    return flag.get()[key].set(value)
+
+def is_field_autofilled(field):
+    return field.auto
 
 def get_field_desc(field):
     return field.__doc__
@@ -137,3 +174,6 @@ def find_all_devs():
         yield i
 
 gprotos = load_gprotocols()
+
+PMField = Field
+PMFlagsField = Flags
