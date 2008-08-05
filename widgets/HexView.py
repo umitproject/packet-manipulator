@@ -56,7 +56,7 @@ class OffsetText(BaseText):
         self.buffer.set_text('')
 
         bpl = self._parent.bpl
-        tot_lines = len(txt) / bpl
+        tot_lines = int(len(txt) / bpl)
 
         if len(txt) % bpl != 0:
             tot_lines += 1
@@ -173,7 +173,7 @@ class HexText(BaseText):
         self.buffer.set_text('')
 
         bpl = self._parent.bpl
-        tot_lines = len(txt) / bpl
+        tot_lines = int(len(txt) / bpl)
 
         if len(txt) % bpl != 0:
             tot_lines += 1
@@ -423,6 +423,7 @@ class HexView(gtk.HBox):
     def get_payload(self):
         return self._payload
     def set_payload(self, val):
+        print val, type(val)
         self._payload = val
 
         for view in (self.offset_text, self.hex_text, self.ascii_text):

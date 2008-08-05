@@ -27,6 +27,8 @@ from widgets.Expander import AnimatedExpander
 from views import UmitView
 from Icons import get_pixbuf
 
+from Manager.PreferenceManager import Prefs
+
 class ProtocolHierarchy(gtk.ScrolledWindow):
     def __init__(self, packet):
         gtk.ScrolledWindow.__init__(self)
@@ -128,6 +130,9 @@ class SessionPage(gtk.VBox):
         self.vpaned = gtk.VPaned()
         self.proto_hierarchy = ProtocolHierarchy(self.packet)
         self.hexview = HexView()
+
+        Prefs()['gui.maintab.hexview.font'].connect(self.hexview.modify_font)
+        Prefs()['gui.maintab.hexview.bpl'].connect(self.hexview.set_bpl)
 
         self.redraw_hexview()
 

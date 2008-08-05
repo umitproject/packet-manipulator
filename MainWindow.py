@@ -210,10 +210,7 @@ class MainWindow(gtk.Window):
 
     def __on_preferences(self, action):
         dialog = PreferenceDialog(self)
-
-        dialog.run()
-        dialog.hide()
-        dialog.destroy()
+        dialog.show()
 
     def __on_about(self, action):
         dialog = gtk.AboutDialog()

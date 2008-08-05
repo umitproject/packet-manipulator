@@ -18,19 +18,24 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from Atoms import Singleton
-from Icons import register_icons
-from MainWindow import MainWindow
-from Manager.PreferenceManager import Prefs
+class Singleton(object):
+    """
+    A class for singleton pattern
+    Support also gobject if Singleton base subclass if specified first
+    """
 
-class PMApp(Singleton):
-    def __init__(self):
-        register_icons()
+    instances = {}
+    def __new__(cls, *args, **kwargs): 
+        from gobject import GObject
 
-        self.prefs = Prefs()
-        self.main_window = MainWindow()
-        self.main_window.connect_tabs_signals()
-
-    def run(self):
-        from gtk import main
-        main()
+        if Singleton.instances.get(cls) is None:
+            cls.__original_init__ = cls.__init__
+            if issubclass(cls, GObject):
+                Singleton.instances[cls] = GObject.__new__(cls)
+            else:
+                Singleton.instances[cls] = object.__new__(cls, *args, **kwargs)
+        elif cls.__init__ == cls.__original_init__:
+            def nothing(*args, **kwargs):
+                pass
+            cls.__init__ = nothing
+        return Singleton.instances[cls]

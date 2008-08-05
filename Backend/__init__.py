@@ -18,4 +18,15 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from UMPA import *
+class VirtualIFace:
+    def __init__(self, name, desc, ip):
+        self.name = name
+        self.description = desc
+        self.ip = ip
+
+from Manager.PreferenceManager import Prefs
+
+if Prefs()['backend.system'].value.lower() == 'umpa':
+    from UMPA import *
+elif Prefs()['backend.system'].value.lower() == 'scapy':
+    from Scapy import *
