@@ -23,6 +23,7 @@ import Backend
 
 from widgets.HexView import HexView
 from widgets.Expander import AnimatedExpander
+from widgets.Sniff import SniffNotebook
 
 from views import UmitView
 from Icons import get_pixbuf
@@ -200,6 +201,7 @@ class MainTab(UmitView):
         self.packet_expander = AnimatedExpander("<b>Packet perspective</b>", 'packet_small')
 
         self.session_notebook = SessionNotebook()
+        self.sniff_notebook = SniffNotebook()
 
     def __pack_widgets(self):
         "Pack the widgets"
@@ -213,8 +215,7 @@ class MainTab(UmitView):
         self.vbox.pack_start(self.packet_expander)
 
         self.packet_expander.add(self.session_notebook)
-        self.sniff_expander.add(gtk.Button("Miao"))
-        #self.vbox.pack_start(self.session_notebook)
+        self.sniff_expander.add(self.sniff_notebook)
 
         self.session_notebook.drag_dest_set(
             gtk.DEST_DEFAULT_ALL,

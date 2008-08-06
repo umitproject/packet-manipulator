@@ -21,7 +21,164 @@
 import gtk
 import Backend
 
+from sys import maxint
 from umitCore.I18N import _
+
+class CaptureOptions(gtk.Expander):
+    def __init__(self):
+        super(CaptureOptions, self).__init__()
+
+        self.set_border_width(4)
+        self.set_label_widget(self.new_label(_('<b>Options</b>')))
+
+        tbl = gtk.Table(6, 3, False)
+        tbl.set_border_width(4)
+        tbl.set_col_spacings(4)
+
+        tbl.attach(self.new_label(_('Filter:')), 0, 1, 0, 1, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Capture file:')), 0, 1, 1, 2, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Max packet size:')), 0, 1, 2, 3, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 3, 4, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 4, 5, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 5, 6, yoptions=gtk.SHRINK)
+
+        self.filter = gtk.Entry()
+
+        btn = gtk.Button()
+        btn.add(gtk.image_new_from_stock(gtk.STOCK_INFO, gtk.ICON_SIZE_BUTTON))
+        btn.set_relief(gtk.RELIEF_NONE)
+
+        hbox = gtk.HBox(False, 2)
+        hbox.pack_start(self.filter)
+        hbox.pack_start(btn, False, False)
+
+        tbl.attach(hbox, 1, 2, 0, 1, yoptions=gtk.SHRINK)
+
+        self.file = gtk.Entry()
+
+        btn = gtk.Button()
+        btn.add(gtk.image_new_from_stock(gtk.STOCK_OPEN, gtk.ICON_SIZE_BUTTON))
+        btn.set_relief(gtk.RELIEF_NONE)
+        btn.connect('clicked', self.__on_select_capfile)
+
+        hbox = gtk.HBox(False, 2)
+        hbox.pack_start(self.file)
+        hbox.pack_start(btn, False, False)
+
+        tbl.attach(hbox, 1, 2, 1, 2, yoptions=gtk.SHRINK)
+
+        max_size, self.max_size = self.new_combo(0, maxint, [_("byte(s)")])
+        stop_packets, self.stop_packets = self.new_combo(0, maxint, [_("packet(s)")])
+        stop_size, self.stop_size = self.new_combo(0, 1024, [_("KB"), _("MB"), _("GB")])
+        stop_time, self.stop_time = self.new_combo(0, maxint, [_("second(s)"), _("minute(s)"), _("hour(s)")])
+
+        group = gtk.SizeGroup(gtk.SIZE_GROUP_BOTH)
+
+        for widget in max_size, stop_packets, stop_size, stop_time:
+            group.add_widget(widget)
+
+        tbl.attach(max_size, 1, 2, 2, 3, yoptions=gtk.SHRINK)
+        tbl.attach(stop_packets, 1, 2, 3, 4, yoptions=gtk.SHRINK)
+        tbl.attach(stop_size, 1, 2, 4, 5, yoptions=gtk.SHRINK)
+        tbl.attach(stop_time, 1, 2, 5, 6, yoptions=gtk.SHRINK)
+
+        self.res_mac = gtk.CheckButton(_('Enable MAC name resolution'))
+        self.res_name = gtk.CheckButton(_('Enable network name resolution'))
+        self.res_transport = gtk.CheckButton(_('Enable transport name resolution'))
+
+        self.gui_real = gtk.CheckButton(_('Update view in real mode'))
+        self.gui_scroll = gtk.CheckButton(_('Automatic view scrolling'))
+
+        self.net_promisc = gtk.CheckButton(_('Capture in promiscuous mode'))
+
+        tbl.attach(self.gui_real, 2, 3, 0, 1, yoptions=gtk.SHRINK)
+        tbl.attach(self.gui_scroll, 2, 3, 1, 2, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.net_promisc, 2, 3, 2, 3, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.res_mac, 2, 3, 3, 4, yoptions=gtk.SHRINK)
+        tbl.attach(self.res_name, 2, 3, 4, 5, yoptions=gtk.SHRINK)
+        tbl.attach(self.res_transport, 2, 3, 5, 6, yoptions=gtk.SHRINK)
+
+        # Setting the default values
+        self.res_mac.set_active(True)
+        self.res_transport.set_active(True)
+        self.gui_real.set_active(True)
+        self.gui_scroll.set_active(True)
+        self.net_promisc.set_active(True)
+
+        self.add(tbl)
+
+    def new_label(self, txt):
+        lbl = gtk.Label(txt)
+        lbl.set_use_markup(True)
+        lbl.set_alignment(0, 0.5)
+
+        return lbl
+
+    def new_combo(self, min, max, lbls):
+        if len(lbls) == 1:
+            combo = gtk.Label(lbls[0])
+            combo.set_alignment(0, 0.5)
+        else:
+            combo = gtk.combo_box_new_text()
+
+            for lbl in lbls:
+                combo.append_text(lbl)
+
+            combo.set_active(0)
+
+        spin = gtk.SpinButton(gtk.Adjustment(min, min, max, 1, 10))
+
+        hbox = gtk.HBox(True, 2)
+        hbox.pack_start(spin)
+        hbox.pack_start(combo)
+
+        return hbox, spin
+
+    def __on_select_capfile(self, btn):
+        pass
+
+    def get_options(self):
+        filter = self.filter.get_text()
+        capfile = self.file.get_text()
+
+        if not filter:
+            filter = None
+
+        if not capfile:
+            capfile = None
+
+        maxsize = self.max_size.get_value_as_int()
+        scount = self.stop_packets.get_value_as_int()
+        stime = self.stop_time.get_value_as_int()
+        ssize = self.stop_size.get_value_as_int()
+
+        real = self.gui_scroll.get_active()
+        scroll = self.gui_scroll.get_active()
+
+        resmac = self.res_mac.get_active()
+        resname = self.res_name.get_active()
+        restransport = self.res_transport.get_active()
+
+        promisc = self.net_promisc.get_active()
+
+        dct = {
+            'filter'       : filter,
+            'maxsize'      : maxsize,
+            'capfile'      : capfile,
+            'scount'       : scount,
+            'stime'        : stime,
+            'ssize'        : ssize,
+            'real'         : real,
+            'scroll'       : scroll,
+            'resmac'       : resmac,
+            'resname'      : resname,
+            'restransport' : restransport,
+            'promisc'      : promisc
+        }
+
+        return dct
 
 class InterfaceList(gtk.VBox):
     def __init__(self):
@@ -97,11 +254,18 @@ class InterfaceDialog(gtk.Dialog):
         )
         
         self.if_list = InterfaceList()
+        self.options = CaptureOptions()
+
         self.vbox.pack_start(self.if_list)
-        
-        self.if_list.show_all()
-        self.set_size_request(500, 200)
+        self.vbox.pack_start(self.options, False, False)
+
+        self.show_all()
+        self.set_size_request(620, 400)
     
     def get_selected(self):
         "@return the selected interface for sniffing or None"
         return self.if_list.get_selected()
+
+    def get_options(self):
+        "@return the actived options in a dict"
+        return self.options.get_options()

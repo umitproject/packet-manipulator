@@ -109,6 +109,55 @@ class MetaPacket:
         else:
             self.root = proto
 
+    def get_size(self):
+        return len(str(self.root))
+
+    def summary(self):
+        return self.root.summary()
+        ret = ""
+        for r in self.root:
+            ret += self.root._elt2sum(r)
+        return ret
+
+    def get_time(self):
+        #self.root.time
+        return self.root.sprintf("%.time%")
+
+    def get_source(self):
+        ip = self.root.sprintf("{IP:%IP.src%}")
+        hw = self.root.sprintf("{Ether:%Ether.src%}")
+
+        if ip:
+            return ip
+
+        if hw:
+            return hw
+
+        return "N/A"
+
+    def get_dest(self):
+        ip = self.root.sprintf("{IP:%IP.dst%}")
+        hw = self.root.sprintf("{Ether:%Ether.dst%}")
+
+        if ip:
+            return ip
+
+        if hw:
+            return hw
+
+        return "N/A"
+
+    def get_protocol_str(self):
+        proto = self.root
+
+        while isinstance(proto, Packet):
+            if isinstance(proto.payload, NoPayload) or \
+               isinstance(proto.payload, Raw):
+                return proto.name
+
+            proto = proto.payload
+
+
 print ">>> %d protocols registered." % len(gprotos)
 
 
@@ -214,6 +263,30 @@ def implements(obj, klass):
 
 from Backend import VirtualIFace
 
+def next_packet(ctx):
+    if ctx.iface:
+
+        if not ctx.socket:
+            ctx.socket = conf.L2listen(type=ETH_P_ALL, iface=ctx.iface, filter=ctx.filter)
+
+        p = ctx.socket.recv(MTU)
+
+        if p is None:
+            return None
+                
+        return MetaPacket(p)
+
+        #return MetaPacket(sniff(count=1, store=1, iface=ctx.iface, filter=ctx.filter)[0])
+    else:
+        # we not use the default conf iface
+        raise Exception("No sniff interface given.")
+
+def read_file(ctx):
+    if ctx.cap_file:
+        return sniff(count=0, store=1, offline=ctx.cap_file, filter=ctx.filter)
+    else:
+        raise Exception("No pcap file given.")
+
 def find_all_devs():
     ifaces = get_if_list()
 
@@ -243,6 +316,19 @@ def find_all_devs():
     return ret
 
 # Routes stuff
+
+def route_resync():
+    conf.route.resync()
+
+def route_list():
+    for net, msk, gw, iface, addr in conf.route.routes:
+        yield (ltoa(net), ltoa(msk), gw, iface, addr)
+
+def route_add(self, host, net, gw, dev):
+    conf.route.add({'host':host, 'net':net, 'gw':gw, 'dev':dev})
+
+def route_remove(self, host, net, gw, dev):
+    conf.route.delt({'host':host, 'net':net, 'gw':gw, 'dev':dev})
 
 PMField             = Field
 PMFlagsField        = FlagsField

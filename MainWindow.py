@@ -35,6 +35,7 @@ from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
 from Dialogs.Interface import InterfaceDialog
 from Dialogs.Preferences import PreferenceDialog
+from Dialogs.Routes import RoutesDialog
 
 from umitCore.I18N import _
 from umitCore.Paths import Path
@@ -68,6 +69,7 @@ class MainWindow(gtk.Window):
             ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i', None, self.__on_select_iface),
 
             ('Options', None, _('Options'), None),
+            ('Routes', gtk.STOCK_NETWORK, _('Routing table'), '<Control>r', None, self.__on_routing),
             ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'), '<Control>p', None, self.__on_preferences),
 
             ('Views', None, _('Views'), None),
@@ -88,6 +90,8 @@ class MainWindow(gtk.Window):
                 <menuitem action='Interface'/>
             </menu>
             <menu action='Options'>
+                <menuitem action='Routes'/>
+                <separator/>
                 <menuitem action='Preferences'/>
             </menu>
             <menu action='Views'/>
@@ -208,6 +212,12 @@ class MainWindow(gtk.Window):
 
         print "Dumping XML structure for protocol", session.protocol
 
+    def __on_routing(self, action):
+        dialog = RoutesDialog(self)
+        dialog.run()
+        dialog.hide()
+        dialog.destroy()
+
     def __on_preferences(self, action):
         dialog = PreferenceDialog(self)
         dialog.show()
@@ -228,6 +238,7 @@ class MainWindow(gtk.Window):
         dialog.run()
         
         print "IFace selected:", dialog.get_selected()
+        print "Options:", dialog.get_options()
         dialog.hide()
         dialog.destroy()
 
