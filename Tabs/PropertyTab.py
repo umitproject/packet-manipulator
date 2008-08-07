@@ -38,6 +38,9 @@ class PropertyTab(UmitView):
         self._main_widget.add(self.grid)
         self._main_widget.show_all()
 
+        self.prev_page = None
+        self.change_id = None
+
         # Start disabled
         self._main_widget.set_sensitive(False)
 
@@ -61,10 +64,32 @@ class PropertyTab(UmitView):
             # from selection or from the first iter
             # so we can repopulate the PropertyGrid
             
-            proto = page.proto_hierarchy.get_active_protocol()
+            packet, proto = page.proto_hierarchy.get_active_protocol()
+
+            if self.prev_page and self.change_id:
+                sel = self.prev_page.proto_hierarchy.tree.get_selection()
+                if sel:
+                    sel.disconnect(self.change_id)
+
+            self.prev_page = page
+            self.change_id = page.proto_hierarchy.tree.get_selection().connect('changed',
+                                                   self.__on_hierarchy_selection_changed)
             
-            self.grid.populate(proto)
+            self.grid.populate(packet, proto)
             self._main_widget.set_sensitive(True)
+
+    def __on_hierarchy_selection_changed(self, selection):
+        model, iter = selection.get_selected()
+
+        if not iter:
+            return
+
+        packet, proto = self.prev_page.proto_hierarchy.get_active_protocol()
+        
+        self.grid.clear()
+        self.grid.populate(packet, proto)
+
+        self._main_widget.set_sensitive(True)
 
     def __redraw_hex_view(self, tree, entry_destroyed):
         # This is called when the user end the edit action on the PropertyGrid
@@ -81,7 +106,7 @@ class PropertyTab(UmitView):
             # Now reselect the blocks
             self.__on_field_selected(self.grid.tree, *self.grid.tree.get_selected_field())
 
-    def __on_field_selected(self, tree, proto=None, field=None):
+    def __on_field_selected(self, tree, packet=None, proto=None, field=None):
         if not proto or not field:
             return
 
@@ -91,7 +116,7 @@ class PropertyTab(UmitView):
         page = tab.session_notebook.get_current_session()
 
         if page:
-            start  = Backend.get_field_offset(proto, field)
+            start  = Backend.get_field_offset(packet, proto, field)
             length = Backend.get_field_size(proto, field)
 
             page.hexview.select_block(start / 8, max(length / 8, 1))

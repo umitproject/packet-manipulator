@@ -178,12 +178,15 @@ def get_field_value_repr(proto, field):
     return field.i2repr(proto, getattr(proto, field.name))
 
 def get_field_size(proto, field):
+    # CHECK THIS
+    return len(getattr(proto, field.name)) * 8
+
     if hasattr(field, 'size'):
         return field.size
     else:
         return field.sz * 8
 
-def get_field_offset(proto, field):
+def get_field_offset(packet, proto, field):
     bits = 0
 
     for f in proto.fields_desc:

@@ -505,13 +505,14 @@ gobject.type_register(CellRendererIcon)
 class PropertyGridTree(gtk.ScrolledWindow):
     __gsignals__ = {
         'finish-edit'    : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, )),
-        'field-selected' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT)),
+        'field-selected' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT)),
         'desc-changed'   : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_STRING, )),
     }
 
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)
-        
+       
+        self.packet = None
         self.store = gtk.TreeStore(object, object)
         self.tree = gtk.TreeView(self.store)
 
@@ -574,25 +575,23 @@ class PropertyGridTree(gtk.ScrolledWindow):
         model, iter = self.tree.get_selection().get_selected()
 
         if not iter:
-            return (None, None)
+            return (None, None, None)
 
         if isinstance(model.get_value(iter, 1), str):
             iter = model.iter_parent(iter)
 
         if not iter:
-            return (None, None)
+            return (None, None, None)
 
         proto, field = self.__get_parent_field(model, iter)
 
-        print proto, field
-        
         if not proto or not field or \
            not Backend.is_field(field) or \
            not Backend.is_proto(proto):
 
-            return (None, None)
+            return (None, None, None)
 
-        return (proto, field)
+        return (self.packet, proto, field)
 
     def __on_selection_changed(self, selection):
         model, iter = selection.get_selected()
@@ -606,9 +605,9 @@ class PropertyGridTree(gtk.ScrolledWindow):
             # We have selected the protocol
             self.emit('desc-changed', "%s protocol." % Backend.get_proto_name(proto))
         else:
-            proto, field = self.get_selected_field()
+            packet, proto, field = self.get_selected_field()
 
-            self.emit('field-selected', proto, field)
+            self.emit('field-selected', packet, proto, field)
             self.emit('desc-changed', Backend.get_field_desc(field))
 
     def __on_button_release(self, widget, event):
@@ -779,13 +778,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
     def clear(self):
         "Clear the store"
+        self.packet = None
         self.store.clear()
 
-    def populate(self, proto_inst):
+    def populate(self, packet, proto_inst):
         """
         Populate the store with the fields of Protocol
+        @param packet a Packet that cointains the proto_inst
+               or None if not parent is setted
         @param proto_inst a Protocol object instance
         """
+
+        self.packet = packet
         root_iter = self.store.append(None, [proto_inst, None])
 
         # We have to use the get_fields method
@@ -795,6 +799,8 @@ class PropertyGridTree(gtk.ScrolledWindow):
             if Backend.is_flags(field):
                 for flag in Backend.get_flag_keys(field):
                     self.store.append(flag_iter, [None, flag])
+
+        self.tree.expand_row((0, ), False)
 
 gobject.type_register(PropertyGridTree)
 

@@ -31,25 +31,36 @@ from Icons import get_pixbuf
 from Manager.PreferenceManager import Prefs
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
-    def __init__(self, packet):
+    def __init__(self, parent):
         gtk.ScrolledWindow.__init__(self)
 
         self.__create_widgets()
         self.__pack_widgets()
         self.__connect_signals()
 
+        self.session = parent
         self.proto_icon = get_pixbuf('protocol_small')
+
+        self.reload()
+
+    def reload(self):
+        self.store.clear()
 
         root = None
 
         # We pray to be ordered :(
-        for proto in Backend.get_packet_protos(packet):
-            root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), proto])
+        for proto in Backend.get_packet_protos(self.session.packet):
+            if not root:
+                root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), (proto, self.session.packet)])
+            else:
+                root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), proto])
+
+        self.tree.expand_all()
 
     def __create_widgets(self):
         # Icon / string (like TCP packet with some info?) / hidden
         self.store = gtk.TreeStore(gtk.gdk.Pixbuf, str, object)
-        self.view = gtk.TreeView(self.store)
+        self.tree = gtk.TreeView(self.store)
 
         pix = gtk.CellRendererPixbuf()
         txt = gtk.CellRendererText()
@@ -62,21 +73,20 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         col.set_attributes(pix, pixbuf=0)
         col.set_attributes(txt, text=1)
 
-        self.view.append_column(col)
+        self.tree.append_column(col)
 
-        self.view.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
-        self.view.set_enable_tree_lines(True)
-        self.view.set_rules_hint(True)
+        self.tree.set_grid_lines(gtk.TREE_VIEW_GRID_LINES_BOTH)
+        self.tree.set_rules_hint(True)
 
     def __pack_widgets(self):
         self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-        self.add(self.view)
+        self.add(self.tree)
 
     def __connect_signals(self):
-        self.view.enable_model_drag_dest([('text/plain', 0, 0)], gtk.gdk.ACTION_COPY)
-        self.view.connect('drag-data-received', self.__on_drag_data)
+        self.tree.enable_model_drag_dest([('text/plain', 0, 0)], gtk.gdk.ACTION_COPY)
+        self.tree.connect('drag-data-received', self.__on_drag_data)
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
         if data and data.format == 8:
@@ -97,39 +107,46 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         Return the selected protocol or the most
         important protocol if no selection.
 
-        @return an instance of Protocol or None
+        @return a tuple Packet, Protocol or None, None
         """
 
-        model, iter = self.view.get_selection().get_selected()
+        model, iter = self.tree.get_selection().get_selected()
 
         if not iter:
             iter = model.get_iter_first()
 
             if not iter:
-                return None
+                return None, None
 
         obj = model.get_value(iter, 2)
         
-        #assert (isinstance(obj, Backend.Protocol), "Should be a Protocol instance.")
+        assert (Backend.is_proto(obj[0]), "Should be a Protocol instance.")
+        assert (isinstance(obj[1], Backend.MetaPacket), "Should be a MetaPacket instance.")
 
-        return obj
+        return obj[1], obj[0]
 
 
 class SessionPage(gtk.VBox):
-    def __init__(self, proto_name):
+    def __init__(self, packet, protoname=None):
         gtk.VBox.__init__(self)
 
-        self.__create_widgets(Backend.get_proto(proto_name))
+        assert(packet or protoname)
+
+        if not packet and protoname:
+            packet = Backend.get_proto(protoname)()
+            packet = Backend.MetaPacket(packet)
+
+        self.__create_widgets(packet)
         self.__pack_widgets()
         self.__connect_signals()
 
-    def __create_widgets(self, proto):
-        self._label = gtk.Label("*" + proto.__name__)
+    def __create_widgets(self, packet):
+        self._label = gtk.Label("*" + packet.get_protocol_str())
 
-        self.packet = Backend.MetaPacket(proto())
+        self.packet = packet
 
         self.vpaned = gtk.VPaned()
-        self.proto_hierarchy = ProtocolHierarchy(self.packet)
+        self.proto_hierarchy = ProtocolHierarchy(self)
         self.hexview = HexView()
 
         Prefs()['gui.maintab.hexview.font'].connect(self.hexview.modify_font)
@@ -157,6 +174,14 @@ class SessionPage(gtk.VBox):
             print "redraw_hexview(): no packet!!!"
             self.hexview.payload = ""
 
+    def load_packet(self, packet):
+        self.packet = packet
+
+        self._label.set_text("*" + packet.get_protocol_str())
+
+        self.redraw_hexview()
+        self.proto_hierarchy.reload()
+
     def get_label(self):
         return self._label
 
@@ -169,8 +194,12 @@ class SessionNotebook(gtk.Notebook):
         self.set_show_border(False)
         self.set_scrollable(True)
 
+        # We have a static page to manage the packets
+        # selected from sniff perspective
+        self.view_page = None
+
     def create_session(self, proto_name):
-        session = SessionPage(proto_name)
+        session = SessionPage(None, proto_name)
         self.append_page(session, session.label)
         self.set_tab_reorderable(session, True)
 
@@ -188,6 +217,20 @@ class SessionNotebook(gtk.Notebook):
             return obj
 
         return None
+
+    def set_view_page(self, packet):
+        """
+        Returns the SessionPage used for view stuff
+
+        @return a SessionPage instance always
+        """
+
+        if not self.view_page:
+            self.view_page = SessionPage(packet)
+            self.append_page(self.view_page, self.view_page.label)
+            self.set_tab_reorderable(self.view_page, True)
+        else:
+            self.view_page.load_packet(packet)
 
 class MainTab(UmitView):
     tab_position = None
@@ -210,9 +253,12 @@ class MainTab(UmitView):
         # + Sniff (expander)
         # |- Protocol Hierarchy (like wireshark)
         # |_ Hex View (containing the dump of the packet)
-        
-        self.vbox.pack_start(self.sniff_expander)
-        self.vbox.pack_start(self.packet_expander)
+
+        vpaned = gtk.VPaned()
+        vpaned.pack1(self.sniff_expander, True, False)
+        vpaned.pack2(self.packet_expander, True, False)
+
+        self.vbox.pack_start(vpaned)
 
         self.packet_expander.add(self.session_notebook)
         self.sniff_expander.add(self.sniff_notebook)

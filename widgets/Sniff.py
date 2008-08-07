@@ -28,6 +28,15 @@ class SniffRenderer(gtk.CellRendererText):
 gobject.type_register(SniffRenderer)
 
 class SniffPage(gtk.VBox):
+    COL_NO     = 0
+    COL_TIME   = 1
+    COL_SRC    = 2
+    COL_DST    = 3
+    COL_PROTO  = 4
+    COL_INFO   = 5
+    COL_COLOR  = 6
+    COL_OBJECT = 7
+
     def __init__(self, context):
         super(SniffPage, self).__init__(False, 2)
 
@@ -76,6 +85,7 @@ class SniffPage(gtk.VBox):
         self.context.start()
 
         self.timeout_id = gobject.timeout_add(200, self.__update_tree)
+        self.tree.get_selection().connect('changed', self.__on_selection_changed)
     
     def __modify_font(self, font):
         try:
@@ -138,6 +148,23 @@ class SniffPage(gtk.VBox):
     def stop_sniffing(self):
         if self.context:
             self.context.destroy()
+
+    # Signals callbacks
+
+    def __on_selection_changed(self, selection):
+        model, iter = selection.get_selected()
+
+        if not iter:
+            return
+
+        packet = model.get_value(iter, self.COL_OBJECT)
+
+        if not packet:
+            return
+
+        from App import PMApp
+        nb = PMApp().main_window.get_tab("MainTab").session_notebook
+        nb.set_view_page(packet)
 
 class SniffFilter(gtk.HBox):
     pass
