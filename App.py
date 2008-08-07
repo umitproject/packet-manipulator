@@ -18,6 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import gobject
+
 from Atoms import Singleton
 from Icons import register_icons
 from MainWindow import MainWindow
@@ -25,6 +27,8 @@ from Manager.PreferenceManager import Prefs
 
 class PMApp(Singleton):
     def __init__(self):
+        gobject.threads_init()
+
         register_icons()
 
         self.prefs = Prefs()

@@ -18,11 +18,6 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from __future__ import with_statement
-
-import datetime
-
-from threading import Thread, RLock
 from Manager.PreferenceManager import Prefs
 
 class VirtualIFace:
@@ -31,7 +26,7 @@ class VirtualIFace:
         self.description = desc
         self.ip = ip
 
-class SniffContext(Thread):
+class SniffContext:
     """
     A sniff context for controlling various options.
     """
@@ -61,54 +56,22 @@ class SniffContext(Thread):
         self.tot_time = 0
         self.tot_count = 0
 
-        self.running = True
-        self.lock = RLock()
-        self.data = []
-        self.sniffer = None
+        self.exception = None
 
-        self.socket = None
-
-        super(SniffContext, self).__init__(name="SniffContext")
+    def start(self):
+        pass
 
     def get_data(self):
-        with self.lock:
-            lst = self.data
-            self.data = []
-            return lst
+        return []
 
     def destroy(self):
-        self.running = False
+        pass
 
-    def run(self):
-        # Thread main loop
+    def join(self):
+        pass
 
-        packet = None
-        prevtime = datetime.datetime.now()
-
-        while self.running:
-
-            while not packet and self.running:
-                packet = next_packet(self)
-
-            now = datetime.datetime.now()
-            delta = now - prevtime
-            prevtime = now
-
-            self.tot_count += 1
-            self.tot_size += packet.get_size()
-
-            if delta == abs(delta):
-                self.tot_time += delta.seconds
-                # Else we are too speedy :D
-
-            with self.lock:
-                self.data.append(packet)
-
-            if self.stop_count and self.tot_count >= self.stop_count or \
-               self.stop_time and self.tot_time >= self.stop_time or \
-               self.stop_size and self.tot_size >= self.stop_size:
-                print "out?"
-                return
+    def is_alive(self):
+        return True
 
 if Prefs()['backend.system'].value.lower() == 'umpa':
     from UMPA import *

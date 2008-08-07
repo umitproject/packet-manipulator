@@ -220,8 +220,6 @@ class Layout(gtk.Container):
     def do_size_allocate(self, allocation):
         self.allocation = allocation
 
-        #print "do_size_allocate", allocation.width, allocation.height
-
         if self._child:
             rect = gdk.Rectangle(self._child.x, self._child.y,
                                  allocation.width, allocation.height)
@@ -269,10 +267,6 @@ class Layout(gtk.Container):
                 self._dest = 0
             else:
                 self._dest = -max(self._height, allocation.height)
-
-            #print "Using a speed of ", self._speed
-            #print self._current, "to", self._dest
-            #print self.size_request()
 
             gobject.timeout_add(self._time_int, self._do_animation)
 
@@ -387,8 +381,6 @@ class Layout(gtk.Container):
         return True
 
     def _set_expanded(self):
-        print "_set_expanded ", self._to_show
-
         if self._to_show:
             self._current = 0
             self._move(0, self._current)
@@ -399,8 +391,6 @@ class Layout(gtk.Container):
             self._move(0, self._current)
 
             self.hide()
-
-        print "Current:", self._current
 
     def toggle_animation(self):
         if self._animating or not self._child:
@@ -634,17 +624,14 @@ class ToolBox(gtk.VBox):
                    continue
 
             info = self.query_child_packing(page)
-            print info
 
             # We should check with not because it returns 0 instead
             # of python boolean
             if not info[0] or not info[1]:
                 self._active_page = child
                 self.set_child_packing(child, True, True, 0, gtk.PACK_START)
-                print "HERE"
                 return
 
-        print "nothing setted", children
         self._active_page = None
     
     def _repack(self, page):
@@ -681,7 +668,6 @@ class ToolBox(gtk.VBox):
             # if not ignore the page._expand and set the packing to True
 
             for child in self.get_children():
-                print self.query_child_packing(child)
 
                 if 1 in self.query_child_packing(child)[0:2]:
                     self.set_child_packing(page, page._expand, page._expand, 0, gtk.PACK_START)

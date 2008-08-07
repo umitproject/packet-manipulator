@@ -63,7 +63,7 @@ class MainWindow(gtk.Window):
             ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o'),
             ('Save', gtk.STOCK_SAVE, _('_Save packet'), '<Control>s', None, self.__on_save_template),
             ('SaveAs', gtk.STOCK_SAVE, _('Save as'), None),
-            ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q'),
+            ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q', None, self.__on_quit),
             
             ('Capture', None, _('Capture'), None),
             ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i', None, self.__on_select_iface),
@@ -190,7 +190,7 @@ class MainWindow(gtk.Window):
 
     def __connect_signals(self):
         "Connect signals"
-        self.connect('delete-event', lambda *w: gtk.main_quit())
+        self.connect('delete-event', self.__on_quit)
 
     def connect_tabs_signals(self):
         "Used to connect signals between tabs"
@@ -235,12 +235,28 @@ class MainWindow(gtk.Window):
     def __on_select_iface(self, action):
         dialog = InterfaceDialog(self)
 
-        dialog.run()
-        
-        print "IFace selected:", dialog.get_selected()
-        print "Options:", dialog.get_options()
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            iface = dialog.get_selected()
+            args = dialog.get_options()
+
+            tab = self.get_tab("MainTab")
+            tab.sniff_notebook.create_session(iface, args)
+
         dialog.hide()
         dialog.destroy()
+
+    def __on_quit(self, *args):
+
+        # We need to stop the pending sniff threads
+        maintab = self.get_tab("MainTab")
+
+        for page in maintab.sniff_notebook:
+            page.stop_sniffing()
+
+        for page in maintab.sniff_notebook:
+            page.context.join()
+
+        gtk.main_quit()
 
 if __name__ == "__main__":
     app = MainWindow()

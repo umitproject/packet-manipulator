@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License                          
 # along with this program; if not, write to the Free Software                                
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
+
+from __future__ import with_statement
 from scapy import *
 
 def load_scapy_protocols():
@@ -261,31 +263,85 @@ def implements(obj, klass):
 
 # Sniff stuff
 
+from datetime import datetime
+from threading import Thread, Lock
+
 from Backend import VirtualIFace
+from Backend import SniffContext as BaseContext
 
-def next_packet(ctx):
-    if ctx.iface:
+class SniffContext(BaseContext, Thread):
+    """
+    A sniff context for controlling various options.
+    """
 
-        if not ctx.socket:
-            ctx.socket = conf.L2listen(type=ETH_P_ALL, iface=ctx.iface, filter=ctx.filter)
+    def __init__(self, *args, **kwargs):
+        Thread.__init__(self)
+        BaseContext.__init__(self, *args, **kwargs)
 
-        p = ctx.socket.recv(MTU)
+        self.setDaemon(True)
 
-        if p is None:
-            return None
-                
-        return MetaPacket(p)
+    def get_data(self):
+        if self.data:
 
-        #return MetaPacket(sniff(count=1, store=1, iface=ctx.iface, filter=ctx.filter)[0])
-    else:
-        # we not use the default conf iface
-        raise Exception("No sniff interface given.")
+            with self.lock:
+                lst = self.data
+                self.data = []
+                return lst
 
-def read_file(ctx):
-    if ctx.cap_file:
-        return sniff(count=0, store=1, offline=ctx.cap_file, filter=ctx.filter)
-    else:
-        raise Exception("No pcap file given.")
+        return []
+
+    def destroy(self):
+        self.running = False
+
+    def start(self):
+        self.data = []
+        self.lock = Lock()
+        self.prevtime = datetime.now()
+        self.running = False
+
+        try:
+            self.socket = conf.L2listen(type=ETH_P_ALL, iface=self.iface, filter=self.filter)
+        except socket.error, (errno, err):
+            self.exception = err
+            return
+
+        except Exception, err:
+            self.exception = err
+            return
+
+        self.running = True
+
+        Thread.start(self)
+
+    def is_alive(self):
+        return self.running
+
+    def run(self):
+        while self.running:
+            packet = self.socket.recv(MTU)
+
+            if not packet:
+                continue
+
+            packet = MetaPacket(packet)
+
+            self.tot_count += 1
+            self.tot_size += packet.get_size()
+
+            now = datetime.now()
+            delta = now - self.prevtime
+            self.prevtime = now
+
+            if delta == abs(delta):
+                self.tot_time += delta.seconds
+
+            with self.lock:
+                self.data.append(packet)
+
+            if self.stop_count and self.tot_count >= self.stop_count or \
+               self.stop_time and self.tot_time >= self.stop_time or \
+               self.stop_size and self.tot_size >= self.stop_size:
+                self.running = False
 
 def find_all_devs():
     ifaces = get_if_list()
