@@ -128,7 +128,7 @@ class SniffPage(gtk.VBox):
             self.statusbar.image = gtk.STOCK_DIALOG_ERROR
             self.statusbar.start_animation(True)
         elif not alive:
-            self.statusbar.label = \ 
+            self.statusbar.label = \
                 _("<b>Sniffing session finished (%d packets caputered)</b>") % self.context.tot_count
             self.statusbar.image = gtk.STOCK_INFO
             self.statusbar.start_animation(True)
