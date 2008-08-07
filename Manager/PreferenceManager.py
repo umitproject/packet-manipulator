@@ -27,7 +27,7 @@ from xml.sax.xmlreader import AttributesNSImpl
 from Atoms import Singleton
 
 TYPES = {
-    basestring : 'str',
+    str        : 'str',
     bool       : 'bool',
     dict       : 'dict',
     float      : 'float',
@@ -130,6 +130,8 @@ class PreferenceWriter:
 class Prefs(Singleton):
     options = {
         'gui.docking' : True,
+        'gui.maintab.sniffview.font' : 'Monospace 10',
+        'gui.maintab.sniffview.usecolors' : False,
         'gui.maintab.hexview.font' : 'Monospace 10',
         'gui.maintab.hexview.bpl' : 16,
 

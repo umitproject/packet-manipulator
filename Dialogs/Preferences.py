@@ -75,7 +75,7 @@ class Page(gtk.Table):
         for (name, lbl, widget) in self.widgets:
 
             if lbl:
-                label = gtk.Label(lbl)
+                label = gtk.Label("<b>%s</b>" % lbl)
                 label.set_use_markup(True)
                 label.set_alignment(0, 0.5)
 
@@ -102,7 +102,9 @@ class GUIPage(Page):
     def create_widgets(self):
         self.widgets = [
         ('gui.docking', None, gtk.CheckButton('Use docking windows')),
-        ('gui.maintab.hexview.font', 'HexView Font:', gtk.FontButton()),
+        ('gui.maintab.sniffview.font', 'Sniff view font:', gtk.FontButton()),
+        ('gui.maintab.sniffview.usecolors', None, gtk.CheckButton('Colorize rows')),
+        ('gui.maintab.hexview.font', 'HexView font:', gtk.FontButton()),
         ('gui.maintab.hexview.bpl', 'Bytes per line:', gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1)))
         ]
 
