@@ -390,22 +390,31 @@ class CellRendererGroup(gtk.CellRendererText):
         # We draw two lines for emulating a box _|
         cr = window.cairo_create()
         cr.save()
-        
-        cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
-        cr.set_operator(cairo.OPERATOR_OVER)
-        cr.set_line_width(0.25)
-        
+            
         area = background_area
-        
-        # Horiz
-        cr.move_to(area.x, area.y + area.height - 1)
-        cr.rel_line_to(area.width, 0)
-        cr.stroke()
-        
-        # Vert
-        cr.move_to(area.x + area.width - 1, area.y)
-        cr.rel_line_to(0, area.height - 1)
-        cr.stroke()
+        cr.set_operator(cairo.OPERATOR_DEST_OVER)
+
+        if self.get_property('cell-background-set'):
+            cr.set_source_color(self.get_property('cell-background-gdk'))
+            cr.rectangle(area.x, area.y, area.width, area.height)
+            cr.fill()
+
+            self.set_property('cell-background-gdk', None)
+        else:
+            cr.set_operator(cairo.OPERATOR_OVER)
+
+            cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
+            cr.set_line_width(0.5)
+            
+            # Horiz
+            cr.move_to(area.x, area.y + area.height - 1)
+            cr.rel_line_to(area.width, 0)
+            cr.stroke()
+            
+            # Vert
+            cr.move_to(area.x + area.width - 1, area.y)
+            cr.rel_line_to(0, area.height - 1)
+            cr.stroke()
         
         cr.restore()
 
@@ -468,18 +477,27 @@ class CellRendererIcon(gtk.CellRendererPixbuf):
                                                background_area, cell_area,
                                                expose_area, flags)
         
-        area = background_area
         cr = window.cairo_create()
         cr.save()
-        
-        cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
-        cr.set_operator(cairo.OPERATOR_OVER)
-        cr.set_line_width(0.25)
-        
-        cr.move_to(area.x, area.y + area.height - 1)
-        cr.rel_line_to(area.width, 0)
-        cr.stroke()
-        
+
+        area = background_area
+        cr.set_operator(cairo.OPERATOR_DEST_OVER)
+
+        if self.get_property('cell-background-set'):
+            cr.set_source_color(self.get_property('cell-background-gdk'))
+            cr.rectangle(area.x, area.y, area.width, area.height)
+            cr.fill()
+
+            self.set_property('cell-background-gdk', None)
+        else:
+            cr.set_operator(cairo.OPERATOR_OVER)
+            cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
+            cr.set_line_width(0.5)
+            
+            cr.move_to(area.x, area.y + area.height - 1)
+            cr.rel_line_to(area.width, 0)
+            cr.stroke()
+
         cr.restore()
 
 gobject.type_register(CellRendererIcon)
