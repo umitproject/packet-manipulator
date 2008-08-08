@@ -50,10 +50,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
         # We pray to be ordered :(
         for proto in Backend.get_packet_protos(self.session.packet):
-            if not root:
-                root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), (proto, self.session.packet)])
-            else:
-                root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), proto])
+            root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), proto])
 
         self.tree.expand_all()
 
@@ -113,17 +110,13 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         model, iter = self.tree.get_selection().get_selected()
 
         if not iter:
-            iter = model.get_iter_first()
-
-            if not iter:
-                return None, None
+            return None, None
 
         obj = model.get_value(iter, 2)
         
-        assert (Backend.is_proto(obj[0]), "Should be a Protocol instance.")
-        assert (isinstance(obj[1], Backend.MetaPacket), "Should be a MetaPacket instance.")
+        assert (Backend.is_proto(obj), "Should be a Protocol instance.")
 
-        return obj[1], obj[0]
+        return self.session.packet, obj
 
 
 class SessionPage(gtk.VBox):

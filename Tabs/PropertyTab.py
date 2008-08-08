@@ -75,16 +75,18 @@ class PropertyTab(UmitView):
             self.change_id = page.proto_hierarchy.tree.get_selection().connect('changed',
                                                    self.__on_hierarchy_selection_changed)
             
+            if not proto:
+                packet = page.packet
+                proto = page.packet.root
+
             self.grid.populate(packet, proto)
             self._main_widget.set_sensitive(True)
 
     def __on_hierarchy_selection_changed(self, selection):
-        model, iter = selection.get_selected()
-
-        if not iter:
-            return
-
         packet, proto = self.prev_page.proto_hierarchy.get_active_protocol()
+
+        if not proto:
+            return
         
         self.grid.clear()
         self.grid.populate(packet, proto)

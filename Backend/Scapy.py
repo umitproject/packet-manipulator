@@ -178,8 +178,9 @@ def get_field_value_repr(proto, field):
     return field.i2repr(proto, getattr(proto, field.name))
 
 def get_field_size(proto, field):
-    # CHECK THIS
-    return len(getattr(proto, field.name)) * 8
+    if isinstance(field, StrField):
+        # We have to manage in a different way the StrField
+        return len(field.i2m(proto, getattr(proto, field.name))) * 8
 
     if hasattr(field, 'size'):
         return field.size
@@ -188,12 +189,17 @@ def get_field_size(proto, field):
 
 def get_field_offset(packet, proto, field):
     bits = 0
+    
+    child = packet.root
 
-    for f in proto.fields_desc:
-        if f == field:
-            break
+    while not isinstance(child, NoPayload):
+        for f in child.fields_desc:
+            if field == f:
+                return bits
 
-        bits += get_field_size(proto, f)
+            bits += get_field_size(child, f)
+
+        child = child.payload
 
     return bits
 

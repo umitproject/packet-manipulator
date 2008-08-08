@@ -409,6 +409,10 @@ class HexView(gtk.HBox):
         start = offset
         end = offset + len
 
+        # We need to add the \n characters one for each line
+        start += start / self._bpl
+        end += end / self._bpl
+
         if start > end:
             start, end = end, start
 
