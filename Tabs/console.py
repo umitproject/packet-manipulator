@@ -576,10 +576,10 @@ class Console (gtk.ScrolledWindow):
         sys.stdout, self.stdout = self.stdout, sys.stdout
         sys.stderr, self.stderr = self.stderr, sys.stderr
         sys.stdin,  self.stdin  = self.stdin,  sys.stdin
-        sys.settrace (self.idle)
         try:
             try:
                 r = eval (cmd, self.namespace, self.namespace)
+                self.namespace["_"] = r
                 if r is not None:
                     print `r`
             except SyntaxError:
@@ -596,7 +596,6 @@ class Console (gtk.ScrolledWindow):
                 except:
                     sys.stderr, self.stderr = self.stderr, sys.stderr
                     traceback.print_exc()
-        sys.settrace (None)
         sys.stdout, self.stdout = self.stdout, sys.stdout
         sys.stderr, self.stderr = self.stderr, sys.stderr
         sys.stdin,  self.stdin  = self.stdin,  sys.stdin

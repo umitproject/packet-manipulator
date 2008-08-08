@@ -21,6 +21,8 @@
 from __future__ import with_statement
 from scapy import *
 
+conf.color_theme = NoTheme()
+
 def load_scapy_protocols():
     import __builtin__
     all = __builtin__.__dict__.copy()
