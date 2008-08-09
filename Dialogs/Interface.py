@@ -67,20 +67,21 @@ class CaptureOptions(gtk.Expander):
 
         tbl.attach(hbox, 1, 2, 1, 2, yoptions=gtk.SHRINK)
 
-        max_size, self.max_size = self.new_combo(0, maxint, [_("byte(s)")])
+        max_size, self.max_size = self.new_combo(68, maxint, [_("byte(s)")])
+
         stop_packets, self.stop_packets = self.new_combo(0, maxint, [_("packet(s)")])
-        stop_size, self.stop_size = self.new_combo(0, 1024, [_("KB"), _("MB"), _("GB")])
-        stop_time, self.stop_time = self.new_combo(0, maxint, [_("second(s)"), _("minute(s)"), _("hour(s)")])
+        self.stop_size_box, self.stop_size = self.new_combo(0, 1024, [_("KB"), _("MB"), _("GB")])
+        self.stop_time_box, self.stop_time = self.new_combo(0, maxint, [_("second(s)"), _("minute(s)"), _("hour(s)")])
 
         group = gtk.SizeGroup(gtk.SIZE_GROUP_BOTH)
 
-        for widget in max_size, stop_packets, stop_size, stop_time:
+        for widget in max_size, stop_packets, self.stop_size_box, self.stop_time_box:
             group.add_widget(widget)
 
         tbl.attach(max_size, 1, 2, 2, 3, yoptions=gtk.SHRINK)
         tbl.attach(stop_packets, 1, 2, 3, 4, yoptions=gtk.SHRINK)
-        tbl.attach(stop_size, 1, 2, 4, 5, yoptions=gtk.SHRINK)
-        tbl.attach(stop_time, 1, 2, 5, 6, yoptions=gtk.SHRINK)
+        tbl.attach(self.stop_size_box, 1, 2, 4, 5, yoptions=gtk.SHRINK)
+        tbl.attach(self.stop_time_box, 1, 2, 5, 6, yoptions=gtk.SHRINK)
 
         self.res_mac = gtk.CheckButton(_('Enable MAC name resolution'))
         self.res_name = gtk.CheckButton(_('Enable network name resolution'))
@@ -150,9 +151,32 @@ class CaptureOptions(gtk.Expander):
             capfile = None
 
         maxsize = self.max_size.get_value_as_int()
+
         scount = self.stop_packets.get_value_as_int()
+
         stime = self.stop_time.get_value_as_int()
+        factor = self.stop_time_box.get_children()[1].get_active()
+
+        if factor == 0:
+            factor = 1
+        elif factor == 1:
+            factor = 60
+        elif factor == 2:
+            factor = 60 ** 2
+
+        stime = stime * factor
+        
         ssize = self.stop_size.get_value_as_int()
+        factor = self.stop_size_box.get_children()[1].get_active()
+
+        if factor == 0:
+            factor = 1
+        elif factor == 1:
+            factor = 1024
+        elif factor == 2:
+            factor = 1024 ** 2
+
+        ssize = ssize * factor
 
         real = self.gui_scroll.get_active()
         scroll = self.gui_scroll.get_active()
