@@ -67,10 +67,17 @@ if not hasattr(sys, 'ps2'): sys.ps2 = '   ... '
 _orig = os.write
 
 def _hook(f, txt):
-    if f == 1:
+    if f == 0:
+        sys.stdin.write(txt)
+        return len(txt)
+    elif f == 1:
         sys.stdout.write(txt)
+        return len(txt)
+    elif f == 2:
+        sys.stderr.write(txt)
+        return len(txt)
     else:
-        _orig.write(f, txt)
+        return _orig.write(f, txt)
 
 os.write = _hook
 
@@ -286,11 +293,11 @@ class Dispatcher(threading.Thread):
 
     def run(self):
         while self.running:
+            cmd = self.queue.get()
+
             sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
             sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
             sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
-
-            cmd = self.queue.get()
             
             self.main_loop(cmd)
 
