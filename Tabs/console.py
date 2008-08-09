@@ -285,13 +285,11 @@ class Dispatcher(threading.Thread):
                     traceback.print_exc()
 
     def run(self):
-        print "thread loop"
-
-        sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
-        sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
-        sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
-
         while self.running:
+            sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
+            sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
+            sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
+
             cmd = self.queue.get()
             
             self.main_loop(cmd)
@@ -301,13 +299,11 @@ class Dispatcher(threading.Thread):
 
             gobject.idle_add(self.parent.prompt1)
 
+            sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
+            sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
+            sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
+
             self.queue.task_done()
-
-        sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
-        sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
-        sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
-
-        print "Out"
 
     def terminate(self):
         self.raise_exc(KeyboardInterrupt)
@@ -369,7 +365,7 @@ class Console (gtk.ScrolledWindow):
         self.tab_pressed = 0
         self.nonword_re = re.compile("[^\w\._]")
         self.completer = rlcompleter.Completer()
-        self.namespace = namespace
+        self.namespace = {}
         self.cmd = ''
         self.input = ''
         self.input_mode = False

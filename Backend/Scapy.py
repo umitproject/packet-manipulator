@@ -19,7 +19,19 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA 
 
 from __future__ import with_statement
+
+import os
 from scapy import *
+
+__original_write = os.write
+
+def __new_write(fd, txt):
+    if fd == 1:
+        sys.stdout.write(txt)
+    else:
+        __original_write(fd, txt)
+
+os.write = __new_write
 
 conf.color_theme = NoTheme()
 
