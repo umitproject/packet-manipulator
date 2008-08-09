@@ -38,7 +38,9 @@ class SniffPage(gtk.VBox):
     COL_OBJECT = 7
 
     def __init__(self, context):
-        super(SniffPage, self).__init__(False, 2)
+        super(SniffPage, self).__init__(False, 4)
+        
+        self.set_border_width(2)
 
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -46,6 +48,12 @@ class SniffPage(gtk.VBox):
 
         self.store = gtk.ListStore(int, str, str, str, str, str, gtk.gdk.Color, object)
         self.tree = gtk.TreeView(self.store)
+
+        # Create a filter function
+        self.model_filter = self.store.filter_new()
+        self.model_filter.set_visible_func(self.__filter_func)
+
+        self.tree.set_model(self.model_filter)
 
         idx = 0
         for txt in (_('No.'), _('Time'), _('Source'), \
@@ -58,8 +66,10 @@ class SniffPage(gtk.VBox):
 
         sw.add(self.tree)
 
+        self.filter = SniffFilter()
         self.statusbar = HIGAnimatedBar(_('Sniffing on <tt>%s</tt> ...') % context.iface, gtk.STOCK_INFO)
 
+        self.pack_start(self.filter, False, False)
         self.pack_start(sw)
         self.pack_start(self.statusbar, False, False)
 
@@ -86,6 +96,7 @@ class SniffPage(gtk.VBox):
 
         self.timeout_id = gobject.timeout_add(200, self.__update_tree)
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
+        self.filter.get_entry().connect('activate', self.__on_apply_filter)
     
     def __modify_font(self, font):
         try:
@@ -129,7 +140,7 @@ class SniffPage(gtk.VBox):
 
             # Scroll to end
             if self.context.auto_scroll:
-                self.tree.scroll_to_cell(id - 1)
+                self.tree.scroll_to_cell(len(self.model_filter) - 1)
 
         alive = self.context.is_alive()
 
@@ -166,9 +177,104 @@ class SniffPage(gtk.VBox):
         nb = PMApp().main_window.get_tab("MainTab").session_notebook
         nb.set_view_page(packet)
 
-class SniffFilter(gtk.HBox):
-    pass
+    def __on_apply_filter(self, entry):
+        print "Refiltering"
+        self.model_filter.refilter()
 
+    def __filter_func(self, model, iter):
+        txt = self.filter.get_text()
+
+        if not txt:
+            return True
+
+        for idx in xrange(6):
+            if txt in str(model.get_value(iter, idx)):
+                return True
+
+        return False
+
+class SniffFilter(gtk.HBox):
+    __gtype_name__ = "SniffFilter"
+
+    def __init__(self):
+        super(SniffFilter, self).__init__(False, 2)
+
+        self.set_border_width(4)
+
+        self._entry = gtk.Entry()
+        self._box = gtk.EventBox()
+        self._box.add(gtk.image_new_from_stock(gtk.STOCK_CLEAR, gtk.ICON_SIZE_MENU))
+
+        self._entry.set_has_frame(False)
+
+        self.pack_start(self._entry)
+        self.pack_end(self._box, False, False)
+
+        self._box.connect('button-release-event', self.__on_button_release)
+        self._entry.connect('changed', self.__on_update)
+
+        self._colors = None
+    
+    def do_realize(self):
+        gtk.HBox.do_realize(self)
+
+        self._colors = (
+            self.style.white,
+            gtk.gdk.color_parse("#FEFEDC")
+        )
+        
+        self.__on_update(self._entry)
+
+    def do_expose_event(self, evt):
+        alloc = self.allocation    
+        rect = gtk.gdk.Rectangle(alloc.x, alloc.y, alloc.width, alloc.height)
+
+        self.style.paint_flat_box(
+            self.window,          
+            self._entry.state,  
+            self._entry.get_property('shadow_type'),
+            alloc,                                    
+            self._entry,                            
+            'entry_bg',                               
+            rect.x, rect.y, rect.width, rect.height   
+        )                                             
+
+        self.style.paint_shadow(
+            self.window,        
+            self._entry.state,
+            self._entry.get_property('shadow_type'),
+            alloc,                                    
+            self._entry,                            
+            'entry',                                  
+            rect.x, rect.y, rect.width, rect.height   
+        )
+
+        return gtk.HBox.do_expose_event(self, evt)
+
+    def __on_button_release(self, image, evt):
+        if evt.button == 1:
+            self._entry.set_text('')
+
+    def __on_update(self, entry):
+        if self._entry.get_text():
+            color = self._colors[1]
+        else:
+            color = self._colors[0]
+
+        self._entry.modify_base(gtk.STATE_NORMAL, color)
+        self._box.modify_bg(gtk.STATE_NORMAL, color)
+        self.modify_base(gtk.STATE_NORMAL, color)
+
+    def get_text(self):
+        return self._entry.get_text()
+
+    def set_text(self, txt):
+        self._entry.set_text(txt)
+
+    def get_entry(self):
+        return self._entry
+
+gobject.type_register(SniffFilter)
 
 class SniffTab:
     pass
@@ -182,6 +288,6 @@ class SniffNotebook(gtk.Notebook):
 
 if __name__ == "__main__":
     w = gtk.Window()
-    w.add(SniffTree(SniffContext("wlan0")))
+    w.add(SniffFilter())
     w.show_all()
     gtk.main()

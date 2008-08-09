@@ -170,11 +170,11 @@ class CaptureOptions(gtk.Expander):
         factor = self.stop_size_box.get_children()[1].get_active()
 
         if factor == 0:
-            factor = 1
-        elif factor == 1:
             factor = 1024
-        elif factor == 2:
+        elif factor == 1:
             factor = 1024 ** 2
+        elif factor == 2:
+            factor = 1024 ** 3
 
         ssize = ssize * factor
 
