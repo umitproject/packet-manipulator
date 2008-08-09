@@ -42,35 +42,11 @@ class SniffPage(gtk.VBox):
         
         self.set_border_width(2)
 
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        self.__create_toolbar()
+        self.__create_view()
 
-        self.store = gtk.ListStore(int, str, str, str, str, str, gtk.gdk.Color, object)
-        self.tree = gtk.TreeView(self.store)
-
-        # Create a filter function
-        self.model_filter = self.store.filter_new()
-        self.model_filter.set_visible_func(self.__filter_func)
-
-        self.tree.set_model(self.model_filter)
-
-        idx = 0
-        for txt in (_('No.'), _('Time'), _('Source'), \
-                    _('Destination'), _('Protocol'), _('Info')):
-
-            rend = SniffRenderer()
-            col = gtk.TreeViewColumn(txt, rend, text=idx, cell_background_gdk=6)
-            self.tree.append_column(col)
-            idx += 1
-
-        sw.add(self.tree)
-
-        self.filter = SniffFilter()
-        self.statusbar = HIGAnimatedBar(_('Sniffing on <tt>%s</tt> ...') % context.iface, gtk.STOCK_INFO)
-
-        self.pack_start(self.filter, False, False)
-        self.pack_start(sw)
+        self.statusbar = HIGAnimatedBar(_('Sniffing on <tt>%s</tt> ...') % \
+                                        context.iface, gtk.STOCK_INFO)
         self.pack_start(self.statusbar, False, False)
 
         self.show_all()
@@ -97,7 +73,63 @@ class SniffPage(gtk.VBox):
         self.timeout_id = gobject.timeout_add(200, self.__update_tree)
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.filter.get_entry().connect('activate', self.__on_apply_filter)
-    
+
+    def __create_toolbar(self):
+        self.toolbar = gtk.Toolbar()
+        self.toolbar.set_style(gtk.TOOLBAR_ICONS)
+
+        stocks = (
+            gtk.STOCK_MEDIA_STOP,
+            gtk.STOCK_SAVE_AS
+        )
+
+        callbacks = (
+            self.__on_stop,
+            self.__on_save_as
+        )
+
+        for stock, callback in zip(stocks, callbacks):
+            action = gtk.Action(None, None, None, stock)
+            action.connect('activate', callback)
+
+            self.toolbar.insert(action.create_tool_item(), -1)
+
+        self.filter = SniffFilter()
+
+        item = gtk.ToolItem()
+        item.add(self.filter)
+        item.set_expand(True)
+
+        self.toolbar.insert(item, -1)
+
+        self.pack_start(self.toolbar, False, False)
+
+    def __create_view(self):
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+
+        self.store = gtk.ListStore(int, str, str, str, str, str, gtk.gdk.Color, object)
+        self.tree = gtk.TreeView(self.store)
+
+        # Create a filter function
+        self.model_filter = self.store.filter_new()
+        self.model_filter.set_visible_func(self.__filter_func)
+
+        self.tree.set_model(self.model_filter)
+
+        idx = 0
+        for txt in (_('No.'), _('Time'), _('Source'), \
+                    _('Destination'), _('Protocol'), _('Info')):
+
+            rend = SniffRenderer()
+            col = gtk.TreeViewColumn(txt, rend, text=idx, cell_background_gdk=6)
+            self.tree.append_column(col)
+            idx += 1
+
+        sw.add(self.tree)
+        self.pack_start(sw)
+
     def __modify_font(self, font):
         try:
             desc = pango.FontDescription(font)
@@ -178,7 +210,6 @@ class SniffPage(gtk.VBox):
         nb.set_view_page(packet)
 
     def __on_apply_filter(self, entry):
-        print "Refiltering"
         self.model_filter.refilter()
 
     def __filter_func(self, model, iter):
@@ -192,6 +223,13 @@ class SniffPage(gtk.VBox):
                 return True
 
         return False
+
+    def __on_stop(self, action):
+        if self.context.isAlive():
+            self.context.destroy()
+
+    def __on_save_as(self, action):
+        pass
 
 class SniffFilter(gtk.HBox):
     __gtype_name__ = "SniffFilter"
@@ -275,9 +313,6 @@ class SniffFilter(gtk.HBox):
         return self._entry
 
 gobject.type_register(SniffFilter)
-
-class SniffTab:
-    pass
 
 class SniffNotebook(gtk.Notebook):
     def create_session(self, iface, args):
