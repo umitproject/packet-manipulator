@@ -427,7 +427,6 @@ class HexView(gtk.HBox):
     def get_payload(self):
         return self._payload
     def set_payload(self, val):
-        print val, type(val)
         self._payload = val
 
         for view in (self.offset_text, self.hex_text, self.ascii_text):

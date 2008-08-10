@@ -60,7 +60,7 @@ class MainWindow(gtk.Window):
 
         self.main_actions = [
             ('File', None, _('File'), None),
-            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o'),
+            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o', None, self.__on_open_pcap),
             ('Save', gtk.STOCK_SAVE, _('_Save packet'), '<Control>s', None, self.__on_save_template),
             ('SaveAs', gtk.STOCK_SAVE, _('Save as'), None),
             ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q', None, self.__on_quit),
@@ -241,6 +241,26 @@ class MainWindow(gtk.Window):
 
             tab = self.get_tab("MainTab")
             tab.sniff_notebook.create_session(iface, args)
+
+        dialog.hide()
+        dialog.destroy()
+
+    def __on_open_pcap(self, action):
+        dialog = gtk.FileChooserDialog(_("Select a pcap file"), self,
+                                       buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                                gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+
+        for name, pattern in ((_('Pcap files'), '*.pcap'), (_('All files'), '*')):
+            filter = gtk.FileFilter()
+            filter.set_name(name)
+            filter.add_pattern(pattern)
+            dialog.add_filter(filter)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            fname = dialog.get_filename()
+
+            tab = self.get_tab("MainTab")
+            tab.sniff_notebook.load_session(fname)
 
         dialog.hide()
         dialog.destroy()

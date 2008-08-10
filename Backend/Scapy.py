@@ -284,6 +284,21 @@ def implements(obj, klass):
 
     return isinstance(obj, klass)
 
+# Load/Save stuff
+
+def load_pcap_file(fname, count=None):
+    if not count:
+        count = -1
+
+    ret = []
+    lst = rdpcap(fname, count)
+
+    for packet in lst.res:
+        ret.append(MetaPacket(packet))
+
+    del lst
+    return ret
+
 # Sniff stuff
 
 from datetime import datetime
@@ -322,15 +337,16 @@ class SniffContext(BaseContext, Thread):
         self.prevtime = datetime.now()
         self.running = False
 
-        try:
-            self.socket = conf.L2listen(type=ETH_P_ALL, iface=self.iface, filter=self.filter)
-        except socket.error, (errno, err):
-            self.exception = err
-            return
+        if self.iface:
+            try:
+                self.socket = conf.L2listen(type=ETH_P_ALL, iface=self.iface, filter=self.filter)
+            except socket.error, (errno, err):
+                self.exception = err
+                return
 
-        except Exception, err:
-            self.exception = err
-            return
+            except Exception, err:
+                self.exception = err
+                return
 
         self.running = True
 
@@ -340,6 +356,14 @@ class SniffContext(BaseContext, Thread):
         return self.running
 
     def run(self):
+        if not self.iface and self.cap_file:
+            self.data = load_pcap_file(self.cap_file)
+
+            self.tot_count = len(self.data)
+            self.running = False
+            
+            return
+
         while self.running:
             packet = self.socket.recv(MTU)
 

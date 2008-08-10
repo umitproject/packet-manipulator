@@ -321,6 +321,18 @@ class SniffNotebook(gtk.Notebook):
 
         self.append_page(page)
 
+    def load_session(self, fname):
+        """
+        Load a session from pcap files
+
+        @param fname the pcap file path
+        """
+
+        page = SniffPage(Backend.SniffContext(iface=None, capfile=fname))
+        page.show()
+        
+        self.append_page(page)
+
 if __name__ == "__main__":
     w = gtk.Window()
     w.add(SniffFilter())
