@@ -145,7 +145,6 @@ class PacketPage(gtk.VPaned):
         if self.session.packet:
             self.hexview.payload = Backend.get_packet_raw(self.session.packet)
         else:
-            print "redraw_hexview(): no packet!!!"
             self.hexview.payload = ""
 
     def reload(self):

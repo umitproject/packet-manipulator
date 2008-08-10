@@ -266,7 +266,7 @@ class SniffPage(gtk.VBox):
         return False
 
     def __on_stop(self, action):
-        if self.context.is_alive():
+        if getattr(self, 'context', None) and self.context.is_alive():
             self.context.destroy()
 
     def __on_save(self, action, saveas_on_fail=True):
