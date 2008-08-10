@@ -112,7 +112,7 @@ class PreferenceWriter:
 
             attr_vals = {
                 (None, u'id') : key,
-                (None, u'value') : option.value
+                (None, u'value') : str(option.value)
             }
 
             attr_qnames = {
@@ -135,7 +135,7 @@ class Prefs(Singleton):
         'gui.maintab.hexview.font' : 'Monospace 10',
         'gui.maintab.hexview.bpl' : 16,
 
-        'backend.system' : 'umpa',
+        'backend.system' : 'scapy',
     }
 
     def __init__(self):
