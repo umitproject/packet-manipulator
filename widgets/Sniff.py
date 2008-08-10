@@ -225,11 +225,52 @@ class SniffPage(gtk.VBox):
         return False
 
     def __on_stop(self, action):
-        if self.context.isAlive():
+        if self.context.is_alive():
             self.context.destroy()
 
     def __on_save_as(self, action):
-        pass
+        if self.context.is_alive():
+            return
+
+        if not self.context.cap_file:
+            dialog = gtk.FileChooserDialog(_('Save Pcap file to'),
+                    self.get_toplevel(), gtk.FILE_CHOOSER_ACTION_SAVE,
+                    buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                             gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
+
+            for name, pattern in ((_('Pcap files'), '*.pcap'),
+                                  (_('Pcap gz files'), '*.pcap.gz'),
+                                  (_('All files'), '*')):
+
+                filter = gtk.FileFilter()
+                filter.set_name(name)
+                filter.add_pattern(pattern)
+                dialog.add_filter(filter)
+
+            if dialog.run() == gtk.RESPONSE_ACCEPT:
+                self.context.cap_file = dialog.get_filename()
+
+            dialog.hide()
+            dialog.destroy()
+
+        if not self.context.cap_file:
+            return
+
+        lst = []
+        iter = None
+
+        for idx in xrange(len(self.store)):
+            iter = self.store.get_iter((idx, ))
+            lst.append(self.store.get_value(iter, self.COL_OBJECT))
+
+        # Now dump to file
+        self.statusbar.label = \
+            _("<b>Written %d packets to %s</b>") % (len(lst), self.context.cap_file)
+
+        Backend.write_pcap_file(self.context.cap_file, lst)
+
+        self.statusbar.image = gtk.STOCK_HARDDISK
+        self.statusbar.start_animation(True)
 
 class SniffFilter(gtk.HBox):
     __gtype_name__ = "SniffFilter"

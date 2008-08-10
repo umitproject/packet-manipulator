@@ -250,7 +250,10 @@ class MainWindow(gtk.Window):
                                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                                 gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
 
-        for name, pattern in ((_('Pcap files'), '*.pcap'), (_('All files'), '*')):
+        for name, pattern in ((_('Pcap files'), '*.pcap'),
+                              (_('Pcap gz files'), '*.pcap.gz'),
+                              (_('All files'), '*')):
+
             filter = gtk.FileFilter()
             filter.set_name(name)
             filter.add_pattern(pattern)

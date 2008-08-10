@@ -299,6 +299,15 @@ def load_pcap_file(fname, count=None):
     del lst
     return ret
 
+def write_pcap_file(fname, lst):
+    ret = []
+
+    for packet in lst:
+        ret.append(packet.root)
+
+    del lst
+    wrpcap(fname, ret, gz=('gz' in fname.lower()))
+
 # Sniff stuff
 
 from datetime import datetime
@@ -357,9 +366,13 @@ class SniffContext(BaseContext, Thread):
 
     def run(self):
         if not self.iface and self.cap_file:
-            self.data = load_pcap_file(self.cap_file)
 
-            self.tot_count = len(self.data)
+            with self.lock:
+                self.data = load_pcap_file(self.cap_file)
+                self.tot_count = len(self.data)
+
+                # TODO: calc size and time?
+
             self.running = False
             
             return
