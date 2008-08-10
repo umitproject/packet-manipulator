@@ -155,6 +155,20 @@ class GUIPage(Page):
            ('gui.maintab.hexview.bpl', 'Bytes per line:', gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1)))))
         ]
 
+class ViewsPage(Page):
+    title = "Views"
+    icon = gtk.STOCK_LEAVE_FULLSCREEN
+
+    def create_widgets(self):
+        self.widgets = [
+        ('Show views at startup',
+          (('gui.views.protocol_selector_tab', None, gtk.CheckButton('Protocol selector')),
+           ('gui.views.property_tab', None, gtk.CheckButton('Protocol properties')),
+           ('gui.views.vte_tab', None, gtk.CheckButton('Terminal')),
+           ('gui.views.hack_tab', None, gtk.CheckButton('Payload Hack tab')),
+           ('gui.views.console_tab', None, gtk.CheckButton('Python shell'))))
+        ]
+
 class BackendPage(Page):
     title = "Backend"
     icon = gtk.STOCK_CONNECT
@@ -213,7 +227,7 @@ class PreferenceDialog(gtk.Dialog):
         self.connect('response', self.__on_response)
 
     def __populate(self):
-        for page in (GUIPage(), BackendPage()):
+        for page in (GUIPage(), ViewsPage(), BackendPage()):
             self.store.append([page.icon, page.title])
             self.notebook.append_page(page)
 

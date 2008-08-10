@@ -20,10 +20,18 @@
 
 import gtk
 
-try:
-    from paned import *
-except ImportError:
-    print "moo not installed. Using fallback UmitPaned .."
+from Manager.PreferenceManager import Prefs
+
+if Prefs()['gui.docking'].value:
+    try:
+        from paned import *
+    except ImportError:
+        print "moo not installed. Using fallback UmitPaned .."
+
+        Prefs()['gui.docking'].value = False
+
+        from fallbackpaned import *
+else:
     from fallbackpaned import *
 
 from Tabs.VteTab import VteTab
@@ -178,13 +186,17 @@ class MainWindow(gtk.Window):
 
         # Tabs
         self.register_tab(MainTab())
-        self.register_tab(ProtocolSelectorTab())
-        self.register_tab(PropertyTab())
 
-        # Hidden tabs
-        self.register_tab(VteTab(), False)
-        self.register_tab(HackTab(), False)
-        self.register_tab(ConsoleTab(), False)
+        self.register_tab(ProtocolSelectorTab(),
+                          Prefs()['gui.views.protocol_selector_tab'].value)
+        self.register_tab(PropertyTab(),
+                          Prefs()['gui.views.property_tab'].value)
+        self.register_tab(VteTab(),
+                          Prefs()['gui.views.vte_tab'].value)
+        self.register_tab(HackTab(),
+                          Prefs()['gui.views.hack_tab'].value)
+        self.register_tab(ConsoleTab(),
+                          Prefs()['gui.views.console_tab'].value)
 
         self.add(self.vbox)
 
