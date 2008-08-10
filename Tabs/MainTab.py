@@ -23,7 +23,7 @@ import Backend
 
 from widgets.HexView import HexView
 from widgets.Expander import AnimatedExpander
-from widgets.Sniff import SniffNotebook
+from widgets.Sniff import SniffPage
 
 from views import UmitView
 from Icons import get_pixbuf
@@ -45,6 +45,9 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
     def reload(self):
         self.store.clear()
+
+        if not self.session.packet:
+            return
 
         root = None
 
@@ -119,61 +122,82 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         return self.session.packet, obj
 
 
-class SessionPage(gtk.VBox):
-    def __init__(self, packet, protoname=None):
-        gtk.VBox.__init__(self)
+class PacketPage(gtk.VPaned):
+    def __init__(self, parent):
+        super(PacketPage, self).__init__()
 
-        assert(packet or protoname)
+        self.session = parent
 
-        if not packet and protoname:
-            packet = Backend.get_proto(protoname)()
-            packet = Backend.MetaPacket(packet)
-
-        self.__create_widgets(packet)
-        self.__pack_widgets()
-        self.__connect_signals()
-
-    def __create_widgets(self, packet):
-        self._label = gtk.Label("*" + packet.get_protocol_str())
-
-        self.packet = packet
-
-        self.vpaned = gtk.VPaned()
-        self.proto_hierarchy = ProtocolHierarchy(self)
+        self.proto_hierarchy = ProtocolHierarchy(self.session)
         self.hexview = HexView()
+
+        self.pack1(self.proto_hierarchy, True, False)
+        self.pack2(self.hexview, True, False)
 
         Prefs()['gui.maintab.hexview.font'].connect(self.hexview.modify_font)
         Prefs()['gui.maintab.hexview.bpl'].connect(self.hexview.set_bpl)
-
-        self.redraw_hexview()
-
-    def __pack_widgets(self):
-        self.vpaned.pack1(self.proto_hierarchy)
-        self.vpaned.pack2(self.hexview)
-        self.pack_start(self.vpaned)
-
-        self.show_all()
-
-    def __connect_signals(self):
-        pass
 
     def redraw_hexview(self):
         """
         Redraws the hexview
         """
-        if self.packet:
-            self.hexview.payload = Backend.get_packet_raw(self.packet)
+        if self.session.packet:
+            self.hexview.payload = Backend.get_packet_raw(self.session.packet)
         else:
             print "redraw_hexview(): no packet!!!"
             self.hexview.payload = ""
 
-    def load_packet(self, packet):
-        self.packet = packet
-
-        self._label.set_text("*" + packet.get_protocol_str())
-
+    def reload(self):
         self.redraw_hexview()
         self.proto_hierarchy.reload()
+
+class SessionPage(gtk.VBox):
+    def __init__(self, iface=None, args={}, fname=None, packet=None):
+        gtk.VBox.__init__(self)
+
+        assert(iface or fname or packet)
+
+        if iface:
+            self.packet = None
+            self.sniff_page = SniffPage(self, Backend.SniffContext(iface, **args))
+            self._label = gtk.Label("* Capturing on %s" % iface)
+
+        elif fname:
+            self.packet = None
+            self.sniff_page = SniffPage(self, Backend.SniffContext(iface=None, capfile=fname))
+            self._label = gtk.Label(fname)
+
+        else:
+            if isinstance(packet, basestring):
+                packet = Backend.get_proto(packet)()
+                packet = Backend.MetaPacket(packet)
+
+            self.packet = packet
+            self.sniff_page = SniffPage(self)
+            self._label = gtk.Label("*" + packet.get_protocol_str())
+
+        self.set_border_width(4)
+
+        self.vpaned = gtk.VPaned()
+        self.sniff_expander = AnimatedExpander("Sniff perspective", 'sniff_small')
+        self.packet_expander = AnimatedExpander("Packet perspective", 'packet_small')
+
+        self.packet_page = PacketPage(self)
+
+        self.vpaned.pack1(self.sniff_expander, True, False)
+        self.vpaned.pack2(self.packet_expander, True, False)
+
+        self.sniff_expander.add(self.sniff_page)
+        self.packet_expander.add(self.packet_page)
+
+        self.packet_page.reload()
+
+        self.pack_start(self.vpaned)
+        self.show_all()
+
+    def set_active_packet(self, packet):
+        self.packet = packet
+        self.packet_page.reload()
 
     def get_label(self):
         return self._label
@@ -191,8 +215,18 @@ class SessionNotebook(gtk.Notebook):
         # selected from sniff perspective
         self.view_page = None
 
-    def create_session(self, proto_name):
-        session = SessionPage(None, proto_name)
+    def create_edit_session(self, proto_name):
+        session = SessionPage(packet=proto_name)
+        self.append_page(session, session.label)
+        self.set_tab_reorderable(session, True)
+
+    def create_sniff_session(self, iface, args):
+        session = SessionPage(iface, args)
+        self.append_page(session, session.label)
+        self.set_tab_reorderable(session, True)
+
+    def create_offline_session(self, fname):
+        session = SessionPage(fname=fname)
         self.append_page(session, session.label)
         self.set_tab_reorderable(session, True)
 
@@ -211,20 +245,6 @@ class SessionNotebook(gtk.Notebook):
 
         return None
 
-    def set_view_page(self, packet):
-        """
-        Returns the SessionPage used for view stuff
-
-        @return a SessionPage instance always
-        """
-
-        if not self.view_page:
-            self.view_page = SessionPage(packet)
-            self.append_page(self.view_page, self.view_page.label)
-            self.set_tab_reorderable(self.view_page, True)
-        else:
-            self.view_page.load_packet(packet)
-
 class MainTab(UmitView):
     tab_position = None
     label_text = "MainTab"
@@ -232,29 +252,12 @@ class MainTab(UmitView):
     def __create_widgets(self):
         "Create the widgets"
         self.vbox = gtk.VBox(False, 2)
-
-        self.sniff_expander = AnimatedExpander("<b>Sniff perspective</b>", 'sniff_small')
-        self.packet_expander = AnimatedExpander("<b>Packet perspective</b>", 'packet_small')
-
         self.session_notebook = SessionNotebook()
-        self.sniff_notebook = SniffNotebook()
 
     def __pack_widgets(self):
         "Pack the widgets"
 
-        # In the main window we have a perspective like
-        # + Sniff (expander)
-        # |- Protocol Hierarchy (like wireshark)
-        # |_ Hex View (containing the dump of the packet)
-
-        vpaned = gtk.VPaned()
-        vpaned.pack1(self.sniff_expander, True, False)
-        vpaned.pack2(self.packet_expander, True, False)
-
-        self.vbox.pack_start(vpaned)
-
-        self.packet_expander.add(self.session_notebook)
-        self.sniff_expander.add(self.sniff_notebook)
+        self.vbox.pack_start(self.session_notebook)
 
         self.session_notebook.drag_dest_set(
             gtk.DEST_DEFAULT_ALL,
@@ -297,7 +300,7 @@ class MainTab(UmitView):
             proto = data.data
 
             if Backend.get_proto(proto):
-                self.session_notebook.create_session(data.data)
+                self.session_notebook.create_edit_session(data.data)
                 ctx.finish(True, False, time)
                 return True
 

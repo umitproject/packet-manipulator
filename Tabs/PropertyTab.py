@@ -64,18 +64,18 @@ class PropertyTab(UmitView):
             # from selection or from the first iter
             # so we can repopulate the PropertyGrid
             
-            packet, proto = page.proto_hierarchy.get_active_protocol()
+            packet, proto = page.packet_page.proto_hierarchy.get_active_protocol()
 
             if self.prev_page and self.change_id:
-                sel = self.prev_page.proto_hierarchy.tree.get_selection()
+                sel = self.prev_page.packet_page.proto_hierarchy.tree.get_selection()
                 if sel:
                     sel.disconnect(self.change_id)
 
             self.prev_page = page
-            self.change_id = page.proto_hierarchy.tree.get_selection().connect('changed',
-                                                   self.__on_hierarchy_selection_changed)
+            self.change_id = page.packet_page.proto_hierarchy.tree.get_selection().connect('changed',
+                                                               self.__on_hierarchy_selection_changed)
             
-            if not proto:
+            if not proto and page.packet:
                 packet = page.packet
                 proto = page.packet.root
 
@@ -83,7 +83,7 @@ class PropertyTab(UmitView):
             self._main_widget.set_sensitive(True)
 
     def __on_hierarchy_selection_changed(self, selection):
-        packet, proto = self.prev_page.proto_hierarchy.get_active_protocol()
+        packet, proto = self.prev_page.packet_page.proto_hierarchy.get_active_protocol()
 
         if not proto:
             return
@@ -121,4 +121,4 @@ class PropertyTab(UmitView):
             start  = Backend.get_field_offset(packet, proto, field)
             length = Backend.get_field_size(proto, field)
 
-            page.hexview.select_block(start / 8, max(length / 8, 1))
+            page.packet_page.hexview.select_block(start / 8, max(length / 8, 1))

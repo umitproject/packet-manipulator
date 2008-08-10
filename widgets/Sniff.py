@@ -37,16 +37,17 @@ class SniffPage(gtk.VBox):
     COL_COLOR  = 6
     COL_OBJECT = 7
 
-    def __init__(self, context):
+    def __init__(self, session, context=None):
         super(SniffPage, self).__init__(False, 4)
-        
+
+        self.session = session
+
         self.set_border_width(2)
 
         self.__create_toolbar()
         self.__create_view()
 
-        self.statusbar = HIGAnimatedBar(_('Sniffing on <tt>%s</tt> ...') % \
-                                        context.iface, gtk.STOCK_INFO)
+        self.statusbar = HIGAnimatedBar('', gtk.STOCK_INFO)
         self.pack_start(self.statusbar, False, False)
 
         self.show_all()
@@ -67,10 +68,16 @@ class SniffPage(gtk.VBox):
         Prefs()['gui.maintab.sniffview.font'].connect(self.__modify_font)
         Prefs()['gui.maintab.sniffview.usecolors'].connect(self.__modify_colors)
 
-        self.context = context
-        self.context.start()
 
-        self.timeout_id = gobject.timeout_add(200, self.__update_tree)
+        if not context:
+            self.statusbar.label = _('<b>Editing <tt>%s</tt></b>') % self.session.packet.summary()
+        else:
+            self.context = context
+            self.context.start()
+
+            self.statusbar.label = _('<b>Sniffing on <tt>%s</tt> ...</b>') % context.iface
+            self.timeout_id = gobject.timeout_add(200, self.__update_tree)
+
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.filter.get_entry().connect('activate', self.__on_apply_filter)
 
@@ -214,8 +221,12 @@ class SniffPage(gtk.VBox):
             return
 
         from App import PMApp
+
         nb = PMApp().main_window.get_tab("MainTab").session_notebook
-        nb.set_view_page(packet)
+        session = nb.get_current_session()
+
+        if session:
+            session.set_active_packet(packet)
 
     def __on_apply_filter(self, entry):
         self.model_filter.refilter()

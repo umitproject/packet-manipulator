@@ -254,7 +254,7 @@ class MainWindow(gtk.Window):
             args = dialog.get_options()
 
             tab = self.get_tab("MainTab")
-            tab.sniff_notebook.create_session(iface, args)
+            tab.session_notebook.create_sniff_session(iface, args)
 
         dialog.hide()
         dialog.destroy()
@@ -277,7 +277,7 @@ class MainWindow(gtk.Window):
             fname = dialog.get_filename()
 
             tab = self.get_tab("MainTab")
-            tab.sniff_notebook.load_session(fname)
+            tab.session_notebook.create_offline_session(fname)
 
         dialog.hide()
         dialog.destroy()
@@ -287,11 +287,12 @@ class MainWindow(gtk.Window):
         # We need to stop the pending sniff threads
         maintab = self.get_tab("MainTab")
 
-        for page in maintab.sniff_notebook:
-            page.stop_sniffing()
+        for page in maintab.session_notebook:
+            page.sniff_page.stop_sniffing()
 
-        for page in maintab.sniff_notebook:
-            page.context.join()
+        for page in maintab.session_notebook:
+            if hasattr(page.sniff_page, 'context'):
+                page.sniff_page.context.join()
 
         gtk.main_quit()
 
