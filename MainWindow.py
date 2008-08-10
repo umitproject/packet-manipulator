@@ -68,17 +68,15 @@ class MainWindow(gtk.Window):
 
         self.main_actions = [
             ('File', None, _('File'), None),
-            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o', None, self.__on_open_pcap),
-            ('Save', gtk.STOCK_SAVE, _('_Save packet'), '<Control>s', None, self.__on_save_template),
-            ('SaveAs', gtk.STOCK_SAVE, _('Save as'), None),
-            ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q', None, self.__on_quit),
+            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o', _('Open pcap file'), self.__on_open_pcap),
+            ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q', _('Quit from application'), self.__on_quit),
             
             ('Capture', None, _('Capture'), None),
-            ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i', None, self.__on_select_iface),
+            ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i', _('Capture from interface'), self.__on_select_iface),
 
             ('Options', None, _('Options'), None),
-            ('Routes', gtk.STOCK_NETWORK, _('Routing table'), '<Control>r', None, self.__on_routing),
-            ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'), '<Control>p', None, self.__on_preferences),
+            ('Routes', gtk.STOCK_NETWORK, _('Routing table'), '<Control>r', _('Routes editor'), self.__on_routing),
+            ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'), '<Control>p', _('Preferences'), self.__on_preferences),
 
             ('Views', None, _('Views'), None),
 
@@ -89,8 +87,6 @@ class MainWindow(gtk.Window):
         self.default_ui = """<menubar>
             <menu action='File'>
                 <menuitem action='Open'/>
-                <menuitem action='Save'/>
-                <menuitem action='SaveAs'/>
                 <separator/>
                 <menuitem action='Quit'/>
             </menu>
@@ -110,7 +106,11 @@ class MainWindow(gtk.Window):
 
             <toolbar>
                 <toolitem action='Open'/>
-                <toolitem action='Save'/>
+                <toolitem action='Interface'/>
+                <separator/>
+                <toolitem action='Routes'/>
+                <toolitem action='Preferences'/>
+                <separator/>
             </toolbar>
             """
 
@@ -177,6 +177,8 @@ class MainWindow(gtk.Window):
         self.vbox.pack_start(self.menubar, False, False, 0)
 
         self.toolbar = self.ui_manager.get_widget("/toolbar")
+        self.toolbar.set_style(gtk.TOOLBAR_ICONS)
+
         self.vbox.pack_start(self.toolbar, False, False, 0)
 
         item = self.ui_manager.get_widget('/menubar/Views')
