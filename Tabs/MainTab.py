@@ -188,7 +188,11 @@ class SessionPage(gtk.VBox):
         self.vpaned.pack1(self.sniff_expander, True, False)
         self.vpaned.pack2(self.packet_expander, True, False)
 
-        self.sniff_expander.add(self.sniff_page)
+        if iface or fname:
+            self.sniff_expander.add_widget(self.sniff_page, True)
+        else:
+            self.sniff_expander.add_widget(self.sniff_page, False)
+
         self.packet_expander.add(self.packet_page)
 
         self.packet_page.reload()

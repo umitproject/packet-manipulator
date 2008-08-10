@@ -70,6 +70,7 @@ class SniffPage(gtk.VBox):
 
 
         if not context:
+            self.store.append([self.session.packet])
             self.statusbar.label = _('<b>Editing <tt>%s</tt></b>') % self.session.packet.summary()
         else:
             self.context = context
@@ -98,9 +99,9 @@ class SniffPage(gtk.VBox):
         )
 
         tooltips = (
-            _('Stop capturing ...'),
-            _('Save packets ...'),
-            _('Save packets as ...')
+            _('Stop capturing'),
+            _('Save packets'),
+            _('Save packets as')
         )
 
         for tooltip, stock, callback in zip(tooltips, stocks, callbacks):
@@ -191,8 +192,6 @@ class SniffPage(gtk.VBox):
 
     def __update_tree(self):
         for packet in self.context.get_data():
-            id = len(self.store) + 1
-
             self.store.append([packet])
 
             # Scroll to end
@@ -271,28 +270,10 @@ class SniffPage(gtk.VBox):
             self.context.destroy()
 
     def __on_save(self, action, saveas_on_fail=True):
-        if not self.context.cap_file:
-
-            if saveas_on_fail:
-                self.__on_save_as(None)
-
-            return
-
-        lst = []
-        iter = None
-
-        for idx in xrange(len(self.store)):
-            iter = self.store.get_iter((idx, ))
-            lst.append(self.store.get_value(iter, 0))
-
-        # Now dump to file
-        self.statusbar.label = \
-            _("<b>Written %d packets to %s</b>") % (len(lst), self.context.cap_file)
-
-        Backend.write_pcap_file(self.context.cap_file, lst)
-
-        self.statusbar.image = gtk.STOCK_HARDDISK
-        self.statusbar.start_animation(True)
+        if getattr(self, 'context', None) and self.context.cap_file:
+            self.__save_packets(self.context.cap_file)
+        else:
+            self.__on_save_as(None)
 
     def __on_save_as(self, action):
         dialog = gtk.FileChooserDialog(_('Save Pcap file to'),
@@ -310,12 +291,31 @@ class SniffPage(gtk.VBox):
             dialog.add_filter(filter)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
-            self.context.cap_file = dialog.get_filename()
+            self.__save_packets(dialog.get_filename())
 
         dialog.hide()
         dialog.destroy()
 
-        self.__on_save(None, False)
+    def __save_packets(self, fname):
+        lst = []
+        iter = None
+
+        for idx in xrange(len(self.store)):
+            iter = self.store.get_iter((idx, ))
+            lst.append(self.store.get_value(iter, 0))
+
+        # Now dump to file
+        self.statusbar.image = gtk.STOCK_HARDDISK
+        self.statusbar.label = \
+            _("<b>Written %d packets to %s</b>") % (len(lst), fname)
+
+        try:
+            Backend.write_pcap_file(fname, lst)
+        except Exception, err:
+            self.statusbar.image = gtk.STOCK_DIALOG_ERROR
+            self.statusbar.label = _("<b>Error while writing to %s (%s)</b>") % (fname, str(err))
+
+        self.statusbar.start_animation(True)
 
 class SniffFilter(gtk.HBox):
     __gtype_name__ = "SniffFilter"
@@ -399,28 +399,3 @@ class SniffFilter(gtk.HBox):
         return self._entry
 
 gobject.type_register(SniffFilter)
-
-class SniffNotebook(gtk.Notebook):
-    def create_session(self, iface, args):
-        page = SniffPage(Backend.SniffContext(iface, **args))
-        page.show()
-
-        self.append_page(page)
-
-    def load_session(self, fname):
-        """
-        Load a session from pcap files
-
-        @param fname the pcap file path
-        """
-
-        page = SniffPage(Backend.SniffContext(iface=None, capfile=fname))
-        page.show()
-        
-        self.append_page(page)
-
-if __name__ == "__main__":
-    w = gtk.Window()
-    w.add(SniffFilter())
-    w.show_all()
-    gtk.main()
