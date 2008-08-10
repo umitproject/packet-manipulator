@@ -80,16 +80,24 @@ class SniffPage(gtk.VBox):
 
         stocks = (
             gtk.STOCK_MEDIA_STOP,
+            gtk.STOCK_SAVE,
             gtk.STOCK_SAVE_AS
         )
 
         callbacks = (
             self.__on_stop,
+            self.__on_save,
             self.__on_save_as
         )
 
-        for stock, callback in zip(stocks, callbacks):
-            action = gtk.Action(None, None, None, stock)
+        tooltips = (
+            _('Stop capturing ...'),
+            _('Save packets ...'),
+            _('Save packets as ...')
+        )
+
+        for tooltip, stock, callback in zip(tooltips, stocks, callbacks):
+            action = gtk.Action(None, None, tooltip, stock)
             action.connect('activate', callback)
 
             self.toolbar.insert(action.create_tool_item(), -1)
@@ -228,32 +236,12 @@ class SniffPage(gtk.VBox):
         if self.context.is_alive():
             self.context.destroy()
 
-    def __on_save_as(self, action):
-        if self.context.is_alive():
-            return
-
+    def __on_save(self, action, saveas_on_fail=True):
         if not self.context.cap_file:
-            dialog = gtk.FileChooserDialog(_('Save Pcap file to'),
-                    self.get_toplevel(), gtk.FILE_CHOOSER_ACTION_SAVE,
-                    buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                             gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
 
-            for name, pattern in ((_('Pcap files'), '*.pcap'),
-                                  (_('Pcap gz files'), '*.pcap.gz'),
-                                  (_('All files'), '*')):
+            if saveas_on_fail:
+                self.__on_save_as(None)
 
-                filter = gtk.FileFilter()
-                filter.set_name(name)
-                filter.add_pattern(pattern)
-                dialog.add_filter(filter)
-
-            if dialog.run() == gtk.RESPONSE_ACCEPT:
-                self.context.cap_file = dialog.get_filename()
-
-            dialog.hide()
-            dialog.destroy()
-
-        if not self.context.cap_file:
             return
 
         lst = []
@@ -271,6 +259,29 @@ class SniffPage(gtk.VBox):
 
         self.statusbar.image = gtk.STOCK_HARDDISK
         self.statusbar.start_animation(True)
+
+    def __on_save_as(self, action):
+        dialog = gtk.FileChooserDialog(_('Save Pcap file to'),
+                self.get_toplevel(), gtk.FILE_CHOOSER_ACTION_SAVE,
+                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                         gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
+
+        for name, pattern in ((_('Pcap files'), '*.pcap'),
+                              (_('Pcap gz files'), '*.pcap.gz'),
+                              (_('All files'), '*')):
+
+            filter = gtk.FileFilter()
+            filter.set_name(name)
+            filter.add_pattern(pattern)
+            dialog.add_filter(filter)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            self.context.cap_file = dialog.get_filename()
+
+        dialog.hide()
+        dialog.destroy()
+
+        self.__on_save(None, False)
 
 class SniffFilter(gtk.HBox):
     __gtype_name__ = "SniffFilter"
