@@ -789,6 +789,9 @@ class PropertyGridTree(gtk.ScrolledWindow):
         @param proto_inst a Protocol object instance
         """
 
+        if not proto_inst:
+            return
+
         self.packet = packet
         root_iter = self.store.append(None, [proto_inst, None])
 

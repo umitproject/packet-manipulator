@@ -56,6 +56,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
             root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), proto])
 
         self.tree.expand_all()
+        self.tree.get_selection().select_path((0, ))
 
     def __create_widgets(self):
         # Icon / string (like TCP packet with some info?) / hidden

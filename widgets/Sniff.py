@@ -124,7 +124,7 @@ class SniffPage(gtk.VBox):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-        self.store = gtk.ListStore(int, str, str, str, str, str, gtk.gdk.Color, object)
+        self.store = gtk.ListStore(object)
         self.tree = gtk.TreeView(self.store)
 
         # Create a filter function
@@ -134,17 +134,38 @@ class SniffPage(gtk.VBox):
         self.tree.set_model(self.model_filter)
 
         idx = 0
+        rend = SniffRenderer()
+
         for txt in (_('No.'), _('Time'), _('Source'), \
                     _('Destination'), _('Protocol'), _('Info')):
 
-            rend = SniffRenderer()
-            col = gtk.TreeViewColumn(txt, rend, text=idx, cell_background_gdk=6)
+            col = gtk.TreeViewColumn(txt, rend)
+            col.set_cell_data_func(rend, self.__cell_data_func, idx)
             self.tree.append_column(col)
+
             idx += 1
 
         sw.add(self.tree)
         self.pack_start(sw)
 
+    def __cell_data_func(self, col, cell, model, iter, idx):
+        packet = model.get_value(iter, 0)
+
+        if idx == self.COL_NO:
+            cell.set_property('text', str(model.get_path(iter)[0] + 1))
+        elif idx == self.COL_TIME:
+            cell.set_property('text', packet.get_time())
+        elif idx == self.COL_SRC:
+            cell.set_property('text', packet.get_source())
+        elif idx == self.COL_DST:
+            cell.set_property('text', packet.get_dest())
+        elif idx == self.COL_PROTO:
+            cell.set_property('text', packet.get_protocol_str())
+        elif idx == self.COL_INFO:
+            cell.set_property('text', packet.summary())
+
+        cell.set_property('cell-background-gdk', self.__get_color(packet))
+       
     def __modify_font(self, font):
         try:
             desc = pango.FontDescription(font)
@@ -161,11 +182,6 @@ class SniffPage(gtk.VBox):
         self.use_colors = value
         self.tree.set_rules_hint(not self.use_colors)
 
-        self.store.foreach(self.__update_row_color)
-
-    def __update_row_color(self, model, path, iter):
-        model.set_value(iter, 6, self.__get_color(model.get_value(iter, 7)))
-
     def __get_color(self, packet):
         if self.use_colors:
             proto = packet.get_protocol_str()
@@ -177,13 +193,7 @@ class SniffPage(gtk.VBox):
         for packet in self.context.get_data():
             id = len(self.store) + 1
 
-            self.store.append(
-                [
-                 id, packet.get_time(), packet.get_source(),
-                 packet.get_dest(), packet.get_protocol_str(), packet.summary(),
-                 self.__get_color(packet), packet
-                ]
-            )
+            self.store.append([packet])
 
             # Scroll to end
             if self.context.auto_scroll:
@@ -204,7 +214,7 @@ class SniffPage(gtk.VBox):
         return alive
 
     def stop_sniffing(self):
-        if self.context:
+        if hasattr(self, 'context') and self.context:
             self.context.destroy()
 
     # Signals callbacks
@@ -215,7 +225,7 @@ class SniffPage(gtk.VBox):
         if not iter:
             return
 
-        packet = model.get_value(iter, self.COL_OBJECT)
+        packet = model.get_value(iter, 0)
 
         if not packet:
             return
@@ -237,8 +247,21 @@ class SniffPage(gtk.VBox):
         if not txt:
             return True
 
-        for idx in xrange(6):
-            if txt in str(model.get_value(iter, idx)):
+        packet = model.get_value(iter, 0)
+
+        strs = (
+            str(model.get_path(iter)[0] + 1),
+            packet.get_time(),
+            packet.get_source(),
+            packet.get_dest(),
+            packet.get_protocol_str(),
+            packet.summary()
+        )
+
+        # TODO: implement a search engine like num: summary: ?
+
+        for pattern in strs:
+            if txt in pattern:
                 return True
 
         return False
@@ -260,7 +283,7 @@ class SniffPage(gtk.VBox):
 
         for idx in xrange(len(self.store)):
             iter = self.store.get_iter((idx, ))
-            lst.append(self.store.get_value(iter, self.COL_OBJECT))
+            lst.append(self.store.get_value(iter, 0))
 
         # Now dump to file
         self.statusbar.label = \

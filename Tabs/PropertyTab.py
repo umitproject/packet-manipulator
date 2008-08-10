@@ -103,7 +103,8 @@ class PropertyTab(UmitView):
         page = tab.session_notebook.get_current_session()
 
         if page:
-            page.redraw_hexview()
+            # No reload to avoid repopulating
+            page.packet_page.redraw_hexview()
 
             # Now reselect the blocks
             self.__on_field_selected(self.grid.tree, *self.grid.tree.get_selected_field())
