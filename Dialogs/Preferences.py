@@ -164,6 +164,7 @@ class ViewsPage(Page):
         ('Show views at startup',
           (('gui.views.protocol_selector_tab', None, gtk.CheckButton('Protocol selector')),
            ('gui.views.property_tab', None, gtk.CheckButton('Protocol properties')),
+           ('gui.views.status_tab', None, gtk.CheckButton('Status view')),
            ('gui.views.vte_tab', None, gtk.CheckButton('Terminal')),
            ('gui.views.hack_tab', None, gtk.CheckButton('Payload Hack tab')),
            ('gui.views.console_tab', None, gtk.CheckButton('Python shell'))))

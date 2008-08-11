@@ -28,6 +28,7 @@ from widgets.Sniff import SniffPage
 from views import UmitView
 from Icons import get_pixbuf
 
+from umitCore.I18N import _
 from Manager.PreferenceManager import Prefs
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
@@ -123,17 +124,71 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         return self.session.packet, obj
 
 
-class PacketPage(gtk.VPaned):
+class PacketPage(gtk.VBox):
     def __init__(self, parent):
-        super(PacketPage, self).__init__()
+        super(PacketPage, self).__init__(False, 4)
 
         self.session = parent
+
+        # Create the toolbar for sending selected packet
+        self.toolbar = gtk.Toolbar()
+        self.toolbar.set_style(gtk.TOOLBAR_ICONS)
+
+        stocks = (
+            gtk.STOCK_GO_UP,
+            gtk.STOCK_GO_DOWN
+        )
+
+        tooltips = (
+            'Send packet',
+            'Send/receive packet'
+        )
+
+        callbacks = (
+            self.__on_send,
+            self.__on_send_receive
+        )
+
+        for tooltip, stock, callback in zip(tooltips, stocks, callbacks):
+            action = gtk.Action(None, None, tooltip, stock)
+            action.connect('activate', callback)
+            self.toolbar.insert(action.create_tool_item(), -1)
+
+        self.toolbar.insert(gtk.SeparatorToolItem(), -1)
+
+        from sys import maxint
+
+        self.packet_count = gtk.SpinButton(gtk.Adjustment(1, 0, maxint, 1, 10))
+        self.packet_interval = gtk.SpinButton(gtk.Adjustment(0, 0, maxint, 1, 10))
+
+        for lbl, widget in zip((_('No:'), _('Interval:')),
+                               (self.packet_count, self.packet_interval)):
+
+            hbox = gtk.HBox(False, 4)
+            hbox.set_border_width(2)
+
+            label = gtk.Label(lbl)
+            label.set_use_markup(True)
+            label.set_alignment(0, 0.5)
+
+            hbox.pack_start(label)
+            hbox.pack_start(widget)
+
+            item = gtk.ToolItem()
+            item.add(hbox)
+
+            self.toolbar.insert(item, -1)
+
+        self.pack_start(self.toolbar, False, False)
 
         self.proto_hierarchy = ProtocolHierarchy(self.session)
         self.hexview = HexView()
 
-        self.pack1(self.proto_hierarchy, True, False)
-        self.pack2(self.hexview, True, False)
+        vpaned = gtk.VPaned()
+        vpaned.pack1(self.proto_hierarchy, True, False)
+        vpaned.pack2(self.hexview, True, False)
+        
+        self.pack_start(vpaned)
 
         Prefs()['gui.maintab.hexview.font'].connect(self.hexview.modify_font)
         Prefs()['gui.maintab.hexview.bpl'].connect(self.hexview.set_bpl)
@@ -150,6 +205,16 @@ class PacketPage(gtk.VPaned):
     def reload(self):
         self.redraw_hexview()
         self.proto_hierarchy.reload()
+
+    def __on_send(self, action):
+        packet, protocol = self.proto_hierarchy.get_active_protocol()
+
+        if not packet:
+            return
+
+
+    def __on_send_receive(self, action):
+        pass
 
 class SessionPage(gtk.VBox):
     def __init__(self, iface=None, args={}, fname=None, packet=None):

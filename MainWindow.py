@@ -37,6 +37,7 @@ else:
 from Tabs.VteTab import VteTab
 from Tabs.MainTab import MainTab
 from Tabs.HackTab import HackTab
+from Tabs.StatusTab import StatusTab
 from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
 from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
@@ -193,6 +194,8 @@ class MainWindow(gtk.Window):
                           Prefs()['gui.views.protocol_selector_tab'].value)
         self.register_tab(PropertyTab(),
                           Prefs()['gui.views.property_tab'].value)
+        self.register_tab(StatusTab(),
+                          Prefs()['gui.views.status_tab'].value)
         self.register_tab(VteTab(),
                           Prefs()['gui.views.vte_tab'].value)
         self.register_tab(HackTab(),

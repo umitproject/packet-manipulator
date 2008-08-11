@@ -30,7 +30,11 @@ icons = (
     'locked',
     'packet',
     'layer',
-    'sniff'
+    'sniff',
+
+    'info',
+    'warning',
+    'error'
 )
 
 def register_icons():
