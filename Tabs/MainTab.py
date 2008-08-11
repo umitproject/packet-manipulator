@@ -212,6 +212,8 @@ class PacketPage(gtk.VBox):
         if not packet:
             return
 
+        count = self.packet_count.get_value_as_int()
+        inter = self.packet_interval.get_value_as_int()
 
     def __on_send_receive(self, action):
         pass
