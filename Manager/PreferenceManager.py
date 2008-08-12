@@ -162,6 +162,7 @@ class Prefs(Singleton):
         'gui.views.protocol_selector_tab' : True,
         'gui.views.property_tab' : True,
         'gui.views.status_tab' : True,
+        'gui.views.operations_tab' : True,
         'gui.views.vte_tab' : False,
         'gui.views.hack_tab' : False,
         'gui.views.console_tab' : False,

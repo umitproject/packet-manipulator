@@ -31,6 +31,8 @@ from Icons import get_pixbuf
 from umitCore.I18N import _
 from Manager.PreferenceManager import Prefs
 
+from Tabs.OperationsTab import SendOperation
+
 class ProtocolHierarchy(gtk.ScrolledWindow):
     def __init__(self, parent):
         gtk.ScrolledWindow.__init__(self)
@@ -212,8 +214,14 @@ class PacketPage(gtk.VBox):
         if not packet:
             return
 
+        # We start a background process in Operations tab
+
         count = self.packet_count.get_value_as_int()
         inter = self.packet_interval.get_value_as_int()
+
+        from App import PMApp
+        tab = PMApp().main_window.get_tab("Operations")
+        tab.tree.append_operation(SendOperation(packet, count, inter))
 
     def __on_send_receive(self, action):
         pass

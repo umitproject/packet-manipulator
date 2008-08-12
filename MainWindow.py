@@ -40,6 +40,7 @@ from Tabs.HackTab import HackTab
 from Tabs.StatusTab import StatusTab
 from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
+from Tabs.OperationsTab import OperationsTab
 from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
 from Dialogs.Interface import InterfaceDialog
@@ -196,6 +197,8 @@ class MainWindow(gtk.Window):
                           Prefs()['gui.views.property_tab'].value)
         self.register_tab(StatusTab(),
                           Prefs()['gui.views.status_tab'].value)
+        self.register_tab(OperationsTab(),
+                          Prefs()['gui.views.operations_tab'].value)
         self.register_tab(VteTab(),
                           Prefs()['gui.views.vte_tab'].value)
         self.register_tab(HackTab(),

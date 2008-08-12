@@ -21,6 +21,8 @@
 from __future__ import with_statement
 
 import os
+import threading
+
 from scapy import *
 
 __original_write = os.write
@@ -430,6 +432,36 @@ def find_all_devs():
         ret.append(VirtualIFace(iface, hw, ip))
 
     return ret
+
+# Sending/Receiving
+
+def _send_packet(metapacket, count, inter, callback, udata):
+    packet = metapacket.root
+
+    while count > 0:
+        send(packet, 0, 0)
+        count -= 1
+
+        if inter:
+            time.sleep(inter)
+
+        if callback(metapacket, count, inter, udata) == True:
+            return
+
+def send_packet(metapacket, count, inter, callback, udata=None):
+    """
+    Send a metapacket in thread context
+
+    @param metapacket the packet to send
+    @param count send n count metapackets
+    @param inter interval between two consecutive sends
+    @param callback a callback to call at each send (of type packet, count, inter, udata)
+           when True is returned the send thread is stopped
+    @param udata the userdata to pass to the callback
+    """
+    send_thread = threading.Thread(target=_send_packet, args=(metapacket, count, inter, callback, udata))
+    send_thread.setDaemon(True) # avoids zombies
+    send_thread.start()
 
 # Routes stuff
 
