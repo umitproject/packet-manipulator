@@ -21,6 +21,7 @@
 from __future__ import with_statement
 
 import os
+import time
 import threading
 
 from scapy import *
@@ -442,11 +443,12 @@ def _send_packet(metapacket, count, inter, callback, udata):
         send(packet, 0, 0)
         count -= 1
 
-        if inter:
-            time.sleep(inter)
-
         if callback(metapacket, count, inter, udata) == True:
             return
+
+        time.sleep(inter)
+
+    callback(None, count, inter, udata)
 
 def send_packet(metapacket, count, inter, callback, udata=None):
     """
@@ -462,6 +464,101 @@ def send_packet(metapacket, count, inter, callback, udata=None):
     send_thread = threading.Thread(target=_send_packet, args=(metapacket, count, inter, callback, udata))
     send_thread.setDaemon(True) # avoids zombies
     send_thread.start()
+
+def _sndrecv_sthread(wrpipe, socket, packet, count, inter, callback, udata):
+    try:
+        for idx in xrange(count):
+            socket.send(packet)
+
+            if callback(idx, udata) == True:
+                return
+
+            time.sleep(inter)
+    except SystemExit:
+        pass
+    except Exception, err:
+        print "Error in _sndrecv_sthread(PID: %d EXC: %s)" % (os.getpid(), str(err))
+    else:
+        cPickle.dump(arp_cache, wrpipe)
+        wrpipe.close()
+
+def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
+    ans = 0
+    nbrecv = 0
+    notans = count
+
+    packet_hash = packet.hashret()
+
+    inmask = [socket, rdpipe]
+
+    while True:
+        r = None
+        if FREEBSD or DARWIN:
+            inp, out, err = select(inmask, [], [], 0.05)
+            if len(inp) == 0 or socket in inp:
+                r = socket.nonblock_recv()
+        else:
+            inp, out, err = select(inmask, [], [], None)
+            if len(inp) == 0:
+                return
+            if socket in inp:
+                r = socket.recv(MTU)
+        if r is None:
+            continue
+
+        if r.hashret() == packet_hash and r.answers(packet):
+            ans += 1
+
+            if notans:
+                notans -= 1
+
+            if callback(r, True, nbrecv + ans, ans, notans, udata):
+                break
+        else:
+            nbrecv += 1
+
+            if callback(r, False, nbrecv + ans, ans, notans, udata):
+                break
+
+        if notans == 0:
+            break
+    try:
+        ac = cPickle.load(rdpipe)
+    except EOFError:
+        print "Child died unexpectedly. Packets may have not been sent"
+    else:
+        arp_cache.update(ac)
+
+    sthread.join()
+
+    # received/answers/remaining
+    callback(None, False, nbrecv + ans, ans, notans, udata)
+
+def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, sudata=None, rudata=None):
+    packet = metapacket.root
+
+    if not isinstance(packet, Gen):
+        packet = SetGen(packet)
+
+    if not count or count <= 0:
+        count = 1
+
+    socket = conf.L3socket(iface=iface)
+
+    rdpipe, wrpipe = os.pipe()
+    rdpipe = os.fdopen(rdpipe)
+    wrpipe = os.fdopen(wrpipe, 'w')
+
+    send_thread = threading.Thread(target=_sndrecv_sthread,
+                                   args=(wrpipe, socket, packet, count, inter, scallback, sudata))
+    recv_thread = threading.Thread(target=_sndrecv_rthread,
+                                   args=(send_thread, rdpipe, socket, packet, count, rcallback, rudata))
+
+    send_thread.setDaemon(True)
+    recv_thread.setDaemon(True)
+
+    send_thread.start()
+    recv_thread.start()
 
 # Routes stuff
 

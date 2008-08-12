@@ -26,6 +26,7 @@ import gobject
 from umitCore.Paths import Path
 
 icons = (
+    'operation',
     'protocol',
     'locked',
     'packet',

@@ -90,12 +90,15 @@ class SendOperation(Operation):
         self.tot_count = count
         self.count = 0
 
-        self.inter = inter / 100.0
+        self.inter = float(float(inter) / 1000.0)
 
         super(SendOperation, self).__init__()
 
     def get_text(self):
-        return _("Sent %d of %d packets ...") % (self.count, self.tot_count)
+        if self.count == self.tot_count:
+            return _("%d packet(s) sent.") % self.tot_count
+        else:
+            return _("Sending packet %d of %d") % (self.count, self.tot_count)
 
     def start(self):
         self.state = Operation.RUNNING
@@ -107,20 +110,82 @@ class SendOperation(Operation):
             Backend.send_packet(self.packet, self.tot_count - self.count, self.inter, self.__send_callback)
 
     def __send_callback(self, packet, count, inter, udata=None):
-        self.count += 1
-        
-        # Calc the percentage
-        self.percentage = float(self.count) / float(self.tot_count)
-        self.percentage *= 100.0
+        if packet:
+            self.count += 1
+            
+            # Calc the percentage
+            self.percentage = float(self.count) / float(self.tot_count)
+            self.percentage *= 100.0
 
-        self.notify_parent()
+            self.notify_parent()
+        else:
+            self.state = Operation.STOPPED
 
         # Stop if the Operation is paused or stopped
         return self.state == Operation.PAUSED or \
                self.state == Operation.STOPPED
 
 class SendReceiveOperation(Operation):
-    pass
+    def __init__(self, packet, count, inter, iface=None):
+        self.packet = packet
+        self.tot_count = count
+
+        self.inter = float(float(inter) / 1000.0)
+        self.iface = iface
+
+        self.scount = 0
+        self.percentage = 1
+
+        self.summary = ''
+
+        super(SendReceiveOperation, self).__init__()
+
+    def start(self):
+        self.state = Operation.RUNNING
+        Backend.send_receive_packet(self.packet, self.tot_count, self.inter, self.iface,
+                                    self.__send_callback, self.__receive_callback)
+
+    def __send_callback(self, idx, udata):
+        self.scount += 1
+
+        self.summary = _("Sending packet %d of %d") % (idx + 1, self.tot_count)
+        self.__update()
+
+        return self.state == Operation.PAUSED or \
+               self.state == Operation.STOPPED
+
+    def __receive_callback(self, reply, is_reply, received, answered, remaining, udata):
+
+        if reply:
+            self.summary = _("Received/Answered/Remaining %d/%d/%d") % (received, answered, remaining)
+        else:
+            self.state = Operation.STOPPED
+
+        self.__update()
+
+        return self.state == Operation.PAUSED or \
+               self.state == Operation.STOPPED
+
+    def __update(self):
+        self.percentage += gobject.G_MAXINT / 4
+        self.percentage %= gobject.G_MAXINT
+
+        self.notify_parent()
+
+    def get_percentage(self):
+        if self.state == Operation.STOPPED:
+            return 100.0
+        else:
+            return None
+
+    def resume(self):
+        if self.state == Operation.PAUSED:
+            self.state = Operation.RUNNING
+            Backend.send_receive_packet(self.packet, self.tot_count - self.scount, self.inter, self.iface,
+                                        self.__send_callback, self.__receive_callback)
+
+    def get_text(self):
+        return self.summary
 
 class OperationTree(gtk.TreeView):
     def __init__(self):
@@ -130,22 +195,46 @@ class OperationTree(gtk.TreeView):
         # We have only one column with a progress bar
         # showing a text
 
-        rend = gtk.CellRendererProgress()
-        col = gtk.TreeViewColumn('', rend)
-        col.set_cell_data_func(rend, self.__cell_data_func)
+        col = gtk.TreeViewColumn(_('Operation'))
+        col.set_resizable(True)
+
+        rend = gtk.CellRendererPixbuf()
+        col.pack_start(rend, False)
+        col.set_cell_data_func(rend, self.__pix_data_func)
+
+        rend = gtk.CellRendererText()
+        col.pack_start(rend)
+        col.set_cell_data_func(rend, self.__text_data_func)
 
         self.append_column(col)
-        self.set_headers_visible(False)
+
+        rend = gtk.CellRendererProgress()
+        col = gtk.TreeViewColumn(_('Status'), rend)
+        col.set_resizable(True)
+        col.set_cell_data_func(rend, self.__progress_data_func)
+
+        self.append_column(col)
+
         self.set_rules_hint(True)
 
-        self.update_id = None
+        self.icon_operation = get_pixbuf('operation_small')
         self.connect('button-release-event', self.__on_button_release)
 
-    def __cell_data_func(self, col, cell, model, iter):
+    def __pix_data_func(self, col, cell, model, iter):
+        cell.set_property('pixbuf', self.icon_operation)
+
+    def __text_data_func(self, col, cell, model, iter):
+        operation = model.get_value(iter, 0)
+        cell.set_property('text', operation.get_text())
+
+    def __progress_data_func(self, col, cell, model, iter):
         operation = model.get_value(iter, 0)
 
-        cell.set_property('text', operation.get_text())
-        cell.set_property('value', operation.get_percentage())
+        if operation.get_percentage() != None:
+            cell.set_property('value', operation.get_percentage())
+            cell.set_property('pulse', -1)
+        else:
+            cell.set_property('pulse', operation.percentage)
 
     def __on_button_release(self, widget, evt):
         if evt.button != 3:
@@ -222,7 +311,7 @@ class OperationTree(gtk.TreeView):
         pass
 
 class OperationsTab(UmitView):
-    icon_name = gtk.STOCK_INFO
+    icon_name = 'operation_small'
     tab_position = gtk.POS_BOTTOM
     label_text = "Operations"
 
