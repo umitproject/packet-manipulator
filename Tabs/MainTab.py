@@ -239,10 +239,10 @@ class PacketPage(gtk.VBox):
         tab.tree.append_operation(SendReceiveOperation(packet, count, inter))
 
 class SessionPage(gtk.VBox):
-    def __init__(self, iface=None, args={}, fname=None, packet=None):
+    def __init__(self, iface=None, args={}, fname=None, packet=None, title=None):
         gtk.VBox.__init__(self)
 
-        assert(iface or fname or packet)
+        assert(iface or fname or packet or title, "No iface nor fname nor packet nor title provided")
 
         if iface:
             self.packet = None
@@ -254,7 +254,7 @@ class SessionPage(gtk.VBox):
             self.sniff_page = SniffPage(self, Backend.SniffContext(iface=None, capfile=fname))
             self._label = gtk.Label(fname)
 
-        else:
+        elif packet:
             if isinstance(packet, basestring):
                 packet = Backend.get_proto(packet)()
                 packet = Backend.MetaPacket(packet)
@@ -262,12 +262,17 @@ class SessionPage(gtk.VBox):
             self.packet = packet
             self.sniff_page = SniffPage(self)
             self._label = gtk.Label("*" + packet.get_protocol_str())
+        elif title:
+            # Empty page
+            self.packet = None
+            self.sniff_page = SniffPage(self)
+            self._label = gtk.Label(title)
 
         self.set_border_width(4)
 
         self.vpaned = gtk.VPaned()
-        self.sniff_expander = AnimatedExpander("Sniff perspective", 'sniff_small')
-        self.packet_expander = AnimatedExpander("Packet perspective", 'packet_small')
+        self.sniff_expander = AnimatedExpander(_("Sniff perspective"), 'sniff_small')
+        self.packet_expander = AnimatedExpander(_("Packet perspective"), 'packet_small')
 
         self.packet_page = PacketPage(self)
 
@@ -308,18 +313,24 @@ class SessionNotebook(gtk.Notebook):
 
     def create_edit_session(self, proto_name):
         session = SessionPage(packet=proto_name)
-        self.append_page(session, session.label)
-        self.set_tab_reorderable(session, True)
+        return self.__append_session(session)
 
     def create_sniff_session(self, iface, args):
         session = SessionPage(iface, args)
-        self.append_page(session, session.label)
-        self.set_tab_reorderable(session, True)
+        return self.__append_session(session)
 
     def create_offline_session(self, fname):
         session = SessionPage(fname=fname)
+        return self.__append_session(session)
+
+    def create_empty_session(self, title):
+        session = SessionPage(title=title)
+        return self.__append_session(session)
+
+    def __append_session(self, session):
         self.append_page(session, session.label)
         self.set_tab_reorderable(session, True)
+        return session
 
     def get_current_session(self):
         """

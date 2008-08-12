@@ -443,12 +443,12 @@ def _send_packet(metapacket, count, inter, callback, udata):
         send(packet, 0, 0)
         count -= 1
 
-        if callback(metapacket, count, inter, udata) == True:
+        if callback(metapacket, udata) == True:
             return
 
         time.sleep(inter)
 
-    callback(None, count, inter, udata)
+    callback(None, udata)
 
 def send_packet(metapacket, count, inter, callback, udata=None):
     """
@@ -457,7 +457,7 @@ def send_packet(metapacket, count, inter, callback, udata=None):
     @param metapacket the packet to send
     @param count send n count metapackets
     @param inter interval between two consecutive sends
-    @param callback a callback to call at each send (of type packet, count, inter, udata)
+    @param callback a callback to call at each send (of type packet, udata)
            when True is returned the send thread is stopped
     @param udata the userdata to pass to the callback
     """
@@ -470,7 +470,7 @@ def _sndrecv_sthread(wrpipe, socket, packet, count, inter, callback, udata):
         for idx in xrange(count):
             socket.send(packet)
 
-            if callback(idx, udata) == True:
+            if callback(packet, idx, udata) == True:
                 return
 
             time.sleep(inter)
@@ -512,12 +512,12 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
             if notans:
                 notans -= 1
 
-            if callback(r, True, nbrecv + ans, ans, notans, udata):
+            if callback(MetaPacket(r), True, nbrecv + ans, ans, notans, udata):
                 break
         else:
             nbrecv += 1
 
-            if callback(r, False, nbrecv + ans, ans, notans, udata):
+            if callback(MetaPacket(r), False, nbrecv + ans, ans, notans, udata):
                 break
 
         if notans == 0:
@@ -535,6 +535,20 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
     callback(None, False, nbrecv + ans, ans, notans, udata)
 
 def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, sudata=None, rudata=None):
+    """
+    Send/receive a metapacket in thread context
+
+    @param metapacket the packet to send
+    @param count send n count metapackets
+    @param inter interval between two consecutive sends
+    @param iface the interface where to wait for replies
+    
+    @param callback a callback to call at each send (of type packet, packet_idx, udata)
+    @param sudata the userdata to pass to the send callback
+
+    @param callback a callback to call at each receive (of type reply_packet, is_reply, received, answers, remaining)
+    @param sudata the userdata to pass to the send callback
+    """
     packet = metapacket.root
 
     if not isinstance(packet, Gen):

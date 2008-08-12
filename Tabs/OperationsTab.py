@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import gobject
+
 import Backend
 
 from umitCore.I18N import _
@@ -60,6 +62,10 @@ class Operation(object):
         raise Exception("Not implemented")
 
     # This methods can't fail
+
+    def activate(self):
+        "Called when the user clicks on the row"
+        pass
 
     def start(self):
         "Start the current operation"
@@ -109,7 +115,7 @@ class SendOperation(Operation):
             self.state = Operation.RUNNING
             Backend.send_packet(self.packet, self.tot_count - self.count, self.inter, self.__send_callback)
 
-    def __send_callback(self, packet, count, inter, udata=None):
+    def __send_callback(self, udata=None):
         if packet:
             self.count += 1
             
@@ -137,6 +143,8 @@ class SendReceiveOperation(Operation):
         self.percentage = 1
 
         self.summary = ''
+        self.buffer = []
+        self.session = None
 
         super(SendReceiveOperation, self).__init__()
 
@@ -145,7 +153,7 @@ class SendReceiveOperation(Operation):
         Backend.send_receive_packet(self.packet, self.tot_count, self.inter, self.iface,
                                     self.__send_callback, self.__receive_callback)
 
-    def __send_callback(self, idx, udata):
+    def __send_callback(self, packet, idx, udata):
         self.scount += 1
 
         self.summary = _("Sending packet %d of %d") % (idx + 1, self.tot_count)
@@ -157,6 +165,7 @@ class SendReceiveOperation(Operation):
     def __receive_callback(self, reply, is_reply, received, answered, remaining, udata):
 
         if reply:
+            self.buffer.append((is_reply, reply))
             self.summary = _("Received/Answered/Remaining %d/%d/%d") % (received, answered, remaining)
         else:
             self.state = Operation.STOPPED
@@ -186,6 +195,21 @@ class SendReceiveOperation(Operation):
 
     def get_text(self):
         return self.summary
+
+    def activate(self):
+        # We need to create a new page containing
+        # the list of sent and received packets
+
+        if not self.session:
+            from App import PMApp
+            tab = PMApp().main_window.get_tab("MainTab")
+            self.session = tab.session_notebook.create_empty_session("Packets received")
+
+            # Populate the sniff perspective
+            pktlist = filter(None, [(check) and (pack) or (None) for check, pack in self.buffer])
+
+            self.session.sniff_page.populate(pktlist)
+            self.session.sniff_page.statusbar.label = _("<b>%d packet(s) received.</b>") % len(pktlist)
 
 class OperationTree(gtk.TreeView):
     def __init__(self):
@@ -249,13 +273,15 @@ class OperationTree(gtk.TreeView):
         operation = model.get_value(iter, 0)
 
         labels = (
-            'Resume operation',
-            'Pause operation',
-            'Stop operation',
-            'Remove finished'
+            _('Open'),
+            _('Resume operation'),
+            _('Pause operation'),
+            _('Stop operation'),
+            _('Remove finished')
         )
 
         stocks = (
+            gtk.STOCK_OPEN,
             gtk.STOCK_MEDIA_PLAY,
             gtk.STOCK_MEDIA_PAUSE,
             gtk.STOCK_MEDIA_STOP,
@@ -263,6 +289,7 @@ class OperationTree(gtk.TreeView):
         )
 
         callbacks = (
+            self.__on_open,
             self.__on_resume,
             self.__on_pause,
             self.__on_stop,
@@ -297,6 +324,9 @@ class OperationTree(gtk.TreeView):
             operation.start()
 
     # Callbacks section
+
+    def __on_open(self, action, operation):
+        operation.activate()
 
     def __on_resume(self, action, operation):
         operation.resume()

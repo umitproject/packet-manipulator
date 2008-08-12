@@ -70,8 +70,9 @@ class SniffPage(gtk.VBox):
 
 
         if not context:
-            self.store.append([self.session.packet])
-            self.statusbar.label = _('<b>Editing <tt>%s</tt></b>') % self.session.packet.summary()
+            if self.session.packet:
+                self.store.append([self.session.packet])
+                self.statusbar.label = _('<b>Editing <tt>%s</tt></b>') % self.session.packet.summary()
         else:
             self.context = context
             self.context.start()
@@ -211,6 +212,10 @@ class SniffPage(gtk.VBox):
             self.statusbar.start_animation(True)
 
         return alive
+
+    def populate(self, pktlist):
+        for packet in pktlist:
+            self.store.append([packet])
 
     def stop_sniffing(self):
         if hasattr(self, 'context') and self.context:
