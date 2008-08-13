@@ -20,13 +20,13 @@
 
 from Manager.PreferenceManager import Prefs
 
-class VirtualIFace:
+class VirtualIFace(object):
     def __init__(self, name, desc, ip):
         self.name = name
         self.description = desc
         self.ip = ip
 
-class BaseContext:
+class BaseContext(object):
     """
     This is a base context for sending/receiving/loading packets
     """
@@ -68,7 +68,7 @@ class TimedContext(BaseContext):
 
     def start(self):
         if self.state != TimedContext.RUNNING:
-            if self._start():
+            if self._start() == True:
                 self.state = TimedContext.RUNNING
 
     def pause(self):
@@ -88,13 +88,12 @@ class TimedContext(BaseContext):
     def get_state(self):
         return self._state
     def set_state(self, val):
-        self._state = val
-
-        if self._state != TimedContext.RUNNING:
-            self.running = False
-        else:
+        if val == TimedContext.RUNNING:
             self.running = True
-            print "RUNNING"
+        else:
+            self.running = False
+
+        self._state = val
 
     state = property(get_state, set_state)
 
