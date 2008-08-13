@@ -317,17 +317,106 @@ from datetime import datetime
 from threading import Thread, Lock
 
 from Backend import VirtualIFace
-from Backend import SniffContext as BaseContext
+from Backend import TimedContext
+from Backend import SendContext as BaseSendContext
+from Backend import SniffContext as SniffBaseContext
+from Backend import SendReceiveContext as BaseSendReceiveContext
 
-class SniffContext(BaseContext, Thread):
+class SendContext(BaseSendContext):
+    def _start(self):
+        if self.tot_count - self.count > 0:
+            self.thread = send_packet(self.packet, self.tot_count - self.count, self.inter, \
+                        self.__send_callback, self.udata)
+            return True
+
+        return False
+
+    def __send_callback(self, packet, udata):
+        if packet:
+            self.count += 1
+        else:
+            self.state = TimedContext.NOT_RUNNING
+
+        if self.callback:
+            self.callback(packet, udata)
+
+        return self.state == TimedContext.NOT_RUNNING or \
+               self.state == TimedContext.PAUSED
+
+    #def pause(self):
+    #    BaseSendContext.pause(self)
+    #    self.thread.join()
+
+    #def stop(self):
+    #    BaseSendContext.stop(self)
+    #    self.thread.join()
+
+    def join(self):
+        self.thread.join()
+        self.running = False
+
+class SendReceiveContext(BaseSendReceiveContext):
+    def _start(self):
+        if self.tot_count - self.count > 0 and self.remaining > 0:
+            self.sthread, self.rthread = send_receive_packet( \
+                                self.packet, self.tot_count - self.count, self.inter, \
+                                self.iface, self.__send_callback, self.__recv_callback, \
+                                self.sudata, self.rudata)
+            return True
+
+        return False
+
+    def __send_callback(self, packet, idx, udata):
+        self.count += 1
+
+        if self.scallback:
+            self.scallback(packet, idx, udata)
+
+        return self.state == TimedContext.NOT_RUNNING or \
+               self.state == TimedContext.PAUSED
+
+    def __recv_callback(self, packet, is_reply, udata):
+        if not packet:
+            self.state = TimedContext.NOT_RUNNING
+        else:
+            self.received += 1
+
+            if is_reply:
+                self.answers += 1
+                self.remaining -= 1
+
+        if self.rcallback:
+            self.rcallback(packet, is_reply, udata)
+
+        return self.state == TimedContext.NOT_RUNNING or \
+               self.state == TimedContext.PAUSED
+
+    #def pause(self):
+    #    BaseSendReceiveContext.pause(self)
+    #    self.sthread.join()
+    #    self.rthread.join()
+
+    #def stop(self):
+    #    BaseSendReceiveContext.stop(self)
+    #    self.sthread.join()
+    #    self.rthread.join()
+
+    def join(self):
+        self.sthread.join()
+        self.rthread.join()
+
+        self.running = False
+
+class SniffContext(SniffBaseContext, Thread):
     """
     A sniff context for controlling various options.
     """
 
     def __init__(self, *args, **kwargs):
         Thread.__init__(self)
-        BaseContext.__init__(self, *args, **kwargs)
+        SniffBaseContext.__init__(self, *args, **kwargs)
 
+        self.summary = 'Sniffing on %s' % self.iface
         self.setDaemon(True)
 
     def get_data(self):
@@ -341,13 +430,13 @@ class SniffContext(BaseContext, Thread):
         return []
 
     def destroy(self):
+        self.summary = 'Sniffing session finished (%d packets captured)' % self.tot_count
         self.running = False
 
     def start(self):
         self.data = []
         self.lock = Lock()
         self.prevtime = datetime.now()
-        self.running = False
 
         if self.iface:
             try:
@@ -363,9 +452,6 @@ class SniffContext(BaseContext, Thread):
         self.running = True
 
         Thread.start(self)
-
-    def is_alive(self):
-        return self.running
 
     def run(self):
         if not self.iface and self.cap_file:
@@ -405,6 +491,8 @@ class SniffContext(BaseContext, Thread):
                self.stop_time and self.tot_time >= self.stop_time or \
                self.stop_size and self.tot_size >= self.stop_size:
                 self.running = False
+
+FileContext = SniffContext
 
 def find_all_devs():
     ifaces = get_if_list()
@@ -465,6 +553,8 @@ def send_packet(metapacket, count, inter, callback, udata=None):
     send_thread.setDaemon(True) # avoids zombies
     send_thread.start()
 
+    return send_thread
+
 def _sndrecv_sthread(wrpipe, socket, packet, count, inter, callback, udata):
     try:
         for idx in xrange(count):
@@ -512,12 +602,12 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
             if notans:
                 notans -= 1
 
-            if callback(MetaPacket(r), True, nbrecv + ans, ans, notans, udata):
+            if callback(MetaPacket(r), True, udata):
                 break
         else:
             nbrecv += 1
 
-            if callback(MetaPacket(r), False, nbrecv + ans, ans, notans, udata):
+            if callback(MetaPacket(r), False, udata):
                 break
 
         if notans == 0:
@@ -532,7 +622,7 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
     sthread.join()
 
     # received/answers/remaining
-    callback(None, False, nbrecv + ans, ans, notans, udata)
+    callback(None, False, udata)
 
 def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, sudata=None, rudata=None):
     """
@@ -573,6 +663,8 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
 
     send_thread.start()
     recv_thread.start()
+
+    return send_thread, recv_thread
 
 # Routes stuff
 

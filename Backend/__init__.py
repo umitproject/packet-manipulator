@@ -26,7 +26,112 @@ class VirtualIFace:
         self.description = desc
         self.ip = ip
 
-class SniffContext:
+class BaseContext:
+    """
+    This is a base context for sending/receiving/loading packets
+    """
+
+    def __init__(self):
+        self.running = False
+        self.summary = ''
+
+    def get_data(self):
+        return []
+
+    def start(self):
+        pass
+
+    def destroy(self):
+        self.running = False
+
+    def join(self):
+        pass
+
+    def is_alive(self):
+        return self.running
+
+    def get_summary(self):
+        return self.summary
+
+# Send and receive context
+
+class TimedContext(BaseContext):
+    NOT_RUNNING, RUNNING, PAUSED = range(3)
+
+    def __init__(self):
+        self._state = TimedContext.NOT_RUNNING
+        BaseContext.__init__(self)
+
+    def _start(self):
+        "override this"
+        pass
+
+    def start(self):
+        if self.state != TimedContext.RUNNING:
+            if self._start():
+                self.state = TimedContext.RUNNING
+
+    def pause(self):
+        if self.state == TimedContext.RUNNING:
+            self.state = TimedContext.PAUSED
+
+    def stop(self):
+        if self.state == TimedContext.RUNNING:
+            self.state = TimedContext.NOT_RUNNING
+
+    def restart(self):
+        if self.state != TimedContext.RUNNING:
+            self.start()
+
+    resume = restart
+
+    def get_state(self):
+        return self._state
+    def set_state(self, val):
+        self._state = val
+
+        if self._state != TimedContext.RUNNING:
+            self.running = False
+        else:
+            self.running = True
+            print "RUNNING"
+
+    state = property(get_state, set_state)
+
+class SendContext(TimedContext):
+    def __init__(self, metapacket, count, inter, callback, udata=None):
+        self.packet = metapacket
+        self.tot_count = count
+        self.count = 0
+        self.inter = inter
+        self.callback = callback
+        self.udata = udata
+
+        TimedContext.__init__(self)
+
+class SendReceiveContext(TimedContext):
+    def __init__(self, metapacket, count, inter, iface, \
+                 scallback, rcallback, sudata=None, rudata=None):
+
+        self.packet = metapacket
+        self.tot_count = count
+        self.count = 0
+        self.inter = inter
+        self.iface = iface
+        self.scallback = scallback
+        self.rcallback = rcallback
+        self.sudata = sudata
+        self.rudata = rudata
+
+        self.remaining = count
+        self.answers = 0
+        self.received = 0
+
+        self.data = []
+
+        TimedContext.__init__(self)
+
+class SniffContext(BaseContext):
     """
     A sniff context for controlling various options.
     """
@@ -58,20 +163,11 @@ class SniffContext:
 
         self.exception = None
 
-    def start(self):
-        pass
+        BaseReceiver.__init__(self)
 
-    def get_data(self):
-        return []
-
-    def destroy(self):
-        pass
-
-    def join(self):
-        pass
-
-    def is_alive(self):
-        return True
+# This is for loading pcap files
+FileContext = SniffContext
+EditContext = BaseContext
 
 if Prefs()['backend.system'].value.lower() == 'umpa':
     from UMPA import *

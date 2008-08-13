@@ -77,7 +77,7 @@ class SniffPage(gtk.VBox):
             self.context = context
             self.context.start()
 
-            self.statusbar.label = _('<b>Sniffing on <tt>%s</tt> ...</b>') % context.iface
+            self.statusbar.label = "<b>%s</b>" % self.context.get_summary()
             self.timeout_id = gobject.timeout_add(200, self.__update_tree)
 
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
@@ -206,8 +206,7 @@ class SniffPage(gtk.VBox):
             self.statusbar.image = gtk.STOCK_DIALOG_ERROR
             self.statusbar.start_animation(True)
         elif not alive:
-            self.statusbar.label = \
-                _("<b>Sniffing session finished (%d packets caputered)</b>") % self.context.tot_count
+            self.statusbar.label = "<b>%s</b>" % self.context.get_summary()
             self.statusbar.image = gtk.STOCK_INFO
             self.statusbar.start_animation(True)
 

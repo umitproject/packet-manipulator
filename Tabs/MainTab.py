@@ -251,7 +251,7 @@ class SessionPage(gtk.VBox):
 
         elif fname:
             self.packet = None
-            self.sniff_page = SniffPage(self, Backend.SniffContext(iface=None, capfile=fname))
+            self.sniff_page = SniffPage(self, Backend.FileContext(iface=None, capfile=fname))
             self._label = gtk.Label(fname)
 
         elif packet:

@@ -34,11 +34,9 @@ class Operation(object):
     like sending packets or receiving packets and should be ovverriden
     """
 
-    NOT_STARTED, RUNNING, PAUSED, STOPPED = range(4)
-
     def __init__(self):
-        self.state = Operation.NOT_STARTED
         self.percentage = 0
+        self.summary = ''
 
         self.iter = None
         self.model = None
@@ -59,9 +57,7 @@ class Operation(object):
 
     def get_text(self):
         "@return a summary text of the operation"
-        raise Exception("Not implemented")
-
-    # This methods can't fail
+        raise self.summary
 
     def activate(self):
         "Called when the user clicks on the row"
@@ -73,107 +69,75 @@ class Operation(object):
 
     def stop(self):
         "Stop the current operations forever"
-        self.state = Operation.STOPPED
+        pass
 
     def pause(self):
         "Pause the current operations for a future resume"
-        self.state = Operation.PAUSED
+        pass
 
     def resume(self):
         "Resume the paused operations"
-        self.state = Operation.RUNNING
+        pass
 
-    # Attributes
-    
-    def get_state(self):
-        "@retuns a id representing the status of the operation"
-        return self.state
-
-class SendOperation(Operation):
-    def __init__(self, packet, count, inter):
-        self.packet = packet
-
-        self.tot_count = count
-        self.count = 0
-
-        self.inter = float(float(inter) / 1000.0)
-
-        super(SendOperation, self).__init__()
-
-    def get_text(self):
-        if self.count == self.tot_count:
-            return _("%d packet(s) sent.") % self.tot_count
-        else:
-            return _("Sending packet %d of %d") % (self.count, self.tot_count)
+class ContextOperation(Operation):
+    def __init__(self):
+        self.context = None
+        super(ContextOperation, self).__init__()
 
     def start(self):
-        self.state = Operation.RUNNING
-        Backend.send_packet(self.packet, self.tot_count, self.inter, self.__send_callback)
+        self.context.start()
 
     def resume(self):
-        if self.state == Operation.PAUSED:
-            self.state = Operation.RUNNING
-            Backend.send_packet(self.packet, self.tot_count - self.count, self.inter, self.__send_callback)
+        self.context.resume()
 
-    def __send_callback(self, udata=None):
-        if packet:
-            self.count += 1
-            
-            # Calc the percentage
-            self.percentage = float(self.count) / float(self.tot_count)
-            self.percentage *= 100.0
+    def stop(self):
+        self.context.stop()
 
-            self.notify_parent()
+    def pause(self):
+        self.context.pause()
+
+
+class SendOperation(ContextOperation):
+    def __init__(self, packet, count, inter):
+        super(SendOperation, self).__init__()
+        self.context = Backend.SendContext(packet, count, float(float(inter) / 1000.0),
+                                           self.__send_callback, None)
+
+    def get_text(self):
+        if self.context.count == self.context.tot_count:
+            return _("%d packet(s) sent.") % self.context.tot_count
         else:
-            self.state = Operation.STOPPED
+            return _("Sending packet %d of %d") % (self.context.count, self.context.tot_count)
 
-        # Stop if the Operation is paused or stopped
-        return self.state == Operation.PAUSED or \
-               self.state == Operation.STOPPED
 
-class SendReceiveOperation(Operation):
+    def __send_callback(self, packet, udata=None):
+        if self.context.count == self.context.tot_count:
+            self.summary = _("%d packet(s) sent.") % self.context.tot_count
+        else:
+            self.summary = _("Sending packet %d of %d") % (self.context.count, self.context.tot_count)
+
+        self.percentage = float(self.context.count) / float(self.context.tot_count)
+        self.percentage *= 100.0
+
+        self.notify_parent()
+
+class SendReceiveOperation(ContextOperation):
     def __init__(self, packet, count, inter, iface=None):
-        self.packet = packet
-        self.tot_count = count
-
-        self.inter = float(float(inter) / 1000.0)
-        self.iface = iface
-
-        self.scount = 0
-        self.percentage = 1
-
-        self.summary = ''
-        self.buffer = []
-        self.session = None
-
         super(SendReceiveOperation, self).__init__()
-
-    def start(self):
-        self.state = Operation.RUNNING
-        Backend.send_receive_packet(self.packet, self.tot_count, self.inter, self.iface,
-                                    self.__send_callback, self.__receive_callback)
+        self.context = Backend.SendReceiveContext(packet, count, float(float(inter) / 1000.0), iface,
+                                          self.__send_callback, self.__receive_callback, None, None)
 
     def __send_callback(self, packet, idx, udata):
-        self.scount += 1
-
-        self.summary = _("Sending packet %d of %d") % (idx + 1, self.tot_count)
+        self.summary = _("Sending packet %d of %d") % (idx + 1, self.context.tot_count)
         self.__update()
 
-        return self.state == Operation.PAUSED or \
-               self.state == Operation.STOPPED
-
-    def __receive_callback(self, reply, is_reply, received, answered, remaining, udata):
-
+    def __receive_callback(self, reply, is_reply, udata):
         if reply:
-            self.buffer.append((is_reply, reply))
-            self.summary = _("Received/Answered/Remaining %d/%d/%d") % (received, answered, remaining)
+            self.summary = _("Received/Answered/Remaining %d/%d/%d") % (self.context.received, self.context.answers, self.context.remaining)
         else:
-            self.state = Operation.STOPPED
+            self.summary = _("%d of %d replie(s) received") % (self.context.answers, self.context.received)
 
         self.__update()
-
-        return self.state == Operation.PAUSED or \
-               self.state == Operation.STOPPED
 
     def __update(self):
         self.percentage += gobject.G_MAXINT / 4
@@ -182,16 +146,10 @@ class SendReceiveOperation(Operation):
         self.notify_parent()
 
     def get_percentage(self):
-        if self.state == Operation.STOPPED:
+        if self.context.state == self.context.NOT_RUNNING:
             return 100.0
         else:
             return None
-
-    def resume(self):
-        if self.state == Operation.PAUSED:
-            self.state = Operation.RUNNING
-            Backend.send_receive_packet(self.packet, self.tot_count - self.scount, self.inter, self.iface,
-                                        self.__send_callback, self.__receive_callback)
 
     def get_text(self):
         return self.summary
@@ -258,6 +216,7 @@ class OperationTree(gtk.TreeView):
             cell.set_property('value', operation.get_percentage())
             cell.set_property('pulse', -1)
         else:
+            cell.set_property('value', 0)
             cell.set_property('pulse', operation.percentage)
 
     def __on_button_release(self, widget, evt):
