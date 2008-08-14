@@ -84,14 +84,19 @@ def find_all_devs():
 def _send_packet(metapacket, count, inter, callback, udata):
     packet = metapacket.root
 
-    while count > 0:
-        send(packet, 0, 0)
-        count -= 1
+    try:
+        while count > 0:
+            sendp(packet, 0, 0)
+            count -= 1
 
-        if callback(metapacket, udata) == True:
-            return
+            if callback(metapacket, udata) == True:
+                return
 
-        time.sleep(inter)
+            time.sleep(inter)
+
+    except socket.error, (errno, err):
+        callback(Exception(err), udata)
+        return
 
     callback(None, udata)
 
@@ -212,16 +217,19 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
     if not count or count <= 0:
         count = 1
 
-    socket = conf.L3socket(iface=iface)
+    try:
+        sock = conf.L2socket(iface=iface)
+    except socket.error, (errno, err):
+        raise Exception(err)
 
     rdpipe, wrpipe = os.pipe()
     rdpipe = os.fdopen(rdpipe)
     wrpipe = os.fdopen(wrpipe, 'w')
 
     send_thread = Thread(target=_sndrecv_sthread,
-                                   args=(wrpipe, socket, packet, count, inter, scallback, sudata))
+                                   args=(wrpipe, sock, packet, count, inter, scallback, sudata))
     recv_thread = Thread(target=_sndrecv_rthread,
-                                   args=(send_thread, rdpipe, socket, packet, count, rcallback, rudata))
+                                   args=(send_thread, rdpipe, sock, packet, count, rcallback, rudata))
 
     send_thread.setDaemon(True)
     recv_thread.setDaemon(True)

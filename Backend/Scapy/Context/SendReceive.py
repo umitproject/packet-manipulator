@@ -61,11 +61,21 @@ def register_send_receive_context(BaseSendReceiveContext):
             if self.tot_count - self.count > 0 and self.remaining > 0:
                 self.internal = True
                 self.state = self.RUNNING
-                self.sthread, self.rthread = send_receive_packet( \
+
+                try:
+                    self.sthread, self.rthread = send_receive_packet( \
                                     self.packet, self.tot_count - self.count, self.inter, \
                                     self.iface, self.__send_callback, self.__recv_callback, \
                                     self.sudata, self.rudata)
-                return True
+                except Exception, err:
+                    self.internal = False
+                    self.state = self.NOT_RUNNING
+                    self.summary = str(err)
+
+                    return False
+                else:
+                    return True
+
             return False
 
         def _resume(self):

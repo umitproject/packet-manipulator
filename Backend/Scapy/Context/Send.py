@@ -59,17 +59,21 @@ def register_send_context(BaseSendContext):
         _pause = _stop
 
         def __send_callback(self, packet, udata):
-            if packet:
-                self.count += 1
+            if packet and isinstance(packet, Exception):
+                self.internal = False
+                self.summary = str(packet)
             else:
-                self.state = self.NOT_RUNNING
+                if packet:
+                    self.count += 1
+                else:
+                    self.state = self.NOT_RUNNING
 
-            if self.count == self.tot_count:
-                self.summary = "%d packet(s) sent." % self.tot_count
-            else:
-                self.summary = "Sending packet %d of %d" % (self.count, self.tot_count)
+                if self.count == self.tot_count:
+                    self.summary = "%d packet(s) sent." % self.tot_count
+                else:
+                    self.summary = "Sending packet %d of %d" % (self.count, self.tot_count)
 
-            self.percentage = float(self.count) / float(self.tot_count) * 100.0
+                self.percentage = float(self.count) / float(self.tot_count) * 100.0
 
             if self.callback:
                 self.callback(packet, udata)

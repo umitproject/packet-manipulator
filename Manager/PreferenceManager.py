@@ -168,6 +168,7 @@ class Prefs(Singleton):
         'gui.views.console_tab' : False,
 
         'backend.system' : 'scapy',
+        'backend.scapy.interface' : ''
     }
 
     def __init__(self):

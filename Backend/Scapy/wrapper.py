@@ -32,6 +32,14 @@ def __new_write(fd, txt):
 os.write = __new_write
 
 from scapy import *
+from Manager.PreferenceManager import Prefs
+
+def change_interface(iface):
+    if iface:
+        conf.iface = iface
+
+conf.color_theme = NoTheme()
+Prefs()['backend.scapy.interface'].connect(change_interface)
 
 ###############################################################################
 # Protocols loading

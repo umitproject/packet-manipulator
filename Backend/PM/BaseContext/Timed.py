@@ -109,6 +109,8 @@ class BaseTimedContext(StaticContext):
         self._state = val
 
     def get_percentage(self):
+        if self.state == self.NOT_RUNNING:
+            self._percentage = 100.0
         return self._percentage
     def set_percentage(self, val):
         self._percentage = val

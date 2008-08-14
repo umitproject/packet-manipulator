@@ -177,7 +177,9 @@ class BackendPage(Page):
 
     def create_widgets(self):
         self.widgets = [
-        ('backend.system', 'Backend system:', new_combo(('UMPA', 'Scapy')))
+        ('backend.system', 'Backend system:', new_combo(('UMPA', 'Scapy'))),
+        ('Scapy',
+          (('backend.scapy.interface', 'Default interface', gtk.Entry()),))
         ]
 
 class PreferenceDialog(gtk.Dialog):
