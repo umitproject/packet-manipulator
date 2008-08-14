@@ -60,11 +60,53 @@ class SendOperation(Backend.SendContext, Operation):
     def __send_callback(self, packet, udata=None):
         self.notify_parent()
 
+
 class SendReceiveOperation(Backend.SendReceiveContext, Operation):
-    def __init__(self, packet, count, inter, iface=None):
+    """
+    A send receive operation
+    """
+
+    def __init__(self, packet, count, inter, iface=None, background=True):
+        """
+        Construct a SendReceive Operation
+
+        @param packet the packet to send
+        @param count how many times the packet will be sent
+        @param inter the interval between emission
+        @param iface the iface to listen to
+        @param background if the operation should have a session when starts
+        """
+
         Operation.__init__(self)
         Backend.SendReceiveContext.__init__(self, packet, count, inter, iface, self.__send_callback,
                                             self.__receive_callback, None, None)
+        
+        if background:
+            self.session = None
+        else:
+            self.__create_session()
+
+    def _start(self):
+        ret = Backend.SendReceiveContext._start(self)
+
+        if ret and self.session:
+            self.session.sniff_page.reload()
+
+        return ret
+
+    def _restart(self):
+        ret = Backend.SendReceiveContext._restart(self)
+
+        if ret and self.session:
+            self.session.sniff_page.clear()
+
+        return ret
+
+    def __create_session(self):
+        from App import PMApp
+
+        nb = PMApp().main_window.get_tab("MainTab").session_notebook
+        self.session = nb.create_context_session(self, packet=False)
 
     def __send_callback(self, packet, idx, udata):
         self.notify_parent()
@@ -73,19 +115,9 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
         self.notify_parent()
 
     def activate(self):
-        # We need to create a new page containing
-        # the list of sent and received packets
-
         if not self.session:
-            from App import PMApp
-            tab = PMApp().main_window.get_tab("MainTab")
-            self.session = tab.session_notebook.create_empty_session("Packets received")
+            self.__create_session()
 
-            # Populate the sniff perspective
-            pktlist = filter(None, [(check) and (pack) or (None) for check, pack in self.buffer])
-
-            self.session.sniff_page.populate(pktlist)
-            self.session.sniff_page.statusbar.label = _("<b>%d packet(s) received.</b>") % len(pktlist)
 
 class SniffOperation(Backend.SniffContext, Operation):
     def __init__(self, iface, filter=None, maxsize=0, capfile=None, \
@@ -106,10 +138,11 @@ class SniffOperation(Backend.SniffContext, Operation):
         else:
             self.session = None
 
-    def _restart(self):
-        ret = Backend.SniffContext._restart(self)
-        
+    def _start(self):
+        ret = Backend.SniffContext._start(self)
+
         if ret and self.session:
+            self.session.sniff_page.clear()
             self.session.sniff_page.reload()
 
         return ret

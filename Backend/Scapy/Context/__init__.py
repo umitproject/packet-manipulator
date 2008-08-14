@@ -1,9 +1,9 @@
-#!/usr/bin/env python              
-# -*- coding: utf-8 -*-            
-# Copyright (C) 2008 Adriano Monteiro Marques
-#                                            
-# Author: Francesco Piccinno <stack.box@gmail.com>
-#                                                 
+#!/usr/bin/env python                                   
+# -*- coding: utf-8 -*-                                 
+# Copyright (C) 2008 Adriano Monteiro Marques           
+#                                                       
+# Author: Francesco Piccinno <stack.box@gmail.com>      
+#                                                       
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or   
@@ -18,19 +18,7 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-class VirtualIFace(object):                                              
-    def __init__(self, name, desc, ip):                                  
-        self.name = name                                                 
-        self.description = desc                                          
-        self.ip = ip
-
-from PM import *
-
-# Contexts
-from PM.BaseContext.Static import StaticContext
-from PM.BaseContext.Timed import TimedContext
-from PM.BaseContext.Send import SendContext
-from PM.BaseContext.SendReceive import SendReceiveContext
-from PM.BaseContext.Sniff import SniffContext
-
-from Scapy import *
+from Static import register_static_context
+from Send import register_send_context
+from SendReceive import register_send_receive_context
+from Sniff import register_sniff_context

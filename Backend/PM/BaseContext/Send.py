@@ -1,9 +1,9 @@
-#!/usr/bin/env python              
-# -*- coding: utf-8 -*-            
-# Copyright (C) 2008 Adriano Monteiro Marques
-#                                            
-# Author: Francesco Piccinno <stack.box@gmail.com>
-#                                                 
+#!/usr/bin/env python                                   
+# -*- coding: utf-8 -*-                                 
+# Copyright (C) 2008 Adriano Monteiro Marques           
+#                                                       
+# Author: Francesco Piccinno <stack.box@gmail.com>      
+#                                                       
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or   
@@ -18,19 +18,20 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-class VirtualIFace(object):                                              
-    def __init__(self, name, desc, ip):                                  
-        self.name = name                                                 
-        self.description = desc                                          
-        self.ip = ip
+from Timed import TimedContext
+from Backend.PM.Context import register_send_context
 
-from PM import *
+class BaseSendContext(TimedContext):
+    "This should be a derived class of TimedContext"
 
-# Contexts
-from PM.BaseContext.Static import StaticContext
-from PM.BaseContext.Timed import TimedContext
-from PM.BaseContext.Send import SendContext
-from PM.BaseContext.SendReceive import SendReceiveContext
-from PM.BaseContext.Sniff import SniffContext
+    def __init__(self, metapacket, count, inter, callback, udata=None):
+        self.packet = metapacket
+        self.tot_count = count
+        self.count = 0
+        self.inter = float(inter) / 1000.0
+        self.callback = callback
+        self.udata = udata
 
-from Scapy import *
+        TimedContext.__init__(self)
+
+SendContext = register_send_context(BaseSendContext)

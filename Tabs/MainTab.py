@@ -304,8 +304,14 @@ class SessionNotebook(gtk.Notebook):
         session = SessionPage(ctx, show_packet=False)
         return self.__append_session(session)
 
+    def create_context_session(self, ctx, sniff=True, packet=True):
+        session = SessionPage(ctx, show_sniff=sniff, show_packet=packet)
+        return self.__append_session(session)
+
     def create_offline_session(self, fname):
-        ctx = Backend.FileLoaderContext(fname)
+        ctx = Backend.StaticContext(fname)
+        ctx.load()
+
         session = SessionPage(ctx, show_packet=False)
         return self.__append_session(session)
 

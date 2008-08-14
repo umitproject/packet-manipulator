@@ -71,20 +71,23 @@ class SniffPage(gtk.VBox):
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.filter.get_entry().connect('activate', self.__on_apply_filter)
 
+        self.timeout_id = None
         self.reload()
 
-    def reload(self):
+    def clear(self):
         self.store.clear()
 
+    def reload(self):
         for packet in self.session.context.get_data():
             self.store.append([packet])
 
-        self.statusbar.label = "<b>%s</b>" % self.session.context.get_summary()
+        self.statusbar.label = "<b>%s</b>" % self.session.context.summary
 
-        if isinstance(self.session.context, Backend.BaseContext):
+        if self.timeout_id:
+            gobject.source_remove(self.timeout_id)
+
+        if isinstance(self.session.context, Backend.TimedContext):
             self.timeout_id = gobject.timeout_add(200, self.__update_tree)
-        #else:
-        #    self.statusbar.label = _('<b>Editing <tt>%s</tt></b>') % self.session.packet.summary()
 
     def __create_toolbar(self):
         self.toolbar = gtk.Toolbar()
@@ -199,13 +202,13 @@ class SniffPage(gtk.VBox):
             self.store.append([packet])
 
             # Scroll to end
-            if self.session.context.auto_scroll:
+            if getattr(self.session.context, 'auto_scroll', True):
                 self.tree.scroll_to_cell(len(self.model_filter) - 1)
 
         alive = self.session.context.is_alive()
 
         if not alive:
-            self.statusbar.label = "<b>%s</b>" % self.session.context.get_summary()
+            self.statusbar.label = "<b>%s</b>" % self.session.context.summary
             self.statusbar.image = gtk.STOCK_INFO
             self.statusbar.show()
 
@@ -298,24 +301,14 @@ class SniffPage(gtk.VBox):
         dialog.destroy()
 
     def __save_packets(self, fname):
-        lst = []
-        iter = None
+        self.session.context.cap_file = fname
 
-        for idx in xrange(len(self.store)):
-            iter = self.store.get_iter((idx, ))
-            lst.append(self.store.get_value(iter, 0))
-
-        # Now dump to file
-        self.statusbar.image = gtk.STOCK_HARDDISK
-        self.statusbar.label = \
-            _("<b>Written %d packets to %s</b>") % (len(lst), fname)
-
-        try:
-            Backend.write_pcap_file(fname, lst)
-        except Exception, err:
+        if self.session.context.save():
+            self.statusbar.image = gtk.STOCK_HARDDISK
+        else:
             self.statusbar.image = gtk.STOCK_DIALOG_ERROR
-            self.statusbar.label = _("<b>Error while writing to %s (%s)</b>") % (fname, str(err))
 
+        self.statusbar.label = "<b>%s</b>" % self.session.context.summary
         self.statusbar.start_animation(True)
 
 class SniffFilter(gtk.HBox):
