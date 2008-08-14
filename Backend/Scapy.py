@@ -25,6 +25,7 @@ import time
 import threading
 
 from scapy import *
+from umitCore.I18N import _
 
 __original_write = os.write
 
@@ -100,7 +101,7 @@ def get_proto_fields(proto_inst):
 
 def get_field_desc(field):
     if not field:
-        return "No description"
+        return _('No description')
 
     return field.__class__.__name__
 
@@ -287,41 +288,42 @@ def implements(obj, klass):
 
     return isinstance(obj, klass)
 
-# Load/Save stuff
-
-def load_pcap_file(fname, count=None):
-    if not count:
-        count = -1
-
-    ret = []
-    lst = rdpcap(fname, count)
-
-    for packet in lst.res:
-        ret.append(MetaPacket(packet))
-
-    del lst
-    return ret
-
-def write_pcap_file(fname, lst):
-    ret = []
-
-    for packet in lst:
-        ret.append(packet.root)
-
-    del lst
-    wrpcap(fname, ret, gz=('gz' in fname.lower()))
-
 # Sniff stuff
 
 from datetime import datetime
 from threading import Thread, Lock
 
 from Backend import VirtualIFace
-from Backend import SendContext as BaseSendContext
-from Backend import SniffContext as SniffBaseContext
-from Backend import SendReceiveContext as BaseSendReceiveContext
-from Backend import FileLoaderContext as BaseFileLoaderContext
-from Backend import FileWriterContext as BaseFileWriterContext
+from Backend import BaseSendContext, BaseSniffContext, BaseSendReceiveContext, BaseStaticContext
+
+class StaticContext(BaseStaticContext):
+    def load(self):
+        if not self.cap_file:
+            return False
+
+        data = rdpcap(self.cap_file)
+
+        self.data = []
+        for packet in data:
+            self.data.append(MetaPacket(packet))
+
+        self.summary = _('%d packets loaded.') % len(data)
+        return True
+
+    def save(self):
+        if getattr(self, 'get_all_data', False):
+            data = self.get_all_data()
+        else:
+            data = self.get_data()
+
+        if not self.cap_file and not data:
+            return False
+
+        data = [packet.root for packet in data]
+        wrpcap(self.cap_file, data, gz=('gz' in self.cap_file) and (1) or (0))
+
+        self.summary = _('%d packets written.') % len(data)
+        return True
 
 class SendContext(BaseSendContext):
     def __init__(self, metapacket, count, inter, callback, udata=None):
@@ -400,8 +402,21 @@ class SendReceiveContext(BaseSendReceiveContext):
                                         inter, iface, scallback,
                                         rcallback, sudata, rudata)
 
+        self.lock = Lock()
         self.sthread, self.rthread = None, None
         self.internal = False
+
+    def get_all_data(self):
+        with self.lock:
+            return BaseSendReceiveContext.get_all_data(self)
+
+    def get_data(self):
+        with self.lock:
+            return BaseSendReceiveContext.get_data(self)
+
+    def set_data(self, val):
+        with self.lock:
+            self.data = val
 
     def __threads_active(self):
         if self.sthread and self.sthread.isAlive():
@@ -411,7 +426,6 @@ class SendReceiveContext(BaseSendReceiveContext):
         return False
 
     def _start(self):
-        print self.tot_count, self.count, self.tot_count - self.count, self.remaining
         if self.tot_count - self.count > 0 and self.remaining > 0:
             self.internal = True
             self.state = self.RUNNING
@@ -455,7 +469,7 @@ class SendReceiveContext(BaseSendReceiveContext):
     def __send_callback(self, packet, idx, udata):
         self.count += 1
 
-        self.summary = "Sending packet %d of %d" % (self.count, self.tot_count)
+        self.summary = _('Sending packet %d of %d') % (self.count, self.tot_count)
         self.percentage = (self.percentage + 536870911) % 2147483647
 
         if self.scallback:
@@ -470,14 +484,15 @@ class SendReceiveContext(BaseSendReceiveContext):
     def __recv_callback(self, packet, is_reply, udata):
         if not packet:
             self.internal = False
-            self.summary = "%d of %d replie(s) received" % (self.answers, self.received)
+            self.summary = _('%d of %d replie(s) received') % (self.answers, self.received)
         else:
             self.received += 1
-            self.summary = "Received/Answered/Remaining %d/%d/%d" % (self.received, self.answers, self.remaining)
+            self.summary = _('Received/Answered/Remaining %d/%d/%d') % (self.received, self.answers, self.remaining)
 
             if is_reply:
                 self.answers += 1
                 self.remaining -= 1
+                self.data.append(packet)
 
         self.percentage = (self.percentage + 536870911) % 2147483647
 
@@ -506,7 +521,7 @@ class SendReceiveContext(BaseSendReceiveContext):
 
         self.running = False
 
-class SniffContext(SniffBaseContext):
+class SniffContext(BaseSniffContext):
     """
     A sniff context for controlling various options.
     """
@@ -515,7 +530,7 @@ class SniffContext(SniffBaseContext):
     has_restart = True
 
     def __init__(self, *args, **kwargs):
-        SniffBaseContext.__init__(self, *args, **kwargs)
+        BaseSniffContext.__init__(self, *args, **kwargs)
 
         self.lock = Lock()
         self.prevtime = None
@@ -527,11 +542,15 @@ class SniffContext(SniffBaseContext):
 
     def get_all_data(self):
         with self.lock:
-            return SniffBaseContext.get_all_data(self)
+            return BaseSniffContext.get_all_data(self)
 
     def get_data(self):
         with self.lock:
-            return SniffBaseContext.get_data(self)
+            return BaseSniffContext.get_data(self)
+
+    def set_data(self, val):
+        with self.lock:
+            self.data = val
 
     def get_percentage(self):
         if self.state != self.RUNNING:
@@ -584,18 +603,6 @@ class SniffContext(SniffBaseContext):
         return self._start()
 
     def run(self):
-        if not self.iface and self.cap_file:
-
-            with self.lock:
-                self.data = load_pcap_file(self.cap_file)
-                self.tot_count = len(self.data)
-
-                # TODO: calc size and time?
-
-            self.running = False
-            
-            return
-
         while self.internal:
             packet = self.socket.recv(MTU)
 
@@ -614,8 +621,7 @@ class SniffContext(SniffBaseContext):
             if delta == abs(delta):
                 self.tot_time += delta.seconds
 
-            with self.lock:
-                self.data.append(packet)
+            self.data.append(packet)
 
             if self.callback:
                 self.callback(MetaPacket(packet), self.udata)
@@ -633,27 +639,35 @@ class SniffContext(SniffBaseContext):
                 self.percentage = float(float(sum(lst)) / float(len(lst))) * 100.0
 
                 if self.percentage >= 100:
-                    self.state = self.NOT_RUNNING
+                    self.internal = False
             else:
                 # ((goject.G_MAXINT / 4) % gobject.G_MAXINT)
                 self.percentage = (self.percentage + 536870911) % 2147483647
 
+        self.state = self.NOT_RUNNING
         self.percentage = 100.0
-        self.summary = "Finished sniffing on %s" % self.iface
+        status = ""
+
+        if self.tot_size >= 1024 ** 3:
+            status = "%.1f GB/" % (self.tot_size / (1024.0 ** 3))
+        elif self.tot_size >= 1024 ** 2:
+            status = "%.1f MB/" % (self.tot_size / (1024.0 ** 2))
+        else:
+            status = "%.1f KB/" % (self.tot_size / (1024.0))
+
+        if self.tot_time >= 60 ** 2:
+            status += "%d h/" % (self.tot_time / (60 ** 2))
+        elif self.tot_time >= 60:
+            status += "%d m/" % (self.tot_time / 60)
+        else:
+            status += "%d s/" % (self.tot_time)
+
+        status += "%d pks" % (self.tot_count)
+
+        self.summary = _('Finished sniffing on %s (%s)') % (self.iface, status)
 
         if self.callback:
             self.callback(None, self.udata)
-
-        self.state = self.NOT_RUNNING
-
-class FileLoaderContext(BaseFileLoaderContext):
-    def __init__(self, fname):
-        BaseFileLoaderContext.__init__(self, fname)
-
-        data = rdpcap(self.fname)
-
-        for packet in data:
-            self.data.append(MetaPacket(packet))
 
 def find_all_devs():
     ifaces = get_if_list()

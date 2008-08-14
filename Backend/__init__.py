@@ -26,10 +26,21 @@ class VirtualIFace(object):
         self.description = desc
         self.ip = ip
 
-class StaticContext(object):
-    def __init__(self):
-        self._summary = ''
+class BaseStaticContext(object):
+    def __init__(self, fname=None):
         self._data = []
+
+        if fname:
+            self._summary = fname
+            self._cap_file = fname
+        else:
+            self._summary = ''
+            self._cap_file = None
+
+    def load(self):
+        pass
+    def save(self):
+        pass
 
     def get_summary(self):
         return self._summary
@@ -41,10 +52,16 @@ class StaticContext(object):
     def set_data(self, val):
         self._data = val
 
+    def get_cap_file(self):
+        return self._cap_file
+    def set_cap_file(self, val):
+        self._cap_file = val
+
     data = property(get_data, set_data)
     summary = property(get_summary, set_summary)
+    cap_file = property(get_cap_file, set_cap_file)
     
-class BaseContext(StaticContext):
+class BaseContext(BaseStaticContext):
     NOT_RUNNING, RUNNING, PAUSED = range(3)
 
     # Select the suport operations
@@ -54,14 +71,10 @@ class BaseContext(StaticContext):
 
     def __init__(self):
         self._state = self.NOT_RUNNING
-
-        self._summary = ''
         self._percentage = 0.0
-
-        self._data = []
         self._last = 0
 
-        StaticContext.__init__(self)
+        BaseStaticContext.__init__(self)
 
     def _start(self):
         self.state = self.RUNNING
@@ -151,7 +164,7 @@ class BaseContext(StaticContext):
     state = property(get_state, set_state)
     percentage = property(get_percentage, set_percentage)
 
-class SendContext(BaseContext):
+class BaseSendContext(BaseContext):
     def __init__(self, metapacket, count, inter, callback, udata=None):
         self.packet = metapacket
         self.tot_count = count
@@ -162,7 +175,7 @@ class SendContext(BaseContext):
 
         BaseContext.__init__(self)
 
-class SendReceiveContext(BaseContext):
+class BaseSendReceiveContext(BaseContext):
     def __init__(self, metapacket, count, inter, iface, \
                  scallback, rcallback, sudata=None, rudata=None):
 
@@ -180,11 +193,9 @@ class SendReceiveContext(BaseContext):
         self.answers = 0
         self.received = 0
 
-        self.data = []
-
         BaseContext.__init__(self)
 
-class SniffContext(BaseContext):
+class BaseSniffContext(BaseContext):
     """
     A sniff context for controlling various options.
     """
@@ -227,18 +238,7 @@ class SniffContext(BaseContext):
 
 
 # This is an edit session
-EditContext = StaticContext
-
-# These are for loading pcap files
-class FileContext(StaticContext):
-    def __init__(self, fname):
-        StaticContext.__init__(self)
-
-        self.fname = fname
-        self.summary = fname
-
-FileLoaderContext = FileContext
-FileWriterContext = FileContext
+EditContext = BaseStaticContext
 
 if Prefs()['backend.system'].value.lower() == 'umpa':
     from UMPA import *
