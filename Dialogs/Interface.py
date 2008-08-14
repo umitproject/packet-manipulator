@@ -31,7 +31,7 @@ class CaptureOptions(gtk.Expander):
         self.set_border_width(4)
         self.set_label_widget(self.new_label(_('<b>Options</b>')))
 
-        tbl = gtk.Table(6, 3, False)
+        tbl = gtk.Table(7, 3, False)
         tbl.set_border_width(4)
         tbl.set_col_spacings(4)
 
@@ -91,6 +91,8 @@ class CaptureOptions(gtk.Expander):
         self.gui_scroll = gtk.CheckButton(_('Automatic view scrolling'))
 
         self.net_promisc = gtk.CheckButton(_('Capture in promiscuous mode'))
+        
+        self.background = gtk.CheckButton(_('Start in background mode'))
 
         tbl.attach(self.gui_real, 2, 3, 0, 1, yoptions=gtk.SHRINK)
         tbl.attach(self.gui_scroll, 2, 3, 1, 2, yoptions=gtk.SHRINK)
@@ -100,6 +102,8 @@ class CaptureOptions(gtk.Expander):
         tbl.attach(self.res_mac, 2, 3, 3, 4, yoptions=gtk.SHRINK)
         tbl.attach(self.res_name, 2, 3, 4, 5, yoptions=gtk.SHRINK)
         tbl.attach(self.res_transport, 2, 3, 5, 6, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.background, 2, 3, 6, 7, yoptions=gtk.SHRINK)
 
         # Setting the default values
         self.res_mac.set_active(True)
@@ -180,12 +184,11 @@ class CaptureOptions(gtk.Expander):
 
         real = self.gui_scroll.get_active()
         scroll = self.gui_scroll.get_active()
-
         resmac = self.res_mac.get_active()
         resname = self.res_name.get_active()
         restransport = self.res_transport.get_active()
-
         promisc = self.net_promisc.get_active()
+        background = self.background.get_active()
 
         dct = {
             'filter'       : filter,
@@ -199,7 +202,8 @@ class CaptureOptions(gtk.Expander):
             'resmac'       : resmac,
             'resname'      : resname,
             'restransport' : restransport,
-            'promisc'      : promisc
+            'promisc'      : promisc,
+            'background'   : background
         }
 
         return dct

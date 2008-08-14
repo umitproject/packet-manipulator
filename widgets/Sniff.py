@@ -37,7 +37,7 @@ class SniffPage(gtk.VBox):
     COL_COLOR  = 6
     COL_OBJECT = 7
 
-    def __init__(self, session, context=None):
+    def __init__(self, session):
         super(SniffPage, self).__init__(False, 4)
 
         self.session = session
@@ -68,20 +68,23 @@ class SniffPage(gtk.VBox):
         Prefs()['gui.maintab.sniffview.font'].connect(self.__modify_font)
         Prefs()['gui.maintab.sniffview.usecolors'].connect(self.__modify_colors)
 
-
-        if not context:
-            if self.session.packet:
-                self.store.append([self.session.packet])
-                self.statusbar.label = _('<b>Editing <tt>%s</tt></b>') % self.session.packet.summary()
-        else:
-            self.context = context
-            self.context.start()
-
-            self.statusbar.label = "<b>%s</b>" % self.context.get_summary()
-            self.timeout_id = gobject.timeout_add(200, self.__update_tree)
-
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.filter.get_entry().connect('activate', self.__on_apply_filter)
+
+        self.reload()
+
+    def reload(self):
+        self.store.clear()
+
+        for packet in self.session.context.get_data():
+            self.store.append([packet])
+
+        self.statusbar.label = "<b>%s</b>" % self.session.context.get_summary()
+
+        if isinstance(self.session.context, Backend.BaseContext):
+            self.timeout_id = gobject.timeout_add(200, self.__update_tree)
+        #else:
+        #    self.statusbar.label = _('<b>Editing <tt>%s</tt></b>') % self.session.packet.summary()
 
     def __create_toolbar(self):
         self.toolbar = gtk.Toolbar()
@@ -192,23 +195,19 @@ class SniffPage(gtk.VBox):
             return None
 
     def __update_tree(self):
-        for packet in self.context.get_data():
+        for packet in self.session.context.get_data():
             self.store.append([packet])
 
             # Scroll to end
-            if self.context.auto_scroll:
+            if self.session.context.auto_scroll:
                 self.tree.scroll_to_cell(len(self.model_filter) - 1)
 
-        alive = self.context.is_alive()
+        alive = self.session.context.is_alive()
 
-        if self.context.exception:
-            self.statusbar.label = "<b>%s</b>" % self.context.exception
-            self.statusbar.image = gtk.STOCK_DIALOG_ERROR
-            self.statusbar.start_animation(True)
-        elif not alive:
-            self.statusbar.label = "<b>%s</b>" % self.context.get_summary()
+        if not alive:
+            self.statusbar.label = "<b>%s</b>" % self.session.context.get_summary()
             self.statusbar.image = gtk.STOCK_INFO
-            self.statusbar.start_animation(True)
+            self.statusbar.show()
 
         return alive
 
@@ -217,8 +216,7 @@ class SniffPage(gtk.VBox):
             self.store.append([packet])
 
     def stop_sniffing(self):
-        if hasattr(self, 'context') and self.context:
-            self.context.destroy()
+        self.session.context.stop()
 
     # Signals callbacks
 
@@ -270,12 +268,11 @@ class SniffPage(gtk.VBox):
         return False
 
     def __on_stop(self, action):
-        if getattr(self, 'context', None) and self.context.is_alive():
-            self.context.destroy()
+        self.session.context.stop()
 
     def __on_save(self, action, saveas_on_fail=True):
-        if getattr(self, 'context', None) and self.context.cap_file:
-            self.__save_packets(self.context.cap_file)
+        if self.session.context.cap_file:
+            self.__save_packets(self.session.context.cap_file)
         else:
             self.__on_save_as(None)
 

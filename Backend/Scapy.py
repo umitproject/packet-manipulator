@@ -317,31 +317,68 @@ from datetime import datetime
 from threading import Thread, Lock
 
 from Backend import VirtualIFace
-from Backend import TimedContext
 from Backend import SendContext as BaseSendContext
 from Backend import SniffContext as SniffBaseContext
 from Backend import SendReceiveContext as BaseSendReceiveContext
+from Backend import FileLoaderContext as BaseFileLoaderContext
+from Backend import FileWriterContext as BaseFileWriterContext
 
 class SendContext(BaseSendContext):
+    def __init__(self, metapacket, count, inter, callback, udata=None):
+        BaseSendContext.__init__(self, metapacket, count, inter, callback, udata)
+        self.thread = None
+        self.internal = False
+
     def _start(self):
         if self.tot_count - self.count > 0:
+            self.state = self.RUNNING
+            self.internal = True
             self.thread = send_packet(self.packet, self.tot_count - self.count, self.inter, \
-                        self.__send_callback, self.udata)
+                                      self.__send_callback, self.udata)
             return True
 
         return False
+
+    def _resume(self):
+        if self.thread and self.thread.isAlive():
+            return False
+
+        return self._start()
+    
+    def _restart(self):
+        if self.thread and self.thread.isAlive():
+            return False
+
+        self.count = 0
+        return self._start()
+
+    def _stop(self):
+        self.internal = False
+        return True
+
+    _pause = _stop
 
     def __send_callback(self, packet, udata):
         if packet:
             self.count += 1
         else:
-            self.state = TimedContext.NOT_RUNNING
+            self.state = self.NOT_RUNNING
+
+        if self.count == self.tot_count:
+            self.summary = "%d packet(s) sent." % self.tot_count
+        else:
+            self.summary = "Sending packet %d of %d" % (self.count, self.tot_count)
+
+        self.percentage = float(self.count) / float(self.tot_count) * 100.0
 
         if self.callback:
             self.callback(packet, udata)
 
-        return self.state == TimedContext.NOT_RUNNING or \
-               self.state == TimedContext.PAUSED
+        if not self.internal:
+            self.state = self.NOT_RUNNING
+
+        return self.state == self.NOT_RUNNING or \
+               self.state == self.PAUSED
 
     #def pause(self):
     #    BaseSendContext.pause(self)
@@ -356,40 +393,102 @@ class SendContext(BaseSendContext):
         self.running = False
 
 class SendReceiveContext(BaseSendReceiveContext):
+    def __init__(self, metapacket, count, inter, iface, \
+                 scallback, rcallback, sudata=None, rudata=None):
+
+        BaseSendReceiveContext.__init__(self, metapacket, count,
+                                        inter, iface, scallback,
+                                        rcallback, sudata, rudata)
+
+        self.sthread, self.rthread = None, None
+        self.internal = False
+
+    def __threads_active(self):
+        if self.sthread and self.sthread.isAlive():
+            return True
+        if self.rthread and self.rthread.isAlive():
+            return True
+        return False
+
     def _start(self):
+        print self.tot_count, self.count, self.tot_count - self.count, self.remaining
         if self.tot_count - self.count > 0 and self.remaining > 0:
+            self.internal = True
+            self.state = self.RUNNING
             self.sthread, self.rthread = send_receive_packet( \
                                 self.packet, self.tot_count - self.count, self.inter, \
                                 self.iface, self.__send_callback, self.__recv_callback, \
                                 self.sudata, self.rudata)
             return True
-
         return False
+
+    def _resume(self):
+        if self.__threads_active():
+            return False
+
+        return self._start()
+    
+    def _restart(self):
+        if self.__threads_active():
+            return False
+
+        self.count = 0
+        self.percentage = 0.0
+        self.remaining = self.tot_count
+        self.answers = 0
+        self.received = 0
+
+        return self._start()
+
+    def _stop(self):
+        self.internal = False
+        return True
+
+    _pause = _stop
+
+    def get_percentage(self):
+        if self.state == self.NOT_RUNNING:
+            return 100.0
+        else:
+            return None
 
     def __send_callback(self, packet, idx, udata):
         self.count += 1
 
-        if self.scallback:
-            self.scallback(packet, idx, udata)
+        self.summary = "Sending packet %d of %d" % (self.count, self.tot_count)
+        self.percentage = (self.percentage + 536870911) % 2147483647
 
-        return self.state == TimedContext.NOT_RUNNING or \
-               self.state == TimedContext.PAUSED
+        if self.scallback:
+            self.scallback(packet, self.count, udata)
+
+        if not self.internal:
+            self.state = self.NOT_RUNNING
+
+        return self.state == self.NOT_RUNNING or \
+               self.state == self.PAUSED
 
     def __recv_callback(self, packet, is_reply, udata):
         if not packet:
-            self.state = TimedContext.NOT_RUNNING
+            self.internal = False
+            self.summary = "%d of %d replie(s) received" % (self.answers, self.received)
         else:
             self.received += 1
+            self.summary = "Received/Answered/Remaining %d/%d/%d" % (self.received, self.answers, self.remaining)
 
             if is_reply:
                 self.answers += 1
                 self.remaining -= 1
 
+        self.percentage = (self.percentage + 536870911) % 2147483647
+
         if self.rcallback:
             self.rcallback(packet, is_reply, udata)
 
-        return self.state == TimedContext.NOT_RUNNING or \
-               self.state == TimedContext.PAUSED
+        if not self.internal:
+            self.state = self.NOT_RUNNING
+
+        return self.state == self.NOT_RUNNING or \
+               self.state == self.PAUSED
 
     #def pause(self):
     #    BaseSendReceiveContext.pause(self)
@@ -407,51 +506,82 @@ class SendReceiveContext(BaseSendReceiveContext):
 
         self.running = False
 
-class SniffContext(SniffBaseContext, Thread):
+class SniffContext(SniffBaseContext):
     """
     A sniff context for controlling various options.
     """
+    has_stop = True
+    has_pause = False
+    has_restart = True
 
     def __init__(self, *args, **kwargs):
-        Thread.__init__(self)
         SniffBaseContext.__init__(self, *args, **kwargs)
 
+        self.lock = Lock()
+        self.prevtime = None
+        self.socket = None
+        self.internal = True
+
         self.summary = 'Sniffing on %s' % self.iface
-        self.setDaemon(True)
+        self.thread = None
+
+    def get_all_data(self):
+        with self.lock:
+            return SniffBaseContext.get_all_data(self)
 
     def get_data(self):
-        if self.data:
+        with self.lock:
+            return SniffBaseContext.get_data(self)
 
-            with self.lock:
-                lst = self.data
-                self.data = []
-                return lst
+    def get_percentage(self):
+        if self.state != self.RUNNING:
+            return 100.0
+        else:
+            if self.stop_count or \
+               self.stop_time or \
+               self.stop_size:
+                return self.percentage
+            else:
+                return None
 
-        return []
-
-    def destroy(self):
-        self.summary = 'Sniffing session finished (%d packets captured)' % self.tot_count
-        self.running = False
-
-    def start(self):
-        self.data = []
-        self.lock = Lock()
+    def _start(self):
         self.prevtime = datetime.now()
 
-        if self.iface:
+        if self.iface and not self.socket:
             try:
                 self.socket = conf.L2listen(type=ETH_P_ALL, iface=self.iface, filter=self.filter)
             except socket.error, (errno, err):
-                self.exception = err
-                return
-
+                self.summary = str(err)
+                return False
             except Exception, err:
-                self.exception = err
-                return
+                self.summary = str(err)
+                return False
 
-        self.running = True
+        self.summary = 'Sniffing on %s' % self.iface
+        self.state = self.RUNNING
+        self.internal = True
+        self.data = []
 
-        Thread.start(self)
+        self.thread = Thread(target=self.run)
+        self.thread.setDaemon(True)
+        self.thread.start()
+
+        return True
+    
+    def _stop(self):
+        self.internal = False
+        return True
+
+    def _restart(self):
+        if self.thread and self.thread.isAlive():
+            return False
+
+        # Ok reset the counters and begin a new sniff session
+        self.tot_size = 0
+        self.tot_time = 0
+        self.tot_count = 0
+
+        return self._start()
 
     def run(self):
         if not self.iface and self.cap_file:
@@ -466,7 +596,7 @@ class SniffContext(SniffBaseContext, Thread):
             
             return
 
-        while self.running:
+        while self.internal:
             packet = self.socket.recv(MTU)
 
             if not packet:
@@ -487,12 +617,43 @@ class SniffContext(SniffBaseContext, Thread):
             with self.lock:
                 self.data.append(packet)
 
-            if self.stop_count and self.tot_count >= self.stop_count or \
-               self.stop_time and self.tot_time >= self.stop_time or \
-               self.stop_size and self.tot_size >= self.stop_size:
-                self.running = False
+            if self.callback:
+                self.callback(MetaPacket(packet), self.udata)
 
-FileContext = SniffContext
+            lst = []
+
+            if self.stop_count:
+                lst.append(float(float(self.tot_count) / float(self.stop_count)))
+            if self.stop_time:
+                lst.append(float(float(self.tot_time) / float(self.stop_time)))
+            if self.stop_size:
+                lst.append(float(float(self.tot_size) / float(self.stop_size)))
+
+            if lst:
+                self.percentage = float(float(sum(lst)) / float(len(lst))) * 100.0
+
+                if self.percentage >= 100:
+                    self.state = self.NOT_RUNNING
+            else:
+                # ((goject.G_MAXINT / 4) % gobject.G_MAXINT)
+                self.percentage = (self.percentage + 536870911) % 2147483647
+
+        self.percentage = 100.0
+        self.summary = "Finished sniffing on %s" % self.iface
+
+        if self.callback:
+            self.callback(None, self.udata)
+
+        self.state = self.NOT_RUNNING
+
+class FileLoaderContext(BaseFileLoaderContext):
+    def __init__(self, fname):
+        BaseFileLoaderContext.__init__(self, fname)
+
+        data = rdpcap(self.fname)
+
+        for packet in data:
+            self.data.append(MetaPacket(packet))
 
 def find_all_devs():
     ifaces = get_if_list()
@@ -560,8 +721,8 @@ def _sndrecv_sthread(wrpipe, socket, packet, count, inter, callback, udata):
         for idx in xrange(count):
             socket.send(packet)
 
-            if callback(packet, idx, udata) == True:
-                return
+            if callback(packet, idx, udata):
+                break
 
             time.sleep(inter)
     except SystemExit:
@@ -577,6 +738,7 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
     nbrecv = 0
     notans = count
 
+    force_exit = False
     packet_hash = packet.hashret()
 
     inmask = [socket, rdpipe]
@@ -603,11 +765,13 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
                 notans -= 1
 
             if callback(MetaPacket(r), True, udata):
+                force_exit = True
                 break
         else:
             nbrecv += 1
 
             if callback(MetaPacket(r), False, udata):
+                force_exit = True
                 break
 
         if notans == 0:
@@ -619,10 +783,11 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
     else:
         arp_cache.update(ac)
 
-    sthread.join()
+    if sthread and sthread.isAlive():
+        sthread.join()
 
-    # received/answers/remaining
-    callback(None, False, udata)
+    if not force_exit:
+        callback(None, False, udata)
 
 def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, sudata=None, rudata=None):
     """

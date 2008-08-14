@@ -26,96 +26,150 @@ class VirtualIFace(object):
         self.description = desc
         self.ip = ip
 
-class BaseContext(object):
-    """
-    This is a base context for sending/receiving/loading packets
-    """
-
+class StaticContext(object):
     def __init__(self):
-        self.running = False
-        self.summary = ''
+        self._summary = ''
+        self._data = []
+
+    def get_summary(self):
+        return self._summary
+    def set_summary(self, val):
+        self._summary = val
 
     def get_data(self):
-        return []
+        return self._data
+    def set_data(self, val):
+        self._data = val
 
-    def start(self):
-        pass
+    data = property(get_data, set_data)
+    summary = property(get_summary, set_summary)
+    
+class BaseContext(StaticContext):
+    NOT_RUNNING, RUNNING, PAUSED = range(3)
 
-    def destroy(self):
-        self.running = False
+    # Select the suport operations
+    has_stop = True
+    has_pause = True
+    has_restart = True
+
+    def __init__(self):
+        self._state = self.NOT_RUNNING
+
+        self._summary = ''
+        self._percentage = 0.0
+
+        self._data = []
+        self._last = 0
+
+        StaticContext.__init__(self)
+
+    def _start(self):
+        self.state = self.RUNNING
+        return True
+    _resume = _start
+    _restart = _start
+
+    def _stop(self):
+        self.state = self.NOT_RUNNING
+        return True
+
+    def _pause(self):
+        self.state = self.PAUSED
+        return True
 
     def join(self):
         pass
-
+    
     def is_alive(self):
-        return self.running
-
-    def get_summary(self):
-        return self.summary
-
-# Send and receive context
-
-class TimedContext(BaseContext):
-    NOT_RUNNING, RUNNING, PAUSED = range(3)
-
-    def __init__(self):
-        self._state = TimedContext.NOT_RUNNING
-        BaseContext.__init__(self)
-
-    def _start(self):
-        "override this"
-        pass
+        return self._state != self.NOT_RUNNING
 
     def start(self):
-        if self.state != TimedContext.RUNNING:
-            if self._start() == True:
-                self.state = TimedContext.RUNNING
+        print "Start():",
+        if self.state != self.RUNNING:
+            if self._start():
+                print "True"
+                return True
+        print "False"
+        return False
 
     def pause(self):
-        if self.state == TimedContext.RUNNING:
-            self.state = TimedContext.PAUSED
+        print "Pause():",
+        if self.state == self.RUNNING:
+            if self._pause():
+                print "True"
+                return True
+        print "False"
+        return False
 
     def stop(self):
-        if self.state == TimedContext.RUNNING:
-            self.state = TimedContext.NOT_RUNNING
+        print "Stop():",
+        if self.state == self.RUNNING:
+            if self._stop():
+                print "True"
+                return True
+        print "False"
+        return False
 
     def restart(self):
-        if self.state != TimedContext.RUNNING:
-            self.start()
+        print "Restart()",
+        if self.state != self.RUNNING:
+            if self._restart():
+                print "True"
+                return True
+        print "False"
+        return False
 
-    resume = restart
+    def resume(self):
+        print "Resume()",
+        if self.state != self.RUNNING:
+            if self._resume():
+                print "True"
+                return True
+        print "False"
+        return False
 
     def get_state(self):
         return self._state
     def set_state(self, val):
-        if val == TimedContext.RUNNING:
-            self.running = True
-        else:
-            self.running = False
-
         self._state = val
 
-    state = property(get_state, set_state)
+    def get_percentage(self):
+        return self._percentage
+    def set_percentage(self, val):
+        self._percentage = val
 
-class SendContext(TimedContext):
+    # Returns the last data
+    def get_data(self):
+        end = len(self._data)
+        lst = self._data[self._last:]
+        self._last = end
+        return lst
+    
+    def get_all_data(self):
+        return self._data
+
+    state = property(get_state, set_state)
+    percentage = property(get_percentage, set_percentage)
+
+class SendContext(BaseContext):
     def __init__(self, metapacket, count, inter, callback, udata=None):
         self.packet = metapacket
         self.tot_count = count
         self.count = 0
-        self.inter = inter
+        self.inter = float(inter) / 1000.0
         self.callback = callback
         self.udata = udata
 
-        TimedContext.__init__(self)
+        BaseContext.__init__(self)
 
-class SendReceiveContext(TimedContext):
+class SendReceiveContext(BaseContext):
     def __init__(self, metapacket, count, inter, iface, \
                  scallback, rcallback, sudata=None, rudata=None):
 
         self.packet = metapacket
         self.tot_count = count
         self.count = 0
-        self.inter = inter
+        self.inter = float(inter) / 1000.0
         self.iface = iface
         self.scallback = scallback
         self.rcallback = rcallback
@@ -128,16 +182,21 @@ class SendReceiveContext(TimedContext):
 
         self.data = []
 
-        TimedContext.__init__(self)
+        BaseContext.__init__(self)
 
 class SniffContext(BaseContext):
     """
     A sniff context for controlling various options.
     """
+    
+    has_stop = True
+    has_resume = False
+    has_restart = True
 
     def __init__(self, iface, filter=None, maxsize=0, capfile=None, \
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
-                 resmac=True, resname=False, restransport=True, promisc=True):
+                 resmac=True, resname=False, restransport=True, promisc=True, \
+                 background=False, callback=None, udata=None):
 
         self.iface = iface
         self.filter = filter
@@ -156,17 +215,30 @@ class SniffContext(BaseContext):
         self.name_resolution = resname
         self.transport_resoltioin = restransport
 
+        self.background = background
+        self.callback = callback
+        self.udata = udata
+
         self.tot_size = 0
         self.tot_time = 0
         self.tot_count = 0
 
-        self.exception = None
+        BaseContext.__init__(self)
 
-        BaseReceiver.__init__(self)
 
-# This is for loading pcap files
-FileContext = SniffContext
-EditContext = BaseContext
+# This is an edit session
+EditContext = StaticContext
+
+# These are for loading pcap files
+class FileContext(StaticContext):
+    def __init__(self, fname):
+        StaticContext.__init__(self)
+
+        self.fname = fname
+        self.summary = fname
+
+FileLoaderContext = FileContext
+FileWriterContext = FileContext
 
 if Prefs()['backend.system'].value.lower() == 'umpa':
     from UMPA import *

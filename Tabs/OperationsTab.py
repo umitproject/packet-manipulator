@@ -35,9 +35,6 @@ class Operation(object):
     """
 
     def __init__(self):
-        self.percentage = 0
-        self.summary = ''
-
         self.iter = None
         self.model = None
 
@@ -51,108 +48,29 @@ class Operation(object):
         if self.iter and self.model:
             self.model.row_changed(self.model.get_path(self.iter), self.iter)
 
-    def get_percentage(self):
-        "@return the percentage of the work"
-        return self.percentage
-
-    def get_text(self):
-        "@return a summary text of the operation"
-        raise self.summary
-
     def activate(self):
         "Called when the user clicks on the row"
         pass
 
-    def start(self):
-        "Start the current operation"
-        pass
-
-    def stop(self):
-        "Stop the current operations forever"
-        pass
-
-    def pause(self):
-        "Pause the current operations for a future resume"
-        pass
-
-    def resume(self):
-        "Resume the paused operations"
-        pass
-
-class ContextOperation(Operation):
-    def __init__(self):
-        self.context = None
-        super(ContextOperation, self).__init__()
-
-    def start(self):
-        self.context.start()
-
-    def resume(self):
-        self.context.resume()
-
-    def stop(self):
-        self.context.stop()
-
-    def pause(self):
-        self.context.pause()
-
-
-class SendOperation(ContextOperation):
+class SendOperation(Backend.SendContext, Operation):
     def __init__(self, packet, count, inter):
-        super(SendOperation, self).__init__()
-        self.context = Backend.SendContext(packet, count, float(float(inter) / 1000.0),
-                                           self.__send_callback, None)
-
-    def get_text(self):
-        if self.context.count == self.context.tot_count:
-            return _("%d packet(s) sent.") % self.context.tot_count
-        else:
-            return _("Sending packet %d of %d") % (self.context.count, self.context.tot_count)
-
+        Operation.__init__(self)
+        Backend.SendContext.__init__(self, packet, count, inter, self.__send_callback, None)
 
     def __send_callback(self, packet, udata=None):
-        if self.context.count == self.context.tot_count:
-            self.summary = _("%d packet(s) sent.") % self.context.tot_count
-        else:
-            self.summary = _("Sending packet %d of %d") % (self.context.count, self.context.tot_count)
-
-        self.percentage = float(self.context.count) / float(self.context.tot_count)
-        self.percentage *= 100.0
-
         self.notify_parent()
 
-class SendReceiveOperation(ContextOperation):
+class SendReceiveOperation(Backend.SendReceiveContext, Operation):
     def __init__(self, packet, count, inter, iface=None):
-        super(SendReceiveOperation, self).__init__()
-        self.context = Backend.SendReceiveContext(packet, count, float(float(inter) / 1000.0), iface,
-                                          self.__send_callback, self.__receive_callback, None, None)
+        Operation.__init__(self)
+        Backend.SendReceiveContext.__init__(self, packet, count, inter, iface, self.__send_callback,
+                                            self.__receive_callback, None, None)
 
     def __send_callback(self, packet, idx, udata):
-        self.summary = _("Sending packet %d of %d") % (idx + 1, self.context.tot_count)
-        self.__update()
-
-    def __receive_callback(self, reply, is_reply, udata):
-        if reply:
-            self.summary = _("Received/Answered/Remaining %d/%d/%d") % (self.context.received, self.context.answers, self.context.remaining)
-        else:
-            self.summary = _("%d of %d replie(s) received") % (self.context.answers, self.context.received)
-
-        self.__update()
-
-    def __update(self):
-        self.percentage += gobject.G_MAXINT / 4
-        self.percentage %= gobject.G_MAXINT
-
         self.notify_parent()
 
-    def get_percentage(self):
-        if self.context.state == self.context.NOT_RUNNING:
-            return 100.0
-        else:
-            return None
-
-    def get_text(self):
-        return self.summary
+    def __receive_callback(self, reply, is_reply, udata):
+        self.notify_parent()
 
     def activate(self):
         # We need to create a new page containing
@@ -168,6 +86,43 @@ class SendReceiveOperation(ContextOperation):
 
             self.session.sniff_page.populate(pktlist)
             self.session.sniff_page.statusbar.label = _("<b>%d packet(s) received.</b>") % len(pktlist)
+
+class SniffOperation(Backend.SniffContext, Operation):
+    def __init__(self, iface, filter=None, maxsize=0, capfile=None, \
+                 scount=0, stime=0, ssize=0, real=True, scroll=True, \
+                 resmac=True, resname=False, restransport=True, promisc=True, background=False):
+
+        Operation.__init__(self)
+        Backend.SniffContext.__init__(self, iface, filter, maxsize, capfile,
+                                      scount, stime, ssize, real, scroll,
+                                      resmac, resname, restransport, promisc,
+                                      background, self.__recv_callback, None)
+
+        if not self.background:
+            from App import PMApp
+
+            nb = PMApp().main_window.get_tab("MainTab").session_notebook
+            self.session = nb.create_sniff_session(self)
+        else:
+            self.session = None
+
+    def _restart(self):
+        ret = Backend.SniffContext._restart(self)
+        
+        if ret and self.session:
+            self.session.sniff_page.reload()
+
+        return ret
+
+    def activate(self):
+        if not self.session:
+            from App import PMApp
+
+            nb = PMApp().main_window.get_tab("MainTab").session_notebook
+            self.session = nb.create_sniff_session(self)
+
+    def __recv_callback(self, packet, udata):
+        self.notify_parent()
 
 class OperationTree(gtk.TreeView):
     def __init__(self):
@@ -207,7 +162,7 @@ class OperationTree(gtk.TreeView):
 
     def __text_data_func(self, col, cell, model, iter):
         operation = model.get_value(iter, 0)
-        cell.set_property('text', operation.get_text())
+        cell.set_property('text', operation.get_summary())
 
     def __progress_data_func(self, col, cell, model, iter):
         operation = model.get_value(iter, 0)
@@ -236,6 +191,7 @@ class OperationTree(gtk.TreeView):
             _('Resume operation'),
             _('Pause operation'),
             _('Stop operation'),
+            _('Restart operation'),
             _('Remove finished')
         )
 
@@ -244,6 +200,7 @@ class OperationTree(gtk.TreeView):
             gtk.STOCK_MEDIA_PLAY,
             gtk.STOCK_MEDIA_PAUSE,
             gtk.STOCK_MEDIA_STOP,
+            gtk.STOCK_REFRESH,
             gtk.STOCK_CLEAR
         )
 
@@ -252,6 +209,7 @@ class OperationTree(gtk.TreeView):
             self.__on_resume,
             self.__on_pause,
             self.__on_stop,
+            self.__on_restart,
             self.__on_clear
         )
 
@@ -295,6 +253,9 @@ class OperationTree(gtk.TreeView):
 
     def __on_stop(self, action, operation):
         operation.stop()
+     
+    def __on_restart(self, action, operation):
+        operation.restart()
 
     def __on_clear(self, action, operation):
         pass

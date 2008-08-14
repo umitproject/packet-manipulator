@@ -40,7 +40,7 @@ from Tabs.HackTab import HackTab
 from Tabs.StatusTab import StatusTab
 from Tabs.ConsoleTab import ConsoleTab
 from Tabs.PropertyTab import PropertyTab
-from Tabs.OperationsTab import OperationsTab
+from Tabs.OperationsTab import OperationsTab, SniffOperation
 from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
 from Dialogs.Interface import InterfaceDialog
@@ -259,8 +259,8 @@ class MainWindow(gtk.Window):
             iface = dialog.get_selected()
             args = dialog.get_options()
 
-            tab = self.get_tab("MainTab")
-            tab.session_notebook.create_sniff_session(iface, args)
+            tab = self.get_tab("Operations")
+            tab.tree.append_operation(SniffOperation(iface, **args))
 
         dialog.hide()
         dialog.destroy()

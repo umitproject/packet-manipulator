@@ -239,34 +239,14 @@ class PacketPage(gtk.VBox):
         tab.tree.append_operation(SendReceiveOperation(packet, count, inter))
 
 class SessionPage(gtk.VBox):
-    def __init__(self, iface=None, args={}, fname=None, packet=None, title=None):
+    def __init__(self, ctx=None, show_sniff=True, show_packet=True):
         gtk.VBox.__init__(self)
 
-        assert(iface or fname or packet or title, "No iface nor fname nor packet nor title provided")
+        self.packet = None
+        self.context = ctx
 
-        if iface:
-            self.packet = None
-            self.sniff_page = SniffPage(self, Backend.SniffContext(iface, **args))
-            self._label = gtk.Label("* Capturing on %s" % iface)
-
-        elif fname:
-            self.packet = None
-            self.sniff_page = SniffPage(self, Backend.FileContext(iface=None, capfile=fname))
-            self._label = gtk.Label(fname)
-
-        elif packet:
-            if isinstance(packet, basestring):
-                packet = Backend.get_proto(packet)()
-                packet = Backend.MetaPacket(packet)
-
-            self.packet = packet
-            self.sniff_page = SniffPage(self)
-            self._label = gtk.Label("*" + packet.get_protocol_str())
-        elif title:
-            # Empty page
-            self.packet = None
-            self.sniff_page = SniffPage(self)
-            self._label = gtk.Label(title)
+        self.sniff_page = SniffPage(self)
+        self._label = gtk.Label(ctx.summary)
 
         self.set_border_width(4)
 
@@ -279,12 +259,8 @@ class SessionPage(gtk.VBox):
         self.vpaned.pack1(self.sniff_expander, True, False)
         self.vpaned.pack2(self.packet_expander, True, False)
 
-        if iface or fname:
-            self.sniff_expander.add_widget(self.sniff_page, True)
-        else:
-            self.sniff_expander.add_widget(self.sniff_page, False)
-
-        self.packet_expander.add(self.packet_page)
+        self.sniff_expander.add_widget(self.sniff_page, show_sniff)
+        self.packet_expander.add_widget(self.packet_page, show_packet)
 
         self.packet_page.reload()
 
@@ -311,16 +287,26 @@ class SessionNotebook(gtk.Notebook):
         # selected from sniff perspective
         self.view_page = None
 
-    def create_edit_session(self, proto_name):
-        session = SessionPage(packet=proto_name)
+    def create_edit_session(self, packet):
+        ctx = Backend.StaticContext()
+
+        if isinstance(packet, basestring):
+            packet = Backend.get_proto(packet)()
+            packet = Backend.MetaPacket(packet)
+
+        ctx.data.append(packet)
+        ctx.summary = _('Editing %s') % packet.get_protocol_str()
+
+        session = SessionPage(ctx)#, show_sniff=False)
         return self.__append_session(session)
 
-    def create_sniff_session(self, iface, args):
-        session = SessionPage(iface, args)
+    def create_sniff_session(self, ctx):
+        session = SessionPage(ctx, show_packet=False)
         return self.__append_session(session)
 
     def create_offline_session(self, fname):
-        session = SessionPage(fname=fname)
+        ctx = Backend.FileLoaderContext(fname)
+        session = SessionPage(ctx, show_packet=False)
         return self.__append_session(session)
 
     def create_empty_session(self, title):
