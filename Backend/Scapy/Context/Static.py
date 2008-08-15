@@ -41,6 +41,7 @@ def register_static_context(BaseStaticContext):
                 self.data.append(MetaPacket(packet))
 
             self.status = self.SAVED
+            self.title = self.cap_file
             self.summary = _('%d packets loaded.') % len(data)
             return True
 
@@ -61,6 +62,7 @@ def register_static_context(BaseStaticContext):
                 return False
 
             self.status = self.SAVED
+            self.title = self.cap_file
             self.summary = _('%d packets written.') % len(data)
             return True
 

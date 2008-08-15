@@ -18,7 +18,11 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import pango
 import gtk
+import os
+
+from Manager.PreferenceManager import Prefs
 
 from views import UmitView
 from umitCore.I18N import _
@@ -34,6 +38,9 @@ class StatusView(gtk.ScrolledWindow):
         self.tag_table = gtk.TextTagTable()
         self.buffer = gtk.TextBuffer(self.tag_table)
         self.view = gtk.TextView(self.buffer)
+        self.view.set_indent(4)
+
+        Prefs()['gui.statustab.font'].connect(self.__modify_font)
         
         self.view.set_border_window_size(gtk.TEXT_WINDOW_LEFT, 16)
         self.view.set_editable(False)
@@ -51,6 +58,15 @@ class StatusView(gtk.ScrolledWindow):
         )
         
         self.lines = []
+
+    def __modify_font(self, val):
+        try:
+            desc = pango.FontDescription(val)
+
+            self.view.modify_font(desc)
+            self.view.get_window(gtk.TEXT_WINDOW_LEFT).set_background(self.style.white)
+        except:
+            return True
 
     def append(self, txt, type=0):
         if type < 0 or type > 2:
@@ -111,6 +127,10 @@ class StatusTab(UmitView):
 
     def create_ui(self):
         self.status = StatusView()
+
+        self.status.info(_("PacketManipulator started on %s") % os.name)
+        self.status.info(_("Using %s backend") % Prefs()['backend.system'].value)
+        self.status.info(_("Good luck"))
 
         self._main_widget.add(self.status)
         self._main_widget.show_all()

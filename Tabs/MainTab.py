@@ -266,6 +266,7 @@ class SessionPage(gtk.VBox):
 
         self.packet = None
         self.context = ctx
+        self.context.title_callback = self.__on_change_title
 
         self.sniff_page = SniffPage(self)
         self._label = ClosableLabel(ctx.title)
@@ -308,6 +309,10 @@ class SessionPage(gtk.VBox):
 
     def get_label(self):
         return self._label
+
+    def __on_change_title(self):
+        if self.context:
+            self._label.label.set_text(self.context.title)
 
     label = property(get_label)
 

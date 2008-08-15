@@ -158,6 +158,8 @@ class Prefs(Singleton):
         'gui.maintab.sniffview.usecolors' : False,
         'gui.maintab.hexview.font' : 'Monospace 10',
         'gui.maintab.hexview.bpl' : 16,
+
+        'gui.statustab.font' : 'Monospace 10',
         
         'gui.views.protocol_selector_tab' : True,
         'gui.views.property_tab' : True,

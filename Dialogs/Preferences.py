@@ -20,6 +20,7 @@
 
 import gtk
 
+from umitCore.I18N import _
 from Manager.PreferenceManager import Prefs
 
 def new_combo(lst):
@@ -139,20 +140,22 @@ class Page(gtk.Table):
             gidx += 1
 
 class GUIPage(Page):
-    title = "GUI"
+    title = _("GUI")
     icon = gtk.STOCK_PREFERENCES
 
     def create_widgets(self):
         self.widgets = [
-        ('gui.docking', None, gtk.CheckButton('Use docking windows')),
+        ('gui.docking', None, gtk.CheckButton(_('Use docking windows'))),
         
         ('Sniff perspective',
-          (('gui.maintab.sniffview.font', 'Sniff view font:', gtk.FontButton()),
-           ('gui.maintab.sniffview.usecolors', None, gtk.CheckButton('Colorize rows')))),
+          (('gui.maintab.sniffview.font', _('Sniff view font:'), gtk.FontButton()),
+           ('gui.maintab.sniffview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
 
-        ('Hex view window',
-          (('gui.maintab.hexview.font', 'HexView font:', gtk.FontButton()),
-           ('gui.maintab.hexview.bpl', 'Bytes per line:', gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1)))))
+        (_('Hex view window'),
+          (('gui.maintab.hexview.font', _('HexView font:'), gtk.FontButton()),
+           ('gui.maintab.hexview.bpl', _('Bytes per line:'), gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1))))),
+        (_('Status tab'),
+          (('gui.statustab.font', _('Status tab font:'), gtk.FontButton()),))
         ]
 
 class ViewsPage(Page):
@@ -161,31 +164,31 @@ class ViewsPage(Page):
 
     def create_widgets(self):
         self.widgets = [
-        ('Show views at startup',
-          (('gui.views.protocol_selector_tab', None, gtk.CheckButton('Protocol selector')),
-           ('gui.views.property_tab', None, gtk.CheckButton('Protocol properties')),
-           ('gui.views.status_tab', None, gtk.CheckButton('Status view')),
-           ('gui.views.operations_tab', None, gtk.CheckButton('Operations')),
-           ('gui.views.vte_tab', None, gtk.CheckButton('Terminal')),
-           ('gui.views.hack_tab', None, gtk.CheckButton('Payload Hack tab')),
-           ('gui.views.console_tab', None, gtk.CheckButton('Python shell'))))
+        (_('Show views at startup'),
+          (('gui.views.protocol_selector_tab', None, gtk.CheckButton(_('Protocol selector'))),
+           ('gui.views.property_tab', None, gtk.CheckButton(_('Protocol properties'))),
+           ('gui.views.status_tab', None, gtk.CheckButton(_('Status view'))),
+           ('gui.views.operations_tab', None, gtk.CheckButton(_('Operations'))),
+           ('gui.views.vte_tab', None, gtk.CheckButton(_('Terminal'))),
+           ('gui.views.hack_tab', None, gtk.CheckButton(_('Payload Hack tab'))),
+           ('gui.views.console_tab', None, gtk.CheckButton(_('Python shell')))))
         ]
 
 class BackendPage(Page):
-    title = "Backend"
+    title = _("Backend")
     icon = gtk.STOCK_CONNECT
 
     def create_widgets(self):
         self.widgets = [
-        ('backend.system', 'Backend system:', new_combo(('UMPA', 'Scapy'))),
+        ('backend.system', _('Backend system:'), new_combo(('UMPA', 'Scapy'))),
         ('Scapy',
-          (('backend.scapy.interface', 'Default interface', gtk.Entry()),))
+          (('backend.scapy.interface', _('Default interface'), gtk.Entry()),))
         ]
 
 class PreferenceDialog(gtk.Dialog):
     def __init__(self, parent):
         super(PreferenceDialog, self).__init__(
-            "Preferences - PacketManipulator", parent,
+            _("Preferences - PacketManipulator"), parent,
             gtk.DIALOG_DESTROY_WITH_PARENT,
             (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE,
              gtk.STOCK_APPLY, gtk.RESPONSE_APPLY,
@@ -280,8 +283,3 @@ class PreferenceDialog(gtk.Dialog):
             self.apply_changes()
             self.save_changes()
             self.close()
-
-if __name__ == "__main__":
-    d = PreferenceDialog(None)
-    d.show()
-    gtk.main()

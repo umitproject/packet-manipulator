@@ -35,6 +35,8 @@ class BaseStaticContext(object):
             self._summary = ''
             self._cap_file = None
 
+        self.title_callback = None
+
     def load(self):
         self.status = self.SAVED
     def save(self):
@@ -54,6 +56,9 @@ class BaseStaticContext(object):
         return self._title
     def set_title(self, val):
         self._title = val
+
+        if self.title_callback:
+            self.title_callback()
 
     def get_status(self):
         return self._status
