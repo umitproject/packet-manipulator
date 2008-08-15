@@ -55,6 +55,11 @@ def register_static_context(BaseStaticContext):
                 return False
 
             data = [packet.root for packet in data]
+
+            if not data:
+                self.summary = _('No packets to save')
+                return False
+
             try:
                 wrpcap(self.cap_file, data, gz=('gz' in self.cap_file) and (1) or (0))
             except IOError, (errno, err):
