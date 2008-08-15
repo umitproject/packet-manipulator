@@ -23,22 +23,15 @@ import cairo
 import pango
 import gobject
 
-# App
-import App
-
-# Protocol stuff
 import Backend
 
-# I18N
 from umitCore.I18N import _
 
-# For the icons
-from Icons import get_pixbuf
-
-# Higwidgets
 from higwidgets.higbuttons import MiniButton
 from higwidgets.hignetwidgets import HIGIpEntry
-from widgets.Expander import ToolBox
+
+from PMGui.Core.Icons import get_pixbuf
+from PMGui.Widgets.Expander import ToolBox
 
 class Editor(gtk.HBox):
 

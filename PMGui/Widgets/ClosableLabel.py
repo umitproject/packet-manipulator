@@ -21,7 +21,7 @@
 import gtk
 import gobject
 
-from Icons import get_pixbuf
+from PMGui.Core.Icons import get_pixbuf
 
 class ClosableLabel(gtk.HBox):
     __gtype_name__ = "ClosableLabel"

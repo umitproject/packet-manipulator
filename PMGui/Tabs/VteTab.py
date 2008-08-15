@@ -21,8 +21,8 @@
 import gtk
 import gobject
 
-from views import UmitView
 from umitCore.I18N import _
+from PMGui.Core.Views import UmitView
 
 class TerminalWidget(gtk.Bin):
     __gtype_name__ = "TerminalWidget"

@@ -25,9 +25,9 @@ import Backend
 
 from umitCore.I18N import _
 
-from App import PMApp
-from views import UmitView
-from Icons import get_pixbuf
+from PMGui.Core.App import PMApp
+from PMGui.Core.Views import UmitView
+from PMGui.Core.Icons import get_pixbuf
 
 class Operation(object):
     """

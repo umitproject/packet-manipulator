@@ -20,7 +20,7 @@
 
 try:
     import psyco
-    psyco.full()
+    psyco.profile()
 
     print "Hurray! psyco enabled!"
 except ImportError:
@@ -96,7 +96,7 @@ def main(args):
     from umitCore.Paths import Path
     Path.set_umit_conf(os.path.split(args[0])[0])
 
-    from App import PMApp
+    from PMGui.Core.App import PMApp
 
     try:
         PMApp().run()

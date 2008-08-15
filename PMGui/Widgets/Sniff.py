@@ -5,7 +5,7 @@ import Backend
 
 from umitCore.I18N import _
 
-from App import PMApp
+from PMGui.Core.App import PMApp
 from Manager.PreferenceManager import Prefs
 from higwidgets.higanimates import HIGAnimatedBar
 

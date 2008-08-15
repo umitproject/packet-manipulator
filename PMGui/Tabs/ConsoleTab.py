@@ -21,8 +21,9 @@
 import gtk
 
 from umitCore.I18N import _
+from PMGui.Core.Views import UmitView
+
 from console import Console
-from views import UmitView
 
 class ConsoleTab(UmitView):
     name = 'PythonShellTab'

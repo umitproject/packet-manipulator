@@ -22,9 +22,10 @@ import gtk
 import Backend
 
 from umitCore.I18N import _
-from views import UmitView
 from collections import defaultdict
-from Icons import get_pixbuf
+
+from PMGui.Core.Views import UmitView
+from PMGui.Core.Icons import get_pixbuf
    
 class ProtocolTree(gtk.VBox):
     COL_PIX = 0

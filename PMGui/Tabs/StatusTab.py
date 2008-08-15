@@ -22,11 +22,11 @@ import pango
 import gtk
 import os
 
+from umitCore.I18N import _
 from Manager.PreferenceManager import Prefs
 
-from views import UmitView
-from umitCore.I18N import _
-from Icons import get_pixbuf
+from PMGui.Core.Views import UmitView
+from PMGui.Core.Icons import get_pixbuf
 
 class StatusView(gtk.ScrolledWindow):
     def __init__(self):

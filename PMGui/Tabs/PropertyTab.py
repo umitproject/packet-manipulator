@@ -23,10 +23,10 @@ import Backend
 
 from umitCore.I18N import _
 
-from App import PMApp
-from views import UmitView
-from widgets.PropertyGrid import PropertyGrid
-from Tabs.MainTab import SessionPage
+from PMGui.Core.App import PMApp
+from PMGui.Core.Views import UmitView
+from PMGui.Widgets.PropertyGrid import PropertyGrid
+from PMGui.Tabs.MainTab import SessionPage
 
 class PropertyTab(UmitView):
     label_text = _('Properties')

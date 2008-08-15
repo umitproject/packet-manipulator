@@ -23,8 +23,8 @@ import gobject
 
 import sys
 
-from Atoms import Singleton
 from umitCore.I18N import _
+from Manager.Atoms import Singleton
 
 class PMApp(Singleton):
     def __init__(self):

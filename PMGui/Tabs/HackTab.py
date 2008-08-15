@@ -27,7 +27,7 @@ import string
 import hashlib
 
 from umitCore.I18N import _
-from views import UmitView
+from PMGui.Core.Views import UmitView
 
 class HackBar(gtk.VBox):
     _url_encre = re.compile(r"[^A-Za-z0-9_.&?=/!~*()-]") # RFC 2396 section 2.3

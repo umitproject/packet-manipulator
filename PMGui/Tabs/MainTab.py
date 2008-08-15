@@ -21,19 +21,19 @@
 import gtk
 import Backend
 
-from widgets.HexView import HexView
-from widgets.Expander import AnimatedExpander
-from widgets.Sniff import SniffPage
-from widgets.ClosableLabel import ClosableLabel
-
-from App import PMApp
-from views import UmitView
-from Icons import get_pixbuf
-
 from umitCore.I18N import _
 from Manager.PreferenceManager import Prefs
 
-from Tabs.OperationsTab import SendOperation, SendReceiveOperation
+from PMGui.Core.App import PMApp
+from PMGui.Core.Views import UmitView
+from PMGui.Core.Icons import get_pixbuf
+
+from PMGui.Widgets.HexView import HexView
+from PMGui.Widgets.Expander import AnimatedExpander
+from PMGui.Widgets.Sniff import SniffPage
+from PMGui.Widgets.ClosableLabel import ClosableLabel
+
+from PMGui.Tabs.OperationsTab import SendOperation, SendReceiveOperation
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
     def __init__(self, parent):

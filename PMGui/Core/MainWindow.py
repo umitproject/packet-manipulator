@@ -27,28 +27,28 @@ from Manager.PreferenceManager import Prefs
 
 if Prefs()['gui.docking'].value:
     try:
-        from paned import *
+        from Paned import *
     except ImportError:
         print "moo not installed. Using fallback UmitPaned .."
 
         Prefs()['gui.docking'].value = False
 
-        from fallbackpaned import *
+        from FallbackPaned import *
 else:
-    from fallbackpaned import *
+    from FallbackPaned import *
 
-from Tabs.VteTab import VteTab
-from Tabs.MainTab import MainTab
-from Tabs.HackTab import HackTab
-from Tabs.StatusTab import StatusTab
-from Tabs.ConsoleTab import ConsoleTab
-from Tabs.PropertyTab import PropertyTab
-from Tabs.OperationsTab import OperationsTab, SniffOperation
-from Tabs.ProtocolSelectorTab import ProtocolSelectorTab
+from PMGui.Tabs.VteTab import VteTab
+from PMGui.Tabs.MainTab import MainTab
+from PMGui.Tabs.HackTab import HackTab
+from PMGui.Tabs.StatusTab import StatusTab
+from PMGui.Tabs.ConsoleTab import ConsoleTab
+from PMGui.Tabs.PropertyTab import PropertyTab
+from PMGui.Tabs.OperationsTab import OperationsTab, SniffOperation
+from PMGui.Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
-from Dialogs.Interface import InterfaceDialog
-from Dialogs.Preferences import PreferenceDialog
-from Dialogs.Routes import RoutesDialog
+from PMGui.Dialogs.Interface import InterfaceDialog
+from PMGui.Dialogs.Preferences import PreferenceDialog
+from PMGui.Dialogs.Routes import RoutesDialog
 
 from umitCore.I18N import _
 from umitCore.Paths import Path
