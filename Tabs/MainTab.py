@@ -24,6 +24,7 @@ import Backend
 from widgets.HexView import HexView
 from widgets.Expander import AnimatedExpander
 from widgets.Sniff import SniffPage
+from widgets.ClosableLabel import ClosableLabel
 
 from views import UmitView
 from Icons import get_pixbuf
@@ -246,7 +247,7 @@ class SessionPage(gtk.VBox):
         self.context = ctx
 
         self.sniff_page = SniffPage(self)
-        self._label = gtk.Label(ctx.summary)
+        self._label = ClosableLabel(ctx.title)
 
         self.set_border_width(4)
 
@@ -288,7 +289,7 @@ class SessionNotebook(gtk.Notebook):
         self.view_page = None
 
     def create_edit_session(self, packet):
-        ctx = Backend.StaticContext()
+        ctx = Backend.StaticContext(_('Unsaved'))
 
         if isinstance(packet, basestring):
             packet = Backend.get_proto(packet)()
@@ -309,7 +310,7 @@ class SessionNotebook(gtk.Notebook):
         return self.__append_session(session)
 
     def create_offline_session(self, fname):
-        ctx = Backend.StaticContext(fname)
+        ctx = Backend.StaticContext(fname, fname)
         ctx.load()
 
         session = SessionPage(ctx, show_packet=False)
@@ -320,9 +321,21 @@ class SessionNotebook(gtk.Notebook):
         return self.__append_session(session)
 
     def __append_session(self, session):
+        session.label.connect('close-clicked', self.__on_close_page, session)
+
         self.append_page(session, session.label)
         self.set_tab_reorderable(session, True)
+
         return session
+
+    def __remove_session(self, session):
+        from App import PMApp
+        tab = PMApp().main_window.get_tab("Operations")
+
+        tab.tree.remove_operation(session.context)
+
+        idx = self.page_num(session)
+        self.remove_page(idx)
 
     def get_current_session(self):
         """
@@ -338,6 +351,46 @@ class SessionNotebook(gtk.Notebook):
             return obj
 
         return None
+
+    def __on_close_page(self, label, session):
+        # Check if are stopped
+
+        if isinstance(session.context, Backend.TimedContext) and \
+           session.context.state != session.context.NOT_RUNNING:
+            dialog = gtk.MessageDialog(self.get_toplevel(),
+                                       gtk.DIALOG_DESTROY_WITH_PARENT,
+                                       gtk.MESSAGE_QUESTION,
+                                       gtk.BUTTONS_YES_NO,
+                                       _('The session is running.\nDo you want stop it?'))
+            id = dialog.run()
+
+            dialog.hide()
+            dialog.destroy()
+            
+            if id == gtk.RESPONSE_YES:
+                session.context.stop()
+
+            return
+
+        if session.context.status == session.context.SAVED:
+            self.__remove_session(session)
+        else:
+
+            dialog = gtk.MessageDialog(self.get_toplevel(),
+                                       gtk.DIALOG_DESTROY_WITH_PARENT,
+                                       gtk.MESSAGE_QUESTION,
+                                       gtk.BUTTONS_YES_NO,
+                                       _('The session has unsaved changes.\nDo you want to save them?'))
+
+            id = dialog.run()
+
+            dialog.hide()
+            dialog.destroy()
+            
+            if id == gtk.RESPONSE_NO or \
+               (id == gtk.RESPONSE_YES and session.sniff_page.save()):
+                
+                self.__remove_session(session)
 
 class MainTab(UmitView):
     tab_position = None

@@ -36,7 +36,7 @@ class BaseTimedContext(StaticContext):
         self._percentage = 0.0
         self._last = 0
 
-        StaticContext.__init__(self)
+        StaticContext.__init__(self, '')
 
     def _start(self):
         self.state = self.RUNNING

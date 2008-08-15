@@ -21,8 +21,12 @@
 from Backend.PM.Context import register_static_context
 
 class BaseStaticContext(object):
-    def __init__(self, fname=None):
+    NOT_SAVED, SAVED = range(2)
+
+    def __init__(self, title, fname=None):
         self._data = []
+        self._title = title
+        self._status = self.NOT_SAVED
 
         if fname:
             self._summary = fname
@@ -32,9 +36,9 @@ class BaseStaticContext(object):
             self._cap_file = None
 
     def load(self):
-        pass
+        self.status = self.SAVED
     def save(self):
-        pass
+        self.status = self.SAVED
 
     def get_summary(self):
         return self._summary
@@ -46,13 +50,25 @@ class BaseStaticContext(object):
     def set_data(self, val):
         self._data = val
 
+    def get_title(self):
+        return self._title
+    def set_title(self, val):
+        self._title = val
+
+    def get_status(self):
+        return self._status
+    def set_status(self, val):
+        self._status = val
+
     def get_cap_file(self):
         return self._cap_file
     def set_cap_file(self, val):
         self._cap_file = val
 
     data = property(get_data, set_data)
+    title = property(get_title, set_title)
     summary = property(get_summary, set_summary)
+    status = property(get_status, set_status)
     cap_file = property(get_cap_file, set_cap_file)
 
 StaticContext = register_static_context(BaseStaticContext)

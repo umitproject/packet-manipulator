@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import Backend
 
 from Manager.PreferenceManager import Prefs
 
@@ -289,16 +290,22 @@ class MainWindow(gtk.Window):
         dialog.destroy()
 
     def __on_quit(self, *args):
+        self.hide()
 
         # We need to stop the pending sniff threads
         maintab = self.get_tab("MainTab")
 
-        for page in maintab.session_notebook:
-            page.sniff_page.stop_sniffing()
+        lst = []
 
         for page in maintab.session_notebook:
-            if hasattr(page.sniff_page, 'context'):
-                page.sniff_page.context.join()
+            if isinstance(page.context, Backend.TimedContext):
+                lst.append(page.context)
+
+        for ctx in lst:
+            ctx.stop()
+
+        for ctx in lst:
+            ctx.join()
 
         gtk.main_quit()
 

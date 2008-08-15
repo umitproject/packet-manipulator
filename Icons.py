@@ -35,7 +35,9 @@ icons = (
 
     'info',
     'warning',
-    'error'
+    'error',
+
+    'stock-close'
 )
 
 def register_icons():

@@ -43,7 +43,7 @@ def register_sniff_context(BaseSniffContext):
             self.socket = None
             self.internal = True
 
-            self.summary = _('Sniffing on %s') % self.iface
+            self.title = _('%s capture') % self.iface
             self.thread = None
 
         def get_all_data(self):

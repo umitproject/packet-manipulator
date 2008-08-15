@@ -74,38 +74,26 @@ class SniffPage(gtk.VBox):
         self.timeout_id = None
         self.reload()
 
-    def clear(self):
-        self.store.clear()
-
-    def reload(self):
-        for packet in self.session.context.get_data():
-            self.store.append([packet])
-
-        self.statusbar.label = "<b>%s</b>" % self.session.context.summary
-
-        if self.timeout_id:
-            gobject.source_remove(self.timeout_id)
-
-        if isinstance(self.session.context, Backend.TimedContext):
-            self.timeout_id = gobject.timeout_add(200, self.__update_tree)
-
     def __create_toolbar(self):
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
 
         stocks = (
+            gtk.STOCK_REFRESH,
             gtk.STOCK_MEDIA_STOP,
             gtk.STOCK_SAVE,
             gtk.STOCK_SAVE_AS
         )
 
         callbacks = (
+            self.__on_restart,
             self.__on_stop,
             self.__on_save,
             self.__on_save_as
         )
 
         tooltips = (
+            _('Restart capturing'),
             _('Stop capturing'),
             _('Save packets'),
             _('Save packets as')
@@ -181,6 +169,8 @@ class SniffPage(gtk.VBox):
             for col in self.tree.get_columns():
                 for rend in col.get_cell_renderers():
                     rend.set_property('font-desc', desc)
+
+            self.__redraw_rows()
         except:
             # Block change
 
@@ -189,6 +179,14 @@ class SniffPage(gtk.VBox):
     def __modify_colors(self, value):
         self.use_colors = value
         self.tree.set_rules_hint(not self.use_colors)
+
+        self.__redraw_rows()
+
+    def __redraw_rows(self):
+        def emit_row_changed(model, path, iter):
+            model.row_changed(path, iter)
+
+        self.store.foreach(emit_row_changed)
 
     def __get_color(self, packet):
         if self.use_colors:
@@ -214,12 +212,32 @@ class SniffPage(gtk.VBox):
 
         return alive
 
+    # Public functions
+
     def populate(self, pktlist):
         for packet in pktlist:
             self.store.append([packet])
 
-    def stop_sniffing(self):
-        self.session.context.stop()
+    def clear(self):
+        self.store.clear()
+
+    def reload(self):
+        for packet in self.session.context.get_data():
+            self.store.append([packet])
+
+        self.statusbar.label = "<b>%s</b>" % self.session.context.summary
+
+        if self.timeout_id:
+            gobject.source_remove(self.timeout_id)
+
+        if isinstance(self.session.context, Backend.TimedContext):
+            self.timeout_id = gobject.timeout_add(200, self.__update_tree)
+
+    def save(self):
+        return self.__on_save(None)
+
+    def save_as(self):
+        return self.__on_save_as(None)
 
     # Signals callbacks
 
@@ -272,12 +290,14 @@ class SniffPage(gtk.VBox):
 
     def __on_stop(self, action):
         self.session.context.stop()
+    def __on_restart(self, action):
+        self.session.context.restart()
 
-    def __on_save(self, action, saveas_on_fail=True):
+    def __on_save(self, action):
         if self.session.context.cap_file:
-            self.__save_packets(self.session.context.cap_file)
+            return self.__save_packets(self.session.context.cap_file)
         else:
-            self.__on_save_as(None)
+            return self.__on_save_as(None)
 
     def __on_save_as(self, action):
         dialog = gtk.FileChooserDialog(_('Save Pcap file to'),
@@ -294,22 +314,28 @@ class SniffPage(gtk.VBox):
             filter.add_pattern(pattern)
             dialog.add_filter(filter)
 
+        ret = False
         if dialog.run() == gtk.RESPONSE_ACCEPT:
-            self.__save_packets(dialog.get_filename())
+            ret = self.__save_packets(dialog.get_filename())
 
         dialog.hide()
         dialog.destroy()
 
+        return ret
+
     def __save_packets(self, fname):
         self.session.context.cap_file = fname
+        ret = self.session.context.save()
 
-        if self.session.context.save():
+        if ret:
             self.statusbar.image = gtk.STOCK_HARDDISK
         else:
             self.statusbar.image = gtk.STOCK_DIALOG_ERROR
 
         self.statusbar.label = "<b>%s</b>" % self.session.context.summary
         self.statusbar.start_animation(True)
+
+        return ret
 
 class SniffFilter(gtk.HBox):
     __gtype_name__ = "SniffFilter"

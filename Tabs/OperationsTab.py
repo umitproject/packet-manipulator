@@ -273,6 +273,23 @@ class OperationTree(gtk.TreeView):
         if start:
             operation.start()
 
+    def remove_operation(self, operation):
+        """
+        Remove an operation from the store
+
+        @param operation the Operation to remove
+        """
+
+        if not isinstance(operation, Operation):
+            return
+
+        def remove(model, path, iter, operation):
+            if model.get_value(iter, 0) is operation:
+                model.remove(iter)
+                return True
+
+        self.store.foreach(remove, operation)
+
     # Callbacks section
 
     def __on_open(self, action, operation):
@@ -291,7 +308,16 @@ class OperationTree(gtk.TreeView):
         operation.restart()
 
     def __on_clear(self, action, operation):
-        pass
+        # TODO: try a better method
+        iter = self.store.get_iter_first()
+
+        while iter:
+            operation = self.store.get_value(iter, 0)
+
+            if operation.state == operation.NOT_RUNNING:
+                self.store.remove(iter)
+
+            iter = self.store.iter_next(iter)
 
 class OperationsTab(UmitView):
     icon_name = 'operation_small'

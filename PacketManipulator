@@ -93,9 +93,10 @@ if not UMIT_DEVELOPMENT:
     sys.excepthook = UmitExceptionHook()
 
 def main(args):
-    from App import PMApp
     from umitCore.Paths import Path
     Path.set_umit_conf(os.path.split(args[0])[0])
+
+    from App import PMApp
 
     try:
         PMApp().run()

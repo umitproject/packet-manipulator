@@ -40,6 +40,7 @@ def register_static_context(BaseStaticContext):
             for packet in data:
                 self.data.append(MetaPacket(packet))
 
+            self.status = self.SAVED
             self.summary = _('%d packets loaded.') % len(data)
             return True
 
@@ -59,6 +60,7 @@ def register_static_context(BaseStaticContext):
                 self.summary = str(err)
                 return False
 
+            self.status = self.SAVED
             self.summary = _('%d packets written.') % len(data)
             return True
 
