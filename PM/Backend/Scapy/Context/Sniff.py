@@ -23,8 +23,8 @@ from __future__ import with_statement
 from datetime import datetime
 from threading import Thread, Lock
 
-from Backend.Scapy import *
-from umitCore.I18N import _
+from PM.Core.I18N import _
+from PM.Backend.Scapy import *
 
 def register_sniff_context(BaseSniffContext):
     class SniffContext(BaseSniffContext):

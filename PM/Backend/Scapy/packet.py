@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from Backend.Scapy.wrapper import Packet, NoPayload, Raw
+from PM.Backend.Scapy.wrapper import Packet, NoPayload, Raw
 
 class MetaPacket:
     def __init__(self, proto=None):

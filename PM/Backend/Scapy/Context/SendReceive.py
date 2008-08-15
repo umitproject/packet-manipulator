@@ -21,8 +21,8 @@
 from __future__ import with_statement
 
 from threading import Lock
-from umitCore.I18N import _
-from Backend.Scapy.utils import send_receive_packet
+from PM.Core.I18N import _
+from PM.Backend.Scapy.utils import send_receive_packet
 
 def register_send_receive_context(BaseSendReceiveContext):
 

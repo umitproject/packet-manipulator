@@ -32,7 +32,7 @@ def __new_write(fd, txt):
 os.write = __new_write
 
 from scapy import *
-from Manager.PreferenceManager import Prefs
+from PM.Manager.PreferenceManager import Prefs
 
 def change_interface(iface):
     if iface:

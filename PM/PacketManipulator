@@ -1,0 +1,105 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+try:
+    import psyco
+    psyco.profile()
+
+    print "Hurray! psyco enabled!"
+except ImportError:
+    print "No psyco no party! :("
+
+import os
+import sys
+import signal
+
+# used by exception hook
+import cgitb
+import tempfile
+
+from PM.Core.I18N import _
+
+#########################
+VERSION = "0.1"
+UMIT_DEVELOPMENT = os.environ.get("UMIT_DEVELOPMENT", True)
+
+class UmitExceptionHook(object):
+    def __call__(self, etype, emsg, etb):
+        import warnings
+        warnings.filterwarnings("error", module = "gtk")
+        try:
+            import gtk
+            import pango
+            from PM.higwidgets.higdialogs import HIGAlertDialog
+        except Warning, e:
+            print e.message
+            sys.exit(-1)
+        warnings.resetwarnings()
+
+        if etype == ImportError:
+            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+                message_format=_("Import error"),
+                secondary_text=_("\nA required module was not "
+                    "found.\n\nError: %s" % emsg))
+            d.run()
+            d.destroy()
+            return
+
+        crash_text = cgitb.text((etype, emsg, etb))
+        extrainfo = "%-17s %s\n%-17s %s\n%-17s %s\n%-17s %s\n" % (
+            "sys.platform", sys.platform, "os.name", os.name, 
+            "Gtk version", '.'.join(map(str, gtk.gtk_version)), 
+            "Packet Manipulation version", VERSION)
+        crashmsg = "Crash Report\n%s\n%s\nDescription\n%s\n%s" % ('=' * 10, 
+            extrainfo, '-' * 20, crash_text)
+
+        d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+            message_format=_("Fatal exception"),
+            secondary_text=_("\nException:\n"))
+
+        view = gtk.TextView()
+        view.get_buffer().set_text(crashmsg)
+        view.modify_font(pango.FontDescription("mono bold 8"))
+        
+        sw = gtk.ScrolledWindow()
+        sw.add(view)
+        sw.set_size_request(600, 400)
+        sw.show_all()
+        
+        d.vbox.pack_start(sw)
+        d.run()
+        d.destroy()
+        gtk.main_quit()
+
+
+if not UMIT_DEVELOPMENT:
+    sys.excepthook = UmitExceptionHook()
+
+def main(args):
+    from PM.Gui.Core.App import PMApp
+
+    try:
+        app = PMApp()
+        app.run()
+    except KeyboardInterrupt:
+        sys.exit(signal.SIGINT)
+
+if __name__ == "__main__":
+    main(sys.argv)
