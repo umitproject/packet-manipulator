@@ -24,11 +24,23 @@ class MetaPacket:
     def __init__(self, proto=None):
         self.root = proto
 
-    def include(self, proto):
-        if self.root:
-            self.root = self.root / proto
+    def insert(self, proto, layer):
+        if layer == -1:
+            # Append
+            packet = self.root / proto.root
+            self.root = packet
+
+            return True
         else:
-            self.root = proto
+            current = self.root
+
+            while layer == 0:
+                current = current.payload
+                layer -= 1
+
+            last = current.payload
+            self.root = current / proto.root
+            proto.root.payload = last
 
     def get_size(self):
         return len(str(self.root))

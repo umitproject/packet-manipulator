@@ -21,6 +21,8 @@
 import gtk
 import Backend
 
+import os
+
 from Manager.PreferenceManager import Prefs
 
 if Prefs()['gui.docking'].value:
@@ -56,6 +58,7 @@ class MainWindow(gtk.Window):
         gtk.Window.__init__(self)
 
         self.set_title("Packet Manipulator")
+        self.set_icon_from_file(os.path.join(Path.pixmaps_dir, 'pm-logo.png'))
         self.set_size_request(600, 400)
         
         self.registered_tabs = {}
@@ -238,8 +241,13 @@ class MainWindow(gtk.Window):
     def __on_about(self, action):
         dialog = gtk.AboutDialog()
 
+        dialog.set_logo(gtk.gdk.pixbuf_new_from_file(os.path.join(Path.pixmaps_dir, 'pm-logo.png')))
+
         dialog.set_version("0.1")
-        dialog.set_comments("PacketManipulator is a visual packet forger")
+        dialog.set_comments(_("Packet manipulation made easy"))
+        dialog.set_authors(['Francesco Piccinno <stack.box@gmail.com>'])
+        dialog.set_license(_('This program is relased under the terms of GPLv2'))
+        dialog.set_website_label('http://trac.umitproject.org/wiki/PacketManipulator/FrontEnd')
 
         dialog.run()
         dialog.hide()

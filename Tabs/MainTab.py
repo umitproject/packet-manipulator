@@ -95,16 +95,38 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         self.tree.connect('drag-data-received', self.__on_drag_data)
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
+        if not self.session.packet:
+            ctx.finish(False, False, time)
+
         if data and data.format == 8:
-            ret = self.view.get_dest_row_at_pos(x, y)
+            ret = self.tree.get_dest_row_at_pos(x, y)
 
-            if not ret:
-                self.store.append(None, [None, data.data, data.data, None])
-            else:
+            try:
+                # Try to construct an empty packet
+                packet = Backend.get_proto(data.data)()
+                packet = Backend.MetaPacket(packet)
+            except Exception:
+                ctx.finish(False, False, time)
+
+            # We append as default
+            where = -1
+
+            if ret:
                 path, pos = ret
-                print path, pos
+                where = len(path) # because it's a treeview with only one child for row
 
-            ctx.finish(True, False, time)
+                if pos == gtk.TREE_VIEW_DROP_AFTER or \
+                   pos == gtk.TREE_VIEW_DROP_INTO_OR_AFTER:
+                    where += 1
+            
+            # Now try to insert this stuff into the packet
+
+            if self.session.packet.insert(packet, where):
+                ctx.finish(True, False, time)
+                self.session.reload()
+            else:
+                ctx.finish(False, False, time)
+
         else:
             ctx.finish(False, False, time)
 
@@ -266,6 +288,19 @@ class SessionPage(gtk.VBox):
 
         self.pack_start(self.vpaned)
         self.show_all()
+
+    def reload(self):
+        """
+        Reloads the packet page and also the sniff page
+        """
+
+        self.packet_page.reload()
+
+        # FIXME: this should be moved in sniff
+        if not isinstance(self.context, Backend.TimedContext):
+            self.sniff_page.clear()
+
+        self.sniff_page.reload()
 
     def set_active_packet(self, packet):
         self.packet = packet
