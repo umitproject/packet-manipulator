@@ -585,9 +585,9 @@ class ToolBox(gtk.VBox):
 
     def append_page(self, child, txt=None, image=gtk.STOCK_PROPERTIES, expand=True):
         page = ToolPage(self, txt, image, expand)
-        page.add_widget(child, False)
+        page.add_widget(child, expand)
 
-        self.pack_start(page, False, False)
+        self.pack_start(page, expand, expand)
         self._pages.append(page)
         #self._set_active_page(page)
     

@@ -896,22 +896,10 @@ class PropertyGrid(gtk.VBox):
 
         sw.set_size_request(30, 100)
 
-        if True:
-            toolbox = ToolBox()
-            toolbox.append_page(self.tree, '<b>Protocol</b>', gtk.STOCK_CONNECT)
-            toolbox.append_page(sw, '<b>Description</b>', gtk.STOCK_JUSTIFY_FILL, expand=False)
-            self.pack_start(toolbox)
-        else:
-
-            expander = AnimatedExpander('Protocol')
-            expander.add(self.tree)
-
-            self.pack_start(expander)
-
-            expander = AnimatedExpander('Description')
-            expander.add(sw)
-
-            self.pack_start(expander, False, False)
+        toolbox = ToolBox()
+        toolbox.append_page(self.tree, '<b>Protocol</b>', gtk.STOCK_CONNECT)
+        toolbox.append_page(sw, '<b>Description</b>', gtk.STOCK_JUSTIFY_FILL, expand=False)
+        self.pack_start(toolbox)
 
         self.clear = self.tree.clear
         self.populate = self.tree.populate
