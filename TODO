@@ -16,3 +16,6 @@ TODO list (not ordered):
 - create a method to set docstrings for Scapy (load an xml definitions file)
 - page to show relationships between connections
 - graph page like scapy
+- fuzzing
+- xml file loader
+- rmeote server (xml-rpc)? blah
