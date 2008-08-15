@@ -225,14 +225,6 @@ class MainWindow(gtk.Window):
         else:
             self.main_paned.remove_view(tab)
 
-    def __on_save_template(self, action):
-        session = self.get_tab("MainTab").get_current_session()
-
-        if not session:
-            return
-
-        print "Dumping XML structure for protocol", session.protocol
-
     def __on_routing(self, action):
         dialog = RoutesDialog(self)
         dialog.run()
@@ -308,7 +300,3 @@ class MainWindow(gtk.Window):
             ctx.join()
 
         gtk.main_quit()
-
-if __name__ == "__main__":
-    app = MainWindow()
-    app.run()

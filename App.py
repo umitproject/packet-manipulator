@@ -18,9 +18,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import gtk
 import gobject
 
+import sys
+
 from Atoms import Singleton
+from umitCore.I18N import _
 from Icons import register_icons
 from MainWindow import MainWindow
 from Manager.PreferenceManager import Prefs
@@ -29,6 +33,31 @@ class PMApp(Singleton):
     def __init__(self):
         gobject.threads_init()
 
+        root = False
+
+        try:
+            if sys.platform == 'win32':
+                root = True
+            elif is_maemo():
+                root = True
+            elif os.getuid() == 0:
+                root = True
+        except: pass
+
+        if not root:
+            dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL,
+                                       gtk.MESSAGE_WARNING,
+                                       gtk.BUTTONS_YES_NO,
+                                       _('You are running Packet Manipulator as non-root user!\n'
+                                         'Some functionalities need root privileges to work\n\n'
+                                         'Do you want to continue?'))
+            ret = dialog.run()
+            dialog.hide()
+            dialog.destroy()
+            
+            if ret == gtk.RESPONSE_NO:
+                sys.exit(-1)
+
         register_icons()
 
         self.prefs = Prefs()
@@ -36,5 +65,4 @@ class PMApp(Singleton):
         self.main_window.connect_tabs_signals()
 
     def run(self):
-        from gtk import main
-        main()
+        gtk.main()
