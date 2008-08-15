@@ -238,7 +238,12 @@ class EnumEditor(Editor):
 class StrEditor(Editor):
     def create_widgets(self):
         self.entry = gtk.Entry()
-        self.entry.set_text(self.value)
+
+        try:
+            self.entry.set_text(unicode(self.value))
+        except UnicodeDecodeError:
+            self.entry.set_text('')
+
         self.btn = gtk.Button("...")
 
     def pack_widgets(self):
@@ -254,11 +259,52 @@ class StrEditor(Editor):
         self.value = self.entry.get_text()
 
     def __on_edit(self, widget):
-        print "Yeah launch a dialog to edit the field"
+        # TODO: here we need an hexview but with insert mode
+        #       for now only a simple dialog with a textview
+
+        try:
+            text = unicode(self.value)
+        except UnicodeDecodeError:
+            dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_WARNING, gtk.BUTTONS_OK,
+            _("Cannot edit this field because I can't convert it to unicode.\n" \
+              "Try to edit the field with python shell or see if a new version of PM " \
+              "is avaiable. Maybe nopper added the HexView insert mode :)"))
+            dialog.run()
+            dialog.hide()
+            dialog.destroy()
+
+            return
+
+
+        dialog = gtk.Dialog(_('Editing string field'),
+                            None, gtk.DIALOG_MODAL,
+                            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+                             gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+
+        buffer = gtk.TextBuffer()
+        buffer.set_text(unicode(self.value))
+        view = gtk.TextView(buffer)
+
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        sw.add(view)
+        sw.show_all()
+
+        dialog.vbox.pack_start(sw)
+        dialog.set_size_request(400, 300)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            self.entry.set_text(buffer.get_text(buffer.get_start_iter(),
+                                                buffer.get_end_iter(), True))
+
+        dialog.hide()
+        dialog.destroy()
 
 class IPv4Editor(Editor):
     def create_widgets(self):
         self.entry = HIGIpEntry()
+        self.entry.set_text(self.value)
         #self.entry.set_has_frame(False)
 
     def pack_widgets(self):
@@ -509,6 +555,8 @@ class PropertyGridTree(gtk.ScrolledWindow):
         'desc-changed'   : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_STRING, )),
     }
 
+    printable = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ '
+
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)
        
@@ -563,6 +611,20 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.tree.connect('button-release-event', self.__on_button_release)
+
+    def escape(self, txt):
+        """
+        Escape the txt string replacing < with &lt; ecc..
+        also replacing non printable values with dots
+
+        (We should use cgi.escape() or g_markup_escape_text () instead)
+        """
+
+        if not isinstance(txt, basestring):
+            return str(txt)
+
+        escaped = u"".join(map(lambda x: (x in self.printable) and (x) or ('.'), list(txt)))
+        return escaped.replace('<', '&lt;').replace('>', '&gt;').replace('&', '&amp;')
     
     def get_selected_field(self):
         """
@@ -682,7 +744,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
                 value = Backend.get_field_value_repr(protocol, obj)
 
                 if value:
-                    cell.set_property('markup', '<tt>%s</tt>' % value)
+                    cell.set_property('markup', '<tt>%s</tt>' % self.escape(value))
 
         # If we are a field or a string (a sub field of flags)
         elif Backend.is_field(obj) or isinstance(obj, str):
@@ -701,7 +763,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
                 if value is None:
                     value = "N/A"
 
-                cell.set_property('markup', '<tt>%s</tt>' % value)
+                cell.set_property('markup', '<tt>%s</tt>' % self.escape(value))
                 cell.editor = get_editor(obj)
 
                 if cell.editor:
