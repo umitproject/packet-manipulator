@@ -1,6 +1,8 @@
 *~
 *.pyc
+*.pyo
 *.o
 *.so
 *.swp
 *.pcap
+*.tmp
