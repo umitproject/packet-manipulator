@@ -101,6 +101,9 @@ class UmitViewMixin(object):
 
 
 class UmitView(UmitViewMixin):
+    name = None
+    label_text = ''
+    icon_name = gtk.STOCK_INFO
 
     def __init__(self, title=None, icon=None, *args, **kw):
         UmitViewMixin.__init__(self, *args, **kw)
@@ -108,6 +111,7 @@ class UmitView(UmitViewMixin):
         self._main_widget = gtk.VBox()
         self.label_text = title or self.label_text
         self.icon_name = icon or self.icon_name
+        self.name = self.name
         self.create_ui()
 
     def add_main_widget(self, widget, *args, **kw):
@@ -115,4 +119,4 @@ class UmitView(UmitViewMixin):
 
     def connect_tab_signals(self):
         "Ovveride this if you need to connect signals between tabs"
-        print "connect_tab_signals(): Not implemented for", self.__class__.__name__
+        pass

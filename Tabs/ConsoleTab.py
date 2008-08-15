@@ -20,12 +20,15 @@
 
 import gtk
 
+from umitCore.I18N import _
 from console import Console
 from views import UmitView
 
 class ConsoleTab(UmitView):
-    label_text = "Packet Shell"
+    name = 'PythonShellTab'
+    label_text = _('Python Shell')
     tab_position = gtk.POS_BOTTOM
+    icon_name = 'python_small'
 
     def __create_widgets(self):
         self.console = Console()

@@ -21,6 +21,7 @@
 import gtk
 import Backend
 
+from umitCore.I18N import _
 from views import UmitView
 from collections import defaultdict
 from Icons import get_pixbuf
@@ -59,7 +60,7 @@ class ProtocolTree(gtk.VBox):
         txt = gtk.CellRendererText()
         pix = gtk.CellRendererPixbuf()
 
-        col = gtk.TreeViewColumn('Protocols')
+        col = gtk.TreeViewColumn(_('Protocols'))
         col.pack_start(pix, False)
         col.pack_start(txt)
 
@@ -134,13 +135,13 @@ class ProtocolTree(gtk.VBox):
             if not i in dct:
                 continue
 
-            it = self.store.append(None, [self.layer_icon, "Layer %d" % i, None])
+            it = self.store.append(None, [self.layer_icon, _('Layer %d') % i, None])
             
             for proto in dct[i]:
                 self.store.append(it, [self.proto_icon, Backend.get_proto_class_name(proto), proto])
 
         if None in dct:
-            it = self.store.append(None, [self.layer_icon, "Unknown layer", None])
+            it = self.store.append(None, [self.layer_icon, _('Unknown layer'), None])
 
             for proto in dct[None]:
                 self.store.append(it, [self.proto_icon, Backend.get_proto_class_name(proto), proto])
@@ -196,16 +197,11 @@ class ProtocolSelectorTab(UmitView):
     "The protocol selector tab"
 
     icon_name = gtk.STOCK_CONNECT
-    label_text = "Protocols"
+    label_text = _('Protocols')
+    name = 'ProtocolTab'
     tab_position = gtk.POS_RIGHT
 
     def create_ui(self):
         self.tree = ProtocolTree()
         self._main_widget.add(self.tree)
         self._main_widget.show_all()
-
-if __name__ == "__main__":
-    w = gtk.Window()
-    w.add(ProtocolTree())
-    w.show_all()
-    gtk.main()

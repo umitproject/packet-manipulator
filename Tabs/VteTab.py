@@ -22,6 +22,7 @@ import gtk
 import gobject
 
 from views import UmitView
+from umitCore.I18N import _
 
 class TerminalWidget(gtk.Bin):
     __gtype_name__ = "TerminalWidget"
@@ -48,8 +49,8 @@ class TerminalWidget(gtk.Bin):
             self.term.set_size_request(0, 0)
         except ImportError:
             label = gtk.Label(
-                "<b>Loser!</b> You don't have vte python bindings installed.\n"
-                "Download it from <tt>http://ftp.acc.umu.se/pub/GNOME/sources/vte/</tt>"
+                _("<b>Loser!</b> You don't have vte python bindings installed.\n" \
+                "Download it from <tt>http://ftp.acc.umu.se/pub/GNOME/sources/vte/</tt>")
             )
 
             label.set_use_markup(True)
@@ -70,8 +71,9 @@ class TerminalWidget(gtk.Bin):
 gobject.type_register(TerminalWidget)
 
 class VteTab(UmitView):
-    icon_name = gtk.STOCK_OK
-    label_text = "Terminal"
+    icon_name = 'terminal_small'
+    label_text = _('Terminal')
+    name = 'TerminalTab'
     tab_position = gtk.POS_BOTTOM
 
     def create_ui(self):

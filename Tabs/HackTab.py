@@ -26,6 +26,7 @@ import base64
 import string
 import hashlib
 
+from umitCore.I18N import _
 from views import UmitView
 
 class HackBar(gtk.VBox):
@@ -60,14 +61,14 @@ class HackBar(gtk.VBox):
     def __create_trans(self):
         root = gtk.Menu()
 
-        action = gtk.Action(None, 'Transformation', None, gtk.STOCK_JUSTIFY_FILL)
+        action = gtk.Action(None, _('Transformation'), None, gtk.STOCK_JUSTIFY_FILL)
 
         item = action.create_menu_item()
         item.set_submenu(root)
 
         self.menubar.append(item)
 
-        lbls = ('Upper', 'Lower')
+        lbls = (_('Upper'), _('Lower'))
         cbs = (self.__upper, self.__lower)
 
         for lbl, cb in zip(lbls, cbs):
@@ -81,7 +82,7 @@ class HackBar(gtk.VBox):
     def __create_crypt(self):
         root = gtk.Menu()
 
-        action = gtk.Action(None, 'Encryption', None, gtk.STOCK_DIALOG_AUTHENTICATION)
+        action = gtk.Action(None, _('Encryption'), None, gtk.STOCK_DIALOG_AUTHENTICATION)
 
         item = action.create_menu_item()
         item.set_submenu(root)
@@ -103,14 +104,14 @@ class HackBar(gtk.VBox):
     def __create_encoding(self):
         root = gtk.Menu()
 
-        action = gtk.Action(None, 'Encoding', None, gtk.STOCK_CONVERT)
+        action = gtk.Action(None, _('Encoding'), None, gtk.STOCK_CONVERT)
 
         item = action.create_menu_item()
         item.set_submenu(root)
 
         self.menubar.append(item)
 
-        lbls = ('Base64 Encode', 'Base64 Decode', 'URL Encode', 'URL Decode')
+        lbls = (_('Base64 Encode'), _('Base64 Decode'), _('URL Encode'), _('URL Decode'))
         cbs = (self.__enc_base64, self.__dec_base64, self.__enc_url, self.__dec_url)
 
         for lbl, cb in zip(lbls, cbs):
@@ -124,14 +125,14 @@ class HackBar(gtk.VBox):
     def __create_database(self):
         root = gtk.Menu()
 
-        action = gtk.Action(None, 'Database', None, gtk.STOCK_INDEX)
+        action = gtk.Action(None, _('Database'), None, gtk.STOCK_INDEX)
 
         item = action.create_menu_item()
         item.set_submenu(root)
 
         self.menubar.append(item)
 
-        lbls = ('MySQL Encode', 'MySQL Decode', 'MsSQL Encode', 'MsSQL Decode')
+        lbls = (_('MySQL Encode'), _('MySQL Decode'), _('MsSQL Encode'), _('MsSQL Decode'))
         cbs = (self.__enc_my, self.__dec_my, self.__enc_ms, self.__dec_ms)
 
         for lbl, cb in zip(lbls, cbs):
@@ -247,7 +248,8 @@ class HackBar(gtk.VBox):
 class HackTab(UmitView):
     icon_name = gtk.STOCK_CONVERT
     tab_position = gtk.POS_BOTTOM
-    label_text = "Hack Tab"
+    label_text = _('Hack Tab')
+    name = 'HackTab'
 
     def create_ui(self):
         self._main_widget.add(HackBar())

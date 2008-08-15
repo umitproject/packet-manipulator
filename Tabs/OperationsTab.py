@@ -317,7 +317,8 @@ class OperationTree(gtk.TreeView):
 class OperationsTab(UmitView):
     icon_name = 'operation_small'
     tab_position = gtk.POS_BOTTOM
-    label_text = "Operations"
+    label_text = _('Operations')
+    name = 'OperationsTab'
 
     def create_ui(self):
         self.tree = OperationTree()

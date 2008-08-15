@@ -154,9 +154,9 @@ class MainWindow(gtk.Window):
             raise Exception("Tab already present")
 
         # Ok we should add a CheckMenuItem to this fucking menu
-        self.registered_tabs[tab.label_text] = tab
+        self.registered_tabs[tab.name] = tab
 
-        print "Tab %s registered" % tab.label_text
+        print "Tab %s registered as %s" % (tab.label_text, tab.name)
 
         if not tab.tab_position:
             # This is the central widget so it should be added
@@ -252,7 +252,7 @@ class MainWindow(gtk.Window):
             iface = dialog.get_selected()
             args = dialog.get_options()
 
-            tab = self.get_tab("Operations")
+            tab = self.get_tab("OperationsTab")
             tab.tree.append_operation(SniffOperation(iface, **args))
 
         dialog.hide()

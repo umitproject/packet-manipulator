@@ -37,6 +37,8 @@ icons = (
     'warning',
     'error',
 
+    'python',
+    'terminal',
     'stock-close'
 )
 

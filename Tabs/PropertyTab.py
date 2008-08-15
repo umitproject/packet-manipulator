@@ -21,13 +21,16 @@
 import gtk
 import Backend
 
+from umitCore.I18N import _
+
 from App import PMApp
 from views import UmitView
 from widgets.PropertyGrid import PropertyGrid
 from Tabs.MainTab import SessionPage
 
 class PropertyTab(UmitView):
-    label_text = "Properties"
+    label_text = _('Properties')
+    name = 'PropertyTab'
     icon_name = gtk.STOCK_INDEX
     tab_position = gtk.POS_RIGHT
 

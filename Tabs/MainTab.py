@@ -71,7 +71,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         pix = gtk.CellRendererPixbuf()
         txt = gtk.CellRendererText()
 
-        col = gtk.TreeViewColumn('Name')
+        col = gtk.TreeViewColumn(_('Protocol'))
 
         col.pack_start(pix, False)
         col.pack_start(txt, True)
@@ -144,8 +144,8 @@ class PacketPage(gtk.VBox):
         )
 
         tooltips = (
-            'Send packet',
-            'Send/receive packet'
+            _('Send packet'),
+            _('Send/receive packet')
         )
 
         callbacks = (
@@ -221,7 +221,7 @@ class PacketPage(gtk.VBox):
         count = self.packet_count.get_value_as_int()
         inter = self.packet_interval.get_value_as_int()
 
-        tab = PMApp().main_window.get_tab("Operations")
+        tab = PMApp().main_window.get_tab("OperationsTab")
         tab.tree.append_operation(SendOperation(packet, count, inter))
 
     def __on_send_receive(self, action):
@@ -235,7 +235,7 @@ class PacketPage(gtk.VBox):
         count = self.packet_count.get_value_as_int()
         inter = self.packet_interval.get_value_as_int()
 
-        tab = PMApp().main_window.get_tab("Operations")
+        tab = PMApp().main_window.get_tab("OperationsTab")
         tab.tree.append_operation(SendReceiveOperation(packet, count, inter))
 
 class SessionPage(gtk.VBox):
@@ -328,7 +328,7 @@ class SessionNotebook(gtk.Notebook):
         return session
 
     def __remove_session(self, session):
-        tab = PMApp().main_window.get_tab("Operations")
+        tab = PMApp().main_window.get_tab("OperationsTab")
 
         tab.tree.remove_operation(session.context)
 
@@ -392,7 +392,7 @@ class SessionNotebook(gtk.Notebook):
 
 class MainTab(UmitView):
     tab_position = None
-    label_text = "MainTab"
+    name = 'MainTab'
 
     def __create_widgets(self):
         "Create the widgets"

@@ -21,6 +21,7 @@
 import gtk
 
 from views import UmitView
+from umitCore.I18N import _
 from Icons import get_pixbuf
 
 class StatusView(gtk.ScrolledWindow):
@@ -105,7 +106,8 @@ class StatusView(gtk.ScrolledWindow):
 class StatusTab(UmitView):
     icon_name = gtk.STOCK_INFO
     tab_position = gtk.POS_BOTTOM
-    label_text = "Status"
+    label_text = _('Status')
+    name = 'StatusTab'
 
     def create_ui(self):
         self.status = StatusView()
