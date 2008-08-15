@@ -21,9 +21,11 @@
 import gtk
 import gobject
 
+import os
 import sys
 
 from umitCore.I18N import _
+from umitCore.UmitConf import is_maemo
 from Manager.Atoms import Singleton
 
 class PMApp(Singleton):

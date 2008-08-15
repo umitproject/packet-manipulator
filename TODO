@@ -1,0 +1,18 @@
+TODO list (not ordered):
+
+- docstrings
+- syntax highlight on python shell
+- fix others TODO/FIXME
+- I18N, make the mo files
+- new logo (pacchetto)
+- dict editor / list editor (ex TCP dport)
+- hexview with insert mode
+- plugins system (UmitPlugins) / geoip as example plugin
+- fix the send/receive on windows
+- sending/receiving a list of packets instead of a single
+- switching to pyprocessing?
+- documentation and test cases
+- rewrite the UMPA backend
+- create a method to set docstrings for Scapy (load an xml definitions file)
+- page to show relationships between connections
+- graph page like scapy
