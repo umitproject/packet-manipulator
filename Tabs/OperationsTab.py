@@ -25,6 +25,7 @@ import Backend
 
 from umitCore.I18N import _
 
+from App import PMApp
 from views import UmitView
 from Icons import get_pixbuf
 
@@ -103,8 +104,6 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
         return ret
 
     def __create_session(self):
-        from App import PMApp
-
         nb = PMApp().main_window.get_tab("MainTab").session_notebook
         self.session = nb.create_context_session(self, packet=False)
 
@@ -131,8 +130,6 @@ class SniffOperation(Backend.SniffContext, Operation):
                                       background, self.__recv_callback, None)
 
         if not self.background:
-            from App import PMApp
-
             nb = PMApp().main_window.get_tab("MainTab").session_notebook
             self.session = nb.create_sniff_session(self)
         else:
@@ -149,8 +146,6 @@ class SniffOperation(Backend.SniffContext, Operation):
 
     def activate(self):
         if not self.session:
-            from App import PMApp
-
             nb = PMApp().main_window.get_tab("MainTab").session_notebook
             self.session = nb.create_sniff_session(self)
 

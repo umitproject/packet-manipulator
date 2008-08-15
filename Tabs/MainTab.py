@@ -26,6 +26,7 @@ from widgets.Expander import AnimatedExpander
 from widgets.Sniff import SniffPage
 from widgets.ClosableLabel import ClosableLabel
 
+from App import PMApp
 from views import UmitView
 from Icons import get_pixbuf
 
@@ -220,7 +221,6 @@ class PacketPage(gtk.VBox):
         count = self.packet_count.get_value_as_int()
         inter = self.packet_interval.get_value_as_int()
 
-        from App import PMApp
         tab = PMApp().main_window.get_tab("Operations")
         tab.tree.append_operation(SendOperation(packet, count, inter))
 
@@ -235,7 +235,6 @@ class PacketPage(gtk.VBox):
         count = self.packet_count.get_value_as_int()
         inter = self.packet_interval.get_value_as_int()
 
-        from App import PMApp
         tab = PMApp().main_window.get_tab("Operations")
         tab.tree.append_operation(SendReceiveOperation(packet, count, inter))
 
@@ -329,7 +328,6 @@ class SessionNotebook(gtk.Notebook):
         return session
 
     def __remove_session(self, session):
-        from App import PMApp
         tab = PMApp().main_window.get_tab("Operations")
 
         tab.tree.remove_operation(session.context)

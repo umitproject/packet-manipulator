@@ -21,6 +21,7 @@
 import gtk
 import Backend
 
+from App import PMApp
 from views import UmitView
 from widgets.PropertyGrid import PropertyGrid
 from Tabs.MainTab import SessionPage
@@ -49,7 +50,6 @@ class PropertyTab(UmitView):
         # signals from main tab here so we have
         # overriden this method to avoid errors
 
-        from App import PMApp
         tab = PMApp().main_window.get_tab("MainTab")
         tab.session_notebook.connect('switch-page', self.__on_repopulate)
 
@@ -98,7 +98,6 @@ class PropertyTab(UmitView):
         # and we could redraw the entire hexview to show changes
         # The tree argument is the PropertyGridTree object
 
-        from App import PMApp
         tab = PMApp().main_window.get_tab("MainTab")
         page = tab.session_notebook.get_current_session()
 
@@ -114,7 +113,6 @@ class PropertyTab(UmitView):
             return
 
         # We should select also the bounds in HexView
-        from App import PMApp
         tab = PMApp().main_window.get_tab("MainTab")
         page = tab.session_notebook.get_current_session()
 

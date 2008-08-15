@@ -54,7 +54,6 @@ def register_icons():
                 )
                 factory.add(key, gtk.IconSet(pixbuf))
 
-                print "Registering", key
             except gobject.GError:
                 continue
 
@@ -62,7 +61,6 @@ def register_icons():
 
 def get_pixbuf(stock_id):
     name, size = stock_id.split("_")
-    print name, size
 
     if size == "small":
         size = 16

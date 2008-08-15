@@ -25,9 +25,6 @@ import sys
 
 from Atoms import Singleton
 from umitCore.I18N import _
-from Icons import register_icons
-from MainWindow import MainWindow
-from Manager.PreferenceManager import Prefs
 
 class PMApp(Singleton):
     def __init__(self):
@@ -57,6 +54,10 @@ class PMApp(Singleton):
             
             if ret == gtk.RESPONSE_NO:
                 sys.exit(-1)
+
+        from Icons import register_icons
+        from MainWindow import MainWindow
+        from Manager.PreferenceManager import Prefs
 
         register_icons()
 

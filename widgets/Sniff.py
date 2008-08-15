@@ -5,6 +5,7 @@ import Backend
 
 from umitCore.I18N import _
 
+from App import PMApp
 from Manager.PreferenceManager import Prefs
 from higwidgets.higanimates import HIGAnimatedBar
 
@@ -251,8 +252,6 @@ class SniffPage(gtk.VBox):
 
         if not packet:
             return
-
-        from App import PMApp
 
         nb = PMApp().main_window.get_tab("MainTab").session_notebook
         session = nb.get_current_session()
