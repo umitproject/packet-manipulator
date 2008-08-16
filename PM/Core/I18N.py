@@ -33,8 +33,8 @@ except locale.Error, error_msg:
     # Latter, we call setlocale again, but now providing None as the second
     # argument, avoiding the occourrance of the exception.
     # Gtk will raise a warning in this case, but will work just perfectly.
-    print "Your locale setting is not supported. Umit will continue using \
-using your system's preferred language."
+    print "Your locale setting is not supported. PacketManipulator will" \
+          "continue using your system's preferred language."
     LC_ALL = locale.setlocale(locale.LC_ALL, None)
 
 LANG, ENC = locale.getdefaultlocale()
@@ -54,7 +54,7 @@ except ImportError:
     import __builtin__
     __builtin__.__dict__["_"] = str
 else:
-    lang = gettext.translation('umit', LOCALE_DIR, [LANG], fallback=True)
+    lang = gettext.translation('packetmanipulator', LOCALE_DIR, [LANG], fallback=True)
     _ = lang.gettext
 
 
