@@ -9,6 +9,7 @@ url="http://trac.umitproject.org/wiki/PacketManipulator/FrontEnd"
 license=('GPL')
 depends=('pygtk' 'python>=2.4' 'scapy')
 makedepends=('gcc' 'gtk2' 'make')
+optdepends=('psyco: additional speed up')
 
 source=($pkgname-${pkgver}.tar.gz)
 install=('packetmanipulator.install')
