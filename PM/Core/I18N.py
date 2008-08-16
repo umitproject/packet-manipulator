@@ -20,7 +20,7 @@
 
 import locale
 
-from Paths import LOCALE_DIR
+from Const import LOCALE_DIR
 
 try:
     # If the content of the environment variable LANG contains a string which

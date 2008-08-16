@@ -24,7 +24,7 @@ import os.path
 import gtk
 import gobject
 
-from PM.Core.Paths import PIXMAPS_DIR
+from PM.Core.Const import PIXMAPS_DIR
 
 icons = (
     'operation',

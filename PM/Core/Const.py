@@ -21,15 +21,18 @@
 import sys
 import os, os.path
 
+PM_VERSION = '0.1'
+PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 
 PLATFORM = sys.platform
 HOME = os.path.expanduser("~")
 CURRENT_DIR = os.getcwd()
 
 main_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
-main_dir = os.path.dirname(main_dir)
 
-if hasattr(sys, "frozen"):
+if PM_DEVELOPMENT:
+    main_dir = os.path.dirname(main_dir)
+elif hasattr(sys, "frozen"):
     main_dir = os.path.dirname(sys.executable)
 
 LOCALE_DIR = os.path.join(main_dir, "share", "locale")

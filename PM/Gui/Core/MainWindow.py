@@ -50,7 +50,7 @@ from PM.Gui.Dialogs.Preferences import PreferenceDialog
 from PM.Gui.Dialogs.Routes import RoutesDialog
 
 from PM.Core.I18N import _
-from PM.Core.Paths import PIXMAPS_DIR
+from PM.Core.Const import PIXMAPS_DIR, PM_VERSION, PM_DEVELOPMENT
 
 class MainWindow(gtk.Window):
     def __init__(self):
@@ -240,10 +240,11 @@ class MainWindow(gtk.Window):
     def __on_about(self, action):
         dialog = gtk.AboutDialog()
 
-        dialog.set_logo(gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMPAS_DIR, 'pm-logo.png')))
+        dialog.set_logo(gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png')))
 
-        dialog.set_version("0.1")
-        dialog.set_comments(_("Packet manipulation made easy"))
+        dialog.set_version(PM_VERSION)
+        dialog.set_comments(_("Packet manipulation made easy%s") % \
+                            ((PM_DEVELOPMENT) and (' (development snapshot)') or ('')))
         dialog.set_authors(['Francesco Piccinno <stack.box@gmail.com>'])
         dialog.set_license(_('This program is relased under the terms of GPLv2'))
         dialog.set_website_label('http://trac.umitproject.org/wiki/PacketManipulator/FrontEnd')
