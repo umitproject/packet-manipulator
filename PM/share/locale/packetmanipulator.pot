@@ -1,0 +1,619 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2008-08-16 18:00+CEST\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: ENCODING\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: PM/Backend/Scapy/Context/SendReceive.py:114
+msgid "Sending packet %d of %d"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/SendReceive.py:129
+msgid "%d of %d replie(s) received"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/SendReceive.py:132
+msgid "Received/Answered/Remaining %d/%d/%d"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sniff.py:46
+msgid "%s capture"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sniff.py:85
+msgid "Sniffing on %s"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sniff.py:173
+msgid "Finished sniffing on %s (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:45
+msgid "%d packets loaded."
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:60
+msgid "No packets to save"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:71
+msgid "%d packets written."
+msgstr ""
+
+#: PM/Backend/Scapy/wrapper.py:138
+msgid "No description"
+msgstr ""
+
+#: PM/Gui/Core/App.py:48
+msgid ""
+"You are running Packet Manipulator as non-root user!\n"
+"Some functionalities need root privileges to work\n"
+"\n"
+"Do you want to continue?"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:75
+msgid "File"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:76
+msgid "Open pcap file"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:76
+msgid "_Open"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:77
+msgid "Quit from application"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:77
+msgid "_Quit"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:79
+msgid "Capture"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:80
+msgid "Capture from interface"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:80
+msgid "_Interface"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:82
+msgid "Options"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:83
+msgid "Routes editor"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:83
+msgid "Routing table"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:84
+msgid "Preferences"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:84
+msgid "_Preferences"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:86
+msgid "Views"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:88
+msgid "Help"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:89
+msgid "About"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:246
+msgid "Packet manipulation made easy%s"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:249
+msgid "This program is relased under the terms of GPLv2"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:270
+msgid "Select a pcap file"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:274 PM/Gui/Pages/SniffPage.py:328
+msgid "Pcap files"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:275 PM/Gui/Pages/SniffPage.py:329
+msgid "Pcap gz files"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:276 PM/Gui/Pages/SniffPage.py:330
+msgid "All files"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:32
+msgid "<b>Options</b>"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:38
+msgid "Filter:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:39
+msgid "Capture file:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:40
+msgid "Max packet size:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:41 PM/Gui/Dialogs/Interface.py:42
+#: PM/Gui/Dialogs/Interface.py:43
+msgid "Stop after:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:70
+msgid "byte(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:72
+msgid "packet(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:73
+msgid "GB"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:73
+msgid "KB"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:73
+msgid "MB"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:74
+msgid "hour(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:74
+msgid "minute(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:74
+msgid "second(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:86
+msgid "Enable MAC name resolution"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:87
+msgid "Enable network name resolution"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:88
+msgid "Enable transport name resolution"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:90
+msgid "Update view in real mode"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:91
+msgid "Automatic view scrolling"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:93
+msgid "Capture in promiscuous mode"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:95
+msgid "Start in background mode"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:219
+msgid "<b>Avaiable Interfaces:</b>"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:231
+msgid "Name"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:241
+msgid "Description"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:241
+msgid "IP"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:278
+msgid "Interfaces - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:143
+msgid "GUI"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:148
+msgid "Use docking windows"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:151
+msgid "Sniff view font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:152
+msgid "Colorize rows"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:154
+msgid "Hex view window"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:155
+msgid "HexView font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:156
+msgid "Bytes per line:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:157
+msgid "Status tab"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:158
+msgid "Status tab font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:167
+msgid "Show views at startup"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:168
+msgid "Protocol selector"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:169
+msgid "Protocol properties"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:170
+msgid "Status view"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:171 PM/Gui/Tabs/OperationsTab.py:319
+msgid "Operations"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:172 PM/Gui/Tabs/VteTab.py:75
+msgid "Terminal"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:173
+msgid "Payload Hack tab"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:174
+msgid "Python shell"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:178
+msgid "Backend"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:183
+msgid "Backend system:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:185
+msgid "Default interface"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:191
+msgid "Preferences - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:34
+msgid "<b>Routing table:</b>"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:46
+msgid "Network"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:56
+msgid "Gateway"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:56
+msgid "Interface"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:56
+msgid "Netmask"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:56
+msgid "Output IP"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:95
+msgid "Routes - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:68 PM/Gui/Pages/SniffPage.py:158
+msgid "Protocol"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:163
+msgid "Send packet"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:164
+msgid "Send/receive packet"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:184
+msgid "Interval:"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:184
+msgid "No:"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:118
+msgid "Restart capturing"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:119
+msgid "Stop capturing"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:120
+msgid "Save packets"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:121
+msgid "Save packets as"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:157
+msgid "No."
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:157
+msgid "Source"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:157
+msgid "Time"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:158
+msgid "Destination"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:158
+msgid "Info"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:323
+msgid "Save Pcap file to"
+msgstr ""
+
+#: PM/Gui/Tabs/ConsoleTab.py:30
+msgid "Python Shell"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:64
+msgid "Transformation"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:71
+msgid "Lower"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:71
+msgid "Upper"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:85
+msgid "Encryption"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:107
+msgid "Encoding"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:114
+msgid "Base64 Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:114
+msgid "Base64 Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:114
+msgid "URL Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:114
+msgid "URL Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:128
+msgid "Database"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:135
+msgid "MsSQL Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:135
+msgid "MsSQL Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:135
+msgid "MySQL Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:135
+msgid "MySQL Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:251
+msgid "Hack Tab"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:49
+msgid "Sniff perspective"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:50
+msgid "Packet perspective"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:103
+msgid "Unsaved"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:110
+msgid "Editing %s"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:174
+msgid ""
+"The session is running.\n"
+"Do you want stop it?"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:193
+msgid ""
+"The session has unsaved changes.\n"
+"Do you want to save them?"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:162
+msgid "Operation"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:176 PM/Gui/Tabs/StatusTab.py:125
+msgid "Status"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:217
+msgid "Open"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:218
+msgid "Resume operation"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:219
+msgid "Pause operation"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:220
+msgid "Stop operation"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:221
+msgid "Restart operation"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:222
+msgid "Remove finished"
+msgstr ""
+
+#: PM/Gui/Tabs/PropertyTab.py:32
+msgid "Properties"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:64
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:201
+msgid "Protocols"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:139
+msgid "Layer %d"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:145
+msgid "Unknown layer"
+msgstr ""
+
+#: PM/Gui/Tabs/StatusTab.py:131
+msgid "PacketManipulator started on %s"
+msgstr ""
+
+#: PM/Gui/Tabs/StatusTab.py:132
+msgid "Using %s backend"
+msgstr ""
+
+#: PM/Gui/Tabs/StatusTab.py:133
+msgid "Good luck"
+msgstr ""
+
+#: PM/Gui/Tabs/VteTab.py:52
+msgid ""
+"<b>Loser!</b> You don't have vte python bindings installed.\n"
+"Download it from <tt>http://ftp.acc.umu.se/pub/GNOME/sources/vte/</tt>"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:195
+msgid "Set manually"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:261
+msgid ""
+"Cannot edit this field because I can't convert it to unicode.\n"
+"Try to edit the field with python shell or see if a new version of PM is avaiable. Maybe nopper added the HexView insert mode :)"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:271
+msgid "Editing string field"
+msgstr ""
+
+#: PM/higwidgets/higrichlists.py:177
+msgid "Include update"
+msgstr ""
+
+#: PM/higwidgets/higrichlists.py:185
+msgid "Uninstall"
+msgstr ""
+
+#: PM/higwidgets/higrichlists.py:250
+msgid "Disable"
+msgstr ""
+
+#: PM/higwidgets/higrichlists.py:257
+msgid "Enable"
+msgstr ""
+
+#: PM/higwidgets/higtooltips.py:19
+msgid "<span size=\"medium\"><b>Information</b></span>"
+msgstr ""
+
