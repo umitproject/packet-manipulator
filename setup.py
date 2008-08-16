@@ -23,73 +23,76 @@ import glob
 import os, os.path
 
 from distutils.core import setup, Extension
+from PM.Core.Const import PM_VERSION
 
 def getoutput(cmd):
     """Return output (stdout or stderr) of executing cmd in a shell."""
-    return getstatusoutput(cmd)[1]                                     
+    return getstatusoutput(cmd)[1]
 
 def getstatusoutput(cmd):
     """Return (status, output) of executing cmd in a shell."""
-    if sys.platform == 'win32':                               
-        pipe = os.popen(cmd, 'r')                             
-        text = pipe.read()                                    
-        sts = pipe.close() or 0                               
-        if text[-1:] == '\n':                                 
-            text = text[:-1]                                  
-        return sts, text                                      
-    else:                                                     
-        from commands import getstatusoutput                  
-        return getstatusoutput(cmd)                           
+    if sys.platform == 'win32':
+        pipe = os.popen(cmd, 'r')
+        text = pipe.read()
+        sts = pipe.close() or 0
+        if text[-1:] == '\n':
+            text = text[:-1]
+        return sts, text
+    else:
+        from commands import getstatusoutput
+        return getstatusoutput(cmd)
 
 def pkgc_version_check(name, longname, req_version):
     is_installed = not os.system('pkg-config --exists %s' % name)
-    if not is_installed:                                         
-        print "Could not find %s" % longname                     
-        return 0                                                 
+    if not is_installed:
+        print "Could not find %s" % longname
+        return 0
 
     orig_version = getoutput('pkg-config --modversion %s' % name)
-    version = map(int, orig_version.split('.'))                  
-    pkc_version = map(int, req_version.split('.'))               
+    version = map(int, orig_version.split('.'))
+    pkc_version = map(int, req_version.split('.'))
 
     if version >= pkc_version:
-        return 1              
-    else:                     
+        return 1
+    else:
         print "Warning: Too old version of %s" % longname
         print "         Need %s, but %s is installed" % \
-              (pkc_version, orig_version)                
-        self.can_build_ok = 0                            
-        return 0                                         
+              (pkc_version, orig_version)
+        self.can_build_ok = 0
+        return 0
 
 def pkc_get_include_dirs(names):
-    if type(names) != tuple:    
-        names = (names,)        
-    retval = []                 
-    for name in names:          
+    if type(names) != tuple:
+        names = (names,)
+    retval = []
+    for name in names:
         output = getoutput('pkg-config --cflags-only-I %s' % name)
-        retval.extend(output.replace('-I', '').split())           
-    return retval                                                 
+        retval.extend(output.replace('-I', '').split())
+    return retval
 
 def pkc_get_libraries(names):
-    if type(names) != tuple: 
-        names = (names,)     
-    retval = []              
-    for name in names:       
+    if type(names) != tuple:
+        names = (names,)
+    retval = []
+    for name in names:
         output = getoutput('pkg-config --libs-only-l %s' % name)
-        retval.extend(output.replace('-l', '').split())         
-    return retval                                               
+        retval.extend(output.replace('-l', '').split())
+    return retval
 
 def pkc_get_library_dirs(names):
-    if type(names) != tuple:    
-        names = (names,)        
-    retval = []                 
-    for name in names:          
+    if type(names) != tuple:
+        names = (names,)
+    retval = []
+    for name in names:
         output = getoutput('pkg-config --libs-only-L %s' % name)
-        retval.extend(output.replace('-L', '').split())         
+        retval.extend(output.replace('-L', '').split())
     return retval
 
 modules = []
 
 if os.getenv('PM_DOCKING', False):
+    print "OMG you're brave enough to give a try :O"
+
     os.chdir("PM/moo")
     os.system("make")
     os.system("make moo-pygtk.c")
@@ -98,22 +101,22 @@ if os.getenv('PM_DOCKING', False):
     if os.name != 'nt':
         moo = Extension(
             'PM.Gui.moo_stub',
-            [                 
+            [
                 'PM/moo/moopane.c',
                 'PM/moo/moopaned.c',
                 'PM/moo/moobigpaned.c',
                 'PM/moo/moomarshals.c',
-                'PM/moo/moo-pygtk.c',  
-                'PM/moo/moo-stub.c',   
-            ],                      
+                'PM/moo/moo-pygtk.c',
+                'PM/moo/moo-stub.c',
+            ],
             include_dirs=pkc_get_include_dirs('gtk+-2.0 pygtk-2.0'),
-            libraries=pkc_get_libraries('gtk+-2.0 pygtk-2.0'),      
+            libraries=pkc_get_libraries('gtk+-2.0 pygtk-2.0'),
             library_dirs=pkc_get_library_dirs('gtk+-2.0 pygtk-2.0'),
-        )                                                           
-    else:                                                           
-        moo = Extension(                                         
-            'PM.Gui.moo_stub',                                      
-            [                                                       
+        )
+    else:
+        moo = Extension(
+            'PM.Gui.moo_stub',
+            [
                 'PM/moo/moopane.c',
                 'PM/moo/moopaned.c',
                 'PM/moo/moobigpaned.c',
@@ -135,13 +138,14 @@ if os.getenv('PM_DOCKING', False):
     modules = [moo]
 
 mo_files = []
+
 for filepath in glob.glob("PM/share/locale/*/LC_MESSAGES/*.mo"):
     lang = filepath[len("PM/share/locale/"):]
     targetpath = os.path.dirname(os.path.join("share/locale",lang))
     mo_files.append((targetpath, [filepath]))
 
 setup(name         = 'PacketManipulator',
-      version      = '0.1',
+      version      = PM_VERSION,
       description  = 'Packet manipulation made easy',
       author       = 'Francesco Piccinno',
       author_email = 'stack.box@gmail.com',
