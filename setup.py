@@ -134,6 +134,12 @@ if os.getenv('PM_DOCKING', False):
 
     modules = [moo]
 
+mo_files = []
+for filepath in glob.glob("PM/share/locale/*/LC_MESSAGES/*.mo"):
+    lang = filepath[len("PM/share/locale/"):]
+    targetpath = os.path.dirname(os.path.join("share/locale",lang))
+    mo_files.append((targetpath, [filepath]))
+
 setup(name         = 'PacketManipulator',
       version      = '0.1',
       description  = 'Packet manipulation made easy',
@@ -160,7 +166,7 @@ setup(name         = 'PacketManipulator',
                       'PM.Gui.Widgets',
                       'PM.higwidgets'
                      ],
-      data_files   = [('share/pixmaps/umit', glob.glob("PM/share/pixmaps/umit/*"))],
+      data_files   = [('share/pixmaps/umit', glob.glob("PM/share/pixmaps/umit/*"))] + mo_files, 
       scripts      = ['PM/PacketManipulator'],
       ext_modules=modules
 )
