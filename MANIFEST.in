@@ -23,5 +23,5 @@ include PM/moo/detach.png
 include PM/moo/Makefile
 include PM/moo/dsutils.py
 
-recursive-include share/pixmaps/umit *.png
-recursive-include share/locale/it/LC_MESSAGES/ *.mo
+recursive-include PM/share/pixmaps/umit *.png
+recursive-include PM/share/locale/it/LC_MESSAGES/ *.mo
