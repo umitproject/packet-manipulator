@@ -1,5 +1,5 @@
 import gtk
-from moo_stub import BigPaned, PaneLabel, PaneParams
+from PM.Gui.moo_stub import BigPaned, PaneLabel, PaneParams
 
 PANE_CENTER = 'Center'
 PANE_RIGHT = 'Rigth'

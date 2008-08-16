@@ -29,10 +29,9 @@ HOME = os.path.expanduser("~")
 CURRENT_DIR = os.getcwd()
 
 main_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
+main_dir = os.path.dirname(main_dir)
 
-if PM_DEVELOPMENT:
-    main_dir = os.path.dirname(main_dir)
-elif hasattr(sys, "frozen"):
+if hasattr(sys, "frozen"):
     main_dir = os.path.dirname(sys.executable)
 
 LOCALE_DIR = os.path.join(main_dir, "share", "locale")

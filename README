@@ -24,6 +24,14 @@ Portability
      * Ubuntu
      * Microsoft Windows XP (send/receive not works - should be fixed soon)
 
+Installation
+
+   Use the distutils compatible setup.py file provided. If you want to
+   enable the moo docking library prepend a PM_DOCKING=1 as environ
+   before building:
+
+     $ PM_DOCKING=1 python setup.py install --prefix=/usr
+
 Dependencies
 
      * [1] Python 2.4 or higher
