@@ -1,0 +1,22 @@
+# Contributor: Francesco Piccinno <stack.box@gmail.com>
+
+pkgname=PacketManipulator
+pkgver=0.1
+pkgrel=1
+pkgdesc="Packet manipulation made easy"
+arch=('i686' 'x86_64' 'ppc')
+url="http://trac.umitproject.org/wiki/PacketManipulator/FrontEnd"
+license=('GPL')
+depends=('pygtk' 'python>=2.4' 'scapy')
+makedepends=('gcc' 'gtk2' 'make')
+
+# blah needs a url without ?format=raw
+source=("http://trac.umitproject.org/attachment/wiki/PacketManipulator/FrontEnd/PacketManipulato-0.1.tar.gz?format=raw")
+install=('')
+
+build() {
+  cd "$srcdir/$pkgname-${pkgver}"
+  python setup.py install --root=$startdir/pkg/
+}
+
+# vim:set ts=2 sw=2 et:
