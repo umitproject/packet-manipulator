@@ -88,7 +88,6 @@ class MiniButton(gtk.Button):
         self.set_size_request(*self.img.size_request())
 
 class HIGArrowButton(gtk.Button):
-    __gtype_name__ = "HIGArrowButton"
     __gsignals__ = {
         'force-clicked' : (gobject.SIGNAL_RUN_LAST, None, ())
     }
