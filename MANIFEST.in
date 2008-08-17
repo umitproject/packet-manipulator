@@ -1,4 +1,4 @@
-include umit README AUTHORS COPYING COPYING_HIGWIDGETS
+include README AUTHORS COPYING COPYING_HIGWIDGETS
 
 include PM/moo/moopane.c
 include PM/moo/moopaned.override
