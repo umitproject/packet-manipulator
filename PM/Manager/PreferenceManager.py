@@ -24,7 +24,7 @@ from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesNSImpl
 
-from Atoms import Singleton
+from PM.Core.Atoms import Singleton
 
 TYPES = {
     str        : 'str',

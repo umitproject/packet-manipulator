@@ -25,7 +25,7 @@ import os
 import sys
 
 from PM.Core.I18N import _
-from PM.Manager.Atoms import Singleton
+from PM.Core.Atoms import Singleton
 
 class PMApp(Singleton):
     def __init__(self):
