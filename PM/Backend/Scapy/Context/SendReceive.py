@@ -37,6 +37,7 @@ def register_send_receive_context(BaseSendReceiveContext):
             self.lock = Lock()
             self.sthread, self.rthread = None, None
             self.internal = False
+            self.title = _('Send/receive %s') % metapacket.summary()
 
         def get_all_data(self):
             with self.lock:
@@ -158,8 +159,11 @@ def register_send_receive_context(BaseSendReceiveContext):
         #    self.rthread.join()
 
         def join(self):
-            self.sthread.join()
-            self.rthread.join()
+            if self.sthread:
+                self.sthread.join()
+
+            if self.rthread:
+                self.rthread.join()
 
             self.running = False
 
