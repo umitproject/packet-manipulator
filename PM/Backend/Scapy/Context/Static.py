@@ -21,7 +21,7 @@
 from PM.Backend.Scapy.packet import MetaPacket
 from PM.Backend.Scapy.wrapper import rdpcap, wrpcap
 
-from umitCore.I18N import _
+from PM.Core.I18N import _
 
 def register_static_context(BaseStaticContext):
 

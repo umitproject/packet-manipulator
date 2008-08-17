@@ -22,9 +22,19 @@ from Timed import TimedContext
 from PM.Backend.Abstract.Context import register_send_context
 
 class BaseSendContext(TimedContext):
-    "This should be a derived class of TimedContext"
+    "A context to only send packets"
 
     def __init__(self, metapacket, count, inter, callback, udata=None):
+        """
+        Create a BaseSendContext object
+
+        @param metapacket the packet to send
+        @param count the n metapacket to send
+        @param inter the interval of time between two consecutive send
+        @param callback the function to call at every send
+        @param udata the user data to pass to callback
+        """
+
         self.packet = metapacket
         self.tot_count = count
         self.count = 0

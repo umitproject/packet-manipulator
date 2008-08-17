@@ -22,7 +22,13 @@ from Static import StaticContext
 from PM.Backend.Abstract.Context import register_timed_context
 
 class BaseTimedContext(StaticContext):
-    "This should be a derived class of StaticContext"
+    """
+    A TimedContext could be stopped/paused/resumed/restarted
+    and should be asynchronous so use threads to avoid UI freeze.
+
+    Use has_stop/has_pause/has_restart attribute to choose
+    what actions is supported by your TimedContext
+    """
 
     NOT_RUNNING, RUNNING, PAUSED = range(3)
 
@@ -39,23 +45,36 @@ class BaseTimedContext(StaticContext):
         StaticContext.__init__(self, '')
 
     def _start(self):
+        "The real start method you should override this"
         self.state = self.RUNNING
         return True
-    _resume = _start
-    _restart = _start
+
+    def _resume(self):
+        "The real resume method you should override this"
+        self.state = self.RUNNING
+        return True
+
+    def _restart(self):
+        "The real restart method you should override this"
+        self.state = self.RUNNING
+        return True
 
     def _stop(self):
+        "The real stop method you should override this"
         self.state = self.NOT_RUNNING
         return True
 
     def _pause(self):
+        "The real pause method you should override this"
         self.state = self.PAUSED
         return True
 
     def join(self):
+        "Join the child thread"
         pass
     
     def is_alive(self):
+        "Ponderate about overriding"
         return self._state != self.NOT_RUNNING
 
     def start(self):
@@ -125,7 +144,12 @@ class BaseTimedContext(StaticContext):
     def get_all_data(self):
         return self._data
 
-    state = property(get_state, set_state)
-    percentage = property(get_percentage, set_percentage)
+    state = property(get_state, set_state, \
+            doc="The TimedContext state (NOT_RUNNING/RUNNING/PAUSED)")
+
+    percentage = property(get_percentage, set_percentage, \
+            doc="The percentage of the timed context or None\n" \
+                "If None you should set the percentage to a random? value\n" \
+                "see pulse attribute in gtk.CellRendererProgress")
 
 TimedContext = register_timed_context(BaseTimedContext)

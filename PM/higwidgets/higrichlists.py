@@ -28,8 +28,8 @@ This module contains:
 import gtk
 import pango
 import gobject
-from higwidgets.higbuttons import HIGButton
-from umitCore.I18N import _
+from PM.higwidgets.higbuttons import HIGButton
+from PM.Core.I18N import _
 
 class HIGRichRow(gtk.EventBox):
     """

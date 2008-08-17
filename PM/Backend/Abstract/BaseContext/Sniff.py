@@ -22,11 +22,7 @@ from Timed import TimedContext
 from PM.Backend.Abstract.Context import register_sniff_context
 
 class BaseSniffContext(TimedContext):
-    """
-    A sniff context for controlling various options.
-
-    This should be a derived class of TimedContext
-    """
+    "A context to sniff on a given interface"
     
     has_stop = True
     has_resume = False
@@ -36,6 +32,27 @@ class BaseSniffContext(TimedContext):
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
                  resmac=True, resname=False, restransport=True, promisc=True, \
                  background=False, callback=None, udata=None):
+
+        """
+        Create a BaseSniffContext object
+
+        @param iface the interface to sniff from
+        @param filter the BPF filter to apply
+        @param maxsize the max size for every packet (0 no filter)
+        @param capfile the file where the packets are saved (in real time)
+        @param scount stop after scount packets sniffed (0 no filter)
+        @param stime stop after stime seconds (0 no filter)
+        @param ssize stop after ssize bytes (0 no filter)
+        @param real if the view should be updated in real time
+        @param scroll if the view shoud be scrolled at every packet received
+        @param resmac enable MAC resolution
+        @param resname enable name resolution
+        @param restransport enable transport resolution
+        @param promisc set the interface to promisc mode
+        @param background if the sniff context should be runned in background
+        @param callback a function to call at every packet sniffed
+        @param udata the user data to pass to callback
+        """
 
         self.iface = iface
         self.filter = filter

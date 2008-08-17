@@ -24,9 +24,9 @@
 import gtk
 import gobject
 
-from higwidgets.higspinner import HIGSpinner
-from higwidgets.higboxes import HIGHBox
-from higwidgets.higbuttons import HIGButton
+from PM.higwidgets.higspinner import HIGSpinner
+from PM.higwidgets.higboxes import HIGHBox
+from PM.higwidgets.higbuttons import HIGButton
 
 class HIGEditableLabel(gtk.EventBox):
     # called when label is changed .. if returns True new_value is setted

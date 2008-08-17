@@ -22,10 +22,23 @@ from Timed import TimedContext
 from PM.Backend.Abstract.Context import register_send_receive_context
 
 class BaseSendReceiveContext(TimedContext):
-    "This should be a derived class of TimedContext"
+    "A context to send and receive packets"
 
     def __init__(self, metapacket, count, inter, iface, \
                  scallback, rcallback, sudata=None, rudata=None):
+
+        """
+        Create a BaseSendReceiveContext object
+
+        @param metapacket the packet to send
+        @param count the n of metapacket to send
+        @param interval the interval between two consecutive send
+        @param iface the interface to listen on for replies
+        @param scallback the send callback to call at each send
+        @param rcallback the recv callback to call at each recv
+        @param sudata the user data for scallback
+        @param rudata the user data for rcallback
+        """
 
         self.packet = metapacket
         self.tot_count = count

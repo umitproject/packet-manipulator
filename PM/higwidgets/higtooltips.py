@@ -8,7 +8,7 @@ import gtk
 import gobject
 import cairo
 
-from umitCore.I18N import _
+from PM.Core.I18N import _
 
 class HIGTooltipData(object):
     """

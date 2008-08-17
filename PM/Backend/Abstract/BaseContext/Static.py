@@ -21,9 +21,20 @@
 from PM.Backend.Abstract.Context import register_static_context
 
 class BaseStaticContext(object):
+    """
+    This is a simple static context
+    """
+
     NOT_SAVED, SAVED = range(2)
 
     def __init__(self, title, fname=None):
+        """
+        Create a BaseStaticContext object
+
+        @param title the title for the session
+        @param fname the cap_file
+        """
+
         self._data = []
         self._title = title
         self._status = self.NOT_SAVED
@@ -38,9 +49,24 @@ class BaseStaticContext(object):
         self.title_callback = None
 
     def load(self):
+        """
+        Load the data from cap_file
+
+        @return True if ok or False
+        """
+
         self.status = self.SAVED
+        return True
+
     def save(self):
+        """
+        Save data to cap_file
+
+        @return True if ok or False
+        """
+
         self.status = self.SAVED
+        return True
 
     def get_summary(self):
         return self._summary
@@ -70,10 +96,19 @@ class BaseStaticContext(object):
     def set_cap_file(self, val):
         self._cap_file = val
 
-    data = property(get_data, set_data)
-    title = property(get_title, set_title)
-    summary = property(get_summary, set_summary)
-    status = property(get_status, set_status)
-    cap_file = property(get_cap_file, set_cap_file)
+    data = property(get_data, set_data, \
+            doc="A simple list to contain the MetaPackets")
+
+    title = property(get_title, set_title, \
+            doc="The title for the current session")
+
+    summary = property(get_summary, set_summary, \
+            doc="A summary string to describe the operation")
+
+    status = property(get_status, set_status, \
+            doc="A status flag (SAVED/NOT_SAVED)")
+
+    cap_file = property(get_cap_file, set_cap_file, \
+            doc="The cap_file where the file is saved or loaded")
 
 StaticContext = register_static_context(BaseStaticContext)
