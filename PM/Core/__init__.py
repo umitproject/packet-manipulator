@@ -22,4 +22,5 @@
 Gui/Backend indipendent functions provided by
     - I18N
     - Const
+    - Atoms
 """

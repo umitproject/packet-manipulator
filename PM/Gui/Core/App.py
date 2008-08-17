@@ -18,6 +18,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+"""
+This module contains the PMApp singleton object that gives access to
+the all PacketManipulator functionalities
+"""
+
 import gtk
 import gobject
 
@@ -28,6 +33,8 @@ from PM.Core.I18N import _
 from PM.Core.Atoms import Singleton
 
 class PMApp(Singleton):
+    "The PacketManipulator application singleton object"
+
     def __init__(self):
         gobject.threads_init()
 

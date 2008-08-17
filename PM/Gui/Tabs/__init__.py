@@ -18,3 +18,16 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+"""
+Tabs used in PacketManipulator are defined here.
+
+Tabs:
+    - ConsoleTab (python shell)
+    - HackTab (to modify a payload)
+    - MainTab (the main tab)
+    - OperationsTab (operations organizer)
+    - PropertyTab (protocols properties)
+    - ProtocolSelectorTab (protocol selector)
+    - StatusTab (status tab)
+    - VteTab (terminal tab)
+"""

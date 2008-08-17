@@ -18,6 +18,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+"""
+This module manages the stock icons registering and offers useful functions
+regarding icons and pixbufs
+"""
+
 import os
 import os.path
 
@@ -44,6 +49,8 @@ icons = (
 )
 
 def register_icons():
+    "Register icons with a IconFactory"
+
     factory = gtk.IconFactory()
     pix_dir = PIXMAPS_DIR
 
@@ -63,6 +70,8 @@ def register_icons():
     factory.add_default()
 
 def get_pixbuf(stock_id):
+    "Get the pixbuf for a stock item defined in icons"
+
     name, size = stock_id.split("_")
 
     if size == "small":

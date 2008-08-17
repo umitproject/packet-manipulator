@@ -18,6 +18,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+"""
+This module contains the MainWindow class
+"""
+
 import gtk
 import os
 
@@ -140,9 +144,22 @@ class MainWindow(gtk.Window):
         self.vbox = gtk.VBox(False, 2)
 
     def get_tab(self, name):
+        """
+        Get a tab from its name
+
+        @param name the name of the tab
+        """
+
         return self.registered_tabs[name]
 
     def register_tab(self, tab, show=True):
+        """
+        Register a tab
+
+        @param tab the Tab object
+        @param show if the Tab should be showed
+        """
+
         item = self.ui_manager.get_widget('/menubar/Views')
         menu = item.get_submenu()
 
