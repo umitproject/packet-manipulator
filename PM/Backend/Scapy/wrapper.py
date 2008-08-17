@@ -34,6 +34,9 @@ os.write = __new_write
 from scapy import *
 from PM.Manager.PreferenceManager import Prefs
 
+if not 'WINDOWS' in globals():
+    WINDOWS = False
+
 def change_interface(iface):
     if iface:
         conf.iface = iface

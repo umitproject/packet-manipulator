@@ -222,6 +222,9 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
 
     try:
         sock = conf.L2socket(iface=iface)
+
+        if not sock:
+            raise Exception('Unable to create a valid socket')
     except socket.error, (errno, err):
         raise Exception(err)
 

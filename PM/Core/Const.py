@@ -51,5 +51,3 @@ if os.path.exists(HOME) and \
    os.access(HOME, os.R_OK and os.W_OK) and \
    not os.path.exists(PM_HOME):
     os.mkdir(PM_HOME)
-else:
-    print "No permission to create %s" % PM_HOME
