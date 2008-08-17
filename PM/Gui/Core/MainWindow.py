@@ -277,8 +277,9 @@ class MainWindow(gtk.Window):
             iface = dialog.get_selected()
             args = dialog.get_options()
 
-            tab = self.get_tab("OperationsTab")
-            tab.tree.append_operation(SniffOperation(iface, **args))
+            if iface:
+                tab = self.get_tab("OperationsTab")
+                tab.tree.append_operation(SniffOperation(iface, **args))
 
         dialog.hide()
         dialog.destroy()

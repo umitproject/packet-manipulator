@@ -270,6 +270,18 @@ def send_packet(metapacket, count, inter, callback, udata=None):
 def find_all_devs():
     return []
 
+def route_resync():
+    pass
+
+def route_list():
+    return []
+
+def route_add(self, host, net, gw, dev):
+    pass
+
+def route_remove(self, host, net, gw, dev):
+    pass
+
 PMField = Field
 PMFlagsField = Flags
 
