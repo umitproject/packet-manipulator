@@ -154,6 +154,8 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
             inp, out, err = select(inmask, [], [], 0.05)
             if len(inp) == 0 or socket in inp:
                 r = socket.nonblock_recv()
+        elif WINDOWS:
+            r = socket.recv(MTU)
         else:
             inp, out, err = select(inmask, [], [], None)
             if len(inp) == 0:
@@ -181,6 +183,7 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
 
         if notans == 0:
             break
+    
     try:
         ac = cPickle.load(rdpipe)
     except EOFError:
