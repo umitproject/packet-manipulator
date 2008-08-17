@@ -23,7 +23,7 @@ import sys
 import signal
 
 try:
-    if os.getenv('PM_DEVELOPMENT', False):
+    if os.getenv('PM_NOPSYCO', False):
         raise ImportError
 
     import psyco

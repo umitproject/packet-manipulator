@@ -91,7 +91,7 @@ def get_proto(proto_name):
     return None
 
 def get_proto_layer(proto):
-    return None
+    return getattr(proto, '_pm_layer', None)
 
 def get_proto_fields(proto_inst):
     if isinstance(proto_inst, type) and isinstance(proto_inst, Packet):

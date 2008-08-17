@@ -34,6 +34,7 @@ PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 PLATFORM = sys.platform
 HOME = os.path.expanduser("~")
 CURRENT_DIR = os.getcwd()
+PM_HOME = os.path.join(HOME, '.PacketManipulator')
 
 main_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 main_dir = os.path.dirname(main_dir)
@@ -45,3 +46,10 @@ elif hasattr(sys, "frozen"):
 
 LOCALE_DIR = os.path.join(main_dir, "share", "locale")
 PIXMAPS_DIR = os.path.join(main_dir, "share", "pixmaps", "umit")
+
+if os.path.exists(HOME) and \
+   os.access(HOME, os.R_OK and os.W_OK) and \
+   not os.path.exists(PM_HOME):
+    os.mkdir(PM_HOME)
+else:
+    print "No permission to create %s" % PM_HOME

@@ -24,11 +24,13 @@ XML file using SAX parser provided by python
 """
 
 import sys
+import os.path
 
 from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesNSImpl
 
+from PM.Core.Const import PM_HOME
 from PM.Core.Atoms import Singleton
 
 TYPES = {
@@ -179,7 +181,7 @@ class Prefs(Singleton):
     }
 
     def __init__(self):
-        self.fname = 'pm-prefs.xml'
+        self.fname = os.path.join(PM_HOME, 'pm-prefs.xml')
         
         try:
             opts = self.load_options()
@@ -207,7 +209,3 @@ class Prefs(Singleton):
 
     def __getitem__(self, x):
         return self.options[x]
-
-if __name__ == "__main__":
-    Prefs().load_options('test.xml')
-
