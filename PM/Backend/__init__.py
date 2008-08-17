@@ -24,8 +24,6 @@ class VirtualIFace(object):
         self.description = desc                                          
         self.ip = ip
 
-from Abstract import *
-
 # Contexts
 from Abstract.BaseContext.Static import StaticContext
 from Abstract.BaseContext.Timed import TimedContext
@@ -33,4 +31,9 @@ from Abstract.BaseContext.Send import SendContext
 from Abstract.BaseContext.SendReceive import SendReceiveContext
 from Abstract.BaseContext.Sniff import SniffContext
 
-from Scapy import *
+from PM.Manager.PreferenceManager import Prefs
+
+if Prefs()['backend.system'].value.lower() == 'umpa':
+    from UMPA import *
+else:
+    from Scapy import *

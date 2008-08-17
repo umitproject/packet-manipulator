@@ -69,5 +69,9 @@ def register_sniff_context(context_class):
     print "!! SniffContext not overloaded"
     return context_class
 
-# TODO: choose UMPA?
-from PM.Backend.Scapy.Context import *
+from PM.Manager.PreferenceManager import Prefs
+
+if Prefs()['backend.system'].value.lower() == 'umpa':
+    from PM.Backend.UMPA.Context import *
+else:
+    from PM.Backend.Scapy.Context import *

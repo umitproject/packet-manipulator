@@ -25,6 +25,9 @@ from umpa.packets import Packet
 from umpa.protocols._protocols import Protocol
 from umpa.protocols._fields import *
 
+from umpa.extensions.XML import load as xml_load
+from umpa.extensions.XML import save as xml_save
+
 from inspect import isclass
 
 # Globals UMPA protocols

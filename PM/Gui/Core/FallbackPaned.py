@@ -75,8 +75,10 @@ class UmitPaned(gtk.VBox):
 
         if pos == gtk.POS_RIGHT or pos == gtk.POS_LEFT:
             self.hnotebook.append_page(widget, label)
+            self.hnotebook.set_tab_reorderable(widget, True)
         elif pos == gtk.POS_TOP or pos == gtk.POS_BOTTOM:
             self.vnotebook.append_page(widget, label)
+            self.vnotebook.set_tab_reorderable(widget, True)
 
     def remove_view(self, tab):
         pos = tab.tab_position
