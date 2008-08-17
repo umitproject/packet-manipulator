@@ -1,26 +1,39 @@
+# , 2008.
 msgid ""
 msgstr ""
 "Project-Id-Version: PacketManipulator 0.1\n"
-"POT-Creation-Date: 2008-08-16 18:00+CEST\n"
+"POT-Creation-Date: 2008-08-17 17:54+CEST\n"
 "Last-Translator: Francesco Piccinno <stack.box@gmail.com>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
-#: PM/Backend/Scapy/Context/SendReceive.py:114
+#: PM/Backend/Scapy/Context/Send.py:73 PM/Backend/UMPA/Context/Send.py:73
+#, fuzzy
+msgid "%d packet(s) sent."
+msgstr "%d pacchetti salvati."
+
+#: PM/Backend/Scapy/Context/Send.py:75
+#: PM/Backend/Scapy/Context/SendReceive.py:115
+#: PM/Backend/UMPA/Context/Send.py:75
 msgid "Sending packet %d of %d"
 msgstr "Invio il pacchetto %d di %d"
 
-#: PM/Backend/Scapy/Context/SendReceive.py:129
+#: PM/Backend/Scapy/Context/SendReceive.py:40
+#, fuzzy
+msgid "Send/receive %s"
+msgstr "Invia/ricevi %s"
+
+#: PM/Backend/Scapy/Context/SendReceive.py:130
 msgid "%d of %d replie(s) received"
 msgstr "%d di %d risposte ricevute"
 
-#: PM/Backend/Scapy/Context/SendReceive.py:132
+#: PM/Backend/Scapy/Context/SendReceive.py:133
 msgid "Received/Answered/Remaining %d/%d/%d"
 msgstr "Ricevuti/Risposte/Rimanenti %d/%d/%d"
 
-#: PM/Backend/Scapy/Context/Sniff.py:46
+#: PM/Backend/Scapy/Context/Sniff.py:46 PM/Backend/UMPA/Context/Sniff.py:41
 msgid "%s capture"
 msgstr "%s cattura"
 
@@ -32,15 +45,15 @@ msgstr "Ascolto su %s"
 msgid "Finished sniffing on %s (%s)"
 msgstr "Fine ascolto su %s (%s)"
 
-#: PM/Backend/Scapy/Context/Static.py:45
+#: PM/Backend/Scapy/Context/Static.py:45 PM/Backend/UMPA/Context/Static.py:46
 msgid "%d packets loaded."
 msgstr "%d pacchetti caricati."
 
-#: PM/Backend/Scapy/Context/Static.py:60
+#: PM/Backend/Scapy/Context/Static.py:60 PM/Backend/UMPA/Context/Static.py:61
 msgid "No packets to save"
 msgstr "Nessun pacchetto da salvare"
 
-#: PM/Backend/Scapy/Context/Static.py:71
+#: PM/Backend/Scapy/Context/Static.py:71 PM/Backend/UMPA/Context/Static.py:72
 msgid "%d packets written."
 msgstr "%d pacchetti salvati."
 
@@ -48,7 +61,20 @@ msgstr "%d pacchetti salvati."
 msgid "No description"
 msgstr "Nessuna descrizione"
 
-#: PM/Gui/Core/App.py:48
+#: PM/Backend/UMPA/Context/SendReceive.py:37
+#, fuzzy
+msgid "Send/Receive %s"
+msgstr "Invia/ricevi %s"
+
+#: PM/Backend/UMPA/Context/SendReceive.py:40
+msgid "Send/Receive is not avaiable with this backend"
+msgstr "Invia/ricevi non è disponibile con questo backend"
+
+#: PM/Backend/UMPA/Context/Sniff.py:47
+msgid "Sniff is not avaiable with this backend"
+msgstr "La cattura non è disponibile con questo backend"
+
+#: PM/Gui/Core/App.py:55
 msgid ""
 "You are running Packet Manipulator as non-root user!\n"
 "Some functionalities need root privileges to work\n"
@@ -56,368 +82,369 @@ msgid ""
 "Do you want to continue?"
 msgstr ""
 "Stai usando Packet Manipulator come utente non amministratore!\n"
-"Qualche funzionalità richiede questi privilegi per poter funzionare correttamente\n"
+"Qualche funzionalità richiede questi privilegi per poter funzionare "
+"correttamente\n"
 "\n"
 "Vuoi continuare comunque?"
 
-#: PM/Gui/Core/MainWindow.py:75
+#: PM/Gui/Core/MainWindow.py:79
 msgid "File"
 msgstr "File"
 
-#: PM/Gui/Core/MainWindow.py:76
+#: PM/Gui/Core/MainWindow.py:80
 msgid "Open pcap file"
 msgstr "Apri file pcap"
 
-#: PM/Gui/Core/MainWindow.py:76
+#: PM/Gui/Core/MainWindow.py:80
 msgid "_Open"
 msgstr "Apri"
 
-#: PM/Gui/Core/MainWindow.py:77
+#: PM/Gui/Core/MainWindow.py:81
 msgid "Quit from application"
 msgstr "Esci dall'applicazione"
 
-#: PM/Gui/Core/MainWindow.py:77
+#: PM/Gui/Core/MainWindow.py:81
 msgid "_Quit"
 msgstr "Esci"
 
-#: PM/Gui/Core/MainWindow.py:79
+#: PM/Gui/Core/MainWindow.py:83
 msgid "Capture"
 msgstr "Cattura"
 
-#: PM/Gui/Core/MainWindow.py:80
+#: PM/Gui/Core/MainWindow.py:84
 msgid "Capture from interface"
 msgstr "Cattura dall'interfaccia"
 
-#: PM/Gui/Core/MainWindow.py:80
+#: PM/Gui/Core/MainWindow.py:84
 msgid "_Interface"
 msgstr "_Interfaccia"
 
-#: PM/Gui/Core/MainWindow.py:82
+#: PM/Gui/Core/MainWindow.py:86
 msgid "Options"
 msgstr "Opzioni"
 
-#: PM/Gui/Core/MainWindow.py:83
+#: PM/Gui/Core/MainWindow.py:87
 msgid "Routes editor"
 msgstr "Modifica rotte"
 
-#: PM/Gui/Core/MainWindow.py:83
+#: PM/Gui/Core/MainWindow.py:87
 msgid "Routing table"
 msgstr "Tabella rotte"
 
-#: PM/Gui/Core/MainWindow.py:84
+#: PM/Gui/Core/MainWindow.py:88
 msgid "Preferences"
 msgstr "Preferenze"
 
-#: PM/Gui/Core/MainWindow.py:84
+#: PM/Gui/Core/MainWindow.py:88
 msgid "_Preferences"
 msgstr "_Preferenze"
 
-#: PM/Gui/Core/MainWindow.py:86
+#: PM/Gui/Core/MainWindow.py:90
 msgid "Views"
 msgstr "Schede"
 
-#: PM/Gui/Core/MainWindow.py:88
+#: PM/Gui/Core/MainWindow.py:92
 msgid "Help"
 msgstr "Aiuto"
 
-#: PM/Gui/Core/MainWindow.py:89
+#: PM/Gui/Core/MainWindow.py:93
 msgid "About"
 msgstr "Riguardo"
 
-#: PM/Gui/Core/MainWindow.py:246
+#: PM/Gui/Core/MainWindow.py:263
 msgid "Packet manipulation made easy%s"
 msgstr "Packet manipulation made easy%s"
 
-#: PM/Gui/Core/MainWindow.py:249
+#: PM/Gui/Core/MainWindow.py:266
 msgid "This program is relased under the terms of GPLv2"
 msgstr "Questo programma è rilasciato sotto i termini della licenza GPLv2"
 
-#: PM/Gui/Core/MainWindow.py:270
+#: PM/Gui/Core/MainWindow.py:287
 msgid "Select a pcap file"
 msgstr "Seleziona un file pcap"
 
-#: PM/Gui/Core/MainWindow.py:274 PM/Gui/Pages/SniffPage.py:328
+#: PM/Gui/Core/MainWindow.py:291 PM/Gui/Pages/SniffPage.py:332
 msgid "Pcap files"
 msgstr "File pcap"
 
-#: PM/Gui/Core/MainWindow.py:275 PM/Gui/Pages/SniffPage.py:329
+#: PM/Gui/Core/MainWindow.py:292 PM/Gui/Pages/SniffPage.py:333
 msgid "Pcap gz files"
 msgstr "File pcap gz"
 
-#: PM/Gui/Core/MainWindow.py:276 PM/Gui/Pages/SniffPage.py:330
+#: PM/Gui/Core/MainWindow.py:293 PM/Gui/Pages/SniffPage.py:334
 msgid "All files"
 msgstr "Tutti i file"
 
-#: PM/Gui/Dialogs/Interface.py:32
+#: PM/Gui/Dialogs/Interface.py:36
 msgid "<b>Options</b>"
 msgstr "<b>Opzioni</b>"
 
-#: PM/Gui/Dialogs/Interface.py:38
+#: PM/Gui/Dialogs/Interface.py:42
 msgid "Filter:"
 msgstr "Filtro:"
 
-#: PM/Gui/Dialogs/Interface.py:39
+#: PM/Gui/Dialogs/Interface.py:43
 msgid "Capture file:"
 msgstr "File cattura:"
 
-#: PM/Gui/Dialogs/Interface.py:40
+#: PM/Gui/Dialogs/Interface.py:44
 msgid "Max packet size:"
 msgstr "Taglia massima pacchetto:"
 
-#: PM/Gui/Dialogs/Interface.py:41 PM/Gui/Dialogs/Interface.py:42
-#: PM/Gui/Dialogs/Interface.py:43
+#: PM/Gui/Dialogs/Interface.py:45 PM/Gui/Dialogs/Interface.py:46
+#: PM/Gui/Dialogs/Interface.py:47
 msgid "Stop after:"
 msgstr "Interrompi dopo:"
 
-#: PM/Gui/Dialogs/Interface.py:70
+#: PM/Gui/Dialogs/Interface.py:74
 msgid "byte(s)"
 msgstr "byte(s)"
 
-#: PM/Gui/Dialogs/Interface.py:72
+#: PM/Gui/Dialogs/Interface.py:76
 msgid "packet(s)"
 msgstr "pacchetti"
 
-#: PM/Gui/Dialogs/Interface.py:73
+#: PM/Gui/Dialogs/Interface.py:77
 msgid "GB"
 msgstr "GB"
 
-#: PM/Gui/Dialogs/Interface.py:73
+#: PM/Gui/Dialogs/Interface.py:77
 msgid "KB"
 msgstr "KB"
 
-#: PM/Gui/Dialogs/Interface.py:73
+#: PM/Gui/Dialogs/Interface.py:77
 msgid "MB"
 msgstr "MB"
 
-#: PM/Gui/Dialogs/Interface.py:74
+#: PM/Gui/Dialogs/Interface.py:78
 msgid "hour(s)"
 msgstr "ore"
 
-#: PM/Gui/Dialogs/Interface.py:74
+#: PM/Gui/Dialogs/Interface.py:78
 msgid "minute(s)"
 msgstr "minuti"
 
-#: PM/Gui/Dialogs/Interface.py:74
+#: PM/Gui/Dialogs/Interface.py:78
 msgid "second(s)"
 msgstr "secondi"
 
-#: PM/Gui/Dialogs/Interface.py:86
+#: PM/Gui/Dialogs/Interface.py:90
 msgid "Enable MAC name resolution"
 msgstr "Abilita la risoluzione dei MAC"
 
-#: PM/Gui/Dialogs/Interface.py:87
+#: PM/Gui/Dialogs/Interface.py:91
 msgid "Enable network name resolution"
 msgstr "Abilita la risoluzione dei network name"
 
-#: PM/Gui/Dialogs/Interface.py:88
+#: PM/Gui/Dialogs/Interface.py:92
 msgid "Enable transport name resolution"
 msgstr "Abilita la risoluzione dei nomi"
 
-#: PM/Gui/Dialogs/Interface.py:90
+#: PM/Gui/Dialogs/Interface.py:94
 msgid "Update view in real mode"
 msgstr "Aggiorna in tempo reale"
 
-#: PM/Gui/Dialogs/Interface.py:91
+#: PM/Gui/Dialogs/Interface.py:95
 msgid "Automatic view scrolling"
 msgstr "Esegui scrolling automatico"
 
-#: PM/Gui/Dialogs/Interface.py:93
+#: PM/Gui/Dialogs/Interface.py:97
 msgid "Capture in promiscuous mode"
 msgstr "Cattura in modalità promiscua"
 
-#: PM/Gui/Dialogs/Interface.py:95
+#: PM/Gui/Dialogs/Interface.py:99
 msgid "Start in background mode"
 msgstr "Avvia in secondo piano"
 
-#: PM/Gui/Dialogs/Interface.py:219
+#: PM/Gui/Dialogs/Interface.py:223
 msgid "<b>Avaiable Interfaces:</b>"
 msgstr "<b>Interfacce disponibili:</b>"
 
-#: PM/Gui/Dialogs/Interface.py:231
+#: PM/Gui/Dialogs/Interface.py:235
 msgid "Name"
 msgstr " Nome"
 
-#: PM/Gui/Dialogs/Interface.py:241
+#: PM/Gui/Dialogs/Interface.py:245
 msgid "Description"
 msgstr "Descrizione"
 
-#: PM/Gui/Dialogs/Interface.py:241
+#: PM/Gui/Dialogs/Interface.py:245
 msgid "IP"
 msgstr "IP"
 
-#: PM/Gui/Dialogs/Interface.py:278
+#: PM/Gui/Dialogs/Interface.py:282
 msgid "Interfaces - PacketManipulator"
 msgstr "Interfacce - PacketManipulator"
 
-#: PM/Gui/Dialogs/Preferences.py:143
+#: PM/Gui/Dialogs/Preferences.py:147
 msgid "GUI"
 msgstr "GUI"
 
-#: PM/Gui/Dialogs/Preferences.py:148
+#: PM/Gui/Dialogs/Preferences.py:152
 msgid "Use docking windows"
 msgstr "Usa finestre docking"
 
-#: PM/Gui/Dialogs/Preferences.py:151
+#: PM/Gui/Dialogs/Preferences.py:155
 msgid "Sniff view font:"
 msgstr "Font per la visuale cattura:"
 
-#: PM/Gui/Dialogs/Preferences.py:152
+#: PM/Gui/Dialogs/Preferences.py:156
 msgid "Colorize rows"
 msgstr "Colora le righe"
 
-#: PM/Gui/Dialogs/Preferences.py:154
+#: PM/Gui/Dialogs/Preferences.py:158
 msgid "Hex view window"
 msgstr "Finestra esadecimale"
 
-#: PM/Gui/Dialogs/Preferences.py:155
+#: PM/Gui/Dialogs/Preferences.py:159
 msgid "HexView font:"
 msgstr "Font per visuale esadecimale:"
 
-#: PM/Gui/Dialogs/Preferences.py:156
+#: PM/Gui/Dialogs/Preferences.py:160
 msgid "Bytes per line:"
 msgstr "Numero byte per linea:"
 
-#: PM/Gui/Dialogs/Preferences.py:157
+#: PM/Gui/Dialogs/Preferences.py:161
 msgid "Status tab"
 msgstr "Scheda stato"
 
-#: PM/Gui/Dialogs/Preferences.py:158
+#: PM/Gui/Dialogs/Preferences.py:162
 msgid "Status tab font:"
 msgstr "Font per la scheda di stato:"
 
-#: PM/Gui/Dialogs/Preferences.py:167
+#: PM/Gui/Dialogs/Preferences.py:171
 msgid "Show views at startup"
 msgstr "Mostra schede all'avvio"
 
-#: PM/Gui/Dialogs/Preferences.py:168
+#: PM/Gui/Dialogs/Preferences.py:172
 msgid "Protocol selector"
 msgstr "Selettore di protocollo"
 
-#: PM/Gui/Dialogs/Preferences.py:169
+#: PM/Gui/Dialogs/Preferences.py:173
 msgid "Protocol properties"
 msgstr "Proprietà protocollo"
 
-#: PM/Gui/Dialogs/Preferences.py:170
+#: PM/Gui/Dialogs/Preferences.py:174
 msgid "Status view"
 msgstr "Scheda di stato"
 
-#: PM/Gui/Dialogs/Preferences.py:171 PM/Gui/Tabs/OperationsTab.py:319
+#: PM/Gui/Dialogs/Preferences.py:175 PM/Gui/Tabs/OperationsTab.py:319
 msgid "Operations"
 msgstr "Operazioni"
 
-#: PM/Gui/Dialogs/Preferences.py:172 PM/Gui/Tabs/VteTab.py:75
+#: PM/Gui/Dialogs/Preferences.py:176 PM/Gui/Tabs/VteTab.py:75
 msgid "Terminal"
 msgstr "Terminale"
 
-#: PM/Gui/Dialogs/Preferences.py:173
+#: PM/Gui/Dialogs/Preferences.py:177
 msgid "Payload Hack tab"
 msgstr "Scheda Hack Payload"
 
-#: PM/Gui/Dialogs/Preferences.py:174
+#: PM/Gui/Dialogs/Preferences.py:178
 msgid "Python shell"
 msgstr "Interprete Python"
 
-#: PM/Gui/Dialogs/Preferences.py:178
+#: PM/Gui/Dialogs/Preferences.py:182
 msgid "Backend"
 msgstr "Backend"
 
-#: PM/Gui/Dialogs/Preferences.py:183
+#: PM/Gui/Dialogs/Preferences.py:187
 msgid "Backend system:"
 msgstr "Sistem di backend:"
 
-#: PM/Gui/Dialogs/Preferences.py:185
+#: PM/Gui/Dialogs/Preferences.py:189
 msgid "Default interface"
 msgstr "Interfaccia predefinita:"
 
-#: PM/Gui/Dialogs/Preferences.py:191
+#: PM/Gui/Dialogs/Preferences.py:195
 msgid "Preferences - PacketManipulator"
 msgstr "Preferenze - PacketManipulator"
 
-#: PM/Gui/Dialogs/Routes.py:34
+#: PM/Gui/Dialogs/Routes.py:38
 msgid "<b>Routing table:</b>"
 msgstr "<b>Tabella rotte:</b>"
 
-#: PM/Gui/Dialogs/Routes.py:46
+#: PM/Gui/Dialogs/Routes.py:50
 msgid "Network"
 msgstr "Rete"
 
-#: PM/Gui/Dialogs/Routes.py:56
+#: PM/Gui/Dialogs/Routes.py:60
 msgid "Gateway"
 msgstr "Gateway"
 
-#: PM/Gui/Dialogs/Routes.py:56
+#: PM/Gui/Dialogs/Routes.py:60
 msgid "Interface"
 msgstr "Interfaccia"
 
-#: PM/Gui/Dialogs/Routes.py:56
+#: PM/Gui/Dialogs/Routes.py:60
 msgid "Netmask"
 msgstr "Maschera di rete"
 
-#: PM/Gui/Dialogs/Routes.py:56
+#: PM/Gui/Dialogs/Routes.py:60
 msgid "Output IP"
 msgstr "IP di uscita"
 
-#: PM/Gui/Dialogs/Routes.py:95
+#: PM/Gui/Dialogs/Routes.py:99
 msgid "Routes - PacketManipulator"
 msgstr "Rotte - PacketManipulator"
 
-#: PM/Gui/Pages/PacketPage.py:68 PM/Gui/Pages/SniffPage.py:158
+#: PM/Gui/Pages/PacketPage.py:72 PM/Gui/Pages/SniffPage.py:162
 msgid "Protocol"
 msgstr "Protocollo"
 
-#: PM/Gui/Pages/PacketPage.py:163
+#: PM/Gui/Pages/PacketPage.py:167
 msgid "Send packet"
 msgstr "Invia pacchetto"
 
-#: PM/Gui/Pages/PacketPage.py:164
+#: PM/Gui/Pages/PacketPage.py:168
 msgid "Send/receive packet"
 msgstr "Invia/ricevi pacchetto"
 
-#: PM/Gui/Pages/PacketPage.py:184
+#: PM/Gui/Pages/PacketPage.py:188
 msgid "Interval:"
 msgstr "Intervallo:"
 
-#: PM/Gui/Pages/PacketPage.py:184
+#: PM/Gui/Pages/PacketPage.py:188
 msgid "No:"
 msgstr "Num:"
 
-#: PM/Gui/Pages/SniffPage.py:118
+#: PM/Gui/Pages/SniffPage.py:122
 msgid "Restart capturing"
 msgstr "Riavvia cattura"
 
-#: PM/Gui/Pages/SniffPage.py:119
+#: PM/Gui/Pages/SniffPage.py:123
 msgid "Stop capturing"
 msgstr "Ferma cattura"
 
-#: PM/Gui/Pages/SniffPage.py:120
+#: PM/Gui/Pages/SniffPage.py:124
 msgid "Save packets"
 msgstr "Salva i pacchetti"
 
-#: PM/Gui/Pages/SniffPage.py:121
+#: PM/Gui/Pages/SniffPage.py:125
 msgid "Save packets as"
 msgstr "Salva i pacchetti come"
 
-#: PM/Gui/Pages/SniffPage.py:157
+#: PM/Gui/Pages/SniffPage.py:161
 msgid "No."
 msgstr "Num."
 
-#: PM/Gui/Pages/SniffPage.py:157
+#: PM/Gui/Pages/SniffPage.py:161
 msgid "Source"
 msgstr "Sorgente"
 
-#: PM/Gui/Pages/SniffPage.py:157
+#: PM/Gui/Pages/SniffPage.py:161
 msgid "Time"
 msgstr "Tempo"
 
-#: PM/Gui/Pages/SniffPage.py:158
+#: PM/Gui/Pages/SniffPage.py:162
 msgid "Destination"
 msgstr "Destinazione"
 
-#: PM/Gui/Pages/SniffPage.py:158
+#: PM/Gui/Pages/SniffPage.py:162
 msgid "Info"
 msgstr "Informazioni"
 
-#: PM/Gui/Pages/SniffPage.py:323
+#: PM/Gui/Pages/SniffPage.py:327
 msgid "Save Pcap file to"
 msgstr "Salva file pcap in"
 
@@ -553,16 +580,28 @@ msgstr "Rimuovi finite"
 msgid "Properties"
 msgstr "Proprietà"
 
-#: PM/Gui/Tabs/ProtocolSelectorTab.py:64
-#: PM/Gui/Tabs/ProtocolSelectorTab.py:201
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:51
+msgid "Sort descending"
+msgstr "Ordine alfabetico inverso"
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:52
+msgid "Sort ascending"
+msgstr "Ordine alfabetico"
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:53
+msgid "Sort by layer"
+msgstr "Ordina per layer"
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:68
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:205
 msgid "Protocols"
 msgstr "Protocolli"
 
-#: PM/Gui/Tabs/ProtocolSelectorTab.py:139
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:143
 msgid "Layer %d"
 msgstr "Layer %d"
 
-#: PM/Gui/Tabs/ProtocolSelectorTab.py:145
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:149
 msgid "Unknown layer"
 msgstr "Layer sconosciuto"
 
@@ -593,11 +632,14 @@ msgstr "Imposta manualmente"
 #: PM/Gui/Widgets/PropertyGrid.py:261
 msgid ""
 "Cannot edit this field because I can't convert it to unicode.\n"
-"Try to edit the field with python shell or see if a new version of PM is avaiable. Maybe nopper added the HexView insert mode :)"
+"Try to edit the field with python shell or see if a new version of PM is "
+"avaiable. Maybe nopper added the HexView insert mode :)"
 msgstr ""
-"Non posso modificare questo attributo perche non riesco a convertirlo in stringa utf8.\n"
-"Prova a editarlo con l'interprete python o controlla la disponibilità di una nuova versione di PM. Probabilmente nopper avrà "
-"aggiunto un HexView con modalità modifica :)"
+"Non posso modificare questo attributo perche non riesco a convertirlo in "
+"stringa utf8.\n"
+"Prova a editarlo con l'interprete python o controlla la disponibilità di una "
+"nuova versione di PM. Probabilmente nopper avrà aggiunto un HexView con "
+"modalità modifica :)"
 
 #: PM/Gui/Widgets/PropertyGrid.py:271
 msgid "Editing string field"

@@ -18,6 +18,7 @@ TODO list (not ordered):
 - graph page like scapy
 - fuzzing
 - xml file loader
-- rmeote server (xml-rpc)? blah
+- remote server (xml-rpc)? blah
 - Implementing a get_icon for operation to use only the object in ListStore
 - same in property grid
+- disable the actions in operation popup menu (has_pause ..)
