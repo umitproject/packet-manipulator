@@ -137,7 +137,10 @@ def get_field_desc(field):
     if not field:
         return _('No description')
 
-    return field.__class__.__name__
+    if field.__doc__:
+        return field.__doc__
+    else:
+        return field.__class__.__name__
 
 def get_field_name(field):
     return field.name

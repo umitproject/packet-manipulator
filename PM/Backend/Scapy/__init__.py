@@ -21,6 +21,9 @@
 from packet import *
 from wrapper import *
 from utils import *
+from doc import apply_doc
+
+apply_doc()
 
 PMField             = Field
 PMFlagsField        = FlagsField
