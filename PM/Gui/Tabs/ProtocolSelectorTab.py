@@ -47,9 +47,13 @@ class ProtocolTree(gtk.VBox):
         callbacks = (self.__on_sort_descending,
                      self.__on_sort_ascending,
                      self.__on_sort_layer)
+
+        tooltips = (_('Sort descending'),
+                    _('Sort ascending'),
+                    _('Sort by layer'))
         
-        for stock, cb in zip(stocks, callbacks):
-            action = gtk.Action('', '', '', stock)
+        for tooltip, stock, cb in zip(tooltips, stocks, callbacks):
+            action = gtk.Action(None, None, tooltip, stock)
             item = action.create_tool_item()
             item.connect('clicked', cb)
             

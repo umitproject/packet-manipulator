@@ -47,10 +47,6 @@ class MetaPacket:
 
     def summary(self):
         return self.root.summary()
-        ret = ""
-        for r in self.root:
-            ret += self.root._elt2sum(r)
-        return ret
 
     def get_time(self):
         #self.root.time

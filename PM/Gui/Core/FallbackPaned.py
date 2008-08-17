@@ -71,7 +71,7 @@ class UmitPaned(gtk.VBox):
         label.pack_start(gtk.Label(tab.label_text))
         label.show_all()
 
-        print "Adding widget", widget, "to", pos
+        #print "Adding widget", widget, "to", pos
 
         if pos == gtk.POS_RIGHT or pos == gtk.POS_LEFT:
             self.hnotebook.append_page(widget, label)

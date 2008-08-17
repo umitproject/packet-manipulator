@@ -22,7 +22,7 @@ import os, os.path
 
 from umpa import protocols
 from umpa.packets import Packet
-from umpa.protocols import Protocol
+from umpa.protocols._protocols import Protocol
 from umpa.protocols._fields import *
 
 from inspect import isclass
@@ -61,11 +61,19 @@ def load_gprotocols():
 
     return glob
 
+gprotos = load_gprotocols()
+
+###############################################################################
+# Protocols functions
+###############################################################################
 def get_protocols():
-    """
-    @return a list of type [(Protocol, name)]
-    """
     return gprotos
+
+def get_proto_class_name(protok):
+    return protok.__name__
+
+def get_proto_name(proto_inst):
+    return get_proto_class_name(proto_inst.__class__)
 
 def get_proto(proto_name):
     for proto in gprotos:
@@ -79,13 +87,29 @@ def get_proto(proto_name):
     print "Protocol named %s not found." % proto_name
     return None
 
-def get_proto_class_name(protok):
-    return protok.__name__
+def get_proto_layer(proto):
+    return proto.layer
 
-def get_proto_name(proto_inst):
-    return get_proto_class_name(proto_inst.__class__)
+def get_proto_fields(proto_inst):
+    return proto_inst.get_fields()
 
-# Fields section
+###############################################################################
+# Packet functions
+###############################################################################
+
+def get_packet_protos(packet):
+    for proto in packet.root.protos:
+        yield proto
+
+def get_packet_raw(metapack):
+    return metapack.root.get_raw()
+
+###############################################################################
+# Fields functions
+###############################################################################
+
+def get_field_desc(field):
+    return field.__doc__
 
 def get_field_name(field):
     return field.name
@@ -118,7 +142,7 @@ def get_field_value_repr(proto, field):
 def get_field_size(proto, field):
     return field.bits
 
-def get_field_offset(proto, field):
+def get_field_offset(packet, proto, field):
     return proto.get_offset(field)
 
 def get_field_enumeration_s2i(field):
@@ -127,43 +151,26 @@ def get_field_enumeration_s2i(field):
 def get_field_enumeration_i2s(field):
     return [(v, k) for (k, v) in field.enumerable.items()]
 
-def get_keyflag_value(proto, flag, key):
-    return flag.get()[key].get()
+def is_field_autofilled(field):
+    return field.auto
+
+###############################################################################
+# Flag fields functions
+###############################################################################
 
 def set_keyflag_value(proto, flag, key, value):
     return flag.get()[key].set(value)
 
-def is_field_autofilled(field):
-    return field.auto
-
-def get_field_desc(field):
-    return field.__doc__
+def get_keyflag_value(proto, flag, key):
+    return flag.get()[key].get()
 
 def get_flag_keys(flag_inst):
     for key in flag_inst._ordered_fields:
         yield key
 
-def get_field_key(proto_inst, field_inst):
-    for key in proto_inst.__class__.get_fields_keys():
-        if field_inst == getattr(proto_inst, key, None):
-            return key
-
-    return None
-
-def get_proto_fields(proto_inst):
-    return proto_inst.get_fields()
-
-def get_packet_protos(packet):
-    for proto in packet.root.protos:
-        yield proto
-
-def get_proto_layer(proto):
-    return proto.layer
-
-def get_packet_raw(metapack):
-    return metapack.root.get_raw()
-
-# Checking stuff
+###############################################################################
+# Checking functions
+###############################################################################
 
 def is_field(field):
     return isinstance(field, Field)
@@ -177,22 +184,43 @@ def is_proto(proto):
 def implements(obj, klass):
     return isinstance(obj, klass)
 
-
 class MetaPacket:
     def __init__(self, proto=None):
-        self.root = Packet(proto)
+        self.root = Packet(proto, strict=False)
 
-    def include(self, proto):
-        self.root.include(proto)
+    def insert(self, proto, layer):
+        # Only append for the moment
+        if layer == -1:
+            self.root.include(proto.root.protos[0])
+            return True
 
-from Backend import VirtualIFace
+        return False
+
+    def get_protocol_str(self):
+        return get_proto_name(self.root)
+
+    def summary(self):
+        # We need to ask for a method here
+        return "%s packet" % self.get_protocol_str()
+
+    def get_time(self):
+        # We need to ask for a method here
+        return "N/A"
+
+    def get_dest(self):
+        # We need to ask for a method here
+        return "N/A"
+
+    def get_source(self):
+        # We need to ask for a method here
+        return "N/A"
+
+###############################################################################
+# Functions used by dialogs but not defined
+###############################################################################
 
 def find_all_devs():
-    "@return a list of avaiable devices to sniff from"
     return []
-
-
-gprotos = load_gprotocols()
 
 PMField = Field
 PMFlagsField = Flags

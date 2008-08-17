@@ -21,5 +21,6 @@
 import os
 
 # Probably this won't work on win32
+os.putenv('PM_DEVELOPMENT', '1')
 os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep, os.getenv('PYTHONPATH', '')))
 os.system('PM/PacketManipulator')
