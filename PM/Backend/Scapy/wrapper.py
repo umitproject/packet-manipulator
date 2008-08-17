@@ -220,7 +220,6 @@ def set_keyflag_value(proto, flag, key, value):
 def get_keyflag_value(proto, flag, key):
     return key in get_field_value_repr(proto, flag)
 
-
 def get_flag_keys(field):
     assert isinstance(field, FlagsField)
 

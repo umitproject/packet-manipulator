@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from PM.Backend.Scapy.utils import send_packet
+from PM.Core.I18N import _
 
 def register_send_context(BaseSendContext):
 
@@ -69,9 +70,9 @@ def register_send_context(BaseSendContext):
                     self.state = self.NOT_RUNNING
 
                 if self.count == self.tot_count:
-                    self.summary = "%d packet(s) sent." % self.tot_count
+                    self.summary = _("%d packet(s) sent.") % self.tot_count
                 else:
-                    self.summary = "Sending packet %d of %d" % (self.count, self.tot_count)
+                    self.summary = _("Sending packet %d of %d") % (self.count, self.tot_count)
 
                 self.percentage = float(self.count) / float(self.tot_count) * 100.0
 

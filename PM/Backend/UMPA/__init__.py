@@ -19,6 +19,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import os, os.path
+from threading import Thread
+
+import umpa
+import umpa.utils.security
 
 from umpa import protocols
 from umpa.packets import Packet
@@ -217,6 +221,47 @@ class MetaPacket:
     def get_source(self):
         # We need to ask for a method here
         return "N/A"
+
+###############################################################################
+# Functions used by Contexts
+###############################################################################
+
+def _send_packet(metapacket, count, inter, callback, udata):
+    try:
+        sock = umpa.utils.security.super_priviliges(umpa.Socket)
+        packet = metapacket.root
+
+        while count > 0:
+            sock.send(packet)
+            count -= 1
+
+            if callback(metapacket, udata) == True:
+                return
+
+            time.sleep(inter)
+
+    except OSError, (errno, err):
+        callback(Exception(err), udata)
+        return
+
+    callback(None, udata)
+
+def send_packet(metapacket, count, inter, callback, udata=None):
+    """
+    Send a metapacket in thread context
+
+    @param metapacket the packet to send
+    @param count send n count metapackets
+    @param inter interval between two consecutive sends
+    @param callback a callback to call at each send (of type packet, udata)
+           when True is returned the send thread is stopped
+    @param udata the userdata to pass to the callback
+    """
+    send_thread = Thread(target=_send_packet, args=(metapacket, count, inter, callback, udata))
+    send_thread.setDaemon(True) # avoids zombies
+    send_thread.start()
+
+    return send_thread
 
 ###############################################################################
 # Functions used by dialogs but not defined
