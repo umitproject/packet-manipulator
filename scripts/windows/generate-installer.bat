@@ -25,20 +25,13 @@ xcopy %PMOrig%\scripts\windows\setup.nsi %PMDir% /E /S /C /Y /V /I >> %Output%
 
 echo Creating dist and dist\share directories...
 mkdir %DistDir%\share
-mkdir %DistDir%\share\gtk-2.0
-mkdir %DistDir%\share\gtkthemeselector
 mkdir %DistDir%\share\themes
 mkdir %DistDir%\share\themes\Default
 mkdir %DistDir%\share\themes\MS-Windows
-mkdir %DistDir%\share\xml
-
 
 echo Copying GTK's share to dist directory...
-xcopy %GTKDir%\share\gtk-2.0\*.* %DistDir%\share\gtk-2.0\ /S /Y >> %Output%
-xcopy %GTKDir%\share\gtkthemeselector\*.* %DistDir%\share\gtkthemeselector\ /S /Y >> %Output%
 xcopy %GTKDir%\share\themes\Default\*.* %DistDir%\share\themes\Default /S /Y >> %Output%
 xcopy %GTKDir%\share\themes\MS-Windows\*.* %DistDir%\share\themes\MS-Windows /S /Y >> %Output%
-xcopy %GTKDir%\share\xml\*.* %DistDir%\share\xml\ /S /Y >> %Output%
 xcopy %GTKDir%\bin\*.dll %DistDir% /Y /S >> %Output%
 
 echo Copying setup.py...
