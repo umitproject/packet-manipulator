@@ -22,6 +22,14 @@ import sys
 import glob
 import os, os.path
 
+if os.name == 'nt':
+    try:
+        import py2exe
+    except ImportError:
+        print "Install py2exe to use setup.py"
+        sys.exit(-1)
+
+
 from distutils.core import setup, Extension
 from PM.Core.Const import PM_VERSION
 
@@ -93,25 +101,47 @@ modules = []
 if os.getenv('PM_DOCKING', False):
     print "OMG you're brave enough to give a try :O"
 
-    os.chdir("PM/moo")
-    os.system("make")
-    os.system("make moo-pygtk.c")
-    os.chdir("../..")
-
-    moo = Extension(
-        'PM.Gui.moo_stub',
-        [
-            'PM/moo/moopane.c',
-            'PM/moo/moopaned.c',
-            'PM/moo/moobigpaned.c',
-            'PM/moo/moomarshals.c',
-            'PM/moo/moo-pygtk.c',
-            'PM/moo/moo-stub.c',
-        ],
-        include_dirs=pkc_get_include_dirs('gtk+-2.0 pygtk-2.0'),
-        libraries=pkc_get_libraries('gtk+-2.0 pygtk-2.0'),
-        library_dirs=pkc_get_library_dirs('gtk+-2.0 pygtk-2.0'),
-    )
+    if os.name != 'nt':
+        os.chdir("PM/moo")
+        os.system("make")
+        os.system("make moo-pygtk.c")
+        os.chdir("../..")
+    
+        moo = Extension(
+            'PM.Gui.moo_stub',
+            [
+                'PM/moo/moopane.c',
+                'PM/moo/moopaned.c',
+                'PM/moo/moobigpaned.c',
+                'PM/moo/moomarshals.c',
+                'PM/moo/moo-pygtk.c',
+                'PM/moo/moo-stub.c',
+            ],
+            include_dirs=pkc_get_include_dirs('gtk+-2.0 pygtk-2.0'),
+            libraries=pkc_get_libraries('gtk+-2.0 pygtk-2.0'),
+            library_dirs=pkc_get_library_dirs('gtk+-2.0 pygtk-2.0'),
+        )
+    else:
+        moo = Extension(
+            'PM.Gui.moo_stub',
+            [
+                'PM/moo/moopane.c',
+                'PM/moo/moopaned.c',
+                'PM/moo/moobigpaned.c',
+                'PM/moo/moomarshals.c',
+                'PM/moo/moo-pygtk.c',
+                'PM/moo/moo-stub.c',
+            ],
+            include_dirs=[
+                "C:\\GTK\\include\\gtk-2.0", "C:\\GTK\\include\\glib-2.0",
+                "C:\\GTK\\include\\atk-1.0", "C:\\GTK\\include\\pango-1.0",
+                "C:\\GTK\\include\\cairo",
+                "C:\\GTK\\lib\\gtk-2.0\\include", "C:\\GTK\\lib\\glib-2.0\\include",
+                "C:\\Python25\\include\\pycairo", "C:\\Python25\\include\\pygtk-2.0"
+                ],
+            library_dirs=["C:\\GTK\\lib"],
+            libraries=["gtk-win32-2.0", "gthread-2.0", "glib-2.0", "gobject-2.0", "gdk-win32-2.0", "gdk_pixbuf-2.0"]
+        )
 
     modules = [moo]
 
@@ -152,5 +182,12 @@ setup(name         = 'PacketManipulator',
                      ],
       data_files   = [('share/pixmaps/umit', glob.glob("PM/share/pixmaps/umit/*"))] + mo_files, 
       scripts      = ['PM/PacketManipulator'],
+      windows      = [{'script' : 'PM/PacketManipulator',
+                       'icon_resources' : [(1, 'PM/share/pixmaps/umit/pm-icon48.ico')]}],
+      options      = {'py2exe' : {
+                          'compressed' : 1,
+                          'packages' : 'encodings, scapy',
+                          'includes' : 'gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk'},
+                      'build': {'compiler' : 'mingw32'}},
       ext_modules=modules
 )
