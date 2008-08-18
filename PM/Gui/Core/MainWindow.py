@@ -260,7 +260,7 @@ class MainWindow(gtk.Window):
         dialog.set_logo(gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png')))
 
         dialog.set_version(PM_VERSION)
-        dialog.set_comments(_("Packet manipulation made easy%s") % \
+        dialog.set_comments(_("Packet manipulation made easy%s\n'Audaces fortuna adiuvat'") % \
                             ((PM_DEVELOPMENT) and (' (development snapshot)') or ('')))
         dialog.set_authors(['Francesco Piccinno <stack.box@gmail.com>'])
         dialog.set_license(_('This program is relased under the terms of GPLv2'))
