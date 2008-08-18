@@ -48,6 +48,7 @@ import pygtk
 pygtk.require('2.0')
 
 import gtk
+import gtk, gtk.keysyms
 import pango
 import gobject
 
@@ -288,13 +289,13 @@ class Dispatcher(threading.Thread):
                         tb=tb.tb_next
                     traceback.print_exception (sys.exc_type, sys.exc_value, tb)
                 except:
-                    sys.stderr, self.stderr = self.stderr, sys.stderr
+                    #sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
                     traceback.print_exc()
 
     def run(self):
         while self.running:
             cmd = self.queue.get()
-
+            
             sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
             sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
             sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
@@ -383,9 +384,9 @@ class Console (gtk.ScrolledWindow):
             self.quit_handler = quit_handler
 
         # Setup hooks for standard output.
-        self.stdout = gtkoutfile (self, sys.stdout.fileno(), 'normal')
-        self.stderr = gtkoutfile (self, sys.stderr.fileno(), 'error')
-        self.stdin  = gtkinfile (self, sys.stdin.fileno())
+        self.stdout = gtkoutfile(self, self.__get_stream(sys.stdout), 'normal')
+        self.stderr = gtkoutfile(self, self.__get_stream(sys.stderr), 'error')
+        self.stdin  = gtkinfile(self, self.__get_stream(sys.stdin))
 
         # Setup command history
         self.history = History()
@@ -394,6 +395,14 @@ class Console (gtk.ScrolledWindow):
 
         self.dispatcher = Dispatcher(self)
         self.dispatcher.start()
+
+    def __get_stream(self, stream):
+        if hasattr(stream, 'fileno'):
+            return stream.fileno()
+        elif hasattr(stream, '_file') and hasattr(stream._file, 'fileno'):
+            return stream._file.fileno()
+        else:
+            return stream
 
     def on_button_released(self, widget, event):
         """ Text selection a la mIRC """

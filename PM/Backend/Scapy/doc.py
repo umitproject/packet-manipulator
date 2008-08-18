@@ -110,8 +110,6 @@ class DocLoader(handler.ContentHandler):
                 if self.protocol in all:
                     proto = all[self.protocol]
 
-                    print proto
-
                     setattr(proto, '__doc__', self.escape(self.protocol_doc))
                     setattr(proto, '_pm_layer', self.layer)
 
