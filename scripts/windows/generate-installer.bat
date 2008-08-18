@@ -8,7 +8,7 @@ set DistDir=%PMDir%\dist
 set GTKDir=C:\GTK
 set WinInstallDir=%PMDir%\scripts\windows
 set Output=%PMDir%\win_install.log
-set MakeNSIS=C:\NSIS\makensis.exe
+set MakeNSIS=C:\Programmi\NSIS\makensis.exe
 
 echo Writing output to %Output%
 rd %Output% /S /Q
@@ -34,12 +34,12 @@ mkdir %DistDir%\share\xml
 
 
 echo Copying GTK's share to dist directory...
-xcopy %GTKDir%\share\gtk-2.0\*.* %DistDir%\share\gtk-2.0\ /S >> %Output%
-xcopy %GTKDir%\share\gtkthemeselector\*.* %DistDir%\share\gtkthemeselector\ /S >> %Output%
-xcopy %GTKDir%\share\themes\Default\*.* %DistDir%\share\themes\Default /S >> %Output%
-xcopy %GTKDir%\share\themes\MS-Windows\*.* %DistDir%\share\themes\MS-Windows /S >> %Output%
-xcopy %GTKDir%\share\xml\*.* %DistDir%\share\xml\ /S >> %Output%
-xcopy %GTKDir%\bin\*.dll %DistDir% /S >> %Output%
+xcopy %GTKDir%\share\gtk-2.0\*.* %DistDir%\share\gtk-2.0\ /S /Y >> %Output%
+xcopy %GTKDir%\share\gtkthemeselector\*.* %DistDir%\share\gtkthemeselector\ /S /Y >> %Output%
+xcopy %GTKDir%\share\themes\Default\*.* %DistDir%\share\themes\Default /S /Y >> %Output%
+xcopy %GTKDir%\share\themes\MS-Windows\*.* %DistDir%\share\themes\MS-Windows /S /Y >> %Output%
+xcopy %GTKDir%\share\xml\*.* %DistDir%\share\xml\ /S /Y >> %Output%
+xcopy %GTKDir%\bin\*.dll %DistDir% /Y /S >> %Output%
 
 echo Copying setup.py...
 xcopy %WinInstallDir%\setup.py %PMDir% /Y

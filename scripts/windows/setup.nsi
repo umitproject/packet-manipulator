@@ -8,14 +8,8 @@
 ; General section
 ;==============================================================================
 
-!ifdef compressor
-	SetCompressor ${compressor}
-!else
-	SetCompress Off
-!endif
-
 Name "PacketManipulator"
-OutFile "${exe}-installer.exe"
+OutFile "PacketManipulator-installer.exe"
 InstallDir "$PROGRAMFILES\PacketManipulator"
 
 !ifdef icon
