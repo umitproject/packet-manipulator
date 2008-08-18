@@ -113,9 +113,9 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
                 path, pos = ret
                 where = len(path) # because it's a treeview with only one child for row
 
-                if pos == gtk.TREE_VIEW_DROP_AFTER or \
-                   pos == gtk.TREE_VIEW_DROP_INTO_OR_AFTER:
-                    where += 1
+                if pos == gtk.TREE_VIEW_DROP_BEFORE or \
+                   pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE:
+                    where -= 1
             
             # Now try to insert this stuff into the packet
 

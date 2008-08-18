@@ -32,15 +32,24 @@ class MetaPacket:
 
             return True
         else:
-            current = self.root
+            # We have to insert proto at position layer
 
-            while layer == 0:
-                current = current.payload
+            first = None
+            last = self.root
+
+            while layer > 0 and last:
+                first = last
+                last = last.payload
                 layer -= 1
 
-            last = current.payload
-            self.root = current / proto.root
-            proto.root.payload = last
+            ret = proto.root / last
+
+            if first:
+                first.payload = ret
+            else:
+                self.root = ret
+
+            return True
 
     def get_size(self):
         return len(str(self.root))
