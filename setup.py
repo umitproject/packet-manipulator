@@ -22,6 +22,14 @@ import sys
 import glob
 import os, os.path
 
+if os.name == 'nt':
+    try:
+        import py2exe
+    except ImportError:
+        print "Install py2exe to use setup.py"
+        sys.exit(-1)
+
+
 from distutils.core import setup, Extension
 from PM.Core.Const import PM_VERSION
 
@@ -93,12 +101,12 @@ modules = []
 if os.getenv('PM_DOCKING', False):
     print "OMG you're brave enough to give a try :O"
 
-    os.chdir("PM/moo")
-    os.system("make")
-    os.system("make moo-pygtk.c")
-    os.chdir("../..")
-
     if os.name != 'nt':
+        os.chdir("PM/moo")
+        os.system("make")
+        os.system("make moo-pygtk.c")
+        os.chdir("../..")
+    
         moo = Extension(
             'PM.Gui.moo_stub',
             [
@@ -174,5 +182,12 @@ setup(name         = 'PacketManipulator',
                      ],
       data_files   = [('share/pixmaps/umit', glob.glob("PM/share/pixmaps/umit/*"))] + mo_files, 
       scripts      = ['PM/PacketManipulator'],
+      windows      = [{'script' : 'PM/PacketManipulator',
+                       'icon_resources' : [(1, 'PM/share/pixmaps/umit/pm-icon48.ico')]}],
+      options      = {'py2exe' : {
+                          'compressed' : 1,
+                          'packages' : 'encodings, scapy',
+                          'includes' : 'gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk'},
+                      'build': {'compiler' : 'mingw32'}},
       ext_modules=modules
 )
