@@ -26,13 +26,16 @@ import gtk
 import os
 
 from PM import Backend
+from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
+
+raise Exception("testing")
 
 if Prefs()['gui.docking'].value:
     try:
         from Paned import *
     except ImportError:
-        print "moo not installed. Using fallback UmitPaned .."
+        log.info("moo is not installed. Using fallback paned ..")
 
         Prefs()['gui.docking'].value = False
 
@@ -175,7 +178,7 @@ class MainWindow(gtk.Window):
         # Ok we should add a CheckMenuItem to this fucking menu
         self.registered_tabs[tab.name] = tab
 
-        print "Tab %s registered as %s" % (tab.label_text, tab.name)
+        log.debug("Tab %s registered as %s" % (tab.label_text, tab.name))
 
         if not tab.tab_position:
             # This is the central widget so it should be added

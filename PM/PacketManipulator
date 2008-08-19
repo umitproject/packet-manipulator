@@ -38,62 +38,97 @@ import cgitb
 import tempfile
 
 from PM.Core.I18N import _
+from PM.Core.Const import PM_DEVELOPMENT, PM_VERSION
 
 #########################
-VERSION = "0.1"
-UMIT_DEVELOPMENT = os.environ.get("UMIT_DEVELOPMENT", True)
 
-class UmitExceptionHook(object):
+class PMExceptionHook(object):
     def __call__(self, etype, emsg, etb):
         import warnings
         warnings.filterwarnings("error", module = "gtk")
+
         try:
             import gtk
-            import pango
+            import PM.higwidgets
+
+            from PM.Gui.Core.BugReport import CrashReport
             from PM.higwidgets.higdialogs import HIGAlertDialog
         except Warning, e:
             print e.message
             sys.exit(-1)
+
         warnings.resetwarnings()
 
+        gtk_version = "%s.%s.%s" % gtk.gtk_version
+        pygtk_version = "%s.%s.%s" % gtk.ver
+        higwidgets_version = getattr(PM.higwidgets, "__version__", "< 0.9.5")
+        python_version = sys.version
+
+        versions = _("Versions:\nGTK: %s\nPyGTK: %s\nHIGWidgets: %s\nPython: %s\nPacketManipulator: %s") % \
+                   (gtk_version, pygtk_version, higwidgets_version, python_version, PM_VERSION)
+        
         if etype == ImportError:
-            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
-                message_format=_("Import error"),
-                secondary_text=_("\nA required module was not "
-                    "found.\n\nError: %s" % emsg))
+            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, message_format=_("Import error"),
+                secondary_text=_("\nA required module was not found.\n\nError: %s" % emsg))
+
             d.run()
             d.destroy()
+
             return
 
         crash_text = cgitb.text((etype, emsg, etb))
-        extrainfo = "%-17s %s\n%-17s %s\n%-17s %s\n%-17s %s\n" % (
+        crash_text_dialog = "\n%s\n%s\n" % (versions, crash_text)
+        crash_text= "{{{\n%s\n%s\n}}}" % (versions, crash_text)
+
+        #Dialog info
+        extrainfo_dialog = "%-17s %s\n%-17s %s\n%-17s %s\n%-17s %s\n" % (
             "sys.platform", sys.platform, "os.name", os.name, 
             "Gtk version", '.'.join(map(str, gtk.gtk_version)), 
-            "Packet Manipulation version", VERSION)
-        crashmsg = "Crash Report\n%s\n%s\nDescription\n%s\n%s" % ('=' * 10, 
+            "PacketManipulator", PM_VERSION)
+        crashmsg_dialog = "Crash Report\n%s\n%s\nDescription\n%s\n%s" % \
+                        ('=' * 10, extrainfo_dialog, '-' * 20,\
+                         crash_text_dialog)
+        
+        extrainfo = "%-17s %s\n[[BR]]%-17s %s\n[[BR]]%-17s %s[[BR]]\n" % (
+            "sys.platform", sys.platform, "os.name", os.name, 
+            "Umit version", PM_VERSION)
+        crashmsg = "Crash Report\n[[BR]]%s[[BR]]\n[[BR]]%s\nDescription\n%s\n%s" % ('=' * 10, 
             extrainfo, '-' * 20, crash_text)
 
-        d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
-            message_format=_("Fatal exception"),
-            secondary_text=_("\nException:\n"))
+        try:
+            try:
+                cwin = CrashReport("PacketManipulator Crash - '%s'" % emsg, crashmsg,
+                                   description_dialog=crashmsg_dialog)
+                cwin.show_all()
+                while True: 
+                    # keeping running while bug report is not sent successfully,
+                    # or until the user closes the window.
+                    result = cwin.run()
+                    if result in (gtk.RESPONSE_CANCEL,
+                        gtk.RESPONSE_DELETE_EVENT,
+                        gtk.RESPONSE_NONE):
 
-        view = gtk.TextView()
-        view.get_buffer().set_text(crashmsg)
-        view.modify_font(pango.FontDescription("mono bold 8"))
-        
-        sw = gtk.ScrolledWindow()
-        sw.add(view)
-        sw.set_size_request(600, 400)
-        sw.show_all()
-        
-        d.vbox.pack_start(sw)
-        d.run()
-        d.destroy()
-        gtk.main_quit()
+                        cwin.destroy()
+                        break
+            except Exception, err:
+                print err
+                tempfd, tempname = tempfile.mkstemp()
+                os.write(tempfd, crashmsg_dialog)
+                d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+                    message_format=_("Bug not reported"),
+                    secondary_text=_("A critical error occourried during "
+                        "PacketManipulator execution, \nand it was not properly reported " 
+                        "to our bug tracker. The crash description was saved to: "
+                        "%s, so you can still report it on our bug "
+                        "tracker.") % tempname)
+                os.close(tempfd)
+                d.run()
+                d.destroy()
+        finally:
+            gtk.main_quit()
 
-
-if not UMIT_DEVELOPMENT:
-    sys.excepthook = UmitExceptionHook()
+if not PM_DEVELOPMENT:
+    sys.excepthook = PMExceptionHook()
 
 def main(args):
     from PM.Gui.Core.App import PMApp

@@ -30,6 +30,7 @@ from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesNSImpl
 
+from PM.Core.Logger import log
 from PM.Core.Const import PM_HOME
 from PM.Core.Atoms import Singleton
 
@@ -79,10 +80,10 @@ class Option(object):
         for cb in self.cbs:
             # Lock if a callback returns True
             if cb(val):
-                print "set_value(): Ignoring change"
+                log.debug("Ignoring change")
                 return
 
-        print "set_value(): %s = %s" % (self, val)
+        log.debug("%s = %s" % (self, val))
         self._value = val
 
     def __repr__(self):

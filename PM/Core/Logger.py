@@ -44,7 +44,7 @@ class PMLogger(Logger, object):
         self.__formatter = Formatter(fmt)
 
 
-    format = "[%(levelname)s::%(threadName)s:%(msecs)d] %(filename)s:%(lineno)s : %(message)s"
+    format = "[%(levelname)s::%(threadName)s:%(msecs)d] at %(filename)s:%(lineno)d %(funcName)s(): %(message)s"
 
     formatter = property(get_formatter, set_formatter, doc="")
     __formatter = Formatter(format)
