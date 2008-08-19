@@ -188,7 +188,7 @@ class BugReport(HIGDialog):
 
         bug_register = BugRegister()
 
-        bug_register.component = self.category_id
+        bug_register.component = self.category
         bug_register.summary = self.summary
         if self.description_report!=None:
             bug_register.details = self.description_report

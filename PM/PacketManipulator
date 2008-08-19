@@ -27,7 +27,6 @@ try:
         raise ImportError
 
     import psyco
-    psyco.log()
     psyco.profile()
 
     print "Hurray! psyco enabled!"
