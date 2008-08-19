@@ -117,7 +117,7 @@ class PMExceptionHook(object):
             if gtk.main_level() > 0:
                 gtk.main_quit()
 
-if PM_DEVELOPMENT:
+if not PM_DEVELOPMENT:
     sys.excepthook = PMExceptionHook()
 
 def main(args):
