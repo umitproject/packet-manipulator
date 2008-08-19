@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from PM.Backend.Scapy.wrapper import Packet, NoPayload, Raw
+from PM.Backend.Scapy.wrapper import Packet, NoPayload, Raw, Ether, IP
 
 class MetaPacket:
     def __init__(self, proto=None):
@@ -50,6 +50,36 @@ class MetaPacket:
                 self.root = ret
 
             return True
+    def complete(self):
+        # Add missing layers (Ethernet and IP)
+
+        if not self.root.haslayer(Ether):
+            if not self.root.haslayer(IP):
+                self.root = IP() / self.root
+
+            self.root = Ether() / self.root
+
+    def remove(self, rproto):
+        first = None
+        last = self.root
+
+        if isinstance(self.root.payload, NoPayload):
+            return False
+
+        while isinstance(last, Packet):
+
+            if last == rproto:
+                if first:
+                    first.payload = last.payload
+                else:
+                    self.root = last.payload
+
+                return True
+
+            first = last
+            last = last.payload
+
+        return False
 
     def get_size(self):
         return len(str(self.root))

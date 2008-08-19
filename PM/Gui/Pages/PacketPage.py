@@ -159,16 +159,22 @@ class PacketPage(gtk.VBox):
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
 
         stocks = (
+            gtk.STOCK_EDIT,
+            gtk.STOCK_DELETE,
             gtk.STOCK_GO_UP,
             gtk.STOCK_GO_DOWN
         )
 
         tooltips = (
+            _('Complete layers'),
+            _('Remove selected layer'),
             _('Send packet'),
             _('Send/receive packet')
         )
 
         callbacks = (
+            self.__on_complete,
+            self.__on_remove,
             self.__on_send,
             self.__on_send_receive
         )
@@ -229,6 +235,24 @@ class PacketPage(gtk.VBox):
     def reload(self):
         self.redraw_hexview()
         self.proto_hierarchy.reload()
+
+    def __on_remove(self, action):
+        packet, protocol = self.proto_hierarchy.get_active_protocol()
+
+        if not packet:
+            return
+
+        packet.remove(protocol)
+        self.reload()
+
+    def __on_complete(self, action):
+        packet, protocol = self.proto_hierarchy.get_active_protocol()
+
+        if not packet:
+            return
+
+        packet.complete()
+        self.reload()
 
     def __on_send(self, action):
         packet, protocol = self.proto_hierarchy.get_active_protocol()
