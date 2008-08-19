@@ -27,6 +27,7 @@ try:
         raise ImportError
 
     import psyco
+    psyco.log()
     psyco.profile()
 
     print "Hurray! psyco enabled!"
@@ -127,7 +128,7 @@ class PMExceptionHook(object):
         finally:
             gtk.main_quit()
 
-if not PM_DEVELOPMENT:
+if PM_DEVELOPMENT:
     sys.excepthook = PMExceptionHook()
 
 def main(args):
