@@ -58,6 +58,10 @@ class MetaPacket:
                 self.root = IP() / self.root
 
             self.root = Ether() / self.root
+            
+            return True
+
+        return False
 
     def remove(self, rproto):
         first = None

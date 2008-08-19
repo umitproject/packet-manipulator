@@ -242,8 +242,8 @@ class PacketPage(gtk.VBox):
         if not packet:
             return
 
-        packet.remove(protocol)
-        self.reload()
+        if packet.remove(protocol):
+            self.reload()
 
     def __on_complete(self, action):
         packet, protocol = self.proto_hierarchy.get_active_protocol()
@@ -251,8 +251,8 @@ class PacketPage(gtk.VBox):
         if not packet:
             return
 
-        packet.complete()
-        self.reload()
+        if packet.complete():
+            self.reload()
 
     def __on_send(self, action):
         packet, protocol = self.proto_hierarchy.get_active_protocol()
