@@ -28,6 +28,8 @@ should be prefixed with 'PM_'
 import sys
 import os, os.path
 
+from Logger import log
+
 PM_VERSION = '0.1'
 PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 
@@ -50,4 +52,5 @@ PIXMAPS_DIR = os.path.join(main_dir, "share", "pixmaps", "umit")
 if os.path.exists(HOME) and \
    os.access(HOME, os.R_OK and os.W_OK) and \
    not os.path.exists(PM_HOME):
+    log.debug("Creating PM home directory under %s" % PM_HOME)
     os.mkdir(PM_HOME)

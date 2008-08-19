@@ -19,9 +19,38 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 """
-Gui/Backend indipendent functions provided by
-    - I18N
-    - Const
-    - Atoms
-    - Logger
+Logger module
+
+Use PM_LOGLEVEL to set the loglevel
 """
+
+import os
+from logging import Logger, StreamHandler, Formatter
+
+class PMLogger(Logger, object):
+    def __init__(self, name, level):
+        Logger.__init__(self, name, level)
+        self.formatter = self.format
+
+        handler = StreamHandler()
+        handler.setFormatter(self.formatter)
+
+        self.addHandler(handler)
+
+    def get_formatter(self):
+        return self.__formatter
+
+    def set_formatter(self, fmt):
+        self.__formatter = Formatter(fmt)
+
+
+    format = "[%(levelname)s::%(threadName)s:%(msecs)d] %(filename)s:%(lineno)s : %(message)s"
+
+    formatter = property(get_formatter, set_formatter, doc="")
+    __formatter = Formatter(format)
+
+try:
+    level = 1 # default value
+    level = int(os.getenv('PM_LOGLEVEL', '1'))
+finally:
+    log = PMLogger("PM", level)

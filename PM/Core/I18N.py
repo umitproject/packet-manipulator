@@ -24,6 +24,7 @@ Functions to make gettext working in PacketManipulator
 
 import locale
 
+from Logger import log
 from Const import LOCALE_DIR
 
 try:
@@ -37,8 +38,8 @@ except locale.Error, error_msg:
     # Latter, we call setlocale again, but now providing None as the second
     # argument, avoiding the occourrance of the exception.
     # Gtk will raise a warning in this case, but will work just perfectly.
-    print "Your locale setting is not supported. PacketManipulator will" \
-          "continue using your system's preferred language."
+    log.info("Your locale setting is not supported. PacketManipulator will" \
+             "continue using your system's preferred language.")
     LC_ALL = locale.setlocale(locale.LC_ALL, None)
 
 LANG, ENC = locale.getdefaultlocale()
