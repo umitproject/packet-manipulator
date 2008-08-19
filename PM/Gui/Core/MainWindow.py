@@ -29,8 +29,6 @@ from PM import Backend
 from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
-raise Exception("testing")
-
 if Prefs()['gui.docking'].value:
     try:
         from Paned import *

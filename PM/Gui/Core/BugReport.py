@@ -33,59 +33,33 @@ from PM.Core.Const import PM_VERSION
 from PM.Core.BugRegister import BugRegister
 
 class BugReport(HIGDialog):
-    def __init__(self, title=_('Bug Report'), summary=None, description=None,
-                 category=None, crashreport=False, description_dialog=None):
+    def __init__(self, title=_('Bug Report'), description='', traceback=''):
+
         HIGDialog.__init__(self, title=title, 
-            buttons=(gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
-                gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
+                           buttons=(gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
+                                    gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
         
         self.set_position(gtk.WIN_POS_CENTER_ALWAYS)
-        
-        self.crashreport = crashreport
-        self.description_dialog = description_dialog
+
         self._create_widgets()
-        self._set_category_list()
         self._pack_widgets()
         self._connect_widgets()
-        self.summary = summary or ''
-        self.description_report = description
-        if self.description_dialog==None:
-            self.description = description or ''
-        else:
-            self.description = description_dialog or ''
-        self.category = category or ''
 
-    def _set_category_list(self):
-        # Obtained at bug tracker page source code
-        
-        self.category_list.append(["PacketManipulator",
-                                   "PacketManipulator"])
+        self.description = description
+        self.traceback = traceback
         
     def _create_widgets(self):
-        self.category_label = HIGHintSectionLabel(_("Category (optional)"),
-            _("If you know in which section of the program "
-            "is the bug, please, select it from the choosebox. "
-            "If you don't know what section to choose, leave it blank."))
-        self.category_list = gtk.ListStore(str, str)
-        self.category_combo = gtk.ComboBoxEntry(self.category_list, 0)
-
         self.email_label = HIGHintSectionLabel(_("Email"),
             _("Please inform a valid e-mail address from "
             "where you can be reached to be notified when the bug gets "
             "fixed. Not used for other purposes."))
         self.email_entry = gtk.Entry()
 
-        self.summary_label = HIGHintSectionLabel(_("Summary"),
-            _("This should be a quick description of the issue. "
-            "Try to be clear and concise."))
-        self.summary_entry = gtk.Entry()
-
         self.description_label = HIGHintSectionLabel(_("Description"),
             _("This is where you should write about the bug, "
             "describing it as clear as possible and giving as many "
             "informations as you can along with your system informations, "
-            "like: Which operating system are you using? Which Nmap "
-            "version do you have installed?"))
+            "like: Which operating system are you using?"))
         self.description_scrolled = gtk.ScrolledWindow()
         self.description_text = gtk.TextView()
 
@@ -100,40 +74,24 @@ class BugReport(HIGDialog):
 
     def _pack_widgets(self):
         self.description_scrolled.add(self.description_text)
-        self.description_scrolled.set_policy(gtk.POLICY_AUTOMATIC, 
-            gtk.POLICY_AUTOMATIC)
+        self.description_scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.description_scrolled.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         self.description_scrolled.set_size_request(400, 150)
         self.description_text.set_wrap_mode(gtk.WRAP_WORD)
         self.description_text.modify_font(pango.FontDescription("Monospace 10"))
 
-        self.bug_icon.set_from_stock(gtk.STOCK_DIALOG_INFO, 
-            gtk.ICON_SIZE_DIALOG)
+        self.bug_icon.set_from_stock(gtk.STOCK_DIALOG_INFO, gtk.ICON_SIZE_DIALOG)
         self.bug_icon.set_padding(10, 0)
         self.bug_text.set_line_wrap(True)
-        #self.bug_text.set_justify(gtk.JUSTIFY_LEFT)
         self.bug_text.set_alignment(0, 0.5)
 
         self.hbox.set_border_width(4)
         
-        nextpos = (0, 1)
-        if not self.crashreport:
-            self.table.attach(self.category_label, 0, 1, 0, 1, yoptions=gtk.SHRINK)
-            self.table.attach(self.category_combo, 1, 2, 0, 1, yoptions=gtk.SHRINK)
-            nextpos = (1, 2)
+        self.table.attach(self.email_label, 0, 1, 0, 1, yoptions=gtk.SHRINK)
+        self.table.attach(self.email_entry, 1, 2, 0, 1, yoptions=gtk.SHRINK)
 
-        self.table.attach(self.email_label, 0, 1, nextpos[0], nextpos[1], yoptions=gtk.SHRINK)
-        self.table.attach(self.email_entry, 1, 2, nextpos[0], nextpos[1], yoptions=gtk.SHRINK)
-
-        nextpos = (2, 3)
-        if not self.crashreport:
-            self.table.attach(self.summary_label, 0, 1, 2, 3, yoptions=gtk.SHRINK)
-            self.table.attach(self.summary_entry, 1, 2, 2, 3, yoptions=gtk.SHRINK)
-            nextpos = (3, 4)
-
-        self.table.attach(self.description_label, 0, 2, nextpos[0], nextpos[1], yoptions=gtk.SHRINK)
-        nextpos = nextpos[0] + 1, nextpos[1] + 1
-        self.table.attach(self.description_scrolled, 0, 2, nextpos[0], nextpos[1])
+        self.table.attach(self.description_label, 0, 2, 1, 2, yoptions=gtk.SHRINK)
+        self.table.attach(self.description_scrolled, 0, 2, 2, 3)
 
         self.hbox.pack_start(self.bug_icon, False)
         self.hbox.pack_end(self.bug_text)
@@ -175,7 +133,7 @@ class BugReport(HIGDialog):
             child.set_sensitive(True)
 
     def _send_report(self):
-        if self.summary == "" or self.description == "" or self.email == "":
+        if self.description == "" or self.email == "":
             cancel_dialog = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
                 message_format=_("Bug report is incomplete!"),
                 secondary_text=_("The bug report is incomplete. "
@@ -188,13 +146,9 @@ class BugReport(HIGDialog):
 
         bug_register = BugRegister()
 
-        bug_register.component = self.category
-        bug_register.summary = self.summary
-        if self.description_report!=None:
-            bug_register.details = self.description_report
-        else:
-            bug_register.details = self.description.replace("\n", "[[BR]]")
         bug_register.reporter = self.email
+        bug_register.details = "%s\n[[BR]]\n[[BR]]\nGenerated traceback:\n[[BR]]\n%s" % \
+                               (self.description.replace("\n", "[[BR]]"), self.traceback)
         
         bug_page = None
         try:
@@ -222,11 +176,10 @@ class BugReport(HIGDialog):
                     "now."))
             ok_dialog.run()
             ok_dialog.destroy()
-            webbrowser.open(bug_page, autoraise=1)
 
         if bug_page:
             try:
-                webbrowser.open(bug_page)
+                webbrowser.open(bug_page, autoraise=1)
             except: # XXX What exceptions should be caught here ?
                 page_dialog = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
                     message_format=_("Could not open default Web Browser"),
@@ -240,28 +193,12 @@ class BugReport(HIGDialog):
         # report sent successfully
         self.response(gtk.RESPONSE_DELETE_EVENT)
 
-    def get_category(self):
-        return self.category_combo.child.get_text()
-
-    def set_category(self, category):
-        self.category_combo.child.set_text(category)
-
-    def get_summary(self):
-        return self.summary_entry.get_text()
-
-    def set_summary(self, summary):
-        self.summary_entry.set_text(summary)
     def get_description(self):
         buff = self.description_text.get_buffer()
         return buff.get_text(buff.get_start_iter(), buff.get_end_iter())
+
     def set_description(self, description):
         self.description_text.get_buffer().set_text(description)
-
-    def get_category_id(self):
-        for i in self.category_list:
-            if i[0] == self.category:
-                return i[1]
-        return "100"
 
     def get_email(self):
         return self.email_entry.get_text()
@@ -269,26 +206,5 @@ class BugReport(HIGDialog):
     def set_email(self, email):
         self.email_entry.set_text(email)
 
-
-    category_id = property(get_category_id)
-    category = property(get_category, set_category)
-    summary = property(get_summary, set_summary)
     description = property(get_description, set_description)
     email = property(get_email, set_email)
-
-class CrashReport(BugReport):
-    def __init__(self, summary, description, title=_('Crash Report'),\
-                 description_dialog=None):
-        BugReport.__init__(self, title, summary, description,
-                           "CrashReport", True, 
-                           description_dialog=description_dialog)
-    
-if __name__ == "__main__":
-    c = BugReport()
-    c.show_all()
-    while True:
-        result = c.run()
-        if result in (gtk.RESPONSE_CANCEL, gtk.RESPONSE_DELETE_EVENT, 
-            gtk.RESPONSE_NONE):
-            c.destroy()
-            break

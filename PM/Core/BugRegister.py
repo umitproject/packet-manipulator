@@ -34,7 +34,7 @@ class BugRegister(object):
     def __init__(self):
         urllib.urlopen(trac_new_ticket)
 
-        self.summary = ""
+        self.summary = "Exception caught by crash reporter"
         self.details = ""
         self.input_file = ""
         self.file_description = ""

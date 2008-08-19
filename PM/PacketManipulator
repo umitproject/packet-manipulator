@@ -51,7 +51,7 @@ class PMExceptionHook(object):
             import gtk
             import PM.higwidgets
 
-            from PM.Gui.Core.BugReport import CrashReport
+            from PM.Gui.Core.BugReport import BugReport
             from PM.higwidgets.higdialogs import HIGAlertDialog
         except Warning, e:
             print e.message
@@ -64,8 +64,8 @@ class PMExceptionHook(object):
         higwidgets_version = getattr(PM.higwidgets, "__version__", "< 0.9.5")
         python_version = sys.version
 
-        versions = _("Versions:\nGTK: %s\nPyGTK: %s\nHIGWidgets: %s\nPython: %s\nPacketManipulator: %s") % \
-                   (gtk_version, pygtk_version, higwidgets_version, python_version, PM_VERSION)
+        versions = _("Versions:\nGTK: %s\nPyGTK: %s\nHIGWidgets: %s\nPython: %s") % \
+                   (gtk_version, pygtk_version, higwidgets_version, python_version)
         
         if etype == ImportError:
             d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, message_format=_("Import error"),
@@ -77,28 +77,17 @@ class PMExceptionHook(object):
             return
 
         crash_text = cgitb.text((etype, emsg, etb))
-        crash_text_dialog = "\n%s\n%s\n" % (versions, crash_text)
         crash_text= "{{{\n%s\n%s\n}}}" % (versions, crash_text)
 
-        #Dialog info
-        extrainfo_dialog = "%-17s %s\n%-17s %s\n%-17s %s\n%-17s %s\n" % (
+        extrainfo_dialog = "%-17s %s\n%-17s %s\n%-17s %s\n" % (
             "sys.platform", sys.platform, "os.name", os.name, 
-            "Gtk version", '.'.join(map(str, gtk.gtk_version)), 
             "PacketManipulator", PM_VERSION)
-        crashmsg_dialog = "Crash Report\n%s\n%s\nDescription\n%s\n%s" % \
-                        ('=' * 10, extrainfo_dialog, '-' * 20,\
-                         crash_text_dialog)
-        
-        extrainfo = "%-17s %s\n[[BR]]%-17s %s\n[[BR]]%-17s %s[[BR]]\n" % (
-            "sys.platform", sys.platform, "os.name", os.name, 
-            "Umit version", PM_VERSION)
-        crashmsg = "Crash Report\n[[BR]]%s[[BR]]\n[[BR]]%s\nDescription\n%s\n%s" % ('=' * 10, 
-            extrainfo, '-' * 20, crash_text)
+        crashmsg_dialog = "Crash Report\n%s\n%s\nDescription\n%s\n" % \
+                        ('=' * 10, extrainfo_dialog, '-' * 20)
 
         try:
             try:
-                cwin = CrashReport("PacketManipulator Crash - '%s'" % emsg, crashmsg,
-                                   description_dialog=crashmsg_dialog)
+                cwin = BugReport("PacketManipulator Crash - '%s'" % emsg, crashmsg_dialog, crash_text)
                 cwin.show_all()
                 while True: 
                     # keeping running while bug report is not sent successfully,
@@ -125,7 +114,8 @@ class PMExceptionHook(object):
                 d.run()
                 d.destroy()
         finally:
-            gtk.main_quit()
+            if gtk.main_level() > 0:
+                gtk.main_quit()
 
 if PM_DEVELOPMENT:
     sys.excepthook = PMExceptionHook()
