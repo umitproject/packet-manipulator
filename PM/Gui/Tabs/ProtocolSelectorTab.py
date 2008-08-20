@@ -40,16 +40,16 @@ class ProtocolTree(gtk.VBox):
         #toolbar.set_icon_size(gtk.ICON_SIZE_SMALL_TOOLBAR)
         toolbar.modify_bg(gtk.STATE_NORMAL, toolbar.style.bg[gtk.STATE_NORMAL])
         
-        stocks = (gtk.STOCK_SORT_DESCENDING,
-                  gtk.STOCK_SORT_ASCENDING,
+        stocks = (gtk.STOCK_SORT_ASCENDING,
+                  gtk.STOCK_SORT_DESCENDING,
                   gtk.STOCK_CONVERT)
         
-        callbacks = (self.__on_sort_descending,
-                     self.__on_sort_ascending,
+        callbacks = (self.__on_sort_ascending,
+                     self.__on_sort_descending,
                      self.__on_sort_layer)
 
-        tooltips = (_('Sort descending'),
-                    _('Sort ascending'),
+        tooltips = (_('Sort ascending'),
+                    _('Sort descending'),
                     _('Sort by layer'))
         
         for tooltip, stock, cb in zip(tooltips, stocks, callbacks):
@@ -103,8 +103,7 @@ class ProtocolTree(gtk.VBox):
         self.proto_icon = get_pixbuf('protocol_small')
         self.layer_icon = get_pixbuf('layer_small')
         
-        self.populate()
-        self.__on_sort_descending(None)
+        self.__on_sort_ascending(None)
     
     def populate(self, fill=True):
         self.store.clear()

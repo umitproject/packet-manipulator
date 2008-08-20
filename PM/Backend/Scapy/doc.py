@@ -18,7 +18,56 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+# Use this to generate a field list
+# for i in [i.name for i in Backend.get_proto_fields(Backend.IP())]: print "<attr id=\"%s\">\n</attr>" % i
+
 """
+<scapydoc>
+<proto id="IP" layer="3">
+    <attr id="version">
+        The Version field indicates the format of the internet header.
+    </attr>
+    <attr id="ihl">
+        Internet Header Length is the length of the internet header in 32 bit
+        words, and thus points to the beginning of the data.
+    </attr>
+    <attr id="tos">
+        The Type of Service provides an indication of the abstract parameters
+        of the quality of service desired.
+    </attr>
+    <attr id="len">
+        Internet Header Length is the length of the internet header in 32 bit
+        words, and thus points to the beginning of the data.
+    </attr>
+    <attr id="id">
+    </attr>
+    <attr id="flags">
+        Various Control Flags.
+    </attr>
+    <attr id="frag">
+        This field indicates where in the datagram this fragment belongs.
+    </attr>
+    <attr id="ttl">
+        This field indicates the maximum time the datagram is allowed to
+        remain in the internet system.
+    </attr>
+    <attr id="proto">
+        This field indicates the next level protocol used in the data portion
+        of the internet datagram.
+    </attr>
+    <attr id="chksum">
+        A checksum on the header only.
+    </attr>
+    <attr id="src">
+        The source address.
+    </attr>
+    <attr id="dst">
+        The destination address.
+    </attr>
+    <attr id="options">
+        The options may appear or not in datagrams.
+    </attr>
+</proto>
 <proto id="TCP" layer="4">
     This is Transmission Control Protocol.<br/>
     It the most common protocol in the Internet on fourth layer of the OSI model.
@@ -60,12 +109,14 @@
         Options may occupy space at the end of the TCP header and are a multiple of 8 bits in length.
     </attr>
 </proto>
+</scapydoc>
 """
 
 import sys
 from xml.sax import handler, make_parser, parseString
 
 import wrapper
+from PM.Core.Logger import log
 
 class DocLoader(handler.ContentHandler):
     def __init__(self, outfile):
@@ -109,6 +160,8 @@ class DocLoader(handler.ContentHandler):
 
                 if self.protocol in all:
                     proto = all[self.protocol]
+
+                    log.debug("Applying documentation to %s" % proto)
 
                     setattr(proto, '__doc__', self.escape(self.protocol_doc))
                     setattr(proto, '_pm_layer', self.layer)
