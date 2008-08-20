@@ -8,12 +8,10 @@ TODO list (not ordered):
 - dict editor / list editor (ex TCP dport)
 - hexview with insert mode
 - plugins system (UmitPlugins) / geoip as example plugin
-- fix the send/receive on windows
 - sending/receiving a list of packets instead of a single
 - switching to pyprocessing?
 - documentation and test cases
-- rewrite the UMPA backend
-- create a method to set docstrings for Scapy (load an xml definitions file)
+- rewrite the UMPA backend (complete/remove)
 - page to show relationships between connections
 - graph page like scapy
 - fuzzing
@@ -21,6 +19,3 @@ TODO list (not ordered):
 - remote server (xml-rpc)? blah
 - Implementing a get_icon for operation to use only the object in ListStore
 - same in property grid
-- disable the actions in operation popup menu (has_pause ..)
-- rewrite the clean action
-- implement a popup menu in proto hierarchy to remove layers

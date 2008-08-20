@@ -240,11 +240,20 @@ class OperationTree(gtk.TreeView):
             self.__on_clear
         )
 
+        idx = 0
         for lbl, stock, cb in zip(labels, stocks, callbacks):
             action =  gtk.Action(None, lbl, None, stock)
             action.connect('activate', cb, operation)
+            item = action.create_menu_item()
+            
+            if idx in (1, 2) and not operation.has_pause or \
+               idx == 3 and not operation.has_stop or \
+               idx == 4 and not operation.has_restart:
+                item.set_sensitive(False)
 
-            menu.append(action.create_menu_item())
+            menu.append(item)
+
+            idx += 1
 
         menu.show_all()
         menu.popup(None, None, None, evt.button, evt.time)
@@ -302,16 +311,18 @@ class OperationTree(gtk.TreeView):
         operation.restart()
 
     def __on_clear(self, action, operation):
-        # TODO: try a better method
         iter = self.store.get_iter_first()
 
-        while iter:
+        current = len(self.store)
+        
+        while current >= 0:
+            iter = self.store.get_iter_from_string((current, ))
             operation = self.store.get_value(iter, 0)
 
             if operation.state == operation.NOT_RUNNING:
                 self.store.remove(iter)
 
-            iter = self.store.iter_next(iter)
+            current -= 1
 
 class OperationsTab(UmitView):
     icon_name = 'operation_small'
