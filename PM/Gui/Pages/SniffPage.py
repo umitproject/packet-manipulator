@@ -76,8 +76,11 @@ class SniffPage(gtk.VBox):
         Prefs()['gui.maintab.sniffview.font'].connect(self.__modify_font)
         Prefs()['gui.maintab.sniffview.usecolors'].connect(self.__modify_colors)
 
+        self.tree.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.filter.get_entry().connect('activate', self.__on_apply_filter)
+
+        self.tree.connect('button-press-event', self.__on_popup)
 
         self.timeout_id = None
         self.reload()
@@ -250,21 +253,71 @@ class SniffPage(gtk.VBox):
     # Signals callbacks
 
     def __on_selection_changed(self, selection):
-        model, iter = selection.get_selected()
+        model, lst = selection.get_selected_rows()
 
-        if not iter:
+        # Only if i have one row selected
+        if len(lst) == 1:
+            iter = model.get_iter(lst[0])
+            self.session.set_active_packet(model.get_value(iter, 0))
+        else:
+            self.session.set_active_packet(None)
+
+    def __on_popup(self, tree, evt):
+        if evt.button != 3:
             return
 
-        packet = model.get_value(iter, 0)
+        model, lst = self.tree.get_selection().get_selected_rows()
 
-        if not packet:
+        if not lst:
             return
 
-        nb = PMApp().main_window.get_tab("MainTab").session_notebook
-        session = nb.get_current_session()
+        menu = gtk.Menu()
 
-        if session:
-            session.set_active_packet(packet)
+        labels = (_('Create a sequence'), _('Save selected'))
+        stocks = (gtk.STOCK_INDEX, gtk.STOCK_SAVE_AS)
+        callbacks = (self.__on_create_seq, self.__on_save_selection)
+
+        for lbl, stock, cb in zip(labels, stocks, callbacks):
+            action =  gtk.Action(None, lbl, None, stock)
+            action.connect('activate', cb)
+            menu.append(action.create_menu_item())
+
+        menu.show_all()
+        menu.popup(None, None, None, evt.button, evt.time)
+
+        return True
+    
+    def __get_packets_selected(self):
+        model, lst = self.tree.get_selection().get_selected_rows()
+
+        ret = []
+        for path in lst:
+            ret.append(model.get_value(model.get_iter(path), 0))
+
+        return ret
+
+    def __on_create_seq(self, action):
+        tab = PMApp().main_window.get_tab("MainTab")
+        tab.session_notebook.create_sequence_session(self.__get_packets_selected())
+
+    def __on_save_selection(self, action):
+        dialog = self.__create_save_dialog()
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            ctx = Backend.StaticContext('', dialog.get_filename())
+            ctx.data = self.__get_packets_selected()
+
+            if ctx.save():
+                self.statusbar.image = gtk.STOCK_HARDDISK
+                self.statusbar.label = "<b>%d selected packets saved to %s</b>" % (len(ctx.data), ctx.cap_file)
+            else:
+                self.statusbar.image = gtk.STOCK_DIALOG_ERROR
+                self.statusbar.label = "<b>%s</b>" % ctx.summary
+
+            self.statusbar.start_animation(True)
+
+        dialog.hide()
+        dialog.destroy()
 
     def __on_apply_filter(self, entry):
         self.model_filter.refilter()
@@ -306,6 +359,18 @@ class SniffPage(gtk.VBox):
             return self.__on_save_as(None)
 
     def __on_save_as(self, action):
+        ret = False
+        dialog = self.__create_save_dialog()
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            ret = self.__save_packets(dialog.get_filename())
+
+        dialog.hide()
+        dialog.destroy()
+
+        return ret
+
+    def __create_save_dialog(self):
         dialog = gtk.FileChooserDialog(_('Save Pcap file to'),
                 self.get_toplevel(), gtk.FILE_CHOOSER_ACTION_SAVE,
                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
@@ -320,14 +385,7 @@ class SniffPage(gtk.VBox):
             filter.add_pattern(pattern)
             dialog.add_filter(filter)
 
-        ret = False
-        if dialog.run() == gtk.RESPONSE_ACCEPT:
-            ret = self.__save_packets(dialog.get_filename())
-
-        dialog.hide()
-        dialog.destroy()
-
-        return ret
+        return dialog
 
     def __save_packets(self, fname):
         self.session.context.cap_file = fname

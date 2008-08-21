@@ -54,6 +54,13 @@ class SessionNotebook(gtk.Notebook):
         session = SequenceSession(ctx)
         return self.__append_session(session)
 
+    def create_sequence_session(self, packets):
+        ctx = Backend.StaticContext(_('Unsaved sequence'))
+        ctx.data = packets
+
+        session = SequenceSession(ctx)
+        return self.__append_session(session)
+
     def create_sniff_session(self, ctx):
         session = SniffSession(ctx, show_packet=False)
         return self.__append_session(session)

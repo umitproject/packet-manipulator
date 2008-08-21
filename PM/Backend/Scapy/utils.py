@@ -321,6 +321,11 @@ def _execute_sequence(sock, seq, count, inter, scall, rcall, sudata, rudata):
                     raise StopIteration # ugly :D
  
                 if want_reply:
+                    # TODO: here we should check for a reply for a given time
+                    # passed from the user like the filter? then if the the
+                    # reply is received continue else drop the depth child from
+                    # the sequence and go with the next
+
                     log.debug("Waiting a reply ...")
  
                     packet_hash = packet.hashret()

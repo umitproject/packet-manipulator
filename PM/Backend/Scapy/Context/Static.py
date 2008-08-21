@@ -51,7 +51,7 @@ def register_static_context(BaseStaticContext):
             else:
                 data = self.get_data()
 
-            if not self.cap_file and not data:
+            if not self.cap_file:
                 return False
 
             data = [packet.root for packet in data]
