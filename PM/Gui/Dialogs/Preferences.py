@@ -104,6 +104,9 @@ class Page(gtk.Table):
     def create_ui(self):
         gidx = 0
 
+        lsizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+        wsizegroup = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+
         for options in self.widgets:
 
             if isinstance(options[1], tuple):
@@ -124,6 +127,9 @@ class Page(gtk.Table):
                     lbl, widget = self.__create_option_widgets(name, lbl, widget)
 
                     if lbl:
+                        lsizegroup.add_widget(lbl)
+                        wsizegroup.add_widget(widget)
+
                         table.attach(lbl, 0, 1, idx, idx + 1, yoptions=gtk.SHRINK)
                         table.attach(widget, 1, 2, idx, idx + 1, yoptions=gtk.SHRINK)
                     else:
@@ -136,6 +142,9 @@ class Page(gtk.Table):
                 lbl, widget = self.__create_option_widgets(options[0], options[1], options[2])
 
                 if lbl:
+                    lsizegroup.add_widget(lbl)
+                    wsizegroup.add_widget(widget)
+
                     self.attach(lbl, 0, 1, gidx, gidx + 1, yoptions=gtk.SHRINK)
                     self.attach(widget, 1, 2, gidx, gidx + 1, yoptions=gtk.SHRINK)
                 else:
@@ -154,6 +163,9 @@ class GUIPage(Page):
         ('Sniff perspective',
           (('gui.maintab.sniffview.font', _('Sniff view font:'), gtk.FontButton()),
            ('gui.maintab.sniffview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
+        ('Sequence perspective',
+          (('gui.maintab.sequenceview.font', _('Sequence view font:'), gtk.FontButton()),
+           ('gui.maintab.sequenceview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
 
         (_('Hex view window'),
           (('gui.maintab.hexview.font', _('HexView font:'), gtk.FontButton()),

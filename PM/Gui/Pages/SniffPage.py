@@ -32,26 +32,8 @@ from PM.Manager.PreferenceManager import Prefs
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Widgets.FilterEntry import FilterEntry
+from PM.Gui.Widgets.CellRenderer import GridRenderer
 from PM.higwidgets.higanimates import HIGAnimatedBar
-
-class SniffRenderer(gtk.CellRendererText):
-    __gtype_name__ = "SniffRenderer"
-
-    def do_render(self, window, widget, back, cell, expose, flags):
-        cr = window.cairo_create()
-        cr.save()
-
-        cr.set_line_width(0.5)
-        cr.set_dash([1, 1], 1)
-        cr.move_to(back.x, back.y + back.height)
-        cr.line_to(back.x + back.width, back.y + back.height)
-        cr.stroke()
-
-        cr.restore()
-
-        return gtk.CellRendererText.do_render(self, window, widget, back, cell, expose, flags)
-
-gobject.type_register(SniffRenderer)
 
 class SniffPage(gtk.VBox):
     COL_NO     = 0
@@ -156,7 +138,7 @@ class SniffPage(gtk.VBox):
         self.tree.set_model(self.model_filter)
 
         idx = 0
-        rend = SniffRenderer()
+        rend = GridRenderer()
 
         for txt in (_('No.'), _('Time'), _('Source'), \
                     _('Destination'), _('Protocol'), _('Info')):

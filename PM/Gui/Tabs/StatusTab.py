@@ -23,6 +23,7 @@ import gtk
 import os
 
 from PM.Core.I18N import _
+from PM.Core.Const import PM_VERSION
 from PM.Manager.PreferenceManager import Prefs
 
 from PM.Gui.Core.Views import UmitView
@@ -128,9 +129,9 @@ class StatusTab(UmitView):
     def create_ui(self):
         self.status = StatusView()
 
-        self.status.info(_("PacketManipulator started on %s") % os.name)
+        self.status.info(_("PacketManipulator %s started on %s") % (PM_VERSION, os.name))
         self.status.info(_("Using %s backend") % Prefs()['backend.system'].value)
-        self.status.info(_("Good luck"))
+        self.status.info(_("What do you wanna pwn today?"))
 
         self._main_widget.add(self.status)
         self._main_widget.show_all()

@@ -31,24 +31,61 @@ from PM.Gui.Widgets.ClosableLabel import ClosableLabel
 
 from PM.Gui.Pages.SniffPage import SniffPage
 from PM.Gui.Pages.PacketPage import PacketPage
+from PM.Gui.Pages.SequencePage import SequencePage
 
-class SessionPage(gtk.VBox):
-    def __init__(self, ctx=None, show_sniff=True, show_packet=True):
-        gtk.VBox.__init__(self)
+class Session(gtk.VBox):
+    def __init__(self, ctx):
+        super(Session, self).__init__(False, 2)
 
         self.packet = None
         self.context = ctx
         self.context.title_callback = self.__on_change_title
 
-        self.sniff_page = SniffPage(self)
         self._label = ClosableLabel(ctx.title)
 
         self.set_border_width(4)
+        self.create_ui()
+
+    def create_ui(self):
+        pass
+
+    def reload(self):
+        self.reload_container()
+        self.reload_editor()
+    
+    def reload_container(self, packet=None):
+        """
+        Reload the container of the all packets list
+        @param packet the instance of the packet edited to save cpu or None
+        """
+        pass
+
+    def reload_editor(self):
+        "Reload the editor of the single active packet"
+        pass
+
+    def set_active_packet(self, packet):
+        self.packet = packet
+        self.reload_editor()
+
+    def get_label(self):
+        return self._label
+
+    def __on_change_title(self):
+        if self.context:
+            self._label.label.set_text(self.context.title)
+
+    label = property(get_label)
+
+class SessionPage(Session):
+    def __init__(self, ctx=None, show_sniff=True, show_packet=True):
+        super(SessionPage, self).__init__(ctx)
 
         self.vpaned = gtk.VPaned()
         self.sniff_expander = AnimatedExpander(_("Sniff perspective"), 'sniff_small')
         self.packet_expander = AnimatedExpander(_("Packet perspective"), 'packet_small')
 
+        self.sniff_page = SniffPage(self)
         self.packet_page = PacketPage(self)
 
         self.vpaned.pack1(self.sniff_expander, True, False)
@@ -62,31 +99,40 @@ class SessionPage(gtk.VBox):
         self.pack_start(self.vpaned)
         self.show_all()
 
-    def reload(self):
-        """
-        Reloads the packet page and also the sniff page
-        """
-
+    def reload_editor(self):
         self.packet_page.reload()
 
-        # FIXME: this should be moved in sniff
+    def reload_container(self, packet=None):
+        # FIXME: check packet and emit a row-changed
         if not isinstance(self.context, Backend.TimedContext):
             self.sniff_page.clear()
-
         self.sniff_page.reload()
 
-    def set_active_packet(self, packet):
-        self.packet = packet
+class SequenceSession(Session):
+    def create_ui(self, show_packet=True, show_sequence=True):
+        self.vpaned = gtk.VPaned()
+        self.packet_expander = AnimatedExpander(_("Packet perspective"), 'packet_small')
+        self.sequence_expander = AnimatedExpander(_("Sequence perspective"), gtk.STOCK_INDEX)
+
+        self.packet_page = PacketPage(self)
+        self.sequence_page = SequencePage(self)
+
+        self.vpaned.pack1(self.sequence_expander, True, False)
+        self.vpaned.pack2(self.packet_expander, True, False)
+
+        self.packet_expander.add_widget(self.packet_page, show_packet)
+        self.sequence_expander.add_widget(self.sequence_page, show_sequence)
+
         self.packet_page.reload()
 
-    def get_label(self):
-        return self._label
+        self.pack_start(self.vpaned)
+        self.show_all()
 
-    def __on_change_title(self):
-        if self.context:
-            self._label.label.set_text(self.context.title)
+    def reload_editor(self):
+        self.packet_page.reload()
 
-    label = property(get_label)
+    def reload_container(self, packet=None):
+        self.sequence_page.reload(packet)
 
 class SessionNotebook(gtk.Notebook):
     def __init__(self):
@@ -109,7 +155,7 @@ class SessionNotebook(gtk.Notebook):
         ctx.data.append(packet)
         ctx.summary = _('Editing %s') % packet.get_protocol_str()
 
-        session = SessionPage(ctx)#, show_sniff=False)
+        session = SequenceSession(ctx)
         return self.__append_session(session)
 
     def create_sniff_session(self, ctx):
@@ -149,15 +195,15 @@ class SessionNotebook(gtk.Notebook):
 
     def get_current_session(self):
         """
-        Get the current SessionPage
+        Get the current Session
 
-        @return a SessionPage instance or None
+        @return a Session instance or None
         """
 
         idx = self.get_current_page()
         obj = self.get_nth_page(idx)
 
-        if obj and isinstance(obj, SessionPage):
+        if obj and isinstance(obj, Session):
             return obj
 
         return None

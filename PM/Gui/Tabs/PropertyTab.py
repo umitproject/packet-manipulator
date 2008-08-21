@@ -22,11 +22,12 @@ import gtk
 
 from PM import Backend
 from PM.Core.I18N import _
+from PM.Core.Logger import log
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Views import UmitView
 from PM.Gui.Widgets.PropertyGrid import PropertyGrid
-from PM.Gui.Tabs.MainTab import SessionPage
+from PM.Gui.Tabs.MainTab import Session
 
 class PropertyTab(UmitView):
     label_text = _('Properties')
@@ -45,6 +46,8 @@ class PropertyTab(UmitView):
         self.prev_page = None
         self.change_id = None
 
+        self.notify = {}
+
         # Start disabled
         self._main_widget.set_sensitive(False)
 
@@ -56,13 +59,32 @@ class PropertyTab(UmitView):
         tab = PMApp().main_window.get_tab("MainTab")
         tab.session_notebook.connect('switch-page', self.__on_repopulate)
 
+    def register_notify_for(self, packet, callback):
+        if packet in self.notify:
+            self.notify[packet].append(callback)
+        else:
+            self.notify[packet] = [callback]
+
+        log.debug("%d callbacks for %s" % (len(self.notify[packet]), packet))
+    
+    def remove_notify_for(self, packet, callback):
+        if packet in self.notify:
+            self.notify[packet].remove(callback)
+
+            log.debug("Removing callback for %s" % packet)
+
+            if not self.notify[packet]:
+                del self.notify[packet]
+
+                log.debug("No callbacks for %s" % packet)
+
     def __on_repopulate(self, sess_nb, page, num):
         page = sess_nb.get_nth_page(num)
 
         self._main_widget.set_sensitive(False)
         self.grid.clear()
 
-        if isinstance(page, SessionPage):
+        if isinstance(page, Session):
             # We need to get the protocol instance
             # from selection or from the first iter
             # so we can repopulate the PropertyGrid
@@ -104,16 +126,28 @@ class PropertyTab(UmitView):
         tab = PMApp().main_window.get_tab("MainTab")
         page = tab.session_notebook.get_current_session()
 
+        # FIXME: check if the packet page object is avaiable
+        # within this session or use isisntance(SessionPage, SequencePage)
         if page:
             # No reload to avoid repopulating
             page.packet_page.redraw_hexview()
 
+            packet, proto, field = self.grid.tree.get_selected_field()
+            
+            if packet in self.notify:
+                for cb in self.notify[packet]:
+                    cb(packet, proto, field, True)
+
             # Now reselect the blocks
-            self.__on_field_selected(self.grid.tree, *self.grid.tree.get_selected_field())
+            self.__on_field_selected(self.grid.tree, packet, proto, field)
 
     def __on_field_selected(self, tree, packet=None, proto=None, field=None):
         if not proto or not field:
             return
+
+        if packet in self.notify:
+            for cb in self.notify[packet]:
+                cb(packet, proto, field, False)
 
         # We should select also the bounds in HexView
         tab = PMApp().main_window.get_tab("MainTab")

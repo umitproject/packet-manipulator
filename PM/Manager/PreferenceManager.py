@@ -163,9 +163,11 @@ class Prefs(Singleton):
     options = {
         'gui.docking' : True,
         'gui.maintab.sniffview.font' : 'Monospace 10',
-        'gui.maintab.sniffview.usecolors' : False,
+        'gui.maintab.sniffview.usecolors' : True,
         'gui.maintab.hexview.font' : 'Monospace 10',
         'gui.maintab.hexview.bpl' : 16,
+        'gui.maintab.sequenceview.font' : 'Monospace 10',
+        'gui.maintab.sequenceview.usecolors' : True,
 
         'gui.statustab.font' : 'Monospace 10',
         

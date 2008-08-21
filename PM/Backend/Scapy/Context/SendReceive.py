@@ -165,6 +165,4 @@ def register_send_receive_context(BaseSendReceiveContext):
             if self.rthread:
                 self.rthread.join()
 
-            self.running = False
-
     return SendReceiveContext

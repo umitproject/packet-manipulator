@@ -27,5 +27,6 @@ The class hierarchy is the following:
     \-- BaseTimedContext
        |-- BaseSendContext
        |-- BaseSendReceiveContext
-       \-- BaseSniffContext
+       |-- BaseSniffContext
+       \-- BaseSequenceContext
 """

@@ -128,3 +128,25 @@ class MetaPacket:
                 return proto.name
 
             proto = proto.payload
+    
+    def get_protocols(self):
+        "@returns a list containing the name of protocols"
+
+        lst = []
+        proto = self.root
+
+        while isinstance(proto, Packet):
+            if isinstance(proto, NoPayload):
+                break
+
+            lst.append(proto)
+
+            proto = proto.payload
+
+        return lst
+
+    def haslayer(self, layer):
+        return bool(self.root.haslayer(layer))
+
+    def getlayer(self, layer):
+        return self.root.getlayer(layer)

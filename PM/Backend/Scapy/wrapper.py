@@ -108,6 +108,11 @@ def get_proto_fields(proto_inst):
         if not isinstance(proto_inst.payload, NoPayload):
             get_proto_fields(proto_inst.payload)
 
+def get_proto_field(proto_inst, name):
+    for f in get_proto_fields(proto_inst):
+        if f.name == name:
+            return f
+
 ###############################################################################
 # Packet functions
 ###############################################################################

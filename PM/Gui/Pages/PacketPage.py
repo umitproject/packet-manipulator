@@ -105,6 +105,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
                 packet = Backend.MetaPacket(packet)
             except Exception:
                 ctx.finish(False, False, time)
+                return
 
             # We append as default
             where = -1
@@ -121,7 +122,10 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
             if self.session.packet.insert(packet, where):
                 ctx.finish(True, False, time)
-                self.session.reload()
+
+                self.session.reload_container(self.session.packet)
+                self.session.reload_editor()
+
             else:
                 ctx.finish(False, False, time)
 
@@ -161,53 +165,22 @@ class PacketPage(gtk.VBox):
         stocks = (
             gtk.STOCK_EDIT,
             gtk.STOCK_DELETE,
-            gtk.STOCK_GO_UP,
-            gtk.STOCK_GO_DOWN
         )
 
         tooltips = (
             _('Complete layers'),
             _('Remove selected layer'),
-            _('Send packet'),
-            _('Send/receive packet')
         )
 
         callbacks = (
             self.__on_complete,
             self.__on_remove,
-            self.__on_send,
-            self.__on_send_receive
         )
 
         for tooltip, stock, callback in zip(tooltips, stocks, callbacks):
             action = gtk.Action(None, None, tooltip, stock)
             action.connect('activate', callback)
             self.toolbar.insert(action.create_tool_item(), -1)
-
-        self.toolbar.insert(gtk.SeparatorToolItem(), -1)
-
-        from sys import maxint
-
-        self.packet_count = gtk.SpinButton(gtk.Adjustment(1, 0, maxint, 1, 10))
-        self.packet_interval = gtk.SpinButton(gtk.Adjustment(0, 0, maxint, 1, 10))
-
-        for lbl, widget in zip((_('No:'), _('Interval:')),
-                               (self.packet_count, self.packet_interval)):
-
-            hbox = gtk.HBox(False, 4)
-            hbox.set_border_width(2)
-
-            label = gtk.Label(lbl)
-            label.set_use_markup(True)
-            label.set_alignment(0, 0.5)
-
-            hbox.pack_start(label)
-            hbox.pack_start(widget)
-
-            item = gtk.ToolItem()
-            item.add(hbox)
-
-            self.toolbar.insert(item, -1)
 
         self.pack_start(self.toolbar, False, False)
 
@@ -243,6 +216,7 @@ class PacketPage(gtk.VBox):
             return
 
         if packet.remove(protocol):
+            self.session.reload_container(packet)
             self.reload()
 
     def __on_complete(self, action):
@@ -252,32 +226,5 @@ class PacketPage(gtk.VBox):
             return
 
         if packet.complete():
+            self.session.reload_container(packet)
             self.reload()
-
-    def __on_send(self, action):
-        packet, protocol = self.proto_hierarchy.get_active_protocol()
-
-        if not packet:
-            return
-
-        # We start a background process in Operations tab
-
-        count = self.packet_count.get_value_as_int()
-        inter = self.packet_interval.get_value_as_int()
-
-        tab = PMApp().main_window.get_tab("OperationsTab")
-        tab.tree.append_operation(SendOperation(packet, count, inter))
-
-    def __on_send_receive(self, action):
-        packet, protocol = self.proto_hierarchy.get_active_protocol()
-
-        if not packet:
-            return
-
-        # We start a background process in Operations tab
-
-        count = self.packet_count.get_value_as_int()
-        inter = self.packet_interval.get_value_as_int()
-
-        tab = PMApp().main_window.get_tab("OperationsTab")
-        tab.tree.append_operation(SendReceiveOperation(packet, count, inter))

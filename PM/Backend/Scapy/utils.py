@@ -24,6 +24,8 @@ import sys
 from datetime import datetime
 from threading import Thread, Lock
 
+from PM.Core.Logger import log
+
 from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *
 from PM.Backend.Scapy.packet import MetaPacket
@@ -244,3 +246,140 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
     recv_thread.start()
 
     return send_thread, recv_thread
+
+###############################################################################
+# Sequence Context functions
+###############################################################################
+
+def _next_packet(seq):
+    # yeah we love generators
+
+    idx = 0
+    path = [0, ]
+
+    while path[0] != len(seq):
+        iter = seq
+
+        log.debug("Path is %s" % path)
+
+        for path_idx in xrange(len(path)):
+            if path[path_idx] == len(iter):
+                path = path[0:path_idx]
+                idx = len(path) - 1
+
+                path[idx] += 1
+
+                iter = seq
+                for i in path:
+                    try:
+                        iter = iter[i]
+                    except:
+                        raise StopIteration
+
+                break
+            else:
+                iter = iter[path[path_idx]]
+
+        log.debug("Yielding object at path %s" % path)
+        yield iter
+
+        if iter.conditional:
+            path += [0]
+            idx += 1
+        else:
+            path[idx] += 1
+
+    raise StopIteration
+
+def _execute_sequence(sock, seq, count, inter, scall, rcall, sudata, rudata):
+    # So we have to analyze the Sequence extract the current packet
+    # send it on the wire and check the reply if conditional is != []
+
+    try:
+        for i in xrange(count):
+     
+            log.debug("Pass %d of %d total loops" % (i, count))
+     
+            scall(None, None, sudata)
+ 
+            for seq_iter in _next_packet(seq):
+ 
+                packet = seq_iter.packet.root
+                filter = seq_iter.filter
+ 
+                want_reply = (seq_iter.conditional != [])
+ 
+                sock.send(packet)
+
+                log.debug("Packet %s sent" % seq_iter.packet.summary())
+                log.debug("Sleeping %.2f" % (inter + seq_iter.inter))
+
+                time.sleep(inter + seq_iter.inter)
+ 
+                if scall(packet, want_reply, sudata):
+                    log.debug("scallback want to exit")
+                    raise StopIteration # ugly :D
+ 
+                if want_reply:
+                    log.debug("Waiting a reply ...")
+ 
+                    packet_hash = packet.hashret()
+ 
+                    inmask = [sock]
+ 
+                    while True:
+                        r = None
+                        if FREEBSD or DARWIN:
+                            inp, out, err = select(inmask, [], [], 0.05)
+                            if len(inp) == 0 or sock in inp:
+                                r = sock.nonblock_recv()
+                        elif WINDOWS:
+                            r = sock.recv(MTU)
+                        else:
+                            inp, out, err = select(inmask, [], [], None)
+                            if len(inp) == 0:
+                                return
+                            if sock in inp:
+                                r = sock.recv(MTU)
+                        if r is None:
+                            continue
+
+                        log.debug("Captured a packet %s" % MetaPacket(r).summary())
+
+                        if True:
+                        #if r.hashret() == packet_hash and r.answers(packet):
+                            if rcall(seq_iter.packet, MetaPacket(r), rudata):
+                                log.debug("rcallback want to exit")
+                                raise StopIteration # ugly :D
+ 
+                            break
+
+    except StopIteration:
+        log.debug("Stop iteration by user request")
+    finally:
+        rcall(None, None, rudata)
+
+    log.debug("Sequence end")
+
+def execute_sequence(sequence, count, inter, iface, scallback, rcallback, \
+                     sudata, rudata):
+
+    if not count or count <= 0:
+        count = 1
+
+    try:
+        sock = conf.L2socket(iface=iface)
+
+        if not sock:
+            raise Exception('Unable to create a valid socket')
+    except socket.error, (errno, err):
+        raise Exception(err)
+
+    thread = Thread(target=_execute_sequence, args=(sock, sequence, count, inter, \
+                                                    scallback, rcallback, sudata, rudata))
+    thread.setDaemon(True)
+    thread.start()
+
+    log.debug("sequence thread created (count: %d interval: %d)" % (count, inter))
+
+    return thread

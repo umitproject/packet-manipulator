@@ -151,6 +151,22 @@ class SniffOperation(Backend.SniffContext, Operation):
     def __recv_callback(self, packet, udata):
         self.notify_parent()
 
+
+class SequenceOperation(Backend.SequenceContext, Operation):
+    def __init__(self, seq, count, inter, iface=None):
+
+        Operation.__init__(self)
+        Backend.SequenceContext.__init__(self, seq, count, inter, iface, \
+                                         self.__send_callback,           \
+                                         self.__receive_callback)
+
+    def __send_callback(self, packet, want_reply, loop, count, udata):
+        self.notify_parent()
+
+    def __receive_callback(self, packet, reply, udata):
+        self.notify_parent()
+
+
 class OperationTree(gtk.TreeView):
     def __init__(self):
         self.store = gtk.ListStore(object)
@@ -316,7 +332,7 @@ class OperationTree(gtk.TreeView):
         current = len(self.store)
         
         while current >= 0:
-            iter = self.store.get_iter_from_string((current, ))
+            iter = self.store.get_iter((current, ))
             operation = self.store.get_value(iter, 0)
 
             if operation.state == operation.NOT_RUNNING:

@@ -30,6 +30,9 @@ from Abstract.BaseContext.Timed import TimedContext
 from Abstract.BaseContext.Send import SendContext
 from Abstract.BaseContext.SendReceive import SendReceiveContext
 from Abstract.BaseContext.Sniff import SniffContext
+from Abstract.BaseContext.Sequence import SequenceContext
+
+from Abstract.Context import SequencePacket, SequenceObject
 
 from PM.Manager.PreferenceManager import Prefs
 

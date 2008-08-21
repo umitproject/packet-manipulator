@@ -18,9 +18,24 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-"""
-This module contains perspectives called also Pages:
-    - PacketPage
-    - SniffPage
-    - SequencePage
-"""
+import gtk
+import gobject
+
+class GridRenderer(gtk.CellRendererText):
+    __gtype_name__ = "SniffRenderer"
+
+    def do_render(self, window, widget, back, cell, expose, flags):
+        cr = window.cairo_create()
+        cr.save()
+
+        cr.set_line_width(0.5)
+        cr.set_dash([1, 1], 1)
+        cr.move_to(back.x, back.y + back.height)
+        cr.line_to(back.x + back.width, back.y + back.height)
+        cr.stroke()
+
+        cr.restore()
+
+        return gtk.CellRendererText.do_render(self, window, widget, back, cell, expose, flags)
+
+gobject.type_register(GridRenderer)
