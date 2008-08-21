@@ -193,9 +193,7 @@ class SequencePage(gtk.VBox):
         self.active_diff = None
 
         self.merging = False
-
-        self.model_filter = self.store.filter_new()
-        self.model_filter.set_visible_func(self.__filter_func)
+        self.filter_store = gtk.ListStore(str, object)
 
         target_packet = ('PMPacket', gtk.TARGET_SAME_WIDGET, 0)
         target_plain = ('text/plain', 0, 0)
@@ -347,22 +345,35 @@ class SequencePage(gtk.VBox):
         tab.tree.append_operation(SendReceiveOperation(packet, count, inter))
 
     def __txt_cell_data(self, col, rend, model, iter):
-        tot = ".".join([str(i + 1) for i in model.get_path(iter)])
+        if self.merging:
+            tot = model.get_value(iter, 0)
+            packet = model.get_value(iter, 1)
 
-        packet = model.get_value(iter, 0)
+            rend.set_property('text', "%s) %s" % (tot, packet.summary()))
+        else:
+            tot = ".".join([str(i + 1) for i in model.get_path(iter)])
 
-        rend.set_property('text', "%s) %s" % (tot, packet.summary()))
-        rend.set_property('cell-background-gdk', self.__get_color(packet))
+            packet = model.get_value(iter, 0)
 
-    def __filter_func(self, model, iter):
-        if not self.active_layer:
-            return True
+            rend.set_property('text', "%s) %s" % (tot, packet.summary()))
+            rend.set_property('cell-background-gdk', self.__get_color(packet))
 
-        packet = model.get_value(iter, 0)
+    def refilter(self):
+        self.filter_store.clear()
 
-        return packet.haslayer(self.active_layer)
+        def add_to_store(model, path, iter, store):
+            packet = model.get_value(iter, 0)
+
+            if packet.haslayer(self.active_layer):
+                tot = ".".join([str(i + 1) for i in model.get_path(iter)])
+                store.append([tot, packet])
+
+        self.store.foreach(add_to_store, self.filter_store)
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
+        if self.merging:
+            ctx.finish(False, False, time)
+
         if data:
             packet = None
 
@@ -416,8 +427,8 @@ class SequencePage(gtk.VBox):
 
             self.tree.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
 
-            self.model_filter.refilter()
-            self.tree.set_model(self.model_filter)
+            self.refilter()
+            self.tree.set_model(self.filter_store)
         else:
             self.merging = False
             self.tree.get_selection().set_mode(gtk.SELECTION_SINGLE)
@@ -443,7 +454,8 @@ class SequencePage(gtk.VBox):
             model, lst = sel.get_selected_rows()
 
             for path in lst:
-                packet = model.get_value(model.get_iter(path), 0)
+                # We are the list store
+                packet = model.get_value(model.get_iter(path), 1)
                 self.active_packets.append(packet)
 
             log.debug("Repopulating active_packets with selection %s" % self.active_packets)
@@ -499,7 +511,7 @@ class SequencePage(gtk.VBox):
             def emit_row_changed(model, path, iter):
                 model.row_changed(path, iter)
 
-            self.model_filter.foreach(emit_row_changed)
+            self.filter_store.foreach(emit_row_changed)
 
             Backend.set_field_value(layer, field, val)
 
