@@ -327,18 +327,17 @@ class OperationTree(gtk.TreeView):
         operation.restart()
 
     def __on_clear(self, action, operation):
-        iter = self.store.get_iter_first()
+        def scan(model, path, iter, lst):
+            op = model.get_value(iter, 0)
+            
+            if op.state == op.NOT_RUNNING:
+                lst.append(gtk.TreeRowReference(model, path))
 
-        current = len(self.store)
-        
-        while current >= 0:
-            iter = self.store.get_iter((current, ))
-            operation = self.store.get_value(iter, 0)
+        lst = []
+        self.store.foreach(scan, lst)
 
-            if operation.state == operation.NOT_RUNNING:
-                self.store.remove(iter)
-
-            current -= 1
+        for ref in lst:
+            self.store.remove(self.store.get_iter(ref.get_path()))
 
 class OperationsTab(UmitView):
     icon_name = 'operation_small'

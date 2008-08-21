@@ -34,7 +34,7 @@ from PM.Gui.Widgets.CellRenderer import GridRenderer
 
 from PM.Manager.PreferenceManager import Prefs
 from PM.Backend import SequencePacket, SequenceObject
-from PM.Gui.Tabs.OperationsTab import SequenceOperation
+from PM.Gui.Tabs.OperationsTab import SequenceOperation, SendOperation, SendReceiveOperation
 
 class FilterLayer(gtk.ComboBox):
     def __init__(self):
@@ -318,7 +318,7 @@ class SequencePage(gtk.VBox):
         tab.tree.append_operation(operation)
 
     def __on_send(self, action):
-        packet, protocol = self.proto_hierarchy.get_active_protocol()
+        packet = self.session.packet
 
         if not packet:
             return
@@ -332,7 +332,7 @@ class SequencePage(gtk.VBox):
         tab.tree.append_operation(SendOperation(packet, count, inter))
 
     def __on_send_receive(self, action):
-        packet, protocol = self.proto_hierarchy.get_active_protocol()
+        packet = self.session.packet
 
         if not packet:
             return
