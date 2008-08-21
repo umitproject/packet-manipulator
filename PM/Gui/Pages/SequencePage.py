@@ -192,6 +192,8 @@ class SequencePage(gtk.VBox):
         self.active_packets = []
         self.active_diff = None
 
+        self.merging = False
+
         self.model_filter = self.store.filter_new()
         self.model_filter.set_visible_func(self.__filter_func)
 
@@ -229,8 +231,6 @@ class SequencePage(gtk.VBox):
         self.tree.get_selection().connect('changed', self.__on_selection_changed)
         self.combo.connect('changed', self.__on_filter)
 
-        self.reload()
-
     def __modify_font(self, font):
         try:
             desc = pango.FontDescription(font)
@@ -266,12 +266,13 @@ class SequencePage(gtk.VBox):
 
     def reload(self, packet=None):
         # Should be the selected
-        if packet:
+
+        if not packet is None:
             ret = self.tree.get_selection().get_selected()
 
             if ret:
                 model, iter = ret
-                if model.get_value(iter, 0) == packet:
+                if model.get_value(iter, 0) is packet:
 
                     model.row_changed(model.get_path(iter), iter)
                     self.__update_combo()
@@ -411,11 +412,14 @@ class SequencePage(gtk.VBox):
         self.active_layer = self.combo.get_active_protocol()
 
         if self.active_layer:
+            self.merging = True
+
             self.tree.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
 
             self.model_filter.refilter()
             self.tree.set_model(self.model_filter)
         else:
+            self.merging = False
             self.tree.get_selection().set_mode(gtk.SELECTION_SINGLE)
             self.tree.set_model(self.store)
 
@@ -427,7 +431,7 @@ class SequencePage(gtk.VBox):
                 self.active_packets = []
                 self.active_layer = None
 
-            self.tree.get_selection().select_path((0, ))
+                self.tree.get_selection().select_path((0, ))
 
     def __on_selection_changed(self, sel):
         sel = self.tree.get_selection()
@@ -443,6 +447,7 @@ class SequencePage(gtk.VBox):
                 self.active_packets.append(packet)
 
             log.debug("Repopulating active_packets with selection %s" % self.active_packets)
+            self.session.set_active_packet(None)
 
         elif sel.get_mode() == gtk.SELECTION_SINGLE:
             ret = sel.get_selected()
@@ -490,6 +495,11 @@ class SequencePage(gtk.VBox):
             field = Backend.get_proto_field(layer, field.name)
 
             log.debug("Setting value to %s" % field)
+
+            def emit_row_changed(model, path, iter):
+                model.row_changed(path, iter)
+
+            self.model_filter.foreach(emit_row_changed)
 
             Backend.set_field_value(layer, field, val)
 

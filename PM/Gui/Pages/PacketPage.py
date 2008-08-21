@@ -206,6 +206,18 @@ class PacketPage(gtk.VBox):
             self.hexview.payload = ""
 
     def reload(self):
+        # Hide the toolbar while merging fields
+
+        # FIXME: cyclic
+        #if isinstance(self.session, SequenceSession) and \
+        if getattr(self.session, 'sequence_page', None) and \
+           self.session.sequence_page.merging:
+            self.toolbar.hide()
+            self.proto_hierarchy.hide()
+        else:
+            self.toolbar.show()
+            self.proto_hierarchy.show()
+
         self.redraw_hexview()
         self.proto_hierarchy.reload()
 

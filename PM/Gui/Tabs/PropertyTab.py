@@ -27,7 +27,7 @@ from PM.Core.Logger import log
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Views import UmitView
 from PM.Gui.Widgets.PropertyGrid import PropertyGrid
-from PM.Gui.Tabs.MainTab import Session
+from PM.Gui.Sessions.Base import Session
 
 class PropertyTab(UmitView):
     label_text = _('Properties')

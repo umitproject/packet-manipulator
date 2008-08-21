@@ -146,6 +146,7 @@ setup(name         = 'PacketManipulator',
                       'PM.Gui.Core',
                       'PM.Gui.Tabs',
                       'PM.Gui.Pages',
+                      'PM.Gui.Sessions',
                       'PM.Gui.Dialogs',
                       'PM.Gui.Widgets',
                       'PM.higwidgets'
