@@ -23,6 +23,7 @@ from PM.Backend.Abstract.Context import register_sequence_context
 
 class BaseSequenceContext(TimedContext):
     def __init__(self, seq, count, inter, iface, \
+                 strict, report_recv, report_sent, \
                  scallback, rcallback, sudata=None, rudata=None):
 
         """
@@ -32,6 +33,9 @@ class BaseSequenceContext(TimedContext):
         @param count the n of metapacket to send
         @param interval the interval between two consecutive send
         @param iface the interface to listen on for replies
+        @param strict strict checking for reply
+        @param report_recv report received packets
+        @param report_sent report sent packets
         @param scallback the send callback to call at each send
         @param rcallback the recv callback to call at each recv
         @param sudata the user data for scallback
@@ -52,6 +56,10 @@ class BaseSequenceContext(TimedContext):
         self.rcallback = rcallback
         self.sudata = sudata
         self.rudata = rudata
+
+        self.strict = strict
+        self.report_recv = report_recv
+        self.report_sent = report_sent
 
         self.answers = 0
         self.received = 0

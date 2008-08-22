@@ -31,6 +31,7 @@ from PM.Core.Logger import log
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Widgets.CellRenderer import GridRenderer
+from PM.higwidgets.higtooltips import HIGTooltip, HIGTooltipData
 
 from PM.Manager.PreferenceManager import Prefs
 from PM.Backend import SequencePacket, SequenceObject
@@ -155,7 +156,28 @@ class SequencePage(gtk.VBox):
             item.add(hbox)
 
             self.toolbar.insert(item, -1)
-        self.combo = FilterLayer()
+
+        tooltips = (_('Use strict checking for the replies'),
+                    _('Report also received packets'),
+                    _('Report also sent packets'))
+
+        self.check_strict = gtk.CheckButton("Strict")
+        self.check_received = gtk.CheckButton("Received")
+        self.check_sent = gtk.CheckButton("Sent")
+
+        self.check_strict.set_active(True)
+        self.check_sent.set_active(True)
+
+        for widget, tip in zip((self.check_strict,
+                                self.check_received,
+                                self.check_sent), tooltips):
+
+            item = gtk.ToolItem()
+            item.add(widget)
+
+            HIGTooltip.add_widget(widget, HIGTooltipData(tip))
+
+            self.toolbar.insert(item, -1)
 
         # Combo
         space = gtk.ToolItem()
@@ -163,9 +185,15 @@ class SequencePage(gtk.VBox):
         space.set_expand(True)
         self.toolbar.insert(space, -1)
 
+        action = gtk.Action(None, None, _('Remove packet'), gtk.STOCK_DELETE)
+        action.connect('activate', self.__on_remove)
+        self.toolbar.insert(action.create_tool_item(), -1)
+
         action = gtk.Action(None, None, _('Merge selection'), gtk.STOCK_COLOR_PICKER)
         action.connect('activate', self.__on_merge)
         self.toolbar.insert(action.create_tool_item(), -1)
+
+        self.combo = FilterLayer()
 
         item = gtk.ToolItem()
         item.add(self.combo)
@@ -311,7 +339,10 @@ class SequencePage(gtk.VBox):
         count = max(self.packet_count.get_value_as_int(), 1)
         inter = max(self.packet_interval.get_value_as_int(), 0)
 
-        operation = SequenceOperation(seq, count, inter, None)
+        operation = SequenceOperation(seq, count, inter, None,
+                                      self.check_strict.get_active(),
+                                      self.check_received.get_active(),
+                                      self.check_sent.get_active())
 
         tab = PMApp().main_window.get_tab("OperationsTab")
         tab.tree.append_operation(operation)
@@ -443,6 +474,16 @@ class SequencePage(gtk.VBox):
                 self.active_layer = None
 
                 self.tree.get_selection().select_path((0, ))
+
+    def __on_remove(self, action):
+        if self.merging:
+            return
+
+        model, iter = self.tree.get_selection().get_selected()
+
+        if iter:
+            model.remove(iter)
+            self.session.set_active_packet(None)
 
     def __on_selection_changed(self, sel):
         sel = self.tree.get_selection()

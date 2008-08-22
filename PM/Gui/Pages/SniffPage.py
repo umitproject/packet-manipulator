@@ -93,21 +93,24 @@ class SniffPage(gtk.VBox):
             gtk.STOCK_REFRESH,
             gtk.STOCK_MEDIA_STOP,
             gtk.STOCK_SAVE,
-            gtk.STOCK_SAVE_AS
+            gtk.STOCK_SAVE_AS,
+            gtk.STOCK_NETWORK
         )
 
         callbacks = (
             self.__on_restart,
             self.__on_stop,
             self.__on_save,
-            self.__on_save_as
+            self.__on_save_as,
+            self.__on_reorder
         )
 
         tooltips = (
             _('Restart capturing'),
             _('Stop capturing'),
             _('Save packets'),
-            _('Save packets as')
+            _('Save packets as'),
+            _('Reorder flow')
         )
 
         for tooltip, stock, callback in zip(tooltips, stocks, callbacks):
@@ -131,7 +134,7 @@ class SniffPage(gtk.VBox):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-        self.store = gtk.ListStore(object)
+        self.store = gtk.TreeStore(object)
         self.tree = gtk.TreeView(self.store)
 
         # Create a filter function
@@ -159,7 +162,7 @@ class SniffPage(gtk.VBox):
         packet = model.get_value(iter, 0)
 
         if idx == self.COL_NO:
-            cell.set_property('text', str(model.get_path(iter)[0] + 1))
+            cell.set_property('text', "%s)" % ".".join([str(i + 1) for i in model.get_path(iter)]))
         elif idx == self.COL_TIME:
             cell.set_property('text', packet.get_time())
         elif idx == self.COL_SRC:
@@ -227,14 +230,14 @@ class SniffPage(gtk.VBox):
 
     def populate(self, pktlist):
         for packet in pktlist:
-            self.store.append([packet])
+            self.store.append(None, [packet])
 
     def clear(self):
         self.store.clear()
 
     def reload(self):
         for packet in self.session.context.get_data():
-            self.store.append([packet])
+            self.store.append(None, [packet])
 
         self.statusbar.label = "<b>%s</b>" % self.session.context.summary
 
@@ -318,6 +321,29 @@ class SniffPage(gtk.VBox):
 
         dialog.hide()
         dialog.destroy()
+
+    def __on_reorder(self, action):
+        if isinstance(self.session.context, Backend.StaticContext):
+            packets = self.session.context.get_data()
+        elif isinstance(self.session.context, Backend.TimedContext) and \
+           self.session.context.state == self.session.context.NOT_RUNNING:
+            packets = self.session.context.get_all_data()
+        else:
+            self.statusbar.label = "<b>Cannot reorganize the flow while sniffing</b>"
+            self.statusbar.start_animation(True)
+
+            return
+
+        tree = Backend.analyze_connections(packets)
+
+        if tree:
+            self.store.clear()
+
+            for (root, lst) in tree:
+                iter = self.store.append(None, [root])
+
+                for child in lst:
+                    self.store.append(iter, [child])
 
     def __on_apply_filter(self, entry):
         self.model_filter.refilter()

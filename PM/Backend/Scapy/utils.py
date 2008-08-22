@@ -31,6 +31,47 @@ from PM.Backend.Scapy.wrapper import *
 from PM.Backend.Scapy.packet import MetaPacket
 
 ###############################################################################
+# Analyze functions
+###############################################################################
+
+def analyze_connections(pktlist, strict=False):
+    # Doesn't work with strict = True :(
+    # but without strict is also more speedy so :)
+
+    tree = {}
+
+    for packet in pktlist:
+        hashret = packet.root.hashret()
+        append = False
+        last = 0
+
+        for (idx, hash, pkt) in tree:
+            last = max(last, idx)
+
+            if hash == hashret:
+                lst = tree[(idx, hash, pkt)]
+
+                if strict:
+                    for child in lst:
+                        if child.root.answers(packet.root):
+                            lst.append(packet)
+                            append = True
+                            break
+                else:
+                    lst.append(packet)
+                    append = True
+
+                break
+
+        if not append:
+            tree[(last + 1, hashret, packet)] = []
+
+    items = tree.items()
+    items.sort()
+
+    return [(packet, lst) for (idx, hash, packet), lst in tree.items()]
+
+###############################################################################
 # Routing related functions
 ###############################################################################
 
@@ -291,7 +332,7 @@ def _next_packet(seq):
 
     raise StopIteration
 
-def _execute_sequence(sock, seq, count, inter, scall, rcall, sudata, rudata):
+def _execute_sequence(sock, seq, count, inter, strict, scall, rcall, sudata, rudata):
     # So we have to analyze the Sequence extract the current packet
     # send it on the wire and check the reply if conditional is != []
 
@@ -316,7 +357,7 @@ def _execute_sequence(sock, seq, count, inter, scall, rcall, sudata, rudata):
 
                 time.sleep(inter + seq_iter.inter)
  
-                if scall(packet, want_reply, sudata):
+                if scall(seq_iter.packet, want_reply, sudata):
                     log.debug("scallback want to exit")
                     raise StopIteration # ugly :D
  
@@ -351,23 +392,25 @@ def _execute_sequence(sock, seq, count, inter, scall, rcall, sudata, rudata):
 
                         log.debug("Captured a packet %s" % MetaPacket(r).summary())
 
-                        if True:
-                        #if r.hashret() == packet_hash and r.answers(packet):
-                            if rcall(seq_iter.packet, MetaPacket(r), rudata):
-                                log.debug("rcallback want to exit")
-                                raise StopIteration # ugly :D
- 
-                            break
+                        reply = False
+
+                        if (not strict) or \
+                           (strict and r.hashret() == packet_hash and r.answers(packet)):
+                            reply = True
+
+                        if rcall(seq_iter.packet, MetaPacket(r), reply, rudata):
+                            log.debug("rcallback want to exit")
+                            raise StopIteration # ugly :D
 
     except StopIteration:
         log.debug("Stop iteration by user request")
     finally:
-        rcall(None, None, rudata)
+        rcall(None, None, False, rudata)
 
     log.debug("Sequence end")
 
-def execute_sequence(sequence, count, inter, iface, scallback, rcallback, \
-                     sudata, rudata):
+def execute_sequence(sequence, count, inter, iface, strict,
+                        scallback, rcallback, sudata, rudata):
 
     if not count or count <= 0:
         count = 1
@@ -380,8 +423,9 @@ def execute_sequence(sequence, count, inter, iface, scallback, rcallback, \
     except socket.error, (errno, err):
         raise Exception(err)
 
-    thread = Thread(target=_execute_sequence, args=(sock, sequence, count, inter, \
-                                                    scallback, rcallback, sudata, rudata))
+    thread = Thread(target=_execute_sequence,
+                    args=(sock, sequence, count, inter, strict,
+                          scallback, rcallback, sudata, rudata))
     thread.setDaemon(True)
     thread.start()
 

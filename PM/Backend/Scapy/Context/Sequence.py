@@ -27,16 +27,18 @@ from PM.Backend.Scapy.utils import execute_sequence
 def register_sequence_context(BaseSequenceContext):
     
     class SequenceContext(BaseSequenceContext):
-        def __init__(self, seq, count, inter, iface, \
+        def __init__(self, seq, count, inter, iface, strict, report_recv, report_sent,
                      scallback, rcallback, sudata=None, rudata=None):
 
-            BaseSequenceContext.__init__(self, seq, count, inter, iface, \
+            BaseSequenceContext.__init__(self, seq, count, inter, iface,
+                                         strict, report_recv, report_sent,
                                          scallback, rcallback, sudata, rudata)
 
             self.lock = Lock()
             self.thread = None
             self.internal = False
-            self.title = _('Executing sequence (%d packets %d times)') % (self.tot_packet_count, count)
+            self.title = _('Unsaved')
+            self.summary = _('Executing sequence (%d packets %d times)') % (self.tot_packet_count, count)
 
         def get_all_data(self):
             with self.lock:
@@ -58,10 +60,13 @@ def register_sequence_context(BaseSequenceContext):
                 self.state = self.RUNNING
 
                 try:
-                    self.thread = execute_sequence(self.seq, max(self.tot_loop_count - self.loop_count, 1), \
-                                                   self.inter, self.iface,                     \
-                                                   self.__send_callback, self.__recv_callback, \
-                                                   self.sudata, self.rudata)
+                    self.thread = execute_sequence(
+                        self.seq,
+                        max(self.tot_loop_count - self.loop_count, 1),
+                        self.inter, self.iface, self.strict,
+                        self.__send_callback, self.__recv_callback,
+                        self.sudata, self.rudata
+                    )
                 except Exception, err:
                     self.internal = False
                     self.state = self.NOT_RUNNING
@@ -108,6 +113,9 @@ def register_sequence_context(BaseSequenceContext):
                 else:
                     self.summary = _('Sending packet %s') % packet.summary()
 
+                if self.report_sent:
+                    self.data.append(packet)
+
             self.percentage = float((float(self.packet_count) / float(self.tot_packet_count)) * \
                                     (float(self.loop_count + 1) / float(self.tot_loop_count + 1))) * 100.0
 
@@ -121,7 +129,7 @@ def register_sequence_context(BaseSequenceContext):
             return self.state == self.NOT_RUNNING or \
                    self.state == self.PAUSED
 
-        def __recv_callback(self, packet, reply, udata):
+        def __recv_callback(self, packet, reply, is_reply, udata):
             if not packet:
                 self.internal = False
                 self.summary = _('Sequence finished with %d packets sent and %d received') % \
@@ -130,8 +138,8 @@ def register_sequence_context(BaseSequenceContext):
                 self.received += 1
                 self.summary = _('Received %s') % reply.summary()
 
-                #self.data.append(packet)
-                self.data.append(reply)
+                if is_reply or self.report_recv:
+                    self.data.append(reply)
 
             if self.rcallback:
                 self.rcallback(packet, reply, udata)

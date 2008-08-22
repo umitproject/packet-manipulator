@@ -153,18 +153,32 @@ class SniffOperation(Backend.SniffContext, Operation):
 
 
 class SequenceOperation(Backend.SequenceContext, Operation):
-    def __init__(self, seq, count, inter, iface=None):
+    def __init__(self, seq, count, inter, iface=None, strict=True, \
+                 report_recv=False, report_sent=True):
 
         Operation.__init__(self)
-        Backend.SequenceContext.__init__(self, seq, count, inter, iface, \
-                                         self.__send_callback,           \
+        Backend.SequenceContext.__init__(self, seq, count, inter, iface,   \
+                                         strict, report_recv, report_sent, \
+                                         self.__send_callback,             \
                                          self.__receive_callback)
+
+        nb = PMApp().main_window.get_tab("MainTab").session_notebook
+        self.session = nb.create_sniff_session(self)
 
     def __send_callback(self, packet, want_reply, loop, count, udata):
         self.notify_parent()
 
     def __receive_callback(self, packet, reply, udata):
         self.notify_parent()
+
+    def _start(self):
+        ret = Backend.SequenceContext._start(self)
+
+        if ret and self.session:
+            self.session.sniff_page.clear()
+            self.session.sniff_page.reload()
+
+        return ret
 
 
 class OperationTree(gtk.TreeView):

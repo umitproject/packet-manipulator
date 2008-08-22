@@ -417,7 +417,7 @@ class HIGTooltip(gtk.Window):
             return False
 
         if not data:
-            window = w.get_parent_window()
+            window = w.get_toplevel().window
 
             x, y = window.get_position()
             px, py, pmask = window.get_pointer()
