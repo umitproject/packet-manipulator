@@ -150,3 +150,6 @@ class MetaPacket:
 
     def getlayer(self, layer):
         return self.root.getlayer(layer)
+
+    def get_raw(self):
+        return str(self.root)

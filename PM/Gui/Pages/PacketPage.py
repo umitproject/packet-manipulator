@@ -31,6 +31,7 @@ from PM.Manager.PreferenceManager import Prefs
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Widgets.HexView import HexView
+from PM.Gui.Widgets.Plotter import Plotter
 from PM.Gui.Tabs.OperationsTab import SendOperation, SendReceiveOperation
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
@@ -165,16 +166,19 @@ class PacketPage(gtk.VBox):
         stocks = (
             gtk.STOCK_EDIT,
             gtk.STOCK_DELETE,
+            gtk.STOCK_SELECT_COLOR
         )
 
         tooltips = (
             _('Complete layers'),
             _('Remove selected layer'),
+            _('Graph packet')
         )
 
         callbacks = (
             self.__on_complete,
             self.__on_remove,
+            self.__on_graph
         )
 
         for tooltip, stock, callback in zip(tooltips, stocks, callbacks):
@@ -240,3 +244,36 @@ class PacketPage(gtk.VBox):
         if packet.complete():
             self.session.reload_container(packet)
             self.reload()
+
+    def __on_graph(self, action):
+        if not self.session.packet:
+            return
+
+        dialog = gtk.Dialog(
+                _('Graph for %s') % self.session.packet.get_protocol_str(),
+                self.get_toplevel(), 0, (gtk.STOCK_CLOSE, gtk.RESPONSE_REJECT,
+                                         gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
+
+        dialog.plotter = Plotter(self.session.packet)
+        dialog.vbox.pack_start(dialog.plotter)
+        dialog.set_size_request(900, 600)
+        dialog.show_all()
+
+        dialog.connect('response', self.__on_graph_response)
+
+    def __on_graph_response(self, dialog, id):
+        if id == gtk.RESPONSE_REJECT:
+            dialog.hide()
+            dialog.destroy()
+        elif id == gtk.RESPONSE_ACCEPT:
+            chooser = gtk.FileChooserDialog(_('Save graph to'), dialog,
+                         gtk.FILE_CHOOSER_ACTION_SAVE,
+                         (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+                          gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
+ 
+            if chooser.run() == gtk.RESPONSE_ACCEPT:
+                fname = chooser.get_filename()
+                dialog.plotter.export_to(fname)
+ 
+            chooser.hide()
+            chooser.destroy()
