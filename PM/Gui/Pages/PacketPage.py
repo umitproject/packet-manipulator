@@ -166,18 +166,21 @@ class PacketPage(gtk.VBox):
         stocks = (
             gtk.STOCK_EDIT,
             gtk.STOCK_DELETE,
+            gtk.STOCK_CLEAR,
             gtk.STOCK_SELECT_COLOR
         )
 
         tooltips = (
             _('Complete layers'),
             _('Remove selected layer'),
+            _('Reset layer to default'),
             _('Graph packet')
         )
 
         callbacks = (
             self.__on_complete,
             self.__on_remove,
+            self.__on_reset,
             self.__on_graph
         )
 
@@ -232,6 +235,16 @@ class PacketPage(gtk.VBox):
             return
 
         if packet.remove(protocol):
+            self.session.reload_container(packet)
+            self.reload()
+
+    def __on_reset(self, action):
+        packet, protocol = self.proto_hierarchy.get_active_protocol()
+
+        if not packet:
+            return
+
+        if packet.reset(protocol):
             self.session.reload_container(packet)
             self.reload()
 

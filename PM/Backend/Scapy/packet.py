@@ -144,6 +144,19 @@ class MetaPacket:
             proto = proto.payload
 
         return lst
+    
+    def reset(self, protocol):
+        find = self.root
+
+        while isinstance(find, Packet):
+            if find is protocol:
+
+                for k in protocol.fields.keys():
+                    del protocol.fields[k]
+
+                return True
+
+        return False
 
     def haslayer(self, layer):
         return bool(self.root.haslayer(layer))
