@@ -211,7 +211,7 @@ class SniffPage(gtk.VBox):
 
     def __update_tree(self):
         for packet in self.session.context.get_data():
-            self.store.append([packet])
+            self.store.append(None, [packet])
 
             # Scroll to end
             if getattr(self.session.context, 'auto_scroll', True):
@@ -244,7 +244,8 @@ class SniffPage(gtk.VBox):
         if self.timeout_id:
             gobject.source_remove(self.timeout_id)
 
-        if isinstance(self.session.context, Backend.TimedContext):
+        if isinstance(self.session.context, Backend.TimedContext) and \
+           self.session.context.state != self.session.context.NOT_RUNNING:
             self.timeout_id = gobject.timeout_add(200, self.__update_tree)
 
     def save(self):
@@ -312,7 +313,7 @@ class SniffPage(gtk.VBox):
 
             if ctx.save():
                 self.statusbar.image = gtk.STOCK_HARDDISK
-                self.statusbar.label = "<b>%d selected packets saved to %s</b>" % (len(ctx.data), ctx.cap_file)
+                self.statusbar.label = _('<b>%d selected packets saved to %s</b>') % (len(ctx.data), ctx.cap_file)
             else:
                 self.statusbar.image = gtk.STOCK_DIALOG_ERROR
                 self.statusbar.label = "<b>%s</b>" % ctx.summary
@@ -323,15 +324,17 @@ class SniffPage(gtk.VBox):
         dialog.destroy()
 
     def __on_reorder(self, action):
-        if isinstance(self.session.context, Backend.StaticContext):
-            packets = self.session.context.get_data()
-        elif isinstance(self.session.context, Backend.TimedContext) and \
-           self.session.context.state == self.session.context.NOT_RUNNING:
-            packets = self.session.context.get_all_data()
-        else:
-            self.statusbar.label = "<b>Cannot reorganize the flow while sniffing</b>"
-            self.statusbar.start_animation(True)
+        if isinstance(self.session.context, Backend.TimedContext):
+            if self.session.context.state == self.session.context.NOT_RUNNING:
+                packets = self.session.context.get_all_data()
+            else:
+                self.statusbar.label = _('<b>Cannot reorganize the flow while sniffing</b>')
+                self.statusbar.start_animation(True)
+                return
 
+        elif isinstance(self.session.context, Backend.StaticContext):
+            packets = self.session.context.get_data()
+        else:
             return
 
         tree = Backend.analyze_connections(packets)
