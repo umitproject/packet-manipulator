@@ -30,6 +30,31 @@ from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *
 from PM.Backend.Scapy.packet import MetaPacket
 
+def get_iface_from_ip(metapacket):
+    if metapacket.haslayer(IP):
+        iff, a, gw = conf.route.route(metapacket.getlayer(IP).dst)
+        log.debug("Using %s interface to send packet to %s" % (iff, metapacket.root.dst))
+    else:
+        iff = conf.iface
+        log.debug("Using default %s interface" % iff)
+
+    return iff
+
+def get_socket_for(metapacket, want_layer_2=False):
+    # We should check if the given packet has a IP layer but not an
+    # Ether one so we could send it trough layer 3
+
+    iff = get_iface_from_ip(metapacket)
+
+    if not metapacket.haslayer(Ether) and not want_layer_2:
+        sock = conf.L3socket(iface=iff)
+    else:
+        log.debug("Using layer 2 socket (Ether: %s Layer 2: %s)" % \
+                 (metapacket.haslayer(Ether), want_layer_2))
+        sock = conf.L2socket(iface=iff)
+
+    return sock
+
 ###############################################################################
 # Analyze functions
 ###############################################################################
@@ -124,12 +149,12 @@ def find_all_devs():
 # Send Context functions
 ###############################################################################
 
-def _send_packet(metapacket, count, inter, callback, udata):
+def _send_packet(sock, metapacket, count, inter, callback, udata):
     packet = metapacket.root
 
     try:
         while count > 0:
-            sendp(packet, 0, 0)
+            sock.send(packet)
             count -= 1
 
             if callback(metapacket, udata) == True:
@@ -154,7 +179,13 @@ def send_packet(metapacket, count, inter, callback, udata=None):
            when True is returned the send thread is stopped
     @param udata the userdata to pass to the callback
     """
-    send_thread = Thread(target=_send_packet, args=(metapacket, count, inter, callback, udata))
+
+    try:
+        sock = get_socket_for(metapacket)
+    except socket.error, (errno, err):
+        raise Exception(err)
+
+    send_thread = Thread(target=_send_packet, args=(sock, metapacket, count, inter, callback, udata))
     send_thread.setDaemon(True) # avoids zombies
     send_thread.start()
 
@@ -248,11 +279,11 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
     @param count send n count metapackets
     @param inter interval between two consecutive sends
     @param iface the interface where to wait for replies
-    
-    @param callback a callback to call at each send (of type packet, packet_idx, udata)
+    @param callback a callback to call at each send
+           (of type packet, packet_idx, udata)
     @param sudata the userdata to pass to the send callback
-
-    @param callback a callback to call at each receive (of type reply_packet, is_reply, received, answers, remaining)
+    @param callback a callback to call at each receive
+          (of type reply_packet, is_reply, received, answers, remaining)
     @param sudata the userdata to pass to the send callback
     """
     packet = metapacket.root
@@ -264,7 +295,8 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
         count = 1
 
     try:
-        sock = conf.L2socket(iface=iface)
+        sock = get_socket_for(metapacket, True)
+        sock_send = get_socket_for(metapacket)
 
         if not sock:
             raise Exception('Unable to create a valid socket')
@@ -276,9 +308,11 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
     wrpipe = os.fdopen(wrpipe, 'w')
 
     send_thread = Thread(target=_sndrecv_sthread,
-                                   args=(wrpipe, sock, packet, count, inter, scallback, sudata))
+                           args=(wrpipe, sock_send, packet, count,
+                                 inter, scallback, sudata))
     recv_thread = Thread(target=_sndrecv_rthread,
-                                   args=(send_thread, rdpipe, sock, packet, count, rcallback, rudata))
+                           args=(send_thread, rdpipe, sock, packet,
+                                 count, rcallback, rudata))
 
     send_thread.setDaemon(True)
     recv_thread.setDaemon(True)

@@ -246,18 +246,25 @@ class Plotter(gtk.DrawingArea):
 
                     cr.move_to(start_x + (line_x * atom_x), (line_y + protocol_idx) * atom_y + 4)
 
-                    self.draw_box(cr, layout, fill=fill_color, border=border_color)
+                    # Here we shoul write <==
+                    self.draw_box(cr, layout, fill=fill_color, border=border_color, right=False)
 
-                    # 
                     w, h = 0, 0
                     txt = txt[start:]
                     lines = (len(txt) / 16) + 1
 
                     for i in xrange(lines):
+                        right, left = False, False
+
                         if len(txt) > 16:
+                            # here ===
                             part = txt[i * 16:(i * 16) + 16]
                         else:
+                            right = True
                             part = txt[i * 16:]
+
+                        if i == lines - 1:
+                            right = True
 
                         cr.move_to(start_x, (line_y + protocol_idx + i + 1) * atom_y + 4)
                         
@@ -265,7 +272,8 @@ class Plotter(gtk.DrawingArea):
                         layout.set_text(part)
 
 
-                        w, h = self.draw_box(cr, layout, fill=fill_color, border=border_color)
+                        w, h = self.draw_box(cr, layout, fill=fill_color, border=border_color, 
+                                             right=right, left=left)
 
                     # End point
                     self.fields[(protocol, field_name)].append((start_x + (w / 2.0),
@@ -338,7 +346,7 @@ class Plotter(gtk.DrawingArea):
                           float(color.green) / 65535 - offset,
                           float(color.blue) / 65535 - offset, rgba)
 
-    def draw_box(self, cr, layout, fill=None, border=None):
+    def draw_box(self, cr, layout, fill=None, border=None, bottom=True, top=True, right=True, left=True):
 
         w, h = layout.get_pixel_size()
         x, y = cr.get_current_point()
@@ -360,8 +368,25 @@ class Plotter(gtk.DrawingArea):
         else:
             cr.set_source_rgb(0, 0, 0)
 
-        cr.rectangle(x, y, w + 4, h + 4)
-        cr.stroke()
+        if top:
+            cr.move_to(x, y)
+            cr.line_to(x + w + 4, y)
+            cr.stroke()
+
+        if bottom:
+            cr.move_to(x, y + h + 4)
+            cr.line_to(x + w + 4, y + h + 4)
+            cr.stroke()
+
+        if right:
+            cr.move_to(x + w + 4, y)
+            cr.line_to(x + w + 4, y + h + 4)
+            cr.stroke()
+
+        if left:
+            cr.move_to(x, y)
+            cr.line_to(x, y + h + 4)
+            cr.stroke()
 
         cr.restore()
 
