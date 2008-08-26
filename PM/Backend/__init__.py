@@ -24,6 +24,12 @@ class VirtualIFace(object):
         self.description = desc                                          
         self.ip = ip
 
+class SequencePacket(object):
+    def __init__(self, packet, filter=None, inter=0):
+        self.packet = packet
+        self.filter = None
+        self.inter = inter
+
 # Contexts
 from Abstract.BaseContext.Static import StaticContext
 from Abstract.BaseContext.Timed import TimedContext
@@ -31,8 +37,6 @@ from Abstract.BaseContext.Send import SendContext
 from Abstract.BaseContext.SendReceive import SendReceiveContext
 from Abstract.BaseContext.Sniff import SniffContext
 from Abstract.BaseContext.Sequence import SequenceContext
-
-from Abstract.Context import SequencePacket, SequenceObject
 
 from PM.Manager.PreferenceManager import Prefs
 

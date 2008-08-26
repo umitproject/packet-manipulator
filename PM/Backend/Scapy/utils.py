@@ -22,9 +22,11 @@ import os
 import sys
 
 from datetime import datetime
-from threading import Thread, Lock
+from threading import Thread, Lock, Condition
+from collections import defaultdict
 
 from PM.Core.Logger import log
+from PM.Core.Atoms import Node, ThreadPool
 
 from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *
@@ -326,143 +328,293 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
 # Sequence Context functions
 ###############################################################################
 
-def _next_packet(seq):
-    # yeah we love generators
+class SequenceConsumer(object):
+    def __init__(self, tree, count, inter, strict, \
+                 scallback, rcallback, sudata, rudata, excback):
 
-    idx = 0
-    path = [0, ]
+        assert len(tree) > 0
 
-    while path[0] != len(seq):
-        iter = seq
+        self.tree = tree
+        self.count = max(count, 1)
+        self.inter = inter
+        self.strict = strict
+        self.timeout = 10
 
-        log.debug("Path is %s" % path)
+        self.sockets = []
+        self.recv_list = defaultdict(list)
+        self.receiving = False
 
-        for path_idx in xrange(len(path)):
-            if path[path_idx] == len(iter):
-                path = path[0:path_idx]
-                idx = len(path) - 1
+        self.internal = False
+        self.running = Condition()
 
-                path[idx] += 1
+        self.pool = ThreadPool(2, 10)
+        self.pool.queue_work(None, self.__notify_exc, self.__check)
 
-                iter = seq
-                for i in path:
-                    try:
-                        iter = iter[i]
-                    except:
-                        raise StopIteration
+        self.scallback = scallback
+        self.rcallback = rcallback
+        self.excback = excback
 
+        self.sudata, self.rudata = sudata, rudata
+
+        log.debug("%d total packets to send for %d times" % (len(tree), self.count))
+
+    def isAlive(self):
+        return self.internal
+
+    def stop(self):
+        self.internal = False
+
+        self.pool.stop()
+        #self.pool.join_threads()
+
+    def start(self):
+        if self.internal or self.receiving:
+            log.debug("Pool already started")
+            return
+
+        self.receiving = True
+        self.internal = True
+
+        self.pool.start()
+
+    def __check(self):
+        # This is a function to allow the sequence
+        # to be respawned n times
+
+        self.running.acquire()
+
+        while self.internal and self.count > 0:
+            log.debug("Next step %d" % self.count)
+
+            self.__notify_send(None)
+
+            for node in self.tree.get_children():
+                log.debug("Adding first packet of the sequence")
+                self.pool.queue_work(None, self.__notify_exc, self.__send_worker, node)
                 break
+
+            self.pool.queue_work(None, self.__notify_exc, self.__recv_worker)
+
+            self.running.wait()
+
+            self.count -= 1
+
+        log.debug("Waiting end..")
+
+        self.running.wait()
+        self.running.release()
+
+        if not self.internal:
+            log.debug("Stopping the thread pool (async)")
+            self.pool.stop()
+
+    def __recv_worker(self):
+        # Here we should receive the packet and check against
+        # recv_list if the packet match remove from the list
+        # and start another send_worker
+
+        if self.timeout is not None:
+            stoptime = time.time() + self.timeout
+
+        while self.internal and self.receiving:
+            r = []
+            inmask = [socket for socket, refcount in self.sockets]
+
+            if self.timeout is not None:
+                remain = stoptime - time.time()
+
+                if remain <= 0:
+                    self.receiving = False
+                    break
+
+            if FREEBSD or DARWIN:
+                inp, out, err = select(inmask, [], [], 0.05)
+
+                for sock in inp:
+                    r.append(sock.nonblock_recv())
+
+            elif WINDOWS:
+                for sock in inmask:
+                    r.append(sock.recv(MTU))
             else:
-                iter = iter[path[path_idx]]
+                inp, out, err = select(inmask, [], [], 0.05)
 
-        log.debug("Yielding object at path %s" % path)
-        yield iter
+                for sock in inp:
+                    r.append(sock.recv(MTU))
 
-        if iter.conditional:
-            path += [0]
-            idx += 1
+            if not r:
+                continue
+
+            if self.timeout is not None:
+                stoptime = time.time() + self.timeout
+
+            for precv in r:
+
+                if precv is None:
+                    continue
+
+                is_reply = True
+                my_node = None
+                requested_socket = None
+
+                if self.strict:
+                    is_reply = False
+                    hashret = precv.hashret()
+
+                    if hashret in self.recv_list:
+                        for (idx, sock, node) in self.recv_list[hashret]:
+                            packet = node.get_data().packet.root
+
+                            if precv.answers(packet):
+                                requested_socket = sock
+                                my_node = node
+                                is_reply = True
+
+                                break
+
+                elif not self.strict and my_node is None:
+                    # Get the first packet
+
+                    list = [(v, k) for k, v in self.recv_list.items()]
+                    list.sort()
+
+                    requested_socket = list[0][0][0][1]
+                    my_node = list[0][0][0][2]
+                else:
+                    continue
+
+                # Now cleanup the sockets
+                for idx in xrange(len(self.sockets)):
+                    if self.sockets[idx][0] == requested_socket:
+                        self.sockets[idx][1] -= 1
+
+                        if self.sockets[idx][1] == 0:
+                            self.sockets.remove(self.sockets[idx])
+
+                        break
+
+                if is_reply:
+                    self.__notify_recv(my_node, MetaPacket(precv), is_reply)
+
+                    # Queue another send thread
+                    for node in my_node.get_children():
+                        self.pool.queue_work(None, self.__notify_exc,
+                                             self.__send_worker, node)
+                else:
+                    self.__notify_recv(None, MetaPacket(precv), is_reply)
+
+        log.debug("Trying to exit")
+
+        self.running.acquire()
+        self.running.notify()
+        self.running.release()
+
+        self.receiving = False
+
+        self.__notify_recv(None, None, False)
+
+    def __send_worker(self, node):
+        if not self.internal:
+            log.debug("Discarding packet")
+            return
+
+        obj = node.get_data()
+
+        sock = get_socket_for(obj.packet)
+        sock.send(obj.packet.root)
+
+        self.__notify_send(node)
+
+        if node.is_parent():
+            # Here we should add the node to the dict
+            # to check the the replies for a given time
+            # and continue the sequence with the next
+            # depth.
+
+            try:
+                idx = self.sockets.index(sock)
+                self.sockets[idx][1] += 1
+            except:
+                self.sockets.append([sock, 1])
+
+            key = obj.packet.root.hashret()
+            self.recv_list[key].append((len(self.recv_list), sock, node))
+
+            log.debug("Adding socket to the list for receiving my packet %s" % sock)
+
+        log.debug("Sleeping %f after send" % self.inter)
+        time.sleep(self.inter + obj.inter)
+
+        if self.internal and node.get_parent():
+
+            parent = node.get_parent()
+            next = parent.get_next_of(node)
+
+            if next:
+                log.debug("Processing next packet")
+                self.pool.queue_work(None, self.__notify_exc, self.__send_worker, next)
+
+            else:
+                log.debug("Last packet of this level")
         else:
-            path[idx] += 1
+            log.debug("Last packet sent")
 
-    raise StopIteration
+    def __notify_exc(self, exc):
+        self.scallback = None
+        self.rcallback = None
 
-def _execute_sequence(sock, seq, count, inter, strict, scall, rcall, sudata, rudata):
-    # So we have to analyze the Sequence extract the current packet
-    # send it on the wire and check the reply if conditional is != []
+        if isinstance(exc, socket.error):
+            exc = Exception(str(exc[1]))
 
-    try:
-        for i in xrange(count):
-     
-            log.debug("Pass %d of %d total loops" % (i, count))
-     
-            scall(None, None, sudata)
- 
-            for seq_iter in _next_packet(seq):
- 
-                packet = seq_iter.packet.root
-                filter = seq_iter.filter
- 
-                want_reply = (seq_iter.conditional != [])
- 
-                sock.send(packet)
+        if self.excback:
+            self.excback(exc)
+        else:
+            log.debug("Exception not properly handled. Dumping:")
 
-                log.debug("Packet %s sent" % seq_iter.packet.summary())
-                log.debug("Sleeping %.2f" % (inter + seq_iter.inter))
+            import traceback
+            traceback.print_exc(file=sys.stdout)
 
-                time.sleep(inter + seq_iter.inter)
- 
-                if scall(seq_iter.packet, want_reply, sudata):
-                    log.debug("scallback want to exit")
-                    raise StopIteration # ugly :D
- 
-                if want_reply:
-                    # TODO: here we should check for a reply for a given time
-                    # passed from the user like the filter? then if the the
-                    # reply is received continue else drop the depth child from
-                    # the sequence and go with the next
+        self.stop()
 
-                    log.debug("Waiting a reply ...")
- 
-                    packet_hash = packet.hashret()
- 
-                    inmask = [sock]
- 
-                    while True:
-                        r = None
-                        if FREEBSD or DARWIN:
-                            inp, out, err = select(inmask, [], [], 0.05)
-                            if len(inp) == 0 or sock in inp:
-                                r = sock.nonblock_recv()
-                        elif WINDOWS:
-                            r = sock.recv(MTU)
-                        else:
-                            inp, out, err = select(inmask, [], [], None)
-                            if len(inp) == 0:
-                                return
-                            if sock in inp:
-                                r = sock.recv(MTU)
-                        if r is None:
-                            continue
+    def __notify_send(self, node):
+        log.debug("Packet sent")
 
-                        log.debug("Captured a packet %s" % MetaPacket(r).summary())
+        if not self.scallback:
+            return
 
-                        reply = False
+        packet = None
+        parent = False
+        
+        if node is not None:
+            packet = node.get_data().packet
+            parent = node.is_parent()
 
-                        if (not strict) or \
-                           (strict and r.hashret() == packet_hash and r.answers(packet)):
-                            reply = True
+        if self.scallback(packet, parent, self.sudata):
 
-                        if rcall(seq_iter.packet, MetaPacket(r), reply, rudata):
-                            log.debug("rcallback want to exit")
-                            raise StopIteration # ugly :D
+            log.debug("send_callback want to exit")
+            self.internal = False
 
-    except StopIteration:
-        log.debug("Stop iteration by user request")
-    finally:
-        rcall(None, None, False, rudata)
+    def __notify_recv(self, node, reply, is_reply):
+        log.debug("Packet received (is reply? %s)" % is_reply)
 
-    log.debug("Sequence end")
+        if not self.rcallback:
+            return
 
-def execute_sequence(sequence, count, inter, iface, strict,
-                        scallback, rcallback, sudata, rudata):
+        packet = None
+        
+        if node is not None:
+            packet = node.get_data().packet
 
-    if not count or count <= 0:
-        count = 1
+        if self.rcallback(packet, reply, is_reply, self.rudata):
 
-    try:
-        sock = conf.L2socket(iface=iface)
+            log.debug("recv_callback want to exit")
+            self.internal = False
 
-        if not sock:
-            raise Exception('Unable to create a valid socket')
-    except socket.error, (errno, err):
-        raise Exception(err)
+def execute_sequence(sequence, count, inter, strict, iface, \
+                     scallback, rcallback, sudata, rudata, excback):
 
-    thread = Thread(target=_execute_sequence,
-                    args=(sock, sequence, count, inter, strict,
-                          scallback, rcallback, sudata, rudata))
-    thread.setDaemon(True)
-    thread.start()
+    consumer = SequenceConsumer(sequence, count, inter, strict, \
+                                scallback, rcallback, sudata, rudata, excback)
+    consumer.start()
 
-    log.debug("sequence thread created (count: %d interval: %d)" % (count, inter))
-
-    return thread
+    return consumer

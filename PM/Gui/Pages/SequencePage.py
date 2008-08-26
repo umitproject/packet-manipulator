@@ -28,13 +28,15 @@ from PM import Backend
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 
+from PM.Core.Atoms import Node
+from PM.Backend import SequencePacket
+
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Widgets.CellRenderer import GridRenderer
 from PM.higwidgets.higtooltips import HIGTooltip, HIGTooltipData
 
 from PM.Manager.PreferenceManager import Prefs
-from PM.Backend import SequencePacket, SequenceObject
 from PM.Gui.Tabs.OperationsTab import SequenceOperation, SendOperation, SendReceiveOperation
 
 class FilterLayer(gtk.ComboBox):
@@ -323,23 +325,23 @@ class SequencePage(gtk.VBox):
     def __on_run(self, action):
         # We have to construct a sequence and run our operation :D
 
-        seq = SequencePacket()
+        tree = Node()
 
-        def complete_sequence(model, path, iter, seq):
-            obj = seq
+        def complete_sequence(model, path, iter, tree):
+            path = list(path)[:-1]
+            node = Node(SequencePacket(model.get_value(iter, 0)))
 
-            for i in path[0:max(len(path) -1, 0)]:
-                obj = obj[i]
+            if path:
+                tree = tree.get_from_path(path)
 
-            obj.insert(path[len(path) - 1], \
-                       SequenceObject(model.get_value(iter, 0), 0, ''))
+            tree.append_node(node)
 
-        self.store.foreach(complete_sequence, seq)
+        self.store.foreach(complete_sequence, tree)
 
         count = max(self.packet_count.get_value_as_int(), 1)
         inter = max(self.packet_interval.get_value_as_int(), 0)
 
-        operation = SequenceOperation(seq, count, inter, None,
+        operation = SequenceOperation(tree, count, inter, None,
                                       self.check_strict.get_active(),
                                       self.check_received.get_active(),
                                       self.check_sent.get_active())

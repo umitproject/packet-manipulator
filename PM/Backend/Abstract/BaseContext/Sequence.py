@@ -47,7 +47,7 @@ class BaseSequenceContext(TimedContext):
         self.tot_loop_count = count
         self.loop_count = 0
 
-        self.tot_packet_count = seq.get_length()
+        self.tot_packet_count = len(seq)
         self.packet_count = 0
 
         self.inter = float(inter) / 1000.0

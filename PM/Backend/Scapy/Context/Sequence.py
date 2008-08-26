@@ -34,9 +34,9 @@ def register_sequence_context(BaseSequenceContext):
                                          strict, report_recv, report_sent,
                                          scallback, rcallback, sudata, rudata)
 
-            self.lock = Lock()
-            self.thread = None
+            self.sequencer = None
             self.internal = False
+            self.lock = Lock()
             self.title = _('Unsaved')
             self.summary = _('Executing sequence (%d packets %d times)') % (self.tot_packet_count, count)
 
@@ -59,32 +59,26 @@ def register_sequence_context(BaseSequenceContext):
                 self.internal = True
                 self.state = self.RUNNING
 
-                try:
-                    self.thread = execute_sequence(
-                        self.seq,
-                        max(self.tot_loop_count - self.loop_count, 1),
-                        self.inter, self.iface, self.strict,
-                        self.__send_callback, self.__recv_callback,
-                        self.sudata, self.rudata
-                    )
-                except Exception, err:
-                    self.internal = False
-                    self.state = self.NOT_RUNNING
-                    self.summary = str(err)
+                self.sequencer = execute_sequence(
+                    self.seq,
+                    max(self.tot_loop_count - self.loop_count, 1),
+                    self.inter, self.iface, self.strict,
+                    self.__send_callback, self.__recv_callback,
+                    self.sudata, self.rudata, self.__exc_callback
+                )
 
-                    return False
-                else:
-                    return True
+                return True
+
             return False
 
         def _resume(self):
-            if self.thread and self.thread.isAlive():
+            if self.sequencer.isAlive():
                 return False
 
             return self._start()
         
         def _restart(self):
-            if self.thread and self.thread.isAlive():
+            if self.sequencer.isAlive():
                 return False
 
             self.packet_count = 0
@@ -97,9 +91,16 @@ def register_sequence_context(BaseSequenceContext):
 
         def _stop(self):
             self.internal = False
+            self.sequencer.stop()
+
             return True
 
         _pause = _stop
+
+        def __exc_callback(self, exc):
+            self.internal = False
+            self.state = self.NOT_RUNNING
+            self.summary = str(exc)
 
         def __send_callback(self, packet, want_reply, udata):
             if not packet:
@@ -117,7 +118,7 @@ def register_sequence_context(BaseSequenceContext):
                     self.data.append(packet)
 
             self.percentage = float((float(self.packet_count) / float(self.tot_packet_count)) * \
-                                    (float(self.loop_count + 1) / float(self.tot_loop_count + 1))) * 100.0
+                                    (float(self.loop_count) / float(self.tot_loop_count))) * 100.0
 
             if self.scallback:
                 # FIXME: THIS FUCKING UDATA also in other files
@@ -130,7 +131,7 @@ def register_sequence_context(BaseSequenceContext):
                    self.state == self.PAUSED
 
         def __recv_callback(self, packet, reply, is_reply, udata):
-            if not packet:
+            if reply is None:
                 self.internal = False
                 self.summary = _('Sequence finished with %d packets sent and %d received') % \
                                 (self.packet_count * self.loop_count, self.received * self.loop_count)
@@ -151,7 +152,7 @@ def register_sequence_context(BaseSequenceContext):
                    self.state == self.PAUSED
 
         def join(self):
-            if self.thread and self.thread.isAlive():
-                self.thread.join()
+            if self.sequencer.isAlive():
+                self.sequencer.stop()
 
     return SequenceContext
