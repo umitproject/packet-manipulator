@@ -25,7 +25,7 @@ class VirtualIFace(object):
         self.ip = ip
 
 class SequencePacket(object):
-    def __init__(self, packet, filter=None, inter=0):
+    def __init__(self, packet, filter='', inter=0):
         self.packet = packet
         self.filter = None
         self.inter = inter

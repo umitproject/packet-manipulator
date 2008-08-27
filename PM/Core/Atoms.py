@@ -72,7 +72,7 @@ class Node(object):
         if self.root != None:
             return "%sChild -> %s (%d)" % ("  " * self.get_depth(), self.data, len(self.children))
         else:
-            return "Tree"
+            return "Tree %s" % object.__repr__(self)
 
     def get_depth(self):
         idx = 0
