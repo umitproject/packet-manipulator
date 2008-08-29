@@ -157,11 +157,12 @@ class SequenceWriter(object):
     def __init__(self, fname, sequence):
         output = open(fname, 'w')
 
+        self.depth_idx = 0
         self.writer = XMLGenerator(output, 'utf-8')
+
         self.writer.startDocument()
-        self.writer.startElementNS((None, 'PMScapySequence'),
-                                          'PMScapySequence', {})
-        self.writer.characters('\n')
+        self.startElementNS((None, 'PMScapySequence'),
+                                   'PMScapySequence', {})
 
         self.current_node = None
 
@@ -171,26 +172,44 @@ class SequenceWriter(object):
 
         self.current_node = None
 
-        self.writer.endElementNS((None, 'PMScapySequence'),
-                                        'PMScapySequence')
-        self.writer.characters('\n')
+        self.endElementNS((None, 'PMScapySequence'),
+                                 'PMScapySequence')
 
         self.writer.endDocument()
         output.close()
 
-    def write_node(self, node):
-        spaces = ' ' * (self.current_node.get_depth() + 1)
+    def writeSpaces(self, prepend='', append=''):
+        idx = max(self.depth_idx - 1, 0)
+        txt = '%s%s%s' % (prepend, '  ' * idx, append)
 
-        self.writer.characters(spaces)
+        if txt:
+            self.writer.characters(txt)
+
+    def startElementNS(self, name, qname, attrs, indent=True):
+        if indent:
+            self.writer.characters('\n')
+
+        self.depth_idx += 1
+
+        self.writeSpaces()
+        self.writer.startElementNS(name, qname, attrs)
+
+    def endElementNS(self, name, qname, indent=True):
+        if indent:
+            self.writeSpaces('\n')
+
+        self.writer.endElementNS(name, qname)
+
+        self.depth_idx -= 1
+
+    def write_node(self, node):
         self.start_xml_node(node.get_data())
 
         for child_node in node.get_children():
             self.current_node = child_node
             self.write_node(child_node)
 
-        self.writer.characters(spaces)
         self.end_xml_node()
-        self.writer.characters('\n')
 
     def start_xml_node(self, seq_packet):
         inter = seq_packet.inter
@@ -203,33 +222,27 @@ class SequenceWriter(object):
                        (None, u'filter') : u'filter'}
 
         attrs = AttributesNSImpl(attr_vals, attr_qnames)
-        self.writer.startElementNS((None, 'SequencePacket'),
-                                          'SequencePacket', attrs)
+        self.startElementNS((None, 'SequencePacket'),
+                                   'SequencePacket', attrs)
 
         self.start_xml_packet(seq_packet.packet)
 
     def end_xml_node(self):
-        self.writer.endElementNS((None, 'SequencePacket'),
-                                        'SequencePacket')
+        self.endElementNS((None, 'SequencePacket'),
+                                 'SequencePacket')
 
     def start_xml_packet(self, metapacket):
         protocols = metapacket.get_protocols()
         protocols.reverse()
 
-        self.writer.characters('\n')
-        spaces = ' ' * (self.current_node.get_depth() + 4)
-
         for proto in protocols:
-            self.writer.characters(' ' * (self.current_node.get_depth() + 2))
-
             attr_vals = {(None, u'id') : Backend.get_proto_name(proto),
                          (None, u'time') : "%.6f" % proto.time}
             attr_qnames = {(None, u'id') : u'id', (None, u'time') : u'time'}
 
             attrs = AttributesNSImpl(attr_vals, attr_qnames)
-            self.writer.startElementNS((None, 'proto'), 'proto', attrs)
+            self.startElementNS((None, 'proto'), 'proto', attrs)
 
-            self.writer.characters('\n')
 
             for field in Backend.get_proto_fields(proto):
                 name = Backend.get_field_name(field)
@@ -238,20 +251,15 @@ class SequenceWriter(object):
                 attr_vals = {(None, u'id') : name}
                 attr_qnames = {(None, u'id') : u'id'}
 
-                attrs = AttributesNSImpl(attr_vals, attr_qnames)
-
-                self.writer.characters(spaces)
-                self.writer.startElementNS((None, 'field'), 'field', attrs)
-
-                self.writer.characters(str(value))
-
-                self.writer.endElementNS((None, 'field'), 'field')
                 self.writer.characters('\n')
 
+                attrs = AttributesNSImpl(attr_vals, attr_qnames)
+                self.startElementNS((None, 'field'), 'field', attrs, False)
+                self.writer.characters(str(value))
+                self.endElementNS((None, 'field'), 'field', False)
+
         for idx in xrange(len(protocols)):
-            self.writer.characters(spaces)
-            self.writer.endElementNS((None, 'proto'), 'proto')
-            self.writer.characters('\n')
+            self.endElementNS((None, 'proto'), 'proto')
 
 if __name__ == "__main__":
     tree = Node()
