@@ -22,11 +22,14 @@ from __future__ import with_statement
 from threading import Lock
 
 from PM.Core.I18N import _
+from PM.Backend.Scapy.serialize import load_sequence, save_sequence
 from PM.Backend.Scapy.utils import execute_sequence
 
 def register_sequence_context(BaseSequenceContext):
     
     class SequenceContext(BaseSequenceContext):
+        file_types = [(_('Scapy sequence'), '*.pms')]
+
         def __init__(self, seq, count, inter, iface, strict, report_recv, report_sent,
                      scallback, rcallback, sudata=None, rudata=None):
 
@@ -39,6 +42,27 @@ def register_sequence_context(BaseSequenceContext):
             self.lock = Lock()
             self.title = _('Unsaved')
             self.summary = _('Executing sequence (%d packets %d times)') % (self.tot_packet_count, count)
+        
+        def save(self):
+            if self.cap_file:
+                self.seq = self.load_sequence(self.cap_file)
+
+                if self.seq is not None:
+                    self.state = self.SAVED
+                    return True
+
+            self.state = self.NOT_SAVED
+            return False
+
+        def load(self):
+            if self.cap_file and self.seq is not None and \
+               save_sequence(self.cap_file, self.seq):
+
+                self.state = self.SAVED
+                return True
+
+            self.state = self.NOT_SAVED
+            return False
 
         def get_all_data(self):
             with self.lock:

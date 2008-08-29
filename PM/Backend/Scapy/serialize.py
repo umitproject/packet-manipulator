@@ -23,8 +23,9 @@ from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesNSImpl
 
 from PM.Core.Atoms import Node
+from PM.Core.Logger import log
 
-from PM import Backend
+from PM.Backend.Scapy import *
 from PM.Backend import SequencePacket
 
 class SequenceLoader(handler.ContentHandler):
@@ -61,7 +62,7 @@ class SequenceLoader(handler.ContentHandler):
 
             self.protocol.time = self.current_protocol.time
 
-            self.current_node.data.packet = Backend.MetaPacket(self.protocol)
+            self.current_node.data.packet = MetaPacket(self.protocol)
             self.protocol = self.current_protocol = None
 
     def startElement(self, name, attrs):
@@ -91,7 +92,7 @@ class SequenceLoader(handler.ContentHandler):
                 proto_id = attrs['id']
                 proto_time = eval(attrs['time'])
 
-                protocol = Backend.get_proto(proto_id)()
+                protocol = get_proto(proto_id)()
                 protocol.time = proto_time
 
                 if self.current_protocol is not None:
@@ -148,10 +149,10 @@ class SequenceLoader(handler.ContentHandler):
             except:
                 value = self.field_value
 
-            field = Backend.get_proto_field(self.current_protocol,
+            field = get_proto_field(self.current_protocol,
                                             self.field_id)
 
-            Backend.set_field_value(self.current_protocol, field, value)
+            set_field_value(self.current_protocol, field, value)
 
 class SequenceWriter(object):
     def __init__(self, fname, sequence):
@@ -236,7 +237,7 @@ class SequenceWriter(object):
         protocols.reverse()
 
         for proto in protocols:
-            attr_vals = {(None, u'id') : Backend.get_proto_name(proto),
+            attr_vals = {(None, u'id') : get_proto_name(proto),
                          (None, u'time') : "%.6f" % proto.time}
             attr_qnames = {(None, u'id') : u'id', (None, u'time') : u'time'}
 
@@ -244,9 +245,9 @@ class SequenceWriter(object):
             self.startElementNS((None, 'proto'), 'proto', attrs)
 
 
-            for field in Backend.get_proto_fields(proto):
-                name = Backend.get_field_name(field)
-                value = Backend.get_field_value(proto, field)
+            for field in get_proto_fields(proto):
+                name = get_field_name(field)
+                value = get_field_value(proto, field)
 
                 attr_vals = {(None, u'id') : name}
                 attr_qnames = {(None, u'id') : u'id'}
@@ -261,10 +262,29 @@ class SequenceWriter(object):
         for idx in xrange(len(protocols)):
             self.endElementNS((None, 'proto'), 'proto')
 
+def save_sequence(fname, sequence):
+    assert isinstance(sequence, Node)
+
+    try:
+        SequenceWriter(fname, sequence)
+    except Exception, err:
+        log.debug("Cannot save sequence to file %s (%s)" % (fname, str(err)))
+        return False
+    else:
+        return True
+
+def load_sequence(fname):
+    try:
+        tree = SequenceLoader("test.xml").tree
+        return tree
+    except Exception, err:
+        log.debug("Cannot load sequence from file %s (%s)" % (fname, str(err)))
+        return None
+
 if __name__ == "__main__":
     tree = Node()
-    first = Node(SequencePacket(Backend.MetaPacket(Backend.Ether() / Backend.IP() /  Backend.TCP())))
-    first.append_node(Node(SequencePacket(Backend.MetaPacket(Backend.IP()))))
+    first = Node(SequencePacket(MetaPacket(Ether() / IP() /  TCP())))
+    first.append_node(Node(SequencePacket(MetaPacket(IP()))))
 
     tree.append_node(first)
     SequenceWriter("test.xml", tree)
