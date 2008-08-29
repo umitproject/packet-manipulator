@@ -53,6 +53,40 @@ class Plotter(gtk.DrawingArea):
 
         super(Plotter, self).__init__()
 
+    def do_size_request(self, req):
+        w, h = self.get_requested_size()
+        req.width = w; req.height = h
+
+    def get_requested_size(self):
+        # Get the requested size of the hex view part
+        layout = self.create_pango_layout('FF')
+        layout.set_font_description(pango.FontDescription(self.hex_font))
+
+        atom_w, atom_h = layout.get_pixel_size()
+
+        req_w = (atom_w + 4) * (16 + 1)
+        req_h = (atom_h + 4) * (16 + 1)
+
+        layout.set_font_description(pango.FontDescription(self.attr_font))
+        layout.set_text('A')
+
+        atom_w, atom_h = layout.get_pixel_size()
+        
+        fields = 0
+        protos = [proto for proto in self.packet.get_protocols()]
+
+        for proto in protos:
+            for field in Backend.get_proto_fields(proto):
+                fields += 1
+
+        protos = len(protos)
+
+        req_w += 10 + (atom_w * 35) # 35 characters for attributes
+        req_h = max(req_h, (fields + protos) * (atom_h + 4))
+
+        print req_w, req_h
+        return int(req_w), int(req_h)
+
     def draw_text(self, cr, layout, txt):
         cr.save()
 
@@ -104,7 +138,8 @@ class Plotter(gtk.DrawingArea):
         cr.restore()
 
     def export_to(self, fname):
-        WIDTH, HEIGHT = 900, 600
+        area = self.allocation
+        WIDTH, HEIGHT = area.width, area.height
 
         if '.ps' in fname:
             surface = cairo.PSSurface(fname, WIDTH, HEIGHT)
@@ -324,8 +359,13 @@ class Plotter(gtk.DrawingArea):
             for field in Backend.get_proto_fields(protocol):
                 name = Backend.get_field_name(field)
                 value = str(Backend.get_field_value_repr(protocol, field))
+                
+                text = '%s: %s' % (name, value)
 
-                attr_layout.set_text('%s: %s' % (name, value))
+                if len(text) > 35:
+                    text = text[0:32] + "..."
+
+                attr_layout.set_text(text)
 
                 f_w, f_h = self.draw_text(cr, attr_layout)
 

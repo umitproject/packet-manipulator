@@ -153,7 +153,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         return self.session.packet, obj
 
 
-class PacketPage(gtk.VBox):
+class PacketPage(gtk.HBox):
     def __init__(self, parent):
         super(PacketPage, self).__init__(False, 4)
 
@@ -162,6 +162,7 @@ class PacketPage(gtk.VBox):
         # Create the toolbar for sending selected packet
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
+        self.toolbar.set_orientation(gtk.ORIENTATION_VERTICAL)
 
         stocks = (
             gtk.STOCK_EDIT,
@@ -189,16 +190,13 @@ class PacketPage(gtk.VBox):
             action.connect('activate', callback)
             self.toolbar.insert(action.create_tool_item(), -1)
 
-        self.pack_start(self.toolbar, False, False)
 
         self.proto_hierarchy = ProtocolHierarchy(self.session)
         self.hexview = HexView()
 
-        vpaned = gtk.VPaned()
-        vpaned.pack1(self.proto_hierarchy, True, False)
-        vpaned.pack2(self.hexview, True, False)
-        
-        self.pack_start(vpaned)
+        self.pack_start(self.proto_hierarchy)
+        self.pack_start(self.toolbar, False, False)
+        self.pack_start(self.hexview, False, False)
 
         Prefs()['gui.maintab.hexview.font'].connect(self.hexview.modify_font)
         Prefs()['gui.maintab.hexview.bpl'].connect(self.hexview.set_bpl)
@@ -269,7 +267,6 @@ class PacketPage(gtk.VBox):
 
         dialog.plotter = Plotter(self.session.packet)
         dialog.vbox.pack_start(dialog.plotter)
-        dialog.set_size_request(900, 600)
         dialog.show_all()
 
         dialog.connect('response', self.__on_graph_response)
