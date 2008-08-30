@@ -22,6 +22,8 @@
 A perspective to show sniffed packets
 """
 
+import copy
+
 import gtk
 import pango
 import gobject
@@ -285,11 +287,20 @@ class SniffPage(gtk.VBox):
 
         # TODO: implement tree selection
 
-        ret = []
-        for path in lst:
-            ret.append(model.get_value(model.get_iter(path), 0))
+        if tree:
+            ret = []
+            for path in lst:
+                packet = model.get_value(model.get_iter(path), 0)
+                packet = copy.deepcopy(packet)
+                ret.append(packet)
 
-        return ret
+            return ret
+        else:
+            ret = []
+            for path in lst:
+                ret.append(model.get_value(model.get_iter(path), 0))
+
+            return ret
 
     def __on_create_seq(self, action):
         tab = PMApp().main_window.get_tab("MainTab")

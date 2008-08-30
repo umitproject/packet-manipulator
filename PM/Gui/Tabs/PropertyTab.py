@@ -158,3 +158,4 @@ class PropertyTab(UmitView):
             length = Backend.get_field_size(proto, field)
 
             page.packet_page.hexview.select_block(start / 8, max(length / 8, 1))
+            page.reload_container(page.packet)

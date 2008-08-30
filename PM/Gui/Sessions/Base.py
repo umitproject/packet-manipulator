@@ -114,11 +114,11 @@ class Session(gtk.VBox):
         pass
 
     def set_active_packet(self, packet):
-        if packet != self.packet:
+        if packet is self.packet:
+            log.debug("Packets are the same ignoring updates")
+        else:
             self.packet = packet
             self.reload_editor()
-        else:
-            log.debug("Packets are the same ignoring updates")
 
     def get_label(self):
         return self._label

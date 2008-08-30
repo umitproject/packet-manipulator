@@ -313,7 +313,7 @@ class SequencePage(gtk.VBox):
     def reload(self, packet=None):
         # Should be the selected
 
-        if not packet is None:
+        if packet is not None:
             ret = self.tree.get_selection().get_selected()
 
             if ret:
@@ -322,6 +322,8 @@ class SequencePage(gtk.VBox):
 
                     model.row_changed(model.get_path(iter), iter)
                     self.__update_combo()
+
+                    log.debug("row changed for current packet")
 
                     return
                 else:
@@ -334,7 +336,7 @@ class SequencePage(gtk.VBox):
 
         self.store.clear()
 
-        tree = self.session.context.get_data()
+        tree = self.session.context.get_sequence()
 
         for child in tree.get_children():
             self.__add_to_store(child, None)

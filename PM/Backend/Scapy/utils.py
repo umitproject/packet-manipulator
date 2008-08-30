@@ -381,19 +381,19 @@ class SequenceConsumer(object):
         # This is a function to allow the sequence
         # to be respawned n times
 
+        self.receiving = True
         self.running.acquire()
 
         while self.internal and self.count > 0:
             log.debug("Next step %d" % self.count)
 
             self.__notify_send(None)
+            self.pool.queue_work(None, self.__notify_exc, self.__recv_worker)
 
             for node in self.tree.get_children():
                 log.debug("Adding first packet of the sequence")
                 self.pool.queue_work(None, self.__notify_exc, self.__send_worker, node)
                 break
-
-            self.pool.queue_work(None, self.__notify_exc, self.__recv_worker)
 
             self.running.wait()
 
@@ -521,9 +521,6 @@ class SequenceConsumer(object):
         obj = node.get_data()
 
         sock = get_socket_for(obj.packet)
-        sock.send(obj.packet.root)
-
-        self.__notify_send(node)
 
         if node.is_parent():
             # Here we should add the node to the dict
@@ -541,6 +538,10 @@ class SequenceConsumer(object):
             self.recv_list[key].append((len(self.recv_list), sock, node))
 
             log.debug("Adding socket to the list for receiving my packet %s" % sock)
+
+        sock.send(obj.packet.root)
+
+        self.__notify_send(node)
 
         log.debug("Sleeping %f after send" % self.inter)
         time.sleep(self.inter + obj.inter)

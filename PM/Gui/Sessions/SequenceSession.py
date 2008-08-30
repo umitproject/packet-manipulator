@@ -54,5 +54,5 @@ class SequenceSession(Session):
             fname += ".pms"
 
         # Reinsert the values into the sequence
-        self.context.seq = self.sequence_page.get_current_tree()
+        self.context.set_sequence(self.sequence_page.get_current_tree())
         return super(SequenceSession, self).save_session(fname)

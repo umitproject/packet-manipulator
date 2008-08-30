@@ -71,13 +71,23 @@ def register_sequence_context(BaseSequenceContext):
             return False
 
         def get_all_data(self):
-            return self.get_data()
+            with self.lock:
+                return BaseSequenceContext.get_all_data(self)
 
         def get_data(self):
             with self.lock:
-                return self.seq
+                return BaseSequenceContext.get_data(self)
 
         def set_data(self, val):
+            with self.lock:
+                return BaseSequenceContext.set_data(self)
+
+        # We really need this lock here?
+        def get_sequence(self):
+            with self.lock:
+                return self.seq
+
+        def set_sequence(self, val):
             with self.lock:
                 self.seq = val
 
