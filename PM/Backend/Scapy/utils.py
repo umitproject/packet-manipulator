@@ -202,7 +202,7 @@ def _sndrecv_sthread(wrpipe, socket, packet, count, inter, callback, udata):
         for idx in xrange(count):
             socket.send(packet)
 
-            if callback(packet, idx, udata):
+            if callback(MetaPacket(packet), idx, udata):
                 break
 
             time.sleep(inter)
@@ -214,7 +214,8 @@ def _sndrecv_sthread(wrpipe, socket, packet, count, inter, callback, udata):
         cPickle.dump(arp_cache, wrpipe)
         wrpipe.close()
 
-def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
+def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, \
+                     strict, callback, udata):
     ans = 0
     nbrecv = 0
     notans = count
@@ -241,7 +242,7 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
         if r is None:
             continue
 
-        if r.hashret() == packet_hash and r.answers(packet):
+        if not strict or r.hashret() == packet_hash and r.answers(packet):
             ans += 1
 
             if notans:
@@ -273,7 +274,8 @@ def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, callback, udata):
     if not force_exit:
         callback(None, False, udata)
 
-def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, sudata=None, rudata=None):
+def send_receive_packet(metapacket, count, inter, iface, strict, \
+                        scallback, rcallback, sudata=None, rudata=None):
     """
     Send/receive a metapacket in thread context
 
@@ -281,6 +283,7 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
     @param count send n count metapackets
     @param inter interval between two consecutive sends
     @param iface the interface where to wait for replies
+    @param strict strict checking for reply
     @param callback a callback to call at each send
            (of type packet, packet_idx, udata)
     @param sudata the userdata to pass to the send callback
@@ -314,7 +317,7 @@ def send_receive_packet(metapacket, count, inter, iface, scallback, rcallback, s
                                  inter, scallback, sudata))
     recv_thread = Thread(target=_sndrecv_rthread,
                            args=(send_thread, rdpipe, sock, packet,
-                                 count, rcallback, rudata))
+                                 count, strict, rcallback, rudata))
 
     send_thread.setDaemon(True)
     recv_thread.setDaemon(True)

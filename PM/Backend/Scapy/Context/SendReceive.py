@@ -28,11 +28,14 @@ def register_send_receive_context(BaseSendReceiveContext):
 
     class SendReceiveContext(BaseSendReceiveContext):
         def __init__(self, metapacket, count, inter, iface, \
+                     strict, report_recv, report_sent, \
                      scallback, rcallback, sudata=None, rudata=None):
 
             BaseSendReceiveContext.__init__(self, metapacket, count,
-                                            inter, iface, scallback,
-                                            rcallback, sudata, rudata)
+                                            inter, iface, strict,
+                                            report_recv, report_sent,
+                                            scallback, rcallback,
+                                            sudata, rudata)
 
             self.lock = Lock()
             self.sthread, self.rthread = None, None
@@ -64,10 +67,12 @@ def register_send_receive_context(BaseSendReceiveContext):
                 self.state = self.RUNNING
 
                 try:
-                    self.sthread, self.rthread = send_receive_packet( \
-                                    self.packet, self.tot_count - self.count, self.inter, \
-                                    self.iface, self.__send_callback, self.__recv_callback, \
-                                    self.sudata, self.rudata)
+                    self.sthread, \
+                    self.rthread = send_receive_packet( \
+                        self.packet, self.tot_count - self.count, self.inter, \
+                        self.iface, self.strict, self.__send_callback, \
+                        self.__recv_callback, self.sudata, self.rudata)
+
                 except Exception, err:
                     self.internal = False
                     self.state = self.NOT_RUNNING
@@ -115,6 +120,9 @@ def register_send_receive_context(BaseSendReceiveContext):
             self.summary = _('Sending packet %d of %d') % (self.count, self.tot_count)
             self.percentage = (self.percentage + 536870911) % 2147483647
 
+            if self.report_sent:
+                self.data.append(packet)
+
             if self.scallback:
                 self.scallback(packet, self.count, udata)
 
@@ -135,6 +143,8 @@ def register_send_receive_context(BaseSendReceiveContext):
                 if is_reply:
                     self.answers += 1
                     self.remaining -= 1
+
+                if is_reply or self.report_recv:
                     self.data.append(packet)
 
             self.percentage = (self.percentage + 536870911) % 2147483647

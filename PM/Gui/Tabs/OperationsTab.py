@@ -66,7 +66,9 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
     A send receive operation
     """
 
-    def __init__(self, packet, count, inter, iface=None, background=True):
+    def __init__(self, packet, count, inter, \
+                 iface=None, strict=True, report_recv=False, \
+                 report_sent=True, background=True):
         """
         Construct a SendReceive Operation
 
@@ -74,12 +76,18 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
         @param count how many times the packet will be sent
         @param inter the interval between emission
         @param iface the iface to listen to
+        @param strict strict checking for reply
+        @param report_recv report received packets
+        @param report_sent report sent packets
         @param background if the operation should have a session when starts
         """
 
         Operation.__init__(self)
-        Backend.SendReceiveContext.__init__(self, packet, count, inter, iface, self.__send_callback,
-                                            self.__receive_callback, None, None)
+        Backend.SendReceiveContext.__init__(self, packet, count, inter, iface,
+                                            strict, report_recv, report_sent,
+                                            self.__send_callback,
+                                            self.__receive_callback,
+                                            None, None)
         
         if background:
             self.session = None

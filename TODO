@@ -19,5 +19,5 @@ TODO list (not ordered):
 - remote server (xml-rpc)? blah
 - Implementing a get_icon for operation to use only the object in ListStore
 - same in property grid
-
-- save sequence into pms file
+- using sane export while saving pms file (see export_object)
+- implementing a tree to see results of sequence
