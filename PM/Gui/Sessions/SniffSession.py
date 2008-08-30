@@ -54,3 +54,19 @@ class SniffSession(Session):
             self.sniff_page.clear()
         self.sniff_page.reload()
 
+    def save_session(self, fname):
+        if not fname.lower().endswith('.pcap') or \
+           not fname.lower().endswith('.pcap.gz'):
+            fname += '.pcap.gz'
+
+        ret = super(SniffSession, self).save_session(fname)
+
+        if ret:
+            self.sniff_page.statusbar.image = gtk.STOCK_HARDDISK
+        else:
+            self.sniff_page.statusbar.image = gtk.STOCK_DIALOG_ERROR
+
+        self.sniff_page.statusbar.label = "<b>%s</b>" % self.context.summary
+        self.sniff_page.statusbar.start_animation(True)
+
+        return ret

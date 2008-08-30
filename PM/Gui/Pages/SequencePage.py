@@ -292,6 +292,24 @@ class SequencePage(gtk.VBox):
         else:
             return None
 
+    def get_current_tree(self):
+        tree = Node()
+
+        def add_to_tree(model, path, iter, tree):
+            obj = SequencePacket(model.get_value(iter, 0))
+            parent = model.iter_parent(iter)
+
+            if not parent:
+                tree.append_node(Node(obj))
+            else:
+                path = model.get_path(parent)
+                parent = tree.get_from_path(path)
+                parent.append_node(Node(obj))
+
+        self.store.foreach(add_to_tree, tree)
+
+        return tree
+
     def reload(self, packet=None):
         # Should be the selected
 
@@ -316,11 +334,23 @@ class SequencePage(gtk.VBox):
 
         self.store.clear()
 
-        for packet in self.session.context.get_data():
-            self.store.append(None, [packet])
+        tree = self.session.context.get_data()
+
+        for child in tree.get_children():
+            self.__add_to_store(child, None)
 
         self.tree.get_selection().select_path((0, ))
         self.__update_combo()
+
+    def __add_to_store(self, child, root):
+        spak = child.get_data()
+        root = self.store.append(root, [spak.packet])
+
+        if child.is_parent():
+            for node in child.get_children():
+                self.__add_to_store(node, root)
+
+        return root
 
     def __on_run(self, action):
         # We have to construct a sequence and run our operation :D
@@ -447,6 +477,9 @@ class SequencePage(gtk.VBox):
                     ctx.finish(True, True, time)
 
                 self.__update_combo()
+
+                # Mark as dirty
+                self.session.context.status = self.session.context.NOT_SAVED
 
                 return True
 

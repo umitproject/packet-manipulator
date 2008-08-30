@@ -28,6 +28,7 @@ import gobject
 
 from PM import Backend
 from PM.Core.I18N import _
+from PM.Core.Atoms import Node
 from PM.Manager.PreferenceManager import Prefs
 
 from PM.Gui.Core.App import PMApp
@@ -92,24 +93,18 @@ class SniffPage(gtk.VBox):
         stocks = (
             gtk.STOCK_REFRESH,
             gtk.STOCK_MEDIA_STOP,
-            gtk.STOCK_SAVE,
-            gtk.STOCK_SAVE_AS,
             gtk.STOCK_NETWORK
         )
 
         callbacks = (
             self.__on_restart,
             self.__on_stop,
-            self.__on_save,
-            self.__on_save_as,
             self.__on_reorder
         )
 
         tooltips = (
             _('Restart capturing'),
             _('Stop capturing'),
-            _('Save packets'),
-            _('Save packets as'),
             _('Reorder flow')
         )
 
@@ -248,12 +243,6 @@ class SniffPage(gtk.VBox):
            self.session.context.state != self.session.context.NOT_RUNNING:
             self.timeout_id = gobject.timeout_add(200, self.__update_tree)
 
-    def save(self):
-        return self.__on_save(None)
-
-    def save_as(self):
-        return self.__on_save_as(None)
-
     # Signals callbacks
 
     def __on_selection_changed(self, selection):
@@ -291,8 +280,10 @@ class SniffPage(gtk.VBox):
 
         return True
     
-    def __get_packets_selected(self):
+    def __get_packets_selected(self, tree=False):
         model, lst = self.tree.get_selection().get_selected_rows()
+
+        # TODO: implement tree selection
 
         ret = []
         for path in lst:
@@ -302,7 +293,7 @@ class SniffPage(gtk.VBox):
 
     def __on_create_seq(self, action):
         tab = PMApp().main_window.get_tab("MainTab")
-        tab.session_notebook.create_sequence_session(self.__get_packets_selected())
+        tab.session_notebook.create_sequence_session(self.__get_packets_selected(True))
 
     def __on_save_selection(self, action):
         dialog = self.__create_save_dialog()
@@ -380,53 +371,3 @@ class SniffPage(gtk.VBox):
         self.session.context.stop()
     def __on_restart(self, action):
         self.session.context.restart()
-
-    def __on_save(self, action):
-        if self.session.context.cap_file:
-            return self.__save_packets(self.session.context.cap_file)
-        else:
-            return self.__on_save_as(None)
-
-    def __on_save_as(self, action):
-        ret = False
-        dialog = self.__create_save_dialog()
-
-        if dialog.run() == gtk.RESPONSE_ACCEPT:
-            ret = self.__save_packets(dialog.get_filename())
-
-        dialog.hide()
-        dialog.destroy()
-
-        return ret
-
-    def __create_save_dialog(self):
-        dialog = gtk.FileChooserDialog(_('Save Pcap file to'),
-                self.get_toplevel(), gtk.FILE_CHOOSER_ACTION_SAVE,
-                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                         gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
-
-        for name, pattern in ((_('Pcap files'), '*.pcap'),
-                              (_('Pcap gz files'), '*.pcap.gz'),
-                              (_('All files'), '*')):
-
-            filter = gtk.FileFilter()
-            filter.set_name(name)
-            filter.add_pattern(pattern)
-            dialog.add_filter(filter)
-
-        return dialog
-
-    def __save_packets(self, fname):
-        self.session.context.cap_file = fname
-        ret = self.session.context.save()
-
-        if ret:
-            self.statusbar.image = gtk.STOCK_HARDDISK
-        else:
-            self.statusbar.image = gtk.STOCK_DIALOG_ERROR
-
-        self.statusbar.label = "<b>%s</b>" % self.session.context.summary
-        self.statusbar.start_animation(True)
-
-        return ret
-

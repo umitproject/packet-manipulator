@@ -48,3 +48,11 @@ class SequenceSession(Session):
 
     def reload_container(self, packet=None):
         self.sequence_page.reload(packet)
+
+    def save_session(self, fname):
+        if not fname.lower().endswith(".pms"):
+            fname += ".pms"
+
+        # Reinsert the values into the sequence
+        self.context.seq = self.sequence_page.get_current_tree()
+        return super(SequenceSession, self).save_session(fname)

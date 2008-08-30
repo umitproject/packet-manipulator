@@ -29,6 +29,8 @@ from PM import Backend
 from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
+from PM.higwidgets.higdialogs import HIGAlertDialog
+
 if Prefs()['gui.docking'].value:
     try:
         from Paned import *
@@ -78,7 +80,9 @@ class MainWindow(gtk.Window):
 
         self.main_actions = [
             ('File', None, _('File'), None),
-            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o', _('Open pcap file'), self.__on_open_pcap),
+            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o', _('Open session'), self.__on_open_session),
+            ('Save', gtk.STOCK_SAVE, _('_Save'), '<Control>s', _('Save session'), self.__on_save_session),
+            ('SaveAs', gtk.STOCK_SAVE_AS, _('_Save as'), '<Control><Shift>s', _('Save session as'), self.__on_save_session_as),
             ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q', _('Quit from application'), self.__on_quit),
             
             ('Capture', None, _('Capture'), None),
@@ -97,6 +101,8 @@ class MainWindow(gtk.Window):
         self.default_ui = """<menubar>
             <menu action='File'>
                 <menuitem action='Open'/>
+                <menuitem action='Save'/>
+                <menuitem action='SaveAs'/>
                 <separator/>
                 <menuitem action='Quit'/>
             </menu>
@@ -116,6 +122,7 @@ class MainWindow(gtk.Window):
 
             <toolbar>
                 <toolitem action='Open'/>
+                <toolitem action='Save'/>
                 <toolitem action='Interface'/>
                 <separator/>
                 <toolitem action='Routes'/>
@@ -285,28 +292,80 @@ class MainWindow(gtk.Window):
         dialog.hide()
         dialog.destroy()
 
-    def __on_open_pcap(self, action):
-        dialog = gtk.FileChooserDialog(_("Select a pcap file"), self,
-                                       buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                                                gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+    def __on_open_session(self, action):
+        types = {}
+        sessions = (Backend.StaticContext,
+                    Backend.SequenceContext,
+                    Backend.SniffContext)
 
-        for name, pattern in ((_('Pcap files'), '*.pcap'),
-                              (_('Pcap gz files'), '*.pcap.gz'),
-                              (_('All files'), '*')):
+        for ctx in sessions:
+            for name, pattern in ctx.file_types:
+                types[pattern] = (name, ctx)
 
+        dialog = gtk.FileChooserDialog(_("Select a session"), self,
+                               buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                        gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+
+        filterall = gtk.FileFilter()
+        filterall.set_name(_('All supported files'))
+        [filterall.add_pattern(k) for k in types]
+        dialog.add_filter(filterall)
+
+        for pattern, (name, ctx) in types.items():
             filter = gtk.FileFilter()
             filter.set_name(name)
             filter.add_pattern(pattern)
             dialog.add_filter(filter)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
+            ctx = None
             fname = dialog.get_filename()
+            
+            try:
+                find = fname.split('.')[-1]
+
+                for pattern in types:
+                    if pattern.split('.')[-1] == find:
+                        ctx = types[pattern][1]
+            except:
+                pass
 
             tab = self.get_tab("MainTab")
-            tab.session_notebook.create_offline_session(fname)
+
+            if ctx is Backend.SequenceContext:
+                tab.session_notebook.load_sequence_session(fname)
+
+            elif ctx is Backend.SniffContext:
+                tab.session_notebook.load_sniff_session(fname)
+
+            elif ctx is Backend.StaticContext:
+                tab.session_notebook.load_static_session(fname)
+
+            else:
+                d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+                    message_format=_("Unable to open selected session"),
+                    secondary_text=_("PacketManipulator is unable to guess the"
+                                     "file type. Try to modify the extension "
+                                     "and to reopen the file."))
+                d.run()
+                d.destroy()
 
         dialog.hide()
         dialog.destroy()
+
+    def __on_save_session(self, action):
+        maintab = self.get_tab("MainTab")
+        session = maintab.get_current_session()
+
+        if session:
+            session.save()
+
+    def __on_save_session_as(self, action):
+        maintab = self.get_tab("MainTab")
+        session = maintab.get_current_session()
+
+        if session:
+            session.save_as()
 
     def __on_quit(self, *args):
         self.hide()

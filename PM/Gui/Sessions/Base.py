@@ -20,6 +20,7 @@
 
 import gtk
 
+from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Gui.Widgets.ClosableLabel import ClosableLabel
 
@@ -42,7 +43,65 @@ class Session(gtk.VBox):
     def reload(self):
         self.reload_container()
         self.reload_editor()
+
+    def save(self):
+        "@return True if the content is saved or False"
+        return self._on_save(None)
+
+    def save_as(self):
+        return self._on_save_as(None)
     
+    def save_session(self, fname):
+        """
+        Override this method to do the real save phase
+        @return True if the content is saved or False
+        """
+        
+        self.context.cap_file = fname
+        return self.context.save()
+
+    def add_filters(self, dialog):
+        """
+        Override this method to customize the save dialog
+        by adding filters or others
+        """
+
+        log.debug("Using default add_filters (%s)" % self.context)
+
+        for name, pattern in self.context.file_types:
+            filter = gtk.FileFilter()
+            filter.set_name(name)
+            filter.add_pattern(pattern)
+            dialog.add_filter(filter)
+
+    def _on_save(self, action):
+        if self.context.cap_file:
+            return self.save_session(self.context.cap_file)
+        else:
+            return self._on_save_as(None)
+
+    def _on_save_as(self, action):
+        ret = False
+        dialog = self.__create_save_dialog()
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            ret = self.save_session(dialog.get_filename())
+
+        dialog.hide()
+        dialog.destroy()
+
+        return ret
+
+    def __create_save_dialog(self):
+        dialog = gtk.FileChooserDialog(_('Save session file to'),
+                self.get_toplevel(), gtk.FILE_CHOOSER_ACTION_SAVE,
+                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                         gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
+
+        self.add_filters(dialog)
+
+        return dialog
+
     def reload_container(self, packet=None):
         """
         Reload the container of the all packets list

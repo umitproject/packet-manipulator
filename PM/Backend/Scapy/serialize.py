@@ -275,7 +275,7 @@ def save_sequence(fname, sequence):
 
 def load_sequence(fname):
     try:
-        tree = SequenceLoader("test.xml").tree
+        tree = SequenceLoader(fname).tree
         return tree
     except Exception, err:
         log.debug("Cannot load sequence from file %s (%s)" % (fname, str(err)))

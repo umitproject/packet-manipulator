@@ -22,14 +22,18 @@ from Timed import TimedContext
 from PM.Backend.Abstract.Context import register_sequence_context
 
 class BaseSequenceContext(TimedContext):
-    def __init__(self, seq, count, inter, iface, \
-                 strict, report_recv, report_sent, \
-                 scallback, rcallback, sudata=None, rudata=None):
+    def __init__(self, seq, count=1, inter=0, iface=None, \
+                 strict=True, report_recv=False, report_sent=True, \
+                 scallback=None, rcallback=None, sudata=None, rudata=None):
 
         """
         Create a BaseSequenceContext object
 
-        @param seq a Sequence object
+        If seq is a string then the sequence is loaded from file pointed by
+        seq variable and you could set the other attributes are ignored except
+        [sr]callback and [sr]udata. The others are loaded directly from file.
+
+        @param seq a Sequence object or a string to load from
         @param count the n of metapacket to send
         @param interval the interval between two consecutive send
         @param iface the interface to listen on for replies
@@ -42,28 +46,51 @@ class BaseSequenceContext(TimedContext):
         @param rudata the user data for rcallback
         """
 
-        self.seq = seq
-        
-        self.tot_loop_count = count
-        self.loop_count = 0
+        TimedContext.__init__(self)
 
-        self.tot_packet_count = len(seq)
-        self.packet_count = 0
+        if isinstance(seq, basestring):
+            self.cap_file = seq
 
-        self.inter = float(inter) / 1000.0
-        self.iface = iface
+            if not self.load():
+                raise Exception("Sequence cannot be loaded")
+
+            # TODO: load this field from file
+
+            self.tot_loop_count = 1
+            self.loop_count = 0
+
+            self.tot_packet_count = len(seq)
+            self.packet_count = 0
+
+            self.inter = 0
+            self.iface = None
+
+            self.strict = True
+            self.report_recv = True
+            self.report_sent = True
+
+        else:
+            self.seq = seq
+            
+            self.tot_loop_count = count
+            self.loop_count = 0
+
+            self.tot_packet_count = len(seq)
+            self.packet_count = 0
+
+            self.inter = float(inter) / 1000.0
+            self.iface = iface
+
+            self.strict = strict
+            self.report_recv = report_recv
+            self.report_sent = report_sent
+
         self.scallback = scallback
         self.rcallback = rcallback
         self.sudata = sudata
         self.rudata = rudata
 
-        self.strict = strict
-        self.report_recv = report_recv
-        self.report_sent = report_sent
-
         self.answers = 0
         self.received = 0
-
-        TimedContext.__init__(self)
 
 SequenceContext = register_sequence_context(BaseSequenceContext)

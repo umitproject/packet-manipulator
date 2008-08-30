@@ -22,6 +22,7 @@ from __future__ import with_statement
 from threading import Lock
 
 from PM.Core.I18N import _
+from PM.Core.Logger import log
 from PM.Backend.Scapy.serialize import load_sequence, save_sequence
 from PM.Backend.Scapy.utils import execute_sequence
 
@@ -30,8 +31,9 @@ def register_sequence_context(BaseSequenceContext):
     class SequenceContext(BaseSequenceContext):
         file_types = [(_('Scapy sequence'), '*.pms')]
 
-        def __init__(self, seq, count, inter, iface, strict, report_recv, report_sent,
-                     scallback, rcallback, sudata=None, rudata=None):
+        def __init__(self, seq, count=1, inter=0, iface=None, strict=True, \
+                     report_recv=False, report_sent=True, \
+                     scallback=None, rcallback=None, sudata=None, rudata=None):
 
             BaseSequenceContext.__init__(self, seq, count, inter, iface,
                                          strict, report_recv, report_sent,
@@ -43,38 +45,41 @@ def register_sequence_context(BaseSequenceContext):
             self.title = _('Unsaved')
             self.summary = _('Executing sequence (%d packets %d times)') % (self.tot_packet_count, count)
         
-        def save(self):
+        def load(self):
+            log.debug("Loading sequence from %s" % self.cap_file)
+
             if self.cap_file:
-                self.seq = self.load_sequence(self.cap_file)
+                self.seq = load_sequence(self.cap_file)
 
                 if self.seq is not None:
-                    self.state = self.SAVED
+                    self.status = self.SAVED
                     return True
 
-            self.state = self.NOT_SAVED
+            self.status = self.NOT_SAVED
             return False
 
-        def load(self):
+        def save(self):
+            log.debug("Saving sequence to %s" % self.cap_file)
+
             if self.cap_file and self.seq is not None and \
                save_sequence(self.cap_file, self.seq):
 
-                self.state = self.SAVED
+                self.status = self.SAVED
                 return True
 
-            self.state = self.NOT_SAVED
+            self.status = self.NOT_SAVED
             return False
 
         def get_all_data(self):
-            with self.lock:
-                return BaseSequenceContext.get_all_data(self)
+            return self.get_data()
 
         def get_data(self):
             with self.lock:
-                return BaseSequenceContext.get_data(self)
+                return self.seq
 
         def set_data(self, val):
             with self.lock:
-                self.data = val
+                self.seq = val
 
         def _start(self):
             if self.tot_packet_count - self.packet_count > 0 or \
@@ -96,13 +101,13 @@ def register_sequence_context(BaseSequenceContext):
             return False
 
         def _resume(self):
-            if self.sequencer.isAlive():
+            if self.sequencer and self.sequencer.isAlive():
                 return False
 
             return self._start()
         
         def _restart(self):
-            if self.sequencer.isAlive():
+            if self.sequencer and self.sequencer.isAlive():
                 return False
 
             self.packet_count = 0
@@ -115,7 +120,11 @@ def register_sequence_context(BaseSequenceContext):
 
         def _stop(self):
             self.internal = False
-            self.sequencer.stop()
+
+            if self.sequencer:
+                self.sequencer.stop()
+            else:
+                self.state = self.NOT_RUNNING
 
             return True
 
@@ -176,7 +185,7 @@ def register_sequence_context(BaseSequenceContext):
                    self.state == self.PAUSED
 
         def join(self):
-            if self.sequencer.isAlive():
+            if self.sequencer and self.sequencer.isAlive():
                 self.sequencer.stop()
 
     return SequenceContext

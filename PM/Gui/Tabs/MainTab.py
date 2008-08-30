@@ -22,6 +22,7 @@ import gtk
 
 from PM import Backend
 from PM.Core.I18N import _
+from PM.Core.Atoms import Node
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Views import UmitView
@@ -41,25 +42,32 @@ class SessionNotebook(gtk.Notebook):
         # selected from sniff perspective
         self.view_page = None
 
-    def create_edit_session(self, packet):
-        ctx = Backend.StaticContext(_('Unsaved'))
+    def create_sequence_session(self, packets):
+        """
+        Create a sequence from packets
 
+        @param packets a Node object or a list of packets or a single packet
+        """
+
+        if isinstance(packets, Node):
+            ctx = Backend.SequenceContext(packets)
+        else:
+            seq = Node()
+
+            for packet in packets:
+                seq.append_node(Node(Backend.SequencePacket(packet)))
+
+            ctx = Backend.SequenceContext(seq)
+
+        session = SequenceSession(ctx)
+        return self.__append_session(session)
+
+    def create_edit_session(self, packet):
         if isinstance(packet, basestring):
             packet = Backend.get_proto(packet)()
             packet = Backend.MetaPacket(packet)
 
-        ctx.data.append(packet)
-        ctx.summary = _('Editing %s') % packet.get_protocol_str()
-
-        session = SequenceSession(ctx)
-        return self.__append_session(session)
-
-    def create_sequence_session(self, packets):
-        ctx = Backend.StaticContext(_('Unsaved sequence'))
-        ctx.data = packets
-
-        session = SequenceSession(ctx)
-        return self.__append_session(session)
+        return self.create_sequence_session([packet])
 
     def create_sniff_session(self, ctx):
         session = SniffSession(ctx, show_packet=False)
@@ -69,11 +77,19 @@ class SessionNotebook(gtk.Notebook):
         session = SniffSession(ctx, show_sniff=sniff, show_packet=packet)
         return self.__append_session(session)
 
-    def create_offline_session(self, fname):
+    def load_static_session(self, fname):
         ctx = Backend.StaticContext(fname, fname)
         ctx.load()
 
         session = SniffSession(ctx, show_packet=False)
+        return self.__append_session(session)
+
+    def load_sniff_session(self, fname):
+        return self.load_static_session(fname)
+
+    def load_sequence_session(self, fname):
+        ctx = Backend.SequenceContext(fname)
+        session = SequenceSession(ctx)
         return self.__append_session(session)
 
     def create_empty_session(self, title):
@@ -147,7 +163,7 @@ class SessionNotebook(gtk.Notebook):
             dialog.destroy()
             
             if id == gtk.RESPONSE_NO or \
-               (id == gtk.RESPONSE_YES and session.sniff_page.save()):
+               (id == gtk.RESPONSE_YES and session.save()):
                 
                 self.__remove_session(session)
 
@@ -184,10 +200,10 @@ class MainTab(UmitView):
         self.__connect_signals()
 
     def get_current_session(self):
-        "@returns the current SessionPage or None"
+        "@returns the current Session or None"
         page = self.get_current_page()
 
-        if page and isinstance(page, SessionPage):
+        if page and isinstance(page, Session):
             return page
         return None
 

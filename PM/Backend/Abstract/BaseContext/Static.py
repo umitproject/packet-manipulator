@@ -18,12 +18,16 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+from PM.Core.I18N import _
 from PM.Backend.Abstract.Context import register_static_context
 
 class BaseStaticContext(object):
     """
     This is a simple static context
     """
+
+    file_types = [(_('Pcap files'), '*.pcap'),
+                  (_('Pcap gz files'), '*.pcap.gz')]
 
     NOT_SAVED, SAVED = range(2)
 
