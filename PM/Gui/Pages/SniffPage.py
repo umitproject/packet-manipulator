@@ -283,20 +283,34 @@ class SniffPage(gtk.VBox):
         return True
     
     def __get_packets_selected(self, tree=False):
-        model, lst = self.tree.get_selection().get_selected_rows()
-
-        # TODO: implement tree selection
-
         if tree:
-            ret = []
-            for path in lst:
-                packet = model.get_value(model.get_iter(path), 0)
-                packet = copy.deepcopy(packet)
-                ret.append(packet)
+            node = Node()
 
-            return ret
+            def add_to_tree(model, path, iter, tree):
+                obj = model.get_value(iter, 0)
+                parent = model.iter_parent(iter)
+
+                if not parent:
+                    tree.append_node(Node(obj))
+                else:
+                    path = tree.find(model.get_value(parent, 0))
+
+                    if not path:
+                        tree.append_node(Node(obj))
+                    else:
+                        node = tree.get_from_path(path)
+                        node.append_node(Node(obj))
+
+            self.tree.get_selection().selected_foreach(add_to_tree, node)
+
+            for child in node:
+                child.data = Backend.SequencePacket(child.data)
+
+            return node
         else:
             ret = []
+            model, lst = self.tree.get_selection().get_selected_rows()
+
             for path in lst:
                 ret.append(model.get_value(model.get_iter(path), 0))
 
