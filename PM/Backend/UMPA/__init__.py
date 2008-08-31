@@ -25,7 +25,7 @@ import umpa
 import umpa.utils.security
 
 from umpa import protocols
-from umpa.packets import Packet
+from umpa import Packet
 from umpa.protocols._protocols import Protocol
 from umpa.protocols._fields import *
 
@@ -203,6 +203,12 @@ class MetaPacket:
 
         return False
 
+    def get_raw(self):
+        return get_packet_raw(self)
+
+    def complete(self):
+        return False
+
     def get_protocol_str(self):
         return get_proto_name(self.root)
 
@@ -221,6 +227,9 @@ class MetaPacket:
     def get_source(self):
         # We need to ask for a method here
         return "N/A"
+
+    def get_protocols(self):
+        return self.root.protos
 
 ###############################################################################
 # Functions used by Contexts

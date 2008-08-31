@@ -18,8 +18,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from Static import register_static_context
-from Send import register_send_context
-from SendReceive import register_send_receive_context
-from Sniff import register_sniff_context
-from Sequence import register_sequence_context
+def register_sequence_context(BaseSequenceContext):
+    # Make a class without options for saving
+    class SequenceContext(BaseSequenceContext):
+        file_types = []
+        status = BaseSequenceContext.SAVED
+
+    return SequenceContext

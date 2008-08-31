@@ -40,7 +40,7 @@ class BaseStaticContext(object):
         """
 
         self._data = []
-        self._title = title
+        self._title = title or 'blah'
         self._status = self.NOT_SAVED
 
         if fname:

@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software                
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+from PM.Core.I18N import _
 from Timed import TimedContext
 from PM.Backend.Abstract.Context import register_sequence_context
 
@@ -52,9 +53,11 @@ class BaseSequenceContext(TimedContext):
             self.cap_file = seq
 
             if not self.load():
-                raise Exception("Sequence cannot be loaded")
+                raise Exception('Sequence cannot be loaded')
 
             # TODO: load this field from file
+
+            self.title = self.cap_file
 
             self.tot_loop_count = 1
             self.loop_count = 0
@@ -71,6 +74,7 @@ class BaseSequenceContext(TimedContext):
 
         else:
             self.seq = seq
+            self.title = _('Unsaved sequence')
             
             self.tot_loop_count = count
             self.loop_count = 0
@@ -92,5 +96,10 @@ class BaseSequenceContext(TimedContext):
 
         self.answers = 0
         self.received = 0
+
+    def get_sequence(self):
+        return self.seq
+    def set_sequence(self, val):
+        self.seq = val
 
 SequenceContext = register_sequence_context(BaseSequenceContext)

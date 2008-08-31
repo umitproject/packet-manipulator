@@ -24,6 +24,8 @@ from PM.Core.I18N import _
 def register_static_context(BaseStaticContext):
 
     class StaticContext(BaseStaticContext):
+        file_types = [(_('UMPA XML capture'), '*.uxml')]
+
         def load(self):
             if not self.cap_file:
                 return False

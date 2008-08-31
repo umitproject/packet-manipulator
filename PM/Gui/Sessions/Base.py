@@ -56,6 +56,10 @@ class Session(gtk.VBox):
         Override this method to do the real save phase
         @return True if the content is saved or False
         """
+
+        if not self.context.file_types:
+            log.debug("Saving is disabled (%s)" % self.context)
+            return False
         
         self.context.cap_file = fname
         return self.context.save()
@@ -81,6 +85,10 @@ class Session(gtk.VBox):
             return self._on_save_as(None)
 
     def _on_save_as(self, action):
+        if not self.context.file_types:
+            log.debug("Saving is disabled (%s)" % self.context)
+            return False
+
         ret = False
         dialog = self.__create_save_dialog()
 

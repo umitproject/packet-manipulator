@@ -42,7 +42,6 @@ def register_sequence_context(BaseSequenceContext):
             self.sequencer = None
             self.internal = False
             self.lock = Lock()
-            self.title = _('Unsaved')
             self.summary = _('Executing sequence (%d packets %d times)') % (self.tot_packet_count, count)
         
         def load(self):
@@ -85,11 +84,11 @@ def register_sequence_context(BaseSequenceContext):
         # We really need this lock here?
         def get_sequence(self):
             with self.lock:
-                return self.seq
+                return BaseSequenceContext.get_sequence(self)
 
         def set_sequence(self, val):
             with self.lock:
-                self.seq = val
+                return BaseSequenceContext.set_sequence(self, val)
 
         def _start(self):
             if self.tot_packet_count - self.packet_count > 0 or \
