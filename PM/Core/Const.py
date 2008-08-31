@@ -30,6 +30,7 @@ import os, os.path
 
 from Logger import log
 
+PM_SVN_REVISION = """$Revision$"""
 PM_VERSION = '0.1'
 PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 
