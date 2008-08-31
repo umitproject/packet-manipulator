@@ -133,13 +133,30 @@ class PreferenceLoader(handler.ContentHandler):
                 self.options[opt_name] = Option(opt_value)
 
 class PreferenceWriter:
+    def startElement(self, names, qnames, attrs):
+        self.depth_idx += 1
+        self.writer.characters('  ' * self.depth_idx)
+        self.writer.startElementNS(names, qnames, attrs)
+
+    def endElement(self, names, qnames):
+        self.writer.endElementNS(names, qnames)
+        self.writer.characters('\n')
+        self.depth_idx -= 1
+
     def __init__(self, fname, options):
         output = open(fname, 'w')
+        self.depth_idx = -1
         self.writer = XMLGenerator(output, 'utf-8')
         self.writer.startDocument()
-        self.writer.startElementNS((None, 'PacketManipulator'), 'PacketManipulator', {})
 
-        for key, option in options.items():
+        self.startElement((None, 'PacketManipulator'),
+                                 'PacketManipulator', {})
+        self.writer.characters('\n')
+
+        items = options.items()
+        items.sort()
+
+        for key, option in items:
 
             attr_vals = {
                 (None, u'id') : key,
@@ -152,10 +169,15 @@ class PreferenceWriter:
             }
 
             attrs = AttributesNSImpl(attr_vals, attr_qnames)
-            self.writer.startElementNS((None, str(option.type)), str(option.type), attrs)
-            self.writer.endElementNS((None, str(option.type)), str(option.type))
 
-        self.writer.endElementNS((None, 'PacketManipulator'), 'PacketManipulator')
+            self.startElement((None, str(option.type)),
+                              str(option.type), attrs)
+
+            self.endElement((None, str(option.type)),
+                            str(option.type))
+
+        self.endElement((None, 'PacketManipulator'),
+                                 'PacketManipulator')
         self.writer.endDocument()
         output.close()
 
