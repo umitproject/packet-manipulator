@@ -24,6 +24,7 @@ import sys
 from collections import defaultdict
 
 from PM.Core.Logger import log
+from PM.Backend import TimedContext
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Views import UmitView
@@ -47,6 +48,8 @@ class GeoTab(UmitView):
     def create_ui(self):
         self.locator = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
 
+        vbox = gtk.VBox(False, 2)
+
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
@@ -56,22 +59,44 @@ class GeoTab(UmitView):
         self.tree = gtk.TreeView(self.store)
 
         self.tree.append_column(gtk.TreeViewColumn('Country', gtk.CellRendererText(), text=0))
-        self.tree.append_column(gtk.TreeViewColumn('IP', gtk.CellRendererText(), text=1))
+        self.tree.append_column(gtk.TreeViewColumn('Hits', gtk.CellRendererText(), text=1))
 
         sw.add(self.tree)
 
-        self._main_widget.add(sw)
+        btn = gtk.Button(stock=gtk.STOCK_REFRESH)
+        btn.connect('clicked', self.__on_refresh)
+
+        vbox.pack_start(sw)
+        vbox.pack_start(btn, False, False)
+
+        self._main_widget.add(vbox)
         self._main_widget.show_all()
 
         tab = PMApp().main_window.get_tab("MainTab")
         tab.session_notebook.connect('switch-page', self.__on_switch_page)
 
-    def __on_switch_page(self, sess_nb, page, num):
-        self.store.clear()
-        page = sess_nb.get_nth_page(num)
+    def __on_refresh(self, btn):
+        tab = PMApp().main_window.get_tab("MainTab")
+        self.__load_session(tab.session_notebook.get_current_session())
 
-        if isinstance(page, SniffSession):
-            self.__repopulate(page.context.data)
+    def __on_switch_page(self, sess_nb, page, num):
+        self.__load_session(sess_nb.get_nth_page(num))
+
+    def __load_session(self, page):
+        self.store.clear()
+
+        log.debug("Loading session %s" % page)
+
+        if not isinstance(page, SniffSession):
+            log.debug("This is not a sniff session")
+            return
+
+        if isinstance(page.context, TimedContext) and \
+           page.context.status != page.context.NOT_RUNNING:
+            log.debug("The session is running")
+            return
+
+        self.__repopulate(page.context.data)
 
     def __repopulate(self, packets):
         countries = defaultdict(int)

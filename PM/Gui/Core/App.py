@@ -74,6 +74,7 @@ class PMApp(Singleton):
         self.main_window = MainWindow()
         self.main_window.connect_tabs_signals()
         self.plugin_engine = PluginEngine()
+        self.plugin_engine.load_selected_plugins()
 
     def run(self):
         gtk.main()

@@ -436,7 +436,11 @@ class MainWindow(gtk.Window):
         for ctx in lst:
             ctx.stop()
 
-        for ctx in lst:
-            ctx.join()
+        # Avoids joining all threads are daemon
+        #for ctx in lst:
+        #    ctx.join()
+
+        log.debug("Saving options before exiting")
+        Prefs().write_options()
 
         gtk.main_quit()
