@@ -132,25 +132,29 @@ class SessionNotebook(gtk.Notebook):
 
         if isinstance(session.context, Backend.TimedContext) and \
            session.context.state != session.context.NOT_RUNNING:
-            dialog = gtk.MessageDialog(self.get_toplevel(),
-                                       gtk.DIALOG_DESTROY_WITH_PARENT,
-                                       gtk.MESSAGE_QUESTION,
-                                       gtk.BUTTONS_YES_NO,
-                                       _('The session is running.\nDo you want stop it?'))
-            id = dialog.run()
 
-            dialog.hide()
-            dialog.destroy()
-            
-            if id == gtk.RESPONSE_YES:
+            if Prefs()['gui.maintab.autostop'].value == True:
                 session.context.stop()
+            else:
+                dialog = gtk.MessageDialog(self.get_toplevel(),
+                                           gtk.DIALOG_DESTROY_WITH_PARENT,
+                                           gtk.MESSAGE_QUESTION,
+                                           gtk.BUTTONS_YES_NO,
+                                           _('The session is running.\nDo you want stop it?'))
+                id = dialog.run()
 
-            return
+                dialog.hide()
+                dialog.destroy()
+                
+                if id == gtk.RESPONSE_YES:
+                    session.context.stop()
 
-        if session.context.status == session.context.SAVED:
+                return
+
+        if session.context.status == session.context.SAVED or \
+           Prefs()['gui.maintab.askforsave'].value == False:
             self.__remove_session(session)
         else:
-
             dialog = gtk.MessageDialog(self.get_toplevel(),
                                        gtk.DIALOG_DESTROY_WITH_PARENT,
                                        gtk.MESSAGE_QUESTION,

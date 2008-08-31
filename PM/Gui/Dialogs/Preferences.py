@@ -159,11 +159,14 @@ class GUIPage(Page):
     def create_widgets(self):
         self.widgets = [
         ('gui.docking', None, gtk.CheckButton(_('Use docking windows'))),
+        (_('Sessions'),
+          (('gui.maintab.askforsave', None, gtk.CheckButton(_('Ask on unsaved changes'))),
+           ('gui.maintab.autostop', None, gtk.CheckButton(_('Automatically stop sessions on close'))))),
         
-        ('Sniff perspective',
+        (_('Sniff perspective'),
           (('gui.maintab.sniffview.font', _('Sniff view font:'), gtk.FontButton()),
            ('gui.maintab.sniffview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
-        ('Sequence perspective',
+        (_('Sequence perspective'),
           (('gui.maintab.sequenceview.font', _('Sequence view font:'), gtk.FontButton()),
            ('gui.maintab.sequenceview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
 
