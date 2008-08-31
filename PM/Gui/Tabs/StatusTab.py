@@ -49,6 +49,7 @@ class StatusView(gtk.ScrolledWindow):
         # Create various tags
 
         self.view.connect('expose-event', self.__redraw_left_window)
+        self.view.connect('style-set', self.__on_style)
         self.view.connect('realize', self.__on_realize)
         self.add(self.view)
 
@@ -65,7 +66,7 @@ class StatusView(gtk.ScrolledWindow):
             desc = pango.FontDescription(val)
 
             self.view.modify_font(desc)
-            self.view.get_window(gtk.TEXT_WINDOW_LEFT).set_background(self.style.white)
+            self.view.get_window(gtk.TEXT_WINDOW_LEFT).set_background(self.style.base[gtk.STATE_NORMAL])
         except:
             return True
 
@@ -83,8 +84,14 @@ class StatusView(gtk.ScrolledWindow):
     def error(self, txt):
         self.append(txt, 2)
 
+    def __on_style(self, widget, old):
+        window = self.view.get_window(gtk.TEXT_WINDOW_LEFT)
+
+        if window:
+            window.set_background(self.style.base[gtk.STATE_NORMAL])
+
     def __on_realize(self, widget):
-        self.view.get_window(gtk.TEXT_WINDOW_LEFT).set_background(self.style.white)
+        self.__on_style(widget, None)
 
     def __redraw_left_window(self, widget, event):
         window = self.view.get_window(gtk.TEXT_WINDOW_LEFT)

@@ -37,8 +37,6 @@ class ProtocolTree(gtk.VBox):
         
         toolbar = gtk.Toolbar()
         toolbar.set_style(gtk.TOOLBAR_ICONS)
-        #toolbar.set_icon_size(gtk.ICON_SIZE_SMALL_TOOLBAR)
-        toolbar.modify_bg(gtk.STATE_NORMAL, toolbar.style.bg[gtk.STATE_NORMAL])
         
         stocks = (gtk.STOCK_SORT_ASCENDING,
                   gtk.STOCK_SORT_DESCENDING,

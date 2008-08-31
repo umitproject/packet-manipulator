@@ -84,7 +84,6 @@ class Plotter(gtk.DrawingArea):
         req_w += 10 + (atom_w * 35) # 35 characters for attributes
         req_h = max(req_h, (fields + protos) * (atom_h + 4))
 
-        print req_w, req_h
         return int(req_w), int(req_h)
 
     def draw_text(self, cr, layout, txt):

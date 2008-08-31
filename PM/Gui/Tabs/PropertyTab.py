@@ -58,6 +58,7 @@ class PropertyTab(UmitView):
 
         tab = PMApp().main_window.get_tab("MainTab")
         tab.session_notebook.connect('switch-page', self.__on_repopulate)
+        tab.session_notebook.connect('page-removed', self.__on_clear)
 
     def register_notify_for(self, packet, callback):
         if packet in self.notify:
@@ -77,6 +78,10 @@ class PropertyTab(UmitView):
                 del self.notify[packet]
 
                 log.debug("No callbacks for %s" % packet)
+    
+    def __on_clear(self, sesss_nb, child, num):
+        self._main_widget.set_sensitive(False)
+        self.grid.clear()
 
     def __on_repopulate(self, sess_nb, page, num):
         page = sess_nb.get_nth_page(num)
