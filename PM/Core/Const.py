@@ -30,7 +30,13 @@ import os, os.path
 
 from Logger import log
 
-PM_SVN_REVISION = """$Revision$"""
+try:
+    PM_SVN_REVISION = """$Revision$"""
+    PM_SVN_REVISION = PM_SVN_REVISION.split(" ")[1]
+except:
+    PM_SVN_REVISION = 'N/A'
+
+PM_SITE = 'http://manipulator.umitproject.org'
 PM_VERSION = '0.1'
 PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 
