@@ -109,6 +109,93 @@
         Options may occupy space at the end of the TCP header and are a multiple of 8 bits in length.
     </attr>
 </proto>
+<proto id="UDP" layer="4">
+    User Datagram Protocol implementation.
+    
+    This protocol provides a procedure for application programs to send 
+    messages to other programs with a minimum of protocol mechanism. The 
+    protocol is transaction oriented, and delivery and duplicate protection 
+    are not guaranteed.
+    <attr id="sport">
+        The source port number. See RFC 768 for more.
+    </attr>
+    <attr id="dport">
+        The destination port number. See RFC 768 for more.
+    </attr>
+    <attr id="len">
+        Length is the length in octets of this user datagram including this 
+        header and the data. See RFC 768 for more.
+    </attr>
+    <attr id="chksum">
+        Checksum of Pseudo Header, UDP header and data. See RFC 768 for more.
+    </attr>
+</proto>
+<proto id="ICMP" layer="4">
+    Internet Control Message Protocol implementation.
+
+    It the most common protocol in the Internet on fourth layer 
+    of the OSI model.
+    <attr id="type">
+        Specifies the format of the ICMP message.
+    </attr>
+    <attr id="code">
+        Further qualifies the ICMP message.
+    </attr>
+    <attr id="chksum">
+        Checksum that covers the ICMP message. This is the 16-bit one's 
+        complement of the one's complement sum of the ICMP message starting 
+        with the Type field.
+    </attr>
+    <attr id="id">
+        This field contains an ID value, should be returned in case of ECHO REPLY
+    </attr>
+    <attr id="seq">
+        This field contains a sequence value, should be returned 
+        in case of ECHO REPLY.
+    </attr>
+</proto>
+<proto id="ARP" layer="2">
+    In computer networking, the Address Resolution Protocol (ARP) is the method for finding a host's hardware address when only its Network Layer address is known. ARP is defined in RFC 826.[1] It is a current Internet Standard (STD 37).
+    <attr id="hwtype">
+        Each data link layer protocol is assigned a number used in this field. For example, Ethernet is 1.
+    </attr>
+    <attr id="ptype">
+        Each protocol is assigned a number used in this field. For example, IP is 0x0800.
+    </attr>
+    <attr id="hwlen">
+        Length in bytes of a hardware address. Ethernet addresses are 6 bytes long.
+    </attr>
+    <attr id="plen">
+        Length in bytes of a logical address. IPv4 address are 4 bytes long.
+    </attr>
+    <attr id="op">
+        Specifies the operation the sender is performing: 1 for request, and 2 for reply.
+    </attr>
+    <attr id="hwsrc">
+        Hardware address of the sender.
+    </attr>
+    <attr id="psrc">
+        Protocol address of the sender.
+    </attr>
+    <attr id="hwdst">
+        Hardware address of the intended receiver. This field is ignored in requests.
+    </attr>
+    <attr id="pdst">
+        Protocol address of the intended receiver.
+    </attr>
+</proto>
+<proto id="Ether" layer="1">
+    Ethernet v2 framing, also known as DIX Ethernet (named after the major participants in the framing of the protocol: Digital Equipment Corporation, Intel, Xerox) defines the 2-octet field following the destination and source addresses as an EtherType that identifies an upper layer protocol.
+    <attr id="dst">
+        Destination MAC address
+    </attr>
+    <attr id="src">
+        Source MAC address
+    </attr>
+    <attr id="type">
+        For example, an EtherType value of 0x0800 signals that the packet contains an IPv4 datagram. Likewise, an EtherType of 0x0806 indicates an ARP frame, and 0x8100 indicates IEEE 802.1Q frame.
+    </attr>
+</proto>
 </scapydoc>
 """
 

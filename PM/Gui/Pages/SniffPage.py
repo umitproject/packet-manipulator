@@ -287,7 +287,7 @@ class SniffPage(gtk.VBox):
             node = Node()
 
             def add_to_tree(model, path, iter, tree):
-                obj = model.get_value(iter, 0)
+                obj = copy.deepcopy(model.get_value(iter, 0))
                 parent = model.iter_parent(iter)
 
                 if not parent:

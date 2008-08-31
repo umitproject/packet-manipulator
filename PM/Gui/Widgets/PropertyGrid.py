@@ -834,6 +834,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
         "Clear the store"
         self.packet = None
         self.store.clear()
+        self.emit('desc-changed', '')
 
     def populate(self, packet, proto_inst):
         """

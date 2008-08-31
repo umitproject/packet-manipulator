@@ -133,7 +133,7 @@ class ProtocolTree(gtk.VBox):
         for proto in lst:
             dct[Backend.get_proto_layer(proto)].append(proto)
         
-        for i in xrange(2, 8, 1):
+        for i in xrange(1, 8, 1):
             if not i in dct:
                 continue
 
