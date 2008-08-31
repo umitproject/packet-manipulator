@@ -166,6 +166,36 @@ class MainWindow(gtk.Window):
         """
 
         return self.registered_tabs[name]
+    
+    def deregister_tab(self, tab):
+        """
+        Deregister a tab deleting his CheckMenu and tab from the paned
+
+        @param tab the tab to deregister
+        @return True if is ok or False
+        """
+
+        item = self.ui_manager.get_widget('/menubar/Views')
+        menu = item.get_submenu()
+
+        def find_tab(item, udata):
+            tab, find = udata
+
+            if item.get_data('tab-object') is tab:
+                find = item
+                return True
+
+        find = None
+        menu.foreach(find_tab, (tab, find))
+
+        if find is not None:
+            menu.remove(find)
+            self.main_paned.remove_view(tab)
+            del self.registered_tabs[tab.name]
+
+            return True
+
+        return False
 
     def register_tab(self, tab, show=True):
         """
@@ -184,7 +214,7 @@ class MainWindow(gtk.Window):
             menu = gtk.Menu()
             item.set_submenu(menu)
 
-        if tab.label_text in self.registered_tabs:
+        if tab.name in self.registered_tabs:
             raise Exception("Tab already present")
 
         # Ok we should add a CheckMenuItem to this fucking menu
@@ -192,13 +222,14 @@ class MainWindow(gtk.Window):
 
         log.debug("Tab %s registered as %s" % (tab.label_text, tab.name))
 
-        if not tab.tab_position:
+        if tab.tab_position is None:
             # This is the central widget so it should be added
             # with no MenuItem
             self.main_paned.add_view(tab)
             return
 
         new_item = gtk.CheckMenuItem(tab.label_text)
+        new_item.set_data('tab-object', tab)
         new_item.connect('toggled', self.__on_toggle_tab_menu, tab)
 
         if show:

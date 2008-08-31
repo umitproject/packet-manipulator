@@ -7,7 +7,6 @@ TODO list (not ordered):
 - new logo (pacchetto)
 - dict editor / list editor (ex TCP dport)
 - hexview with insert mode
-- plugins system (UmitPlugins) / geoip as example plugin
 - switching to pyprocessing?
 - documentation and test cases
 - rewrite the UMPA backend (complete/remove)
