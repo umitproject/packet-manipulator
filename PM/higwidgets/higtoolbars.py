@@ -62,7 +62,7 @@ class HIGToolItem(gtk.HBox):
         self.pack_start(self.vbox)#, False, False, 0)
         self.set_border_width(6)
 
-        self.set_size_request(-1, 48)
+        self.set_size_request(-1, 36)
 
         self.show_all()
 

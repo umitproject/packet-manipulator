@@ -29,7 +29,6 @@ class HIGAnimatedBar(gtk.EventBox):
     """
     A dummy animated bar to show message like Firefox one.
     """
-
     __gtype_name__ = "HIGAnimatedBar"
 
     def __init__(self, msg, stock=gtk.STOCK_DIALOG_INFO, file=None, markup=True):
@@ -184,6 +183,8 @@ class HIGAnimatedBar(gtk.EventBox):
     
     image = property(get_image, set_image)
     label = property(get_label, set_label)
+
+gobject.type_register(HIGAnimatedBar)
 
 if __name__ == "__main__":
     w = gtk.Window()

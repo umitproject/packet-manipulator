@@ -55,6 +55,7 @@ from PM.Gui.Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 from PM.Gui.Dialogs.Interface import InterfaceDialog
 from PM.Gui.Dialogs.Preferences import PreferenceDialog
 from PM.Gui.Dialogs.Routes import RoutesDialog
+from PM.Gui.Plugins.Window import PluginWindow
 
 from PM.Core.I18N import _
 from PM.Core.Const import PM_DEVELOPMENT, PM_SVN_REVISION
@@ -91,6 +92,7 @@ class MainWindow(gtk.Window):
 
             ('Options', None, _('Options'), None),
             ('Routes', gtk.STOCK_NETWORK, _('Routing table'), '<Control>r', _('Routes editor'), self.__on_routing),
+            ('Plugins', 'extension_small', _('Plugins'), None, _('Plugin manager'), self.__on_plugins),
             ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'), '<Control>p', _('Preferences'), self.__on_preferences),
 
             ('Views', None, _('Views'), None),
@@ -112,6 +114,8 @@ class MainWindow(gtk.Window):
             </menu>
             <menu action='Options'>
                 <menuitem action='Routes'/>
+                <separator/>
+                <menuitem action='Plugins'/>
                 <separator/>
                 <menuitem action='Preferences'/>
             </menu>
@@ -151,6 +155,8 @@ class MainWindow(gtk.Window):
         self.main_paned = UmitPaned()
 
         self.vbox = gtk.VBox(False, 2)
+
+        self.plugin_window = PluginWindow()
 
     def get_tab(self, name):
         """
@@ -258,6 +264,9 @@ class MainWindow(gtk.Window):
         dialog.run()
         dialog.hide()
         dialog.destroy()
+
+    def __on_plugins(self, action):
+        self.plugin_window.show()
 
     def __on_preferences(self, action):
         dialog = PreferenceDialog(self)

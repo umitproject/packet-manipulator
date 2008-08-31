@@ -366,7 +366,7 @@ class HIGRichList(gtk.ScrolledWindow):
         gtk.ScrolledWindow.__init__(self)
         
         self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
-        self.set_shadow_type(gtk.SHADOW_NONE)
+        self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         self.vbox = gtk.VBox()
 

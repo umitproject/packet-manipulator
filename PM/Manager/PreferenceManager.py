@@ -23,6 +23,7 @@ This module contains various class to load and store preferences to
 XML file using SAX parser provided by python
 """
 
+import os
 import sys
 import os.path
 
@@ -31,7 +32,7 @@ from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesNSImpl
 
 from PM.Core.Logger import log
-from PM.Core.Const import PM_HOME
+from PM.Core.Const import PM_HOME, PM_PLUGINS_DIR, PLUGINS_DIR
 from PM.Core.Atoms import Singleton
 
 TYPES = {
@@ -202,7 +203,10 @@ class Prefs(Singleton):
         'gui.views.console_tab' : False,
 
         'backend.system' : 'scapy',
-        'backend.scapy.interface' : ''
+        'backend.scapy.interface' : '',
+
+        'plugins.paths' : os.pathsep.join((PM_PLUGINS_DIR, PLUGINS_DIR)),
+        'plugins.enabled' : ''
     }
 
     def __init__(self):

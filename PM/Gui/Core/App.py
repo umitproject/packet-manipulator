@@ -31,6 +31,7 @@ import sys
 
 from PM.Core.I18N import _
 from PM.Core.Atoms import Singleton
+from PM.Gui.Plugins.Engine import PluginEngine
 
 class PMApp(Singleton):
     "The PacketManipulator application singleton object"
@@ -72,6 +73,7 @@ class PMApp(Singleton):
         self.prefs = Prefs()
         self.main_window = MainWindow()
         self.main_window.connect_tabs_signals()
+        self.plugin_engine = PluginEngine()
 
     def run(self):
         gtk.main()

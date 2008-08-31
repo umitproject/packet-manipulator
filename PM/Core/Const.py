@@ -45,6 +45,10 @@ HOME = os.path.expanduser("~")
 CURRENT_DIR = os.getcwd()
 PM_HOME = os.path.join(HOME, '.PacketManipulator')
 
+PM_PLUGINS_DIR = os.path.join(PM_HOME, 'plugins')
+PM_PLUGINS_TEMP_DIR = os.path.join(PM_PLUGINS_DIR, 'temp')
+PM_PLUGINS_DOWNLOAD_DIR = os.path.join(PM_PLUGINS_DIR, 'download')
+
 main_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 main_dir = os.path.dirname(main_dir)
 
@@ -55,9 +59,18 @@ elif hasattr(sys, "frozen"):
 
 LOCALE_DIR = os.path.join(main_dir, "share", "locale")
 PIXMAPS_DIR = os.path.join(main_dir, "share", "pixmaps", "umit")
+PLUGINS_DIR = os.path.join(main_dir, "share", "packetmanipulator", "plugins")
 
-if os.path.exists(HOME) and \
-   os.access(HOME, os.R_OK and os.W_OK) and \
-   not os.path.exists(PM_HOME):
-    log.debug("Creating PM home directory under %s" % PM_HOME)
-    os.mkdir(PM_HOME)
+def create_dir(path):
+    if os.path.exists(HOME) and \
+       os.access(HOME, os.R_OK and os.W_OK) and \
+       not os.path.exists(path):
+        log.debug("Creating new directory under %s" % path)
+        os.mkdir(path)
+
+for new_dir in (PM_HOME,
+                PM_PLUGINS_DIR,
+                PM_PLUGINS_TEMP_DIR,
+                PM_PLUGINS_DOWNLOAD_DIR):
+
+    create_dir(new_dir)

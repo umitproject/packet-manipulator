@@ -45,7 +45,10 @@ icons = (
 
     'python',
     'terminal',
-    'stock-close'
+    'stock-close',
+
+    'extension',
+    'paths'
 )
 
 def register_icons():
@@ -69,7 +72,7 @@ def register_icons():
 
     factory.add_default()
 
-def get_pixbuf(stock_id):
+def get_pixbuf(stock_id, w=None, h=None):
     "Get the pixbuf for a stock item defined in icons"
 
     name, size = stock_id.split("_")
@@ -81,4 +84,9 @@ def get_pixbuf(stock_id):
     else:
         raise Exception("Could not determine the pixel size")
 
-    return gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR, "%s-%d.png" % (name, size)))
+    fname = os.path.join(PIXMAPS_DIR, "%s-%d.png" % (name, size))
+
+    if w and h:
+        return gtk.gdk.pixbuf_new_from_file_at_size(fname, w, h)
+    else:
+        return gtk.gdk.pixbuf_new_from_file(fname)
