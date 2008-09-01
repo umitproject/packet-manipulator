@@ -133,6 +133,10 @@ class PluginsPrefs(object):
     def set_plugins(self, value):
         self._plugins.value = os.pathsep.join(value)
 
+    def save_changes(self):
+        # Not implemented all changes are saved automatically here
+        pass
+
     paths = property(get_paths, set_paths)
     plugins = property(get_plugins, set_plugins)
 

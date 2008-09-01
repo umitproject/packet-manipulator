@@ -483,6 +483,9 @@ class SequenceConsumer(Interruptable):
                 if remain <= 0:
                     self.receiving = False
                     break
+            
+            if not inmask:
+                time.sleep(0.05)
 
             if FREEBSD or DARWIN:
                 inp, out, err = select(inmask, [], [], 0.05)
@@ -494,6 +497,7 @@ class SequenceConsumer(Interruptable):
                 for sock in inmask:
                     r.append(sock.recv(MTU))
             else:
+                # FIXME: needs a revision here! possibly packet lost
                 inp, out, err = select(inmask, [], [], 0.05)
 
                 for sock in inp:
