@@ -309,6 +309,8 @@ class MainWindow(gtk.Window):
         dialog.set_logo(gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png')))
 
         dialog.set_version(PM_VERSION)
+
+        dialog.set_website(PM_SITE)
         dialog.set_website_label(PM_SITE)
 
         dialog.set_comments(_("Packet manipulation made easy%s" \
