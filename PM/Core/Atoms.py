@@ -288,6 +288,19 @@ class ThreadPool(object):
 
         self.threads.remove(ct)
 
+
+class Interruptable:
+    """
+    Interruptable interface
+    """
+
+    def start(self):
+        raise Exception("Implement me")
+    def terminate(self):
+        raise Exception("Implement me")
+    def isAlive(self):
+        raise Exception("Implement me")
+
 class Singleton(object):
     """
     A class for singleton pattern

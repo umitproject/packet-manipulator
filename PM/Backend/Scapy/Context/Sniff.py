@@ -24,6 +24,7 @@ from datetime import datetime
 from threading import Thread, Lock
 
 from PM.Core.I18N import _
+from PM.Core.Logger import log
 from PM.Backend.Scapy import *
 
 def register_sniff_context(BaseSniffContext):
@@ -72,7 +73,7 @@ def register_sniff_context(BaseSniffContext):
         def _start(self):
             self.prevtime = datetime.now()
 
-            if self.iface and not self.socket:
+            if self.iface:
                 try:
                     self.socket = conf.L2listen(type=ETH_P_ALL, iface=self.iface, filter=self.filter)
                 except socket.error, (errno, err):
@@ -94,8 +95,14 @@ def register_sniff_context(BaseSniffContext):
             return True
         
         def _stop(self):
-            self.internal = False
-            return True
+            if self.internal:
+                self.internal = False
+
+                if self.socket:
+                    self.socket.close()
+                return True
+            else:
+                return False
 
         def _restart(self):
             if self.thread and self.thread.isAlive():
@@ -109,13 +116,29 @@ def register_sniff_context(BaseSniffContext):
             return self._start()
 
         def run(self):
-            while self.internal:
-                packet = self.socket.recv(MTU)
+            while self.internal and self.socket is not None:
+                r = None
+                inmask = [self.socket]
 
-                if not packet:
-                    continue
+                try:
+                    if FREEBSD or DARWIN:
+                        inp, out, err = select(inmask, inmask, inmask, 0.05)
+                        if len(inp) == 0 or self.socket in inp:
+                            r = self.socket.nonblock_recv()
+                    elif WINDOWS:
+                        r = self.socket.recv(MTU)
+                    else:
+                        inp, out, err = select(inmask, inmask, inmask, None)
+                        if self.socket in inp:
+                            r = self.socket.recv(MTU)
+                    if r is None:
+                        continue
+                except:
+                    self.internal = False
+                    self.socket = None
+                    break
 
-                packet = MetaPacket(packet)
+                packet = MetaPacket(r)
 
                 self.tot_count += 1
                 self.tot_size += packet.get_size()
@@ -149,6 +172,8 @@ def register_sniff_context(BaseSniffContext):
                 else:
                     # ((goject.G_MAXINT / 4) % gobject.G_MAXINT)
                     self.percentage = (self.percentage + 536870911) % 2147483647
+
+            log.debug("Exiting from thread")
 
             self.state = self.NOT_RUNNING
             self.percentage = 100.0

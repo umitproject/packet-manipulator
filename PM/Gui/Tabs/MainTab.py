@@ -31,6 +31,8 @@ from PM.Gui.Sessions.Base import Session
 from PM.Gui.Sessions.SniffSession import SniffSession
 from PM.Gui.Sessions.SequenceSession import SequenceSession
 
+from PM.Manager.PreferenceManager import Prefs
+
 class SessionNotebook(gtk.Notebook):
     def __init__(self):
         gtk.Notebook.__init__(self)

@@ -38,7 +38,7 @@ def register_send_receive_context(BaseSendReceiveContext):
                                             sudata, rudata)
 
             self.lock = Lock()
-            self.sthread, self.rthread = None, None
+            self.thread = None
             self.internal = False
             self.title = _('Send/receive %s') % metapacket.summary()
 
@@ -55,9 +55,7 @@ def register_send_receive_context(BaseSendReceiveContext):
                 self.data = val
 
         def __threads_active(self):
-            if self.sthread and self.sthread.isAlive():
-                return True
-            if self.rthread and self.rthread.isAlive():
+            if self.thread and self.thread.isAlive():
                 return True
             return False
 
@@ -67,8 +65,7 @@ def register_send_receive_context(BaseSendReceiveContext):
                 self.state = self.RUNNING
 
                 try:
-                    self.sthread, \
-                    self.rthread = send_receive_packet( \
+                    self.thread = send_receive_packet( \
                         self.packet, self.tot_count - self.count, self.inter, \
                         self.iface, self.strict, self.__send_callback, \
                         self.__recv_callback, self.sudata, self.rudata)
@@ -85,13 +82,13 @@ def register_send_receive_context(BaseSendReceiveContext):
             return False
 
         def _resume(self):
-            if self.__threads_active():
+            if self.thread and self.thread.isAlive():
                 return False
 
             return self._start()
         
         def _restart(self):
-            if self.__threads_active():
+            if self.thread and self.thread.isAlive():
                 return False
 
             self.count = 0
@@ -104,6 +101,7 @@ def register_send_receive_context(BaseSendReceiveContext):
 
         def _stop(self):
             self.internal = False
+            self.thread.terminate()
             return True
 
         _pause = _stop
@@ -157,22 +155,5 @@ def register_send_receive_context(BaseSendReceiveContext):
 
             return self.state == self.NOT_RUNNING or \
                    self.state == self.PAUSED
-
-        #def pause(self):
-        #    BaseSendReceiveContext.pause(self)
-        #    self.sthread.join()
-        #    self.rthread.join()
-
-        #def stop(self):
-        #    BaseSendReceiveContext.stop(self)
-        #    self.sthread.join()
-        #    self.rthread.join()
-
-        def join(self):
-            if self.sthread:
-                self.sthread.join()
-
-            if self.rthread:
-                self.rthread.join()
 
     return SendReceiveContext

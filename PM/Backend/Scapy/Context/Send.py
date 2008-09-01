@@ -34,9 +34,21 @@ def register_send_context(BaseSendContext):
             if self.tot_count - self.count > 0:
                 self.state = self.RUNNING
                 self.internal = True
-                self.thread = send_packet(self.packet, self.tot_count - self.count, self.inter, \
-                                          self.__send_callback, self.udata)
-                return True
+                
+                try:
+                    self.thread = send_packet(self.packet,
+                                              self.tot_count - self.count,
+                                              self.inter,
+                                              self.__send_callback,
+                                              self.udata)
+                except Exception, err:
+                    self.internal = False
+                    self.state = self.NOT_RUNNING
+                    self.summary = str(err)
+
+                    return False
+                else:
+                    return True
 
             return False
 
@@ -55,6 +67,7 @@ def register_send_context(BaseSendContext):
 
         def _stop(self):
             self.internal = False
+            self.thread.terminate()
             return True
 
         _pause = _stop
@@ -84,17 +97,5 @@ def register_send_context(BaseSendContext):
 
             return self.state == self.NOT_RUNNING or \
                    self.state == self.PAUSED
-
-        #def pause(self):
-        #    BaseSendContext.pause(self)
-        #    self.thread.join()
-
-        #def stop(self):
-        #    BaseSendContext.stop(self)
-        #    self.thread.join()
-
-        def join(self):
-            self.thread.join()
-            self.running = False
 
     return SendContext

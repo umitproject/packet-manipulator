@@ -26,7 +26,7 @@ from threading import Thread, Lock, Condition
 from collections import defaultdict
 
 from PM.Core.Logger import log
-from PM.Core.Atoms import Node, ThreadPool
+from PM.Core.Atoms import Node, ThreadPool, Interruptable
 
 from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *
@@ -151,24 +151,40 @@ def find_all_devs():
 # Send Context functions
 ###############################################################################
 
-def _send_packet(sock, metapacket, count, inter, callback, udata):
-    packet = metapacket.root
+class SenderConsumer(Thread, Interruptable):
+    def __init__(self, socket, metapacket, count, inter, callback, udata):
+        Thread.__init__(self, name="SenderConsumer")
+        self.setDaemon(True)
 
-    try:
-        while count > 0:
-            sock.send(packet)
-            count -= 1
+        self.socket = socket
+        self.metapacket = metapacket
+        self.count = count
+        self.inter = inter
+        self.callback = callback
+        self.udata = udata
 
-            if callback(metapacket, udata) == True:
-                return
+    def run(self):
+        packet = self.metapacket.root
 
-            time.sleep(inter)
+        try:
+            while self.count > 0:
+                self.socket.send(packet)
+                self.count -= 1
 
-    except socket.error, (errno, err):
-        callback(Exception(err), udata)
-        return
+                if self.callback(self.metapacket, self.udata) == True:
+                    return
 
-    callback(None, udata)
+                time.sleep(self.inter)
+
+        except socket.error, (errno, err):
+            self.callback(Exception(err), self.udata)
+            return
+
+        self.callback(None, self.udata)
+
+    def terminate(self):
+        log.debug("Forcing exit of the thread by setting count to 0")
+        self.count = 0
 
 def send_packet(metapacket, count, inter, callback, udata=None):
     """
@@ -187,8 +203,7 @@ def send_packet(metapacket, count, inter, callback, udata=None):
     except socket.error, (errno, err):
         raise Exception(err)
 
-    send_thread = Thread(target=_send_packet, args=(sock, metapacket, count, inter, callback, udata))
-    send_thread.setDaemon(True) # avoids zombies
+    send_thread = SenderConsumer(sock, metapacket, count, inter, callback, udata)
     send_thread.start()
 
     return send_thread
@@ -197,82 +212,130 @@ def send_packet(metapacket, count, inter, callback, udata=None):
 # SendReceive Context functions
 ###############################################################################
 
-def _sndrecv_sthread(wrpipe, socket, packet, count, inter, callback, udata):
-    try:
-        for idx in xrange(count):
-            socket.send(packet)
+class SendReceiveConsumer(Interruptable):
+    def __init__(self, ssock, rsock, metapacket, count, inter, \
+                 strict, sback, rback, sudata, rudata):
 
-            if callback(MetaPacket(packet), idx, udata):
-                break
+        self.send_sock = ssock
+        self.recv_sock = rsock
+        self.metapacket = metapacket
 
-            time.sleep(inter)
-    except SystemExit:
-        pass
-    except Exception, err:
-        print "Error in _sndrecv_sthread(PID: %d EXC: %s)" % (os.getpid(), str(err))
-    else:
-        cPickle.dump(arp_cache, wrpipe)
-        wrpipe.close()
+        self.count = count
+        self.scount = count
+        self.running = True
 
-def _sndrecv_rthread(sthread, rdpipe, socket, packet, count, \
-                     strict, callback, udata):
-    ans = 0
-    nbrecv = 0
-    notans = count
+        self.inter = inter
+        self.strict = strict
+        self.scallback = sback
+        self.rcallback = rback
+        self.sudata = sudata
+        self.rudata = rudata
 
-    force_exit = False
-    packet_hash = packet.hashret()
+        self.rdpipe, self.wrpipe = os.pipe()
+        self.rdpipe = os.fdopen(self.rdpipe)
+        self.wrpipe = os.fdopen(self.wrpipe, 'w')
 
-    inmask = [socket, rdpipe]
+        self.send_thread = Thread(target=self.__send_thread)
+        self.recv_thread = Thread(target=self.__recv_thread)
 
-    while True:
-        r = None
-        if FREEBSD or DARWIN:
-            inp, out, err = select(inmask, [], [], 0.05)
-            if len(inp) == 0 or socket in inp:
-                r = socket.nonblock_recv()
-        elif WINDOWS:
-            r = socket.recv(MTU)
+        self.send_thread.setDaemon(True)
+        self.recv_thread.setDaemon(True)
+
+    def __send_thread(self):
+        try:
+            packet = self.metapacket.root
+
+            while self.scount > 0:
+                self.send_sock.send(packet)
+                self.scount -= 1
+
+                if self.scallback(self.metapacket, self.count - self.scount, self.sudata):
+                    break
+
+                time.sleep(self.inter)
+        except SystemExit:
+            pass
+        except Exception, err:
+            print "Error in _sndrecv_sthread(PID: %d EXC: %s)" % (os.getpid(), str(err))
         else:
-            inp, out, err = select(inmask, [], [], None)
-            if len(inp) == 0:
-                return
-            if socket in inp:
-                r = socket.recv(MTU)
-        if r is None:
-            continue
+            cPickle.dump(arp_cache, self.wrpipe)
+            self.wrpipe.close()
 
-        if not strict or r.hashret() == packet_hash and r.answers(packet):
-            ans += 1
+    def __recv_thread(self):
+        ans = 0
+        nbrecv = 0
+        notans = self.count
 
-            if notans:
-                notans -= 1
+        force_exit = False
+        packet = self.metapacket.root
+        packet_hash = packet.hashret()
 
-            if callback(MetaPacket(r), True, udata):
-                force_exit = True
+        inmask = [self.recv_sock, self.rdpipe]
+
+        while self.running:
+            r = None
+            if FREEBSD or DARWIN:
+                inp, out, err = select(inmask, [], [], 0.05)
+                if len(inp) == 0 or selr.recv_sock in inp:
+                    r = self.recv_sock.nonblock_recv()
+            elif WINDOWS:
+                r = self.recv_sock.recv(MTU)
+            else:
+                inp, out, err = select(inmask, [], [], None)
+                if len(inp) == 0:
+                    return
+                if self.recv_sock in inp:
+                    r = self.recv_sock.recv(MTU)
+            if r is None:
+                continue
+
+            if not self.strict or r.hashret() == packet_hash and r.answers(packet):
+                ans += 1
+
+                if notans:
+                    notans -= 1
+
+                if self.rcallback(MetaPacket(r), True, self.rudata):
+                    force_exit = True
+                    break
+            else:
+                nbrecv += 1
+
+                if self.rcallback(MetaPacket(r), False, self.rudata):
+                    force_exit = True
+                    break
+
+            if notans == 0:
                 break
+        
+        try:
+            ac = cPickle.load(self.rdpipe)
+        except EOFError:
+            print "Child died unexpectedly. Packets may have not been sent"
         else:
-            nbrecv += 1
+            arp_cache.update(ac)
 
-            if callback(MetaPacket(r), False, udata):
-                force_exit = True
-                break
+        if self.send_thread and self.send_thread.isAlive():
+            self.send_thread.join()
 
-        if notans == 0:
-            break
-    
-    try:
-        ac = cPickle.load(rdpipe)
-    except EOFError:
-        print "Child died unexpectedly. Packets may have not been sent"
-    else:
-        arp_cache.update(ac)
+        if not force_exit:
+            self.rcallback(None, False, self.rudata)
 
-    if sthread and sthread.isAlive():
-        sthread.join()
+    def start(self):
+        self.send_thread.start()
+        self.recv_thread.start()
 
-    if not force_exit:
-        callback(None, False, udata)
+    def terminate(self):
+        log.debug("Forcing send thread to exit by setting scount to 0")
+        self.scount = 0
+
+        log.debug("Forcing recv thread to exit by closing recv_socket")
+        self.running = False
+        self.recv_sock.close()
+
+    def isAlive(self):
+        return self.send_thread and self.send_thread.isAlive() or \
+               self.recv_thread and self.recv_thread.isAlive()
 
 def send_receive_packet(metapacket, count, inter, iface, strict, \
                         scallback, rcallback, sudata=None, rudata=None):
@@ -308,30 +371,18 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
     except socket.error, (errno, err):
         raise Exception(err)
 
-    rdpipe, wrpipe = os.pipe()
-    rdpipe = os.fdopen(rdpipe)
-    wrpipe = os.fdopen(wrpipe, 'w')
+    consumer = SendReceiveConsumer(sock_send, sock, metapacket, count, 
+                                   inter, strict, scallback, rcallback,
+                                   sudata, rudata)
+    consumer.start()
 
-    send_thread = Thread(target=_sndrecv_sthread,
-                           args=(wrpipe, sock_send, packet, count,
-                                 inter, scallback, sudata))
-    recv_thread = Thread(target=_sndrecv_rthread,
-                           args=(send_thread, rdpipe, sock, packet,
-                                 count, strict, rcallback, rudata))
-
-    send_thread.setDaemon(True)
-    recv_thread.setDaemon(True)
-
-    send_thread.start()
-    recv_thread.start()
-
-    return send_thread, recv_thread
+    return consumer
 
 ###############################################################################
 # Sequence Context functions
 ###############################################################################
 
-class SequenceConsumer(object):
+class SequenceConsumer(Interruptable):
     def __init__(self, tree, count, inter, strict, \
                  scallback, rcallback, sudata, rudata, excback):
 
@@ -369,6 +420,9 @@ class SequenceConsumer(object):
 
         self.pool.stop()
         #self.pool.join_threads()
+
+    def terminate(self):
+        self.stop()
 
     def start(self):
         if self.internal or self.receiving:
