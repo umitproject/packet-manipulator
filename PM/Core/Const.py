@@ -37,7 +37,7 @@ except:
     PM_SVN_REVISION = 'N/A'
 
 PM_SITE = 'http://manipulator.umitproject.org'
-PM_VERSION = '0.1'
+PM_VERSION = '0.2-RC1'
 PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 
 PLATFORM = sys.platform

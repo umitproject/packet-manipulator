@@ -287,15 +287,23 @@ class Console (gtk.ScrolledWindow):
             self.quit_handler = quit_handler
 
         # Setup hooks for standard output.
-        self.stdout = gtkoutfile (self, sys.stdout.fileno(), 'normal')
-        self.stderr = gtkoutfile (self, sys.stderr.fileno(), 'error')
-        self.stdin  = gtkinfile (self, sys.stdin.fileno())
+        self.stdout = gtkoutfile(self, self.__get_stream(sys.stdout), 'normal')
+        self.stderr = gtkoutfile(self, self.__get_stream(sys.stderr), 'error')
+        self.stdin  = gtkinfile(self, self.__get_stream(sys.stdin))
+        
 
         # Setup command history
         self.history = History()
         self.namespace['__history__'] = self.history
         self.show_all()
-
+        
+    def __get_stream(self, stream): 
+        if hasattr(stream, 'fileno'): 
+            return stream.fileno() 
+        elif hasattr(stream, '_file') and hasattr(stream._file, 'fileno'): 
+            return stream._file.fileno() 
+        else: 
+            return stream 
 
     def on_button_released(self, widget, event):
         """ Text selection a la mIRC """

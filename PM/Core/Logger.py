@@ -50,7 +50,7 @@ class PMLogger(Logger, object):
     __formatter = Formatter(format)
 
 try:
-    level = 1 # default value
-    level = int(os.getenv('PM_LOGLEVEL', '1'))
+    level = 30 # default value
+    level = int(os.getenv('PM_LOGLEVEL', '30'))
 finally:
     log = PMLogger("PM", level)

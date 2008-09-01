@@ -247,6 +247,7 @@ setup(name         = 'PacketManipulator',
                       'PM.Gui.Sessions',
                       'PM.Gui.Dialogs',
                       'PM.Gui.Widgets',
+                      'PM.Gui.Plugins',
                       'PM.higwidgets'
                      ],
       data_files   = [('share/pixmaps/umit', glob.glob("PM/share/pixmaps/umit/*"))] + mo_files, 
