@@ -55,6 +55,8 @@ import gobject
 import re
 import rlcompleter
 
+from PM.Core.I18N import _
+
 stdout = sys.stdout
 if not hasattr(sys, 'ps1'): sys.ps1 = '(PM) '
 if not hasattr(sys, 'ps2'): sys.ps2 = ' ... '
@@ -404,12 +406,12 @@ class Console (gtk.ScrolledWindow):
         
         iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
         self.buffer.insert_with_tags_by_name(iter,
-                'Welcome to PacketManipulator Python Shell (running on %s)\n' % os.name,
+                _('Welcome to PacketManipulator Python Shell (running on %s)\n') % os.name,
                 'center', 'extern'
         )
         iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
         self.buffer.insert_with_tags_by_name(iter, 
-            'Please be carefull becouse you are in the umit main loop\n',
+            _('Please be carefull becouse you are in the PM main loop\n'),
             'center', 'script'
         )
         self.text.scroll_to_mark (self.buffer.get_insert(), 0)

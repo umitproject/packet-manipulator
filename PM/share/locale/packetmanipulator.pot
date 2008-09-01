@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2008-09-01 14:06+CEST\n"
+"POT-Creation-Date: 2008-09-01 18:13+CEST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1003,6 +1003,16 @@ msgstr ""
 msgid ""
 "<b>Loser!</b> You don't have vte python bindings installed.\n"
 "Download it from <tt>http://ftp.acc.umu.se/pub/GNOME/sources/vte/</tt>"
+msgstr ""
+
+#: PM/Gui/Tabs/console.py:409
+msgid ""
+"Welcome to PacketManipulator Python Shell (running on %s)\n"
+msgstr ""
+
+#: PM/Gui/Tabs/console.py:414
+msgid ""
+"Please be carefull becouse you are in the PM main loop\n"
 msgstr ""
 
 #: PM/Gui/Widgets/PropertyGrid.py:195
