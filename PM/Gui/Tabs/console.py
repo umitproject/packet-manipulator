@@ -260,16 +260,22 @@ class Dispatcher(threading.Thread):
         self.running = True
         self.parent = parent
 
-        threading.Thread.__init__(self)
-        self.setDaemon(True)
+        self.thread = None
+        self.owned = False
+    
+    def start(self):
+        self.thread = threading.Thread(target=self.run)
+        self.thread.setDaemon(True)
+        self.thread.start()
 
     def raise_exc(self, exc):
-        assert self.isAlive()
+        if self.thread and self.thread.isAlive():
+            for tid, tobj in threading._active.items():
+                if tobj is self:
+                    _async_raise(tid, exc)
+                    return True
 
-        for tid, tobj in threading._active.items():
-            if tobj is self:
-                _async_raise(tid, exc)
-                return
+        return False
 
     def main_loop(self, cmd):
         try:
@@ -293,28 +299,44 @@ class Dispatcher(threading.Thread):
                     traceback.print_exc()
 
     def run(self):
+        self.set_fds(False)
+
         while self.running:
-            cmd = self.queue.get()
-            
-            sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
-            sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
-            sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
-            
-            self.main_loop(cmd)
+            try:
+                got = False
+                cmd = self.queue.get()
+                got = True
 
-            self.parent.input_mode = False
-            self.parent.input = ""
+                self.parent.input_mode = False
+                self.parent.input = ""
 
-            gobject.idle_add(self.parent.prompt1)
+                if cmd:
+                    self.set_fds(True)
+                    self.main_loop(cmd)
+                    self.set_fds(False)
 
-            sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
-            sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
-            sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
+                gobject.idle_add(self.parent.prompt1)
 
-            self.queue.task_done()
+            except Exception, err:
+                pass
+
+            finally:
+                if got:
+                    self.queue.task_done()
+
+    def set_fds(self, own):
+        if self.owned == own:
+            return
+
+        self.owned = own
+
+        sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
+        sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
+        sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
 
     def terminate(self):
-        self.raise_exc(KeyboardInterrupt)
+        if self.raise_exc(KeyboardInterrupt):
+            self.start()
 
 # =============================================================================
 class Console (gtk.ScrolledWindow):
