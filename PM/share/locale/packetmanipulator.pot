@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2008-09-01 18:13+CEST\n"
+"POT-Creation-Date: 2008-09-01 18:37+CEST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -296,7 +296,7 @@ msgid "Unable to open selected session"
 msgstr ""
 
 #: PM/Gui/Core/MainWindow.py:403
-msgid "PacketManipulator is unable to guess thefile type. Try to modify the extension and to reopen the file."
+msgid "PacketManipulator is unable to guess the file type. Try to modify the extension and to reopen the file."
 msgstr ""
 
 #: PM/Gui/Dialogs/Interface.py:36
@@ -673,7 +673,7 @@ msgid "Remember that you have to restart PacketManipulator to changes makes. Plu
 msgstr ""
 
 #: PM/Gui/Plugins/PathPage.py:209
-msgid "Need PacketMannipulator restart to disable."
+msgid "Need PacketManipulator restart to disable."
 msgstr ""
 
 #: PM/Gui/Plugins/PluginPage.py:59

@@ -206,7 +206,7 @@ class PathPage(gtk.VBox):
 
             def block_row(row, blah):
                 row.activatable = False
-                row.message = _("Need PacketMannipulator restart to disable.")
+                row.message = _("Need PacketManipulator restart to disable.")
 
             self.p_window.plug_page.richlist.foreach(block_row, None)
 

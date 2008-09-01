@@ -400,7 +400,7 @@ class MainWindow(gtk.Window):
             else:
                 d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
                     message_format=_("Unable to open selected session"),
-                    secondary_text=_("PacketManipulator is unable to guess the"
+                    secondary_text=_("PacketManipulator is unable to guess the "
                                      "file type. Try to modify the extension "
                                      "and to reopen the file."))
                 d.run()
