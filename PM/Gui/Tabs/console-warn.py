@@ -48,6 +48,7 @@ import pygtk
 pygtk.require('2.0')
 
 import gtk
+import gtk, gtk.keysyms
 import pango
 import gobject
 
@@ -55,19 +56,31 @@ import gobject
 import re
 import rlcompleter
 
+# Threadings
+import Queue
+import ctypes
+import threading
+
 stdout = sys.stdout
-if not hasattr(sys, 'ps1'): sys.ps1 = '(PM) '
-if not hasattr(sys, 'ps2'): sys.ps2 = ' ... '
- 
-_orig = os.write 
- 
-def _hook(f, txt): 
-    if f == 1: 
-        sys.stdout.write(txt) 
-    else: 
-        _orig.write(f, txt) 
- 
-os.write = _hook 
+if not hasattr(sys, 'ps1'): sys.ps1 = '(UMIT) '
+if not hasattr(sys, 'ps2'): sys.ps2 = '   ... '
+
+_orig = os.write
+
+def _hook(f, txt):
+    if f == 0:
+        sys.stdin.write(txt)
+        return len(txt)
+    elif f == 1:
+        sys.stdout.write(txt)
+        return len(txt)
+    elif f == 2:
+        sys.stderr.write(txt)
+        return len(txt)
+    else:
+        return _orig.write(f, txt)
+
+os.write = _hook
 
 PSLEN = len(sys.ps1)
 
@@ -92,10 +105,10 @@ class gtkoutfile:
     def readline(self):  return ''
     def readlines(self): return []
     def write(self, s):
-        self.console.write (s, self.font)
+        gobject.idle_add(lambda x: self.console.write(x[0], x[1]), (s, self.font))
     def writelines(self, l):
         for s in l:
-            self.console.write (s, self.font)
+            gobject.idle_add(self.console.write, (s, self.font))
     def seek(self, a):   raise IOError, (29, 'Illegal seek')
     def tell(self):      raise IOError, (29, 'Illegal seek')
     truncate = tell
@@ -117,13 +130,21 @@ class gtkinfile:
     def isatty(self):    return False
     def read(self, a):   return self.readline()
     def readline(self):
-        self.console.input_mode = True
-        while self.console.input_mode:
-            while gtk.events_pending():
-                gtk.main_iteration()
-        s = self.console.input
-        self.console.input = ''
-        return s+'\n'
+        try:
+            self.console.input_mode = True
+
+            while self.console.input_mode:
+                sleep(0.01)
+
+            s = self.console.input
+            self.console.input = ''
+            return s+'\n'
+        except KeyboardInterrupt:
+            self.console.input_mode = False
+            self.console.input = ''
+
+            raise EOFError("Interrupted by user")
+
     def readlines(self): return []
     def write(self, s):  return None
     def writelines(self, l): return None
@@ -217,6 +238,105 @@ def commonprefix(m):
                 break
     return prefix
 
+# =============================================================================
+
+# References:
+# - http://code.activestate.com/recipes/496960/
+# - http://sebulba.wikispaces.com/recipe+thread2
+
+from time import sleep
+
+def _async_raise(tid, excobj):
+    ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(excobj))
+
+    while ret > 1:
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
+        sleep(0.1)
+        ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(excobj))
+
+class Dispatcher(threading.Thread):
+    def __init__(self, parent):
+        self.queue = Queue.Queue()
+        self.running = True
+        self.parent = parent
+
+        self.thread = None
+        self.owned = False
+    
+    def start(self):
+        self.thread = threading.Thread(target=self.run)
+        self.thread.setDaemon(True)
+        self.thread.start()
+
+    def raise_exc(self, exc):
+        if self.thread and self.thread.isAlive():
+            for tid, tobj in threading._active.items():
+                if tobj is self:
+                    _async_raise(tid, exc)
+                    return True
+
+        return False
+
+    def main_loop(self, cmd):
+        try:
+            try:
+                r = eval (cmd, self.parent.namespace, self.parent.namespace)
+                self.parent.namespace["_"] = r
+
+                if r is not None:
+                    print `r`
+            except SyntaxError:
+                exec cmd in self.parent.namespace
+        except Exception, err:
+            if not isinstance(err, SystemExit):
+                try:
+                    tb = sys.exc_traceback
+                    if tb:
+                        tb=tb.tb_next
+                    traceback.print_exception (sys.exc_type, sys.exc_value, tb)
+                except:
+                    #sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
+                    traceback.print_exc()
+
+    def run(self):
+        self.set_fds(False)
+
+        while self.running:
+            try:
+                got = False
+                cmd = self.queue.get()
+                got = True
+
+                self.parent.input_mode = False
+                self.parent.input = ""
+
+                if cmd:
+                    self.set_fds(True)
+                    self.main_loop(cmd)
+                    self.set_fds(False)
+
+                gobject.idle_add(self.parent.prompt1)
+
+            except Exception, err:
+                pass
+
+            finally:
+                if got:
+                    self.queue.task_done()
+
+    def set_fds(self, own):
+        if self.owned == own:
+            return
+
+        self.owned = own
+
+        sys.stdout, self.parent.stdout = self.parent.stdout, sys.stdout
+        sys.stderr, self.parent.stderr = self.parent.stderr, sys.stderr
+        sys.stdin,  self.parent.stdin  = self.parent.stdin,  sys.stdin
+
+    def terminate(self):
+        if self.raise_exc(KeyboardInterrupt):
+            self.start()
 
 # =============================================================================
 class Console (gtk.ScrolledWindow):
@@ -275,25 +395,36 @@ class Console (gtk.ScrolledWindow):
         self.tab_pressed = 0
         self.nonword_re = re.compile("[^\w\._]")
         self.completer = rlcompleter.Completer()
-        self.namespace = namespace
+        self.namespace = {}
         self.cmd = ''
         self.input = ''
         self.input_mode = False
         self.linestart = 0
         self.quit_handler = self.quit
+
         if quit_handler:
             self.quit_handler = quit_handler
 
         # Setup hooks for standard output.
-        self.stdout = gtkoutfile (self, sys.stdout.fileno(), 'normal')
-        self.stderr = gtkoutfile (self, sys.stderr.fileno(), 'error')
-        self.stdin  = gtkinfile (self, sys.stdin.fileno())
+        self.stdout = gtkoutfile(self, self.__get_stream(sys.stdout), 'normal')
+        self.stderr = gtkoutfile(self, self.__get_stream(sys.stderr), 'error')
+        self.stdin  = gtkinfile(self, self.__get_stream(sys.stdin))
 
         # Setup command history
         self.history = History()
         self.namespace['__history__'] = self.history
         self.show_all()
 
+        self.dispatcher = Dispatcher(self)
+        self.dispatcher.start()
+
+    def __get_stream(self, stream):
+        if hasattr(stream, 'fileno'):
+            return stream.fileno()
+        elif hasattr(stream, '_file') and hasattr(stream._file, 'fileno'):
+            return stream._file.fileno()
+        else:
+            return stream
 
     def on_button_released(self, widget, event):
         """ Text selection a la mIRC """
@@ -404,12 +535,15 @@ class Console (gtk.ScrolledWindow):
         
         iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
         self.buffer.insert_with_tags_by_name(iter,
-                'Welcome to PacketManipulator Python Shell (running on %s)\n' % os.name,
+                'Welcome to UMIT Python Shell (running on %s)\n' % os.name,
                 'center', 'extern'
         )
         iter = self.buffer.get_iter_at_mark(self.buffer.get_insert())
         self.buffer.insert_with_tags_by_name(iter, 
-            'Please be carefull becouse you are in the umit main loop\n',
+            'Please be carefull becouse you are in the umit main loop\n'
+            'Also try to avoid time.sleep and locking functions because\n'
+            'are uninterruptable in thread\'s context\n'
+            'You have been warned!\n',
             'center', 'script'
         )
         self.text.scroll_to_mark (self.buffer.get_insert(), 0)
@@ -481,9 +615,7 @@ class Console (gtk.ScrolledWindow):
         #start = self.buffer.get_iter_at_mark (mark)
 
         tag = self.buffer.get_tag_table().lookup('prompt')
-
-        while not start.ends_tag(tag):
-            start.forward_char()
+        start.forward_to_tag_toggle(tag)
         
         #if start.get_chars_in_line() >= PSLEN:
         #    start.forward_chars(PSLEN)
@@ -545,7 +677,7 @@ class Console (gtk.ScrolledWindow):
             cmd = self.cmd
             self.cmd = ''
             self.execute (cmd)
-            self.prompt1()
+            #self.prompt1()
             return
 
         self.cmd = self.cmd + l + '\n'
@@ -561,7 +693,7 @@ class Console (gtk.ScrolledWindow):
         cmd = self.cmd
         self.cmd = ''
         self.execute (cmd)
-        self.prompt1()
+        #self.prompt1()
         return
 
 
@@ -583,33 +715,7 @@ class Console (gtk.ScrolledWindow):
         if self.emit('eval', cmd):
             return
 
-        sys.stdout, self.stdout = self.stdout, sys.stdout
-        sys.stderr, self.stderr = self.stderr, sys.stderr
-        sys.stdin,  self.stdin  = self.stdin,  sys.stdin
-        try:
-            try:
-                r = eval (cmd, self.namespace, self.namespace)
-                self.namespace["_"] = r
-                if r is not None:
-                    print `r`
-            except SyntaxError:
-                exec cmd in self.namespace
-        except:
-            if hasattr (sys, 'last_type') and sys.last_type == SystemExit:
-                self.quit_handler()
-            else:
-                try:
-                    tb = sys.exc_traceback
-                    if tb:
-                        tb=tb.tb_next
-                    traceback.print_exception (sys.exc_type, sys.exc_value, tb)
-                except:
-                    sys.stderr, self.stderr = self.stderr, sys.stderr
-                    traceback.print_exc()
-        sys.stdout, self.stdout = self.stdout, sys.stdout
-        sys.stderr, self.stderr = self.stderr, sys.stderr
-        sys.stdin,  self.stdin  = self.stdin,  sys.stdin
-
+        self.dispatcher.queue.put(cmd)
 
     def open (self, filename):
         """ Open and execute a given filename """
@@ -752,6 +858,13 @@ class Console (gtk.ScrolledWindow):
                 if not self.input_mode:
                     self.clear()
                 return True
+
+            # Ctrl-C
+            elif event.keyval in (gtk.keysyms.C, gtk.keysyms.c):
+                self.dispatcher.terminate()
+
+                return True
+
         return False
 
 gobject.type_register(Console)
@@ -801,6 +914,8 @@ class ConsoleWindow:
 
 
 if __name__ == '__main__':
+    gobject.threads_init()
+
     conswin = ConsoleWindow ({'__builtins__': __builtins__,
                               '__name__': '__main__',
                               '__doc__': None},
