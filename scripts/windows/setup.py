@@ -25,13 +25,15 @@ import os, os.path
 if os.name == 'nt':
     try:
         import py2exe
+        from py2exe.build_exe import py2exe as BuildExe
     except ImportError:
         print "Install py2exe to use setup.py"
         sys.exit(-1)
 
 
 from distutils.core import setup, Extension
-from PM.Core.Const import PM_VERSION
+from distutils.command.install import install
+from PM.Core.Const import PM_VERSION, PM_SITE
 
 def getoutput(cmd):
     """Return output (stdout or stderr) of executing cmd in a shell."""
@@ -152,6 +154,72 @@ for filepath in glob.glob("PM/share/locale/*/LC_MESSAGES/*.mo"):
     targetpath = os.path.dirname(os.path.join("share/locale",lang))
     mo_files.append((targetpath, [filepath]))
 
+class pm_install(BuildExe):
+    def run(self):
+        print
+        print "#" * 80
+        print "# Creating EXE"
+        print "#" * 80
+        print
+
+        BuildExe.run(self)
+        self.build_plugins()
+
+        print
+        print "#" * 80
+        print "# Packet manipulator is now installed"
+        print "#" * 80
+        print
+
+    def build_plugins(self):
+        print
+        print "#" * 80
+        print "# Building plugins"
+        print "#" * 80
+        print
+
+        dir = self.dist_dir
+        dirs = ['share', 'PacketManipulator', 'plugins']
+
+        while dirs:
+            dir = os.path.join(dir, dirs.pop(0))
+
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+
+        # Ok now dir is our destination so we should make plugins
+
+        dest_dir = dir
+        old_cd = os.getcwd()
+        pm_dir = os.path.abspath(os.path.dirname(os.sys.argv[0]))
+        plugins_dir = os.path.join(pm_dir, 'plugins')
+
+        os.putenv('PYTHONPATH',
+                  '%s%s%s' % (pm_dir, os.pathsep, os.getenv('PYTHONPATH', '')))
+
+        for dir_entry in os.listdir(plugins_dir):
+            dir_entry = os.path.join(plugins_dir, dir_entry)
+
+            if not os.path.isdir(dir_entry) or \
+               not os.path.exists(os.path.join(dir_entry, "setup.py")):
+                continue
+
+            self.build_plugin(plugins_dir, dir_entry, dest_dir)
+
+        os.chdir(old_cd)
+
+    def build_plugin(self, plugins_dir, dir_entry, dest_dir):
+        os.chdir(os.path.join(plugins_dir, dir_entry))
+
+        if os.name =="nt":
+            os.system("C:\\python25\\python.exe setup.py build_ext -c mingw32 install")
+        else:
+            os.system("python setup.py install")
+
+        for plugin in glob.glob("*.ump"):
+            dest = os.path.join(dest_dir, os.path.basename(plugin))
+            os.rename(plugin, dest)
+            
 setup(name         = 'PacketManipulator',
       version      = PM_VERSION,
       description  = 'Packet manipulation made easy',
@@ -190,5 +258,6 @@ setup(name         = 'PacketManipulator',
                           'packages' : 'encodings, scapy',
                           'includes' : 'gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk'},
                       'build': {'compiler' : 'mingw32'}},
-      ext_modules=modules
+      ext_modules  = modules,
+      cmdclass     = {'py2exe' : pm_install}
 )
