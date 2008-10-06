@@ -33,7 +33,7 @@ try:
 except ImportError:
     print "No psyco no party! :("
 
-# used by exception hook
+import gtk
 import cgitb
 import tempfile
 
@@ -100,7 +100,6 @@ class PMExceptionHook(object):
                         cwin.destroy()
                         break
             except Exception, err:
-                print err
                 tempfd, tempname = tempfile.mkstemp()
                 os.write(tempfd, crashmsg_dialog)
                 d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
@@ -122,10 +121,17 @@ if not PM_DEVELOPMENT:
 
 def main(args):
     from PM.Gui.Core.App import PMApp
+    from PM.Core.Errors import PMErrorException
+    from PM.higwidgets.higdialogs import HIGAlertDialog
 
     try:
         app = PMApp()
         app.run()
+    except PMErrorException, err:
+        d = HIGAlertDialog(type=gtk.MESSAGE_WARNING, message_format=_("General Error"),
+            secondary_text=_(str(err)))
+        d.run()
+        d.destroy()
     except KeyboardInterrupt:
         sys.exit(signal.SIGINT)
 

@@ -31,7 +31,12 @@ def __new_write(fd, txt):
 
 os.write = __new_write
 
-from scapy import *
+try:
+    from scapy import *
+except ImportError:
+    from PM.Core.Errors import PMErrorException
+    raise PMErrorException("Cannot use this backend without scapy installed")
+
 from PM.Manager.PreferenceManager import Prefs
 
 if not 'WINDOWS' in globals():
