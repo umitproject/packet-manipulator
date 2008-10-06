@@ -33,6 +33,10 @@ os.write = __new_write
 
 try:
     from scapy import *
+
+    if 'conf' not in globals():
+        from scapy.all import *
+
 except ImportError:
     from PM.Core.Errors import PMErrorException
     raise PMErrorException("Cannot use this backend without scapy installed")
