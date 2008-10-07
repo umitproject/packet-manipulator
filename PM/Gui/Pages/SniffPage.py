@@ -38,7 +38,9 @@ from PM.Gui.Widgets.FilterEntry import FilterEntry
 from PM.Gui.Widgets.CellRenderer import GridRenderer
 from PM.higwidgets.higanimates import HIGAnimatedBar
 
-class SniffPage(gtk.VBox):
+from PM.Gui.Pages.Base import Perspective
+
+class SniffPage(Perspective):
     COL_NO     = 0
     COL_TIME   = 1
     COL_SRC    = 2
@@ -48,11 +50,10 @@ class SniffPage(gtk.VBox):
     COL_COLOR  = 6
     COL_OBJECT = 7
 
-    def __init__(self, session):
-        super(SniffPage, self).__init__(False, 4)
+    icon = 'sniff_small'
+    title = _('Sniff perspective')
 
-        self.session = session
-
+    def create_ui(self):
         self.set_border_width(2)
 
         self.__create_toolbar()

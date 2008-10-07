@@ -26,13 +26,16 @@ from PM.Gui.Pages.SequencePage import SequencePage
 class SequenceSession(Session):
     def create_ui(self, show_packet=True, show_sequence=True):
         self.vpaned = gtk.VPaned()
-        self.packet_expander = AnimatedExpander(_("Packet perspective"), 'packet_small')
-        self.sequence_expander = AnimatedExpander(_("Sequence perspective"), gtk.STOCK_INDEX)
 
         self.sequence_page = SequencePage(self)
         self.packet_page = PacketPage(self)
 
         self.perspectives = [self.sequence_page, self.packet_page]
+
+        self.packet_expander   = AnimatedExpander(self.packet_page.title,
+                                                  self.packet_page.icon)
+        self.sequence_expander = AnimatedExpander(self.sequence_page.title,
+                                                  self.sequence_page.icon)
 
         self.vpaned.pack1(self.sequence_expander, True, False)
         self.vpaned.pack2(self.packet_expander, True, False)

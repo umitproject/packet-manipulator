@@ -243,6 +243,9 @@ class PluginEngine(Singleton):
         if PM_DEVELOPMENT:
             plugins = os.getenv('PM_PLUGINS', '')
 
+            if not plugins:
+                return
+
             for plugin in plugins.split(os.pathsep):
                 self.load_from_directory(plugin)
 

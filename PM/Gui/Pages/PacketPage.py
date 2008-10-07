@@ -34,6 +34,8 @@ from PM.Gui.Widgets.HexView import HexView
 from PM.Gui.Widgets.Plotter import Plotter
 from PM.Gui.Tabs.OperationsTab import SendOperation, SendReceiveOperation
 
+from PM.Gui.Pages.Base import Perspective
+
 class ProtocolHierarchy(gtk.ScrolledWindow):
     def __init__(self, parent):
         gtk.ScrolledWindow.__init__(self)
@@ -153,11 +155,12 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         return self.session.packet, obj
 
 
-class PacketPage(gtk.HBox):
-    def __init__(self, parent):
-        super(PacketPage, self).__init__(False, 4)
+class PacketPage(Perspective):
+    icon = 'packet_small'
+    title = _('Packet perspective')
 
-        self.session = parent
+    def create_ui(self):
+        self.hbox = gtk.HBox(False, 2)
 
         # Create the toolbar for sending selected packet
         self.toolbar = gtk.Toolbar()
@@ -194,12 +197,14 @@ class PacketPage(gtk.HBox):
         self.proto_hierarchy = ProtocolHierarchy(self.session)
         self.hexview = HexView()
 
-        self.pack_start(self.proto_hierarchy)
-        self.pack_start(self.toolbar, False, False)
-        self.pack_start(self.hexview, False, False)
+        self.hbox.pack_start(self.proto_hierarchy)
+        self.hbox.pack_start(self.toolbar, False, False)
+        self.hbox.pack_start(self.hexview, False, False)
 
         Prefs()['gui.maintab.hexview.font'].connect(self.hexview.modify_font)
         Prefs()['gui.maintab.hexview.bpl'].connect(self.hexview.set_bpl)
+
+        self.pack_start(self.hbox)
 
     def redraw_hexview(self):
         """

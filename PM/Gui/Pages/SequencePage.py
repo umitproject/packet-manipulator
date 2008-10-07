@@ -36,6 +36,8 @@ from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Widgets.CellRenderer import GridRenderer
 from PM.higwidgets.higtooltips import HIGTooltip, HIGTooltipData
 
+from PM.Gui.Pages.Base import Perspective
+
 from PM.Manager.PreferenceManager import Prefs
 from PM.Gui.Tabs.OperationsTab import SequenceOperation, SendOperation, SendReceiveOperation
 
@@ -93,7 +95,7 @@ class FilterLayer(gtk.ComboBox):
         return None
 
 
-class SequencePage(gtk.VBox):
+class SequencePage(Perspective):
     """
     The tree contains a list of packet for example:
      + ICMP request
@@ -110,11 +112,10 @@ class SequencePage(gtk.VBox):
     TODO: add also a filter to check if the received packets meets the criteria
     """
 
-    def __init__(self, parent):
-        super(SequencePage, self).__init__(False, 2)
+    icon = gtk.STOCK_INDEX
+    title = _('Sequence perspective')
 
-        self.session = parent
-
+    def create_ui(self):
         # Toolbar
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)

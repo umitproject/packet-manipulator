@@ -28,13 +28,16 @@ class SniffSession(Session):
         super(SniffSession, self).__init__(ctx)
 
         self.vpaned = gtk.VPaned()
-        self.sniff_expander = AnimatedExpander(_("Sniff perspective"), 'sniff_small')
-        self.packet_expander = AnimatedExpander(_("Packet perspective"), 'packet_small')
 
         self.sniff_page = SniffPage(self)
         self.packet_page = PacketPage(self)
 
         self.perspectives = [self.sniff_page, self.packet_page]
+
+        self.sniff_expander  = AnimatedExpander(self.sniff_page.title,
+                                                self.sniff_page.icon)
+        self.packet_expander = AnimatedExpander(self.packet_page.title,
+                                                self.packet_page.icon)
 
         self.vpaned.pack1(self.sniff_expander, True, False)
         self.vpaned.pack2(self.packet_expander, True, False)
