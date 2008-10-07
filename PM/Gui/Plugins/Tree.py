@@ -23,7 +23,7 @@ import sys
 sys.plugins_path = []
 
 from PM.Core.I18N import _
-from PM.Core.Const import PM_PLUGINS_TEMP_DIR
+from PM.Core.Const import PM_DEVELOPMENT, PM_PLUGINS_TEMP_DIR
 from PM.Core.Logger import log
 from PM.Gui.Plugins.Atoms import Version, DepDict
 from PM.Gui.Plugins.Core import Core
@@ -442,6 +442,55 @@ class PluginsTree(object):
             self.modules[pkg] = module
 
             return module
+
+    def load_directory(self, modpath):
+        if not PM_DEVELOPMENT:
+            log.error("This method should not be called in release.")
+            return
+
+        start_file = 'main'
+
+        log.warning("You are loading a plugin without checking for needs,provides,conflitcts")
+        log.warning("* You have been warned! *")
+
+        log.warning("Assuming `%s' as start file!" % start_file)
+
+        # Load the plugin
+        sys.path.insert(0, os.path.abspath(modpath))
+
+        if start_file in sys.modules:
+            sys.modules.pop(pkg.start_file)
+
+        try:
+            __builtin__.__import__ = hook_import
+            module = hook_import(start_file, level=0)
+
+            if hasattr(module, "__plugins__") and \
+               isinstance(module.__plugins__, list):
+                lst = module.__plugins__
+                ret = []
+
+                for plug in lst:
+                    try:
+                        inst = plug()
+                        inst.start(None)
+
+                        ret.append(inst)
+                    except Exception, err:
+                        import traceback, smtplib, StringIO
+                        fp = StringIO.StringIO()
+                        traceback.print_exc(file=fp)
+
+                        log.critical("Error while starting %s:" % (plug))
+                        log.critical(fp.getvalue())
+                        log.critical("Ignoring instance.")
+
+                if not ret:
+                    log.error("Not startable plugin defined in main file")
+            else:
+                log.error("No Plugin subclass")
+        finally:
+            __builtin__.__import__ = original_import
 
     def __load_hook(self, pkg):
         """

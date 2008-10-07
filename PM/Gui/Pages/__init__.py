@@ -24,3 +24,18 @@ This module contains perspectives called also Pages:
     - SniffPage
     - SequencePage
 """
+
+from PacketPage import PacketPage
+from SniffPage import SniffPage
+from SequencePage import SequencePage
+
+class PerspectiveType:
+    PACKET_PERSPECTIVE, \
+    SNIFF_PERSPECTIVE,  \
+    SEQUENCE_PERSPECTIVE = range(3)
+
+    types = {
+        PacketPage   : 0,
+        SniffPage    : 1,
+        SequencePage : 2
+    }

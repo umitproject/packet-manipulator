@@ -25,7 +25,8 @@ import os.path
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import Singleton
-from PM.Core.Const import PM_PLUGINS_DIR, \
+from PM.Core.Const import PM_DEVELOPMENT, \
+                          PM_PLUGINS_DIR, \
                           PM_PLUGINS_TEMP_DIR, \
                           PM_PLUGINS_DOWNLOAD_DIR
 
@@ -235,6 +236,19 @@ class PluginEngine(Singleton):
 
             if not loaded:
                 log.warning(errmsg)
+
+        # Check out the global variable PM_PLUGINS if we are in
+        # development enviroment.
+
+        if PM_DEVELOPMENT:
+            plugins = os.getenv('PM_PLUGINS', '')
+
+            for plugin in plugins.split(os.pathsep):
+                self.load_from_directory(plugin)
+
+    def load_from_directory(self, path):
+        log.debug("Loading source files from plugin directory: %s" % path)
+        self.tree.load_directory(path)
 
     def load_plugin_from_path(self, plugin, force=False):
         """

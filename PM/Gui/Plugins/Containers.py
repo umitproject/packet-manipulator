@@ -150,7 +150,7 @@ class PluginReader(object):
     def get_logo(self, w=64, h=64):
         "@return a gtk.dk.Pixbuf"
 
-	import gtk
+        import gtk
 
         try:
             # TODO: eliminate the mktemp workaround

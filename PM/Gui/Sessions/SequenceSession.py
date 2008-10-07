@@ -32,6 +32,8 @@ class SequenceSession(Session):
         self.sequence_page = SequencePage(self)
         self.packet_page = PacketPage(self)
 
+        self.perspectives = [self.sequence_page, self.packet_page]
+
         self.vpaned.pack1(self.sequence_expander, True, False)
         self.vpaned.pack2(self.packet_expander, True, False)
 

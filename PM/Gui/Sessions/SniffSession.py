@@ -34,6 +34,8 @@ class SniffSession(Session):
         self.sniff_page = SniffPage(self)
         self.packet_page = PacketPage(self)
 
+        self.perspectives = [self.sniff_page, self.packet_page]
+
         self.vpaned.pack1(self.sniff_expander, True, False)
         self.vpaned.pack2(self.packet_expander, True, False)
 

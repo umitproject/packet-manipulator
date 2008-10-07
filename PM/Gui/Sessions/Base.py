@@ -28,6 +28,8 @@ class Session(gtk.VBox):
     def __init__(self, ctx):
         super(Session, self).__init__(False, 2)
 
+        self.perspectives = []
+
         self.packet = None
         self.context = ctx
         self.context.title_callback = self.__on_change_title

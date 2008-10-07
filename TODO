@@ -17,3 +17,4 @@ TODO list (not ordered):
 - same in property grid
 - using sane export while saving pms file (see export_object)
 - implementing a tree to see results of sequence
+- custom perspectives

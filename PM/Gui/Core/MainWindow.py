@@ -57,6 +57,8 @@ from PM.Gui.Dialogs.Preferences import PreferenceDialog
 from PM.Gui.Dialogs.Routes import RoutesDialog
 from PM.Gui.Plugins.Window import PluginWindow
 
+from PM.Gui.Pages import PerspectiveType
+
 from PM.Core.I18N import _
 from PM.Core.Const import PM_DEVELOPMENT, PM_SVN_REVISION
 from PM.Core.Const import PIXMAPS_DIR, PM_VERSION, PM_SITE
@@ -70,6 +72,12 @@ class MainWindow(gtk.Window):
         self.set_size_request(600, 400)
         
         self.registered_tabs = {}
+        self.perspective_binder = []
+
+        for i in PerspectiveType.types:
+            self.perspective_binder.append(list())
+
+        self.perspective_binder = tuple(self.perspective_binder)
 
         self.__create_widgets()
         self.__pack_widgets()
@@ -237,6 +245,37 @@ class MainWindow(gtk.Window):
 
         new_item.show()
         menu.append(new_item)
+    
+    def bind_perspective(self, ptype, callback):
+        """
+        Bind the perspective 'type'
+
+        The callback should be of the type
+          def perspective_cb(perspective, type, already_present, added)
+
+        @param type the perspective's type (see also PerspectiveType)
+        @param callback the callback to execute when a new
+               perspective of type 'type' is created
+        """
+
+        log.debug("Binding method %s for perspective of type %d" % (callback, ptype))
+
+        self.perspective_binder[ptype].append(callback)
+
+        maintab = self.get_tab("MainTab")
+
+        for page in maintab.session_notebook:
+            for perspective in page.perspectives:
+                idx = PerspectiveType.types[type(perspective)]
+
+                callback(perspective, idx, True, True)
+
+    def debind_perspective(self, type, callback):
+        try:
+            self.perspective_binder[type].remove(callback)
+            log.debug("Binding method %s for perspective of type %d removed" % (callback, type))
+        except:
+            log.error("Failed to remove binding method %s for perspective of type %d" % (callback, type))
 
     def __pack_widgets(self):
         "Pack widgets"
@@ -278,11 +317,32 @@ class MainWindow(gtk.Window):
         "Connect signals"
         self.connect('delete-event', self.__on_quit)
 
+        # Ok we need also to connect signals from main notebook
+        # so we could manage easilly the bind_perspective calls
+
+        maintab = self.get_tab("MainTab")
+        maintab.session_notebook.connect('page-added', self.__on_maintab_page_added)
+        maintab.session_notebook.connect('page-removed', self.__on_maintab_page_removed)
+
     def connect_tabs_signals(self):
         "Used to connect signals between tabs"
 
         for key, tab in self.registered_tabs.items():
             tab.connect_tab_signals()
+
+    def __on_maintab_page_added(self, notebook, page, pagenum):
+        for perspective in page.perspectives:
+            idx = PerspectiveType.types[type(perspective)]
+
+            for callback in self.perspective_binder[idx]:
+                callback(perspective, idx, False, True)
+
+    def __on_maintab_page_removed(self, notebook, page, pagenum):
+        for perspective in page.perspectives:
+            idx = PerspectiveType.types[type(perspective)]
+
+            for callback in self.perspective_binder[idx]:
+                callback(perspective, idx, True, False)
 
     def __on_toggle_tab_menu(self, menuitem, tab):
         if menuitem.get_active():
