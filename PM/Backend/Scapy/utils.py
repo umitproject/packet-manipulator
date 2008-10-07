@@ -166,12 +166,22 @@ class SenderConsumer(Thread, Interruptable):
     def run(self):
         packet = self.metapacket.root
 
+        # If is setted to 0 we need to do an infinite loop
+        # so this variable should be negative
+
+        if not self.count:
+            log.debug("This is an infinite loop.")
+            self.count = -1
+
         try:
-            while self.count > 0:
+            while self.count:
                 self.socket.send(packet)
-                self.count -= 1
+
+                if self.count > 0:
+                    self.count -= 1
 
                 if self.callback(self.metapacket, self.udata) == True:
+                    log.debug("The send callback want to exit")
                     return
 
                 time.sleep(self.inter)

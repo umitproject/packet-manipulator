@@ -31,7 +31,7 @@ def register_send_context(BaseSendContext):
             self.internal = False
 
         def _start(self):
-            if self.tot_count - self.count > 0:
+            if not self.tot_count or self.tot_count - self.count > 0:
                 self.state = self.RUNNING
                 self.internal = True
                 
@@ -76,7 +76,7 @@ def register_send_context(BaseSendContext):
             if packet and isinstance(packet, Exception):
                 self.internal = False
                 self.summary = str(packet)
-            else:
+            elif self.tot_count:
                 if packet:
                     self.count += 1
                 else:
@@ -88,6 +88,10 @@ def register_send_context(BaseSendContext):
                     self.summary = _("Sending packet %d of %d") % (self.count, self.tot_count)
 
                 self.percentage = float(self.count) / float(self.tot_count) * 100.0
+            else:
+                # If we are here we need to pulse the value
+                self.summary = _("Sending packet %s") % packet.summary()
+                self.percentage = (self.percentage + 536870911) % 2147483647
 
             if self.callback:
                 self.callback(packet, udata)
@@ -97,5 +101,14 @@ def register_send_context(BaseSendContext):
 
             return self.state == self.NOT_RUNNING or \
                    self.state == self.PAUSED
+
+        def get_percentage(self):
+            if self.state == self.NOT_RUNNING:
+                return 100.0
+
+            if self.tot_count:
+                return self.percentage
+
+            return None
 
     return SendContext
