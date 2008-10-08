@@ -31,11 +31,14 @@ def __new_write(fd, txt):
 
 os.write = __new_write
 
+PM_USE_NEW_SCAPY = False
+
 try:
     from scapy import *
 
     if 'conf' not in globals():
         from scapy.all import *
+        PM_USE_NEW_SCAPY = True
 
 except ImportError:
     from PM.Core.Errors import PMErrorException

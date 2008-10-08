@@ -24,6 +24,7 @@ sys.plugins_path = []
 
 from PM.Core.I18N import _
 from PM.Core.Const import PM_DEVELOPMENT, PM_PLUGINS_TEMP_DIR
+from PM.Core.Atoms import generate_traceback
 from PM.Core.Logger import log
 from PM.Gui.Plugins.Atoms import Version, DepDict
 from PM.Gui.Plugins.Core import Core
@@ -477,12 +478,8 @@ class PluginsTree(object):
 
                         ret.append(inst)
                     except Exception, err:
-                        import traceback, smtplib, StringIO
-                        fp = StringIO.StringIO()
-                        traceback.print_exc(file=fp)
-
                         log.critical("Error while starting %s:" % (plug))
-                        log.critical(fp.getvalue())
+                        log.critical(generate_traceback())
                         log.critical("Ignoring instance.")
 
                 if not ret:

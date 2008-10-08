@@ -25,7 +25,29 @@ Use PM_LOGLEVEL to set the loglevel
 """
 
 import os
-from logging import Logger, StreamHandler, Formatter
+from logging import Logger, StreamHandler, Formatter, addLevelName
+
+if os.name == 'posix':
+    reset = "\033[1;0m"
+    yellow = "\033[1;33m"
+    green = "\033[1;32m"
+    brown = "\033[0;33m"
+    red = "\033[1;31m"
+else:
+    reset = yellow = green = brown = red = ''
+
+if os.getenv('PM_HAPPY', ''):
+    addLevelName(10, '%s boring stuff: -.- %s' % (brown, reset))
+    addLevelName(20, '%s blah blah :> %s' % (green, reset))
+    addLevelName(30, '%s what the hell? :( %s' % (yellow, reset))
+    addLevelName(40, '%s wtf?! :o %s' % (red, reset))
+    addLevelName(50, '%s OMFADG! :oo %s' % (red, reset))
+else:
+    addLevelName(10, '%sDBG%s' % (brown, reset))
+    addLevelName(20, '%sINF%s' % (green, reset))
+    addLevelName(30, '%sWRN%s' % (yellow, reset))
+    addLevelName(40, '%sERR%s' % (red, reset))
+    addLevelName(50, '%sCRI%s' % (red, reset))
 
 class PMLogger(Logger, object):
     def __init__(self, name, level):
@@ -44,7 +66,7 @@ class PMLogger(Logger, object):
         self.__formatter = Formatter(fmt)
 
 
-    format = "[%(levelname)s::%(threadName)s:%(msecs)d] at %(filename)s:%(lineno)d %(funcName)s(): %(message)s"
+    format = "(%(levelname)s) %(threadName)s:%(msecs)d at %(filename)s:%(lineno)d %(funcName)s(): %(message)s"
 
     formatter = property(get_formatter, set_formatter, doc="")
     __formatter = Formatter(format)
@@ -54,3 +76,7 @@ try:
     level = int(os.getenv('PM_LOGLEVEL', '30'))
 finally:
     log = PMLogger("PM", level)
+    log.info("test")
+    log.debug("test")
+    log.warning("test")
+    log.error("test")

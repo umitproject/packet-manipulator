@@ -28,6 +28,14 @@ import copy
 import Queue
 import threading
 
+import traceback, StringIO
+from PM.Core.Logger import log
+
+def generate_traceback():
+    fp = StringIO.StringIO()
+    traceback.print_exc(file=fp)
+    return fp.getvalue()
+
 class Node(object):
     """
     A simple Node class to create Binary tree.
@@ -269,15 +277,18 @@ class ThreadPool(object):
             try:
                 try:
                     result = func(*args, **kw)
-                except:
+                except Exception, exc:
+                    log.error("Handling exception %s Traceback:" % exc)
+                    log.error(generate_traceback())
+
                     if errback is not None:
                         errback(sys.exc_info()[1])
                 else:
                     if callback is not None:
                         callback(result)
             except Exception, err:
-                print "Thread exceptions ignored."
-                print err
+                log.critical("Thread exceptions ignored. Traceback:")
+                log.critical(generate_traceback())
 
             self.working.remove(ct)
             

@@ -255,11 +255,18 @@ class SendReceiveConsumer(Interruptable):
         try:
             packet = self.metapacket.root
 
-            while self.scount > 0:
+            if not self.scount:
+                log.debug("This is an infinite loop")
+                self.scount = -1
+
+            while self.scount:
                 self.send_sock.send(packet)
-                self.scount -= 1
+
+                if self.scount > 0:
+                    self.scount -= 1
 
                 if self.scallback(self.metapacket, self.count - self.scount, self.sudata):
+                    log.debug("send callback want to exit")
                     break
 
                 time.sleep(self.inter)
@@ -268,7 +275,11 @@ class SendReceiveConsumer(Interruptable):
         except Exception, err:
             print "Error in _sndrecv_sthread(PID: %d EXC: %s)" % (os.getpid(), str(err))
         else:
-            cPickle.dump(arp_cache, self.wrpipe)
+            if PM_USE_NEW_SCAPY:
+                cPickle.dump(conf.netcache, self.wrpipe)
+            else:
+                cPickle.dump(arp_cache, self.wrpipe)
+
             self.wrpipe.close()
 
     def __recv_thread(self):
@@ -323,7 +334,10 @@ class SendReceiveConsumer(Interruptable):
         except EOFError:
             print "Child died unexpectedly. Packets may have not been sent"
         else:
-            arp_cache.update(ac)
+            if PM_USE_NEW_SCAPY:
+                conf.netcache.update(ac)
+            else:
+                arp_cache.update(ac)
 
         if self.send_thread and self.send_thread.isAlive():
             self.send_thread.join()
@@ -369,9 +383,6 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
     if not isinstance(packet, Gen):
         packet = SetGen(packet)
 
-    if not count or count <= 0:
-        count = 1
-
     try:
         sock = get_socket_for(metapacket, True)
         sock_send = get_socket_for(metapacket)
@@ -399,7 +410,7 @@ class SequenceConsumer(Interruptable):
         assert len(tree) > 0
 
         self.tree = tree
-        self.count = max(count, 1)
+        self.count = count
         self.inter = inter
         self.strict = strict
         self.timeout = 10
@@ -451,8 +462,17 @@ class SequenceConsumer(Interruptable):
         self.receiving = True
         self.running.acquire()
 
-        while self.internal and self.count > 0:
-            log.debug("Next step %d" % self.count)
+        if not self.count:
+            log.debug("This is an infinite loop")
+            self.count = -1
+
+        while self.internal and self.count:
+            self.receiving = True
+
+            if self.count > 0:
+                log.debug("Next step %d" % self.count)
+            else:
+                log.debug("Another loop (infinite)")
 
             self.__notify_send(None)
             self.pool.queue_work(None, self.__notify_exc, self.__recv_worker)
@@ -462,18 +482,20 @@ class SequenceConsumer(Interruptable):
                 self.pool.queue_work(None, self.__notify_exc, self.__send_worker, node)
                 break
 
+            log.debug("Waiting recv to begin another loop")
+
             self.running.wait()
 
-            self.count -= 1
+            if self.count > 0:
+                self.count -= 1
 
-        log.debug("Waiting end..")
-
-        self.running.wait()
         self.running.release()
 
         if not self.internal:
             log.debug("Stopping the thread pool (async)")
             self.pool.stop()
+
+        log.debug("Finished")
 
     def __recv_worker(self):
         # Here we should receive the packet and check against
@@ -492,6 +514,7 @@ class SequenceConsumer(Interruptable):
 
                 if remain <= 0:
                     self.receiving = False
+                    log.debug("Timeout here!")
                     break
             
             if not inmask:

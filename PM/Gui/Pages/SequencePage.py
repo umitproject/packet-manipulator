@@ -140,7 +140,7 @@ class SequencePage(Perspective):
         # Count/interval
 
         self.packet_count = gtk.SpinButton(gtk.Adjustment(1, 0, maxint, 1, 10))
-        self.packet_interval = gtk.SpinButton(gtk.Adjustment(0, 0, maxint, 1, 10))
+        self.packet_interval = gtk.SpinButton(gtk.Adjustment(500, 0, maxint, 1, 10))
 
         for lbl, widget in zip((_('No:'), _('Interval:')),
                                (self.packet_count, self.packet_interval)):
@@ -371,8 +371,8 @@ class SequencePage(Perspective):
 
         self.store.foreach(complete_sequence, tree)
 
-        count = max(self.packet_count.get_value_as_int(), 1)
-        inter = max(self.packet_interval.get_value_as_int(), 0)
+        count = self.packet_count.get_value_as_int()
+        inter = self.packet_interval.get_value_as_int()
 
         operation = SequenceOperation(tree, count, inter, None,
                                       self.check_strict.get_active(),

@@ -60,7 +60,8 @@ def register_send_receive_context(BaseSendReceiveContext):
             return False
 
         def _start(self):
-            if self.tot_count - self.count > 0 and self.remaining > 0:
+            if not self.tot_count or (self.tot_count - self.count > 0 and \
+                                      self.remaining > 0):
                 self.internal = True
                 self.state = self.RUNNING
 
@@ -115,7 +116,11 @@ def register_send_receive_context(BaseSendReceiveContext):
         def __send_callback(self, packet, idx, udata):
             self.count += 1
 
-            self.summary = _('Sending packet %d of %d') % (self.count, self.tot_count)
+            if self.tot_count:
+                self.summary = _('Sending packet %d of %d') % (self.count, self.tot_count)
+            else:
+                self.summary = _('Sending packet %s') % packet.summary()
+
             self.percentage = (self.percentage + 536870911) % 2147483647
 
             if self.report_sent:
