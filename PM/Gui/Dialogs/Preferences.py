@@ -158,7 +158,10 @@ class GUIPage(Page):
 
     def create_widgets(self):
         self.widgets = [
-        ('gui.docking', None, gtk.CheckButton(_('Use docking windows'))),
+        (_('General'),
+          (('gui.docking', None, gtk.CheckButton(_('Use docking windows'))),
+           ('gui.expander.standard', None, gtk.CheckButton(_('Use standard expanders'))))),
+        
         (_('Sessions'),
           (('gui.maintab.askforsave', None, gtk.CheckButton(_('Ask on unsaved changes'))),
            ('gui.maintab.autostop', None, gtk.CheckButton(_('Automatically stop sessions on close'))))),
@@ -166,6 +169,7 @@ class GUIPage(Page):
         (_('Sniff perspective'),
           (('gui.maintab.sniffview.font', _('Sniff view font:'), gtk.FontButton()),
            ('gui.maintab.sniffview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
+
         (_('Sequence perspective'),
           (('gui.maintab.sequenceview.font', _('Sequence view font:'), gtk.FontButton()),
            ('gui.maintab.sequenceview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
@@ -173,6 +177,7 @@ class GUIPage(Page):
         (_('Hex view window'),
           (('gui.maintab.hexview.font', _('HexView font:'), gtk.FontButton()),
            ('gui.maintab.hexview.bpl', _('Bytes per line:'), gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1))))),
+
         (_('Status tab'),
           (('gui.statustab.font', _('Status tab font:'), gtk.FontButton()),))
         ]

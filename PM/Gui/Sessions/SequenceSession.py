@@ -25,27 +25,15 @@ from PM.Gui.Pages.SequencePage import SequencePage
 
 class SequenceSession(Session):
     def create_ui(self, show_packet=True, show_sequence=True):
-        self.vpaned = gtk.VPaned()
+        self.pack_start(self.paned)
 
-        self.sequence_page = SequencePage(self)
-        self.packet_page = PacketPage(self)
+        self.sequence_page = self.add_perspective(SequencePage, show_sequence,
+                                                  True, False)
 
-        self.perspectives = [self.sequence_page, self.packet_page]
+        self.packet_page = self.add_perspective(PacketPage, show_packet,
+                                                True, False)
 
-        self.packet_expander   = AnimatedExpander(self.packet_page.title,
-                                                  self.packet_page.icon)
-        self.sequence_expander = AnimatedExpander(self.sequence_page.title,
-                                                  self.sequence_page.icon)
-
-        self.vpaned.pack1(self.sequence_expander, True, False)
-        self.vpaned.pack2(self.packet_expander, True, False)
-
-        self.packet_expander.add_widget(self.packet_page, show_packet)
-        self.sequence_expander.add_widget(self.sequence_page, show_sequence)
-
-        self.pack_start(self.vpaned)
         self.show_all()
-
         self.reload()
 
     def reload_editor(self):

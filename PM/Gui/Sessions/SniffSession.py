@@ -27,27 +27,15 @@ class SniffSession(Session):
     def __init__(self, ctx=None, show_sniff=True, show_packet=True):
         super(SniffSession, self).__init__(ctx)
 
-        self.vpaned = gtk.VPaned()
+        self.sniff_page = self.add_perspective(SniffPage, show_sniff,
+                                               True, False)
 
-        self.sniff_page = SniffPage(self)
-        self.packet_page = PacketPage(self)
-
-        self.perspectives = [self.sniff_page, self.packet_page]
-
-        self.sniff_expander  = AnimatedExpander(self.sniff_page.title,
-                                                self.sniff_page.icon)
-        self.packet_expander = AnimatedExpander(self.packet_page.title,
-                                                self.packet_page.icon)
-
-        self.vpaned.pack1(self.sniff_expander, True, False)
-        self.vpaned.pack2(self.packet_expander, True, False)
-
-        self.sniff_expander.add_widget(self.sniff_page, show_sniff)
-        self.packet_expander.add_widget(self.packet_page, show_packet)
+        self.packet_page = self.add_perspective(PacketPage, show_packet,
+                                                True, False)
 
         self.packet_page.reload()
 
-        self.pack_start(self.vpaned)
+        self.pack_start(self.paned)
         self.show_all()
 
     def reload_editor(self):

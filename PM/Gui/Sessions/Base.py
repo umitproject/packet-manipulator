@@ -22,12 +22,17 @@ import gtk
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
+from PM.Manager.PreferenceManager import Prefs
+
+from PM.Gui.Widgets.MultiPaneds import VMultiPaned
+from PM.Gui.Widgets.Expander import AnimatedExpander
 from PM.Gui.Widgets.ClosableLabel import ClosableLabel
 
 class Session(gtk.VBox):
     def __init__(self, ctx):
         super(Session, self).__init__(False, 2)
 
+        self.paned = VMultiPaned()
         self.perspectives = []
 
         self.packet = None
@@ -41,6 +46,31 @@ class Session(gtk.VBox):
 
     def create_ui(self):
         pass
+    
+    def add_perspective(self, klass, show_pers=True, resize=False, shrink=True):
+        """
+        Add the perspective to the current session
+
+        @param klass a Perspective base class of the perspective to add
+        @param show_pers choose to show the perspective
+        @param resize if True child should resize when the paned is resized
+        @param shrink if True child can be made smaller than its minimum size request
+        @return the perspective instance
+        """
+
+        pers = klass(self)
+        self.perspectives.append(pers)
+
+        if Prefs()['gui.expander.standard'].value:
+            widget = gtk.Expander(pers.title)
+            widget.add(pers)
+        else:
+            widget = AnimatedExpander(pers.title, pers.icon)
+            widget.add_widget(pers, show_pers)
+
+        self.paned.add_child(widget, resize, shrink)
+
+        return pers
 
     def reload(self):
         self.reload_container()

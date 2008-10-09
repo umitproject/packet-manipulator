@@ -185,6 +185,7 @@ class PreferenceWriter:
 class Prefs(Singleton):
     options = {
         'gui.docking' : True,
+        'gui.expander.standard' : False,
         'gui.maintab.sniffview.font' : 'Monospace 10',
         'gui.maintab.sniffview.usecolors' : True,
         'gui.maintab.hexview.font' : 'Monospace 10',

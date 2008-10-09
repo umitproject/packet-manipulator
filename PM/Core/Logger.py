@@ -66,7 +66,7 @@ class PMLogger(Logger, object):
         self.__formatter = Formatter(fmt)
 
 
-    format = "(%(levelname)s) %(threadName)s:%(msecs)d at %(filename)s:%(lineno)d %(funcName)s(): %(message)s"
+    format = "(%(levelname)s) %(threadName)s:%(msecs)dms at %(filename)s:%(lineno)d %(funcName)s(): %(message)s"
 
     formatter = property(get_formatter, set_formatter, doc="")
     __formatter = Formatter(format)
@@ -76,7 +76,3 @@ try:
     level = int(os.getenv('PM_LOGLEVEL', '30'))
 finally:
     log = PMLogger("PM", level)
-    log.info("test")
-    log.debug("test")
-    log.warning("test")
-    log.error("test")
