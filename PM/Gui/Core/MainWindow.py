@@ -281,21 +281,27 @@ class MainWindow(gtk.Window):
 
     def unbind_session(self, type, persp_klass):
         try:
-            self.session_binder[type].remove(persp_klass)
+            for i in range(len(self.session_binder[ptype])):
+                (klass, show, resize, shrink) = self.session_binder[ptype][i]
 
-            klass = SessionType.types[type]
-            maintab = self.get_tab("MainTab")
+                if klass is not persp_klass:
+                    continue
 
-            for page in maintab.session_notebook:
-                if isinstance(page, klass):
-                    page.remove_perspective(klass)
+                del self.session_binder[type][i]
 
-            log.debug(
-                "Binding method %s for perspective of type %s removed" % \
-                (persp_klass, SessionType.types[type])
-            )
+                klass = SessionType.types[type]
+                maintab = self.get_tab("MainTab")
 
-            return True
+                for page in maintab.session_notebook:
+                    if isinstance(page, klass):
+                        page.remove_perspective(klass)
+
+                log.debug(
+                    "Binding method %s for perspective of type %s removed" % \
+                    (persp_klass, SessionType.types[type])
+                )
+
+                return True
         except:
             log.error(
                 "Failed to remove binding method %s for session of type %s" % \
