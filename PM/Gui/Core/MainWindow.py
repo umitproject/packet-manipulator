@@ -58,6 +58,7 @@ from PM.Gui.Dialogs.Routes import RoutesDialog
 from PM.Gui.Plugins.Window import PluginWindow
 
 from PM.Gui.Pages import PerspectiveType
+from PM.Gui.Sessions import SessionType
 
 from PM.Core.I18N import _
 from PM.Core.Const import PM_DEVELOPMENT, PM_SVN_REVISION
@@ -72,12 +73,19 @@ class MainWindow(gtk.Window):
         self.set_size_request(600, 400)
         
         self.registered_tabs = {}
+
+        # Binders for plugins
         self.perspective_binder = []
+        self.session_binder = []
 
         for i in PerspectiveType.types:
             self.perspective_binder.append(list())
 
+        for i in SessionType.types:
+            self.session_binder.append(list())
+
         self.perspective_binder = tuple(self.perspective_binder)
+        self.session_binder = tuple(self.session_binder)
 
         self.__create_widgets()
         self.__pack_widgets()
@@ -245,6 +253,60 @@ class MainWindow(gtk.Window):
 
         new_item.show()
         menu.append(new_item)
+
+    def bind_session(self, ptype, persp_klass, show_pers=True, resize=False, shrink=True):
+        """
+        Bind the perspective 'pers_klass' to Session 'ptype'
+
+        @param ptype the Session type to customize
+        @param persp_klass the perspective class to add to the selected Session
+        @param show_pers choose to show the perspective
+        @param resize if True child should resize when the paned is resized
+        @param shrink if True child can be made smaller than its minimum size request
+        """
+
+        log.debug(
+            "Binding perspective %s to Session %s" % \
+            (persp_klass, SessionType.types[ptype])
+        )
+
+        self.session_binder[ptype].append((persp_klass, show_pers, resize, shrink))
+
+        klass = SessionType.types[ptype]
+        maintab = self.get_tab("MainTab")
+
+        for page in maintab.session_notebook:
+            if isinstance(page, klass):
+                self.apply_bindings(page, ptype)
+
+    def unbind_session(self, type, persp_klass):
+        try:
+            self.session_binder[type].remove(persp_klass)
+
+            klass = SessionType.types[type]
+            maintab = self.get_tab("MainTab")
+
+            for page in maintab.session_notebook:
+                if isinstance(page, klass):
+                    page.remove_perspective(klass)
+
+            log.debug(
+                "Binding method %s for perspective of type %s removed" % \
+                (persp_klass, SessionType.types[type])
+            )
+
+            return True
+        except:
+            log.error(
+                "Failed to remove binding method %s for session of type %s" % \
+                (persp_klass, SessionType.type[ptype])
+            )
+
+        return False
+
+    def apply_bindings(self, page, ptype):
+        for persp_klass, show, resize, shrink in self.session_binder[ptype]:
+            page.add_perspective(persp_klass, show, resize, shrink)
     
     def bind_perspective(self, ptype, callback):
         """
@@ -258,7 +320,10 @@ class MainWindow(gtk.Window):
                perspective of type 'type' is created
         """
 
-        log.debug("Binding method %s for perspective of type %d" % (callback, ptype))
+        log.debug(
+            "Binding method %s for perspective of type %s" % \
+            (callback, PerspectiveType.types[ptype])
+        )
 
         self.perspective_binder[ptype].append(callback)
 
@@ -271,11 +336,38 @@ class MainWindow(gtk.Window):
                 callback(perspective, idx, True, True)
 
     def debind_perspective(self, type, callback):
+        """
+        Remove the binding callback for perspective of type 'type'
+
+        @param type the perspective type
+        @param callback the callback to remove
+        @return True if the callback is removed correctly
+        """
+
         try:
             self.perspective_binder[type].remove(callback)
-            log.debug("Binding method %s for perspective of type %d removed" % (callback, type))
+
+            maintab = self.get_tab("MainTab")
+
+            for page in maintab.session_notebook:
+                for perspective in page.perspectives:
+                    idx = PerspectiveType.types[type(perspective)]
+
+                    callback(perspective, idx, True, False)
+
+            log.debug(
+                "Binding method %s for perspective of type %s removed" % \
+                (callback, PerspectiveType.types[type])
+            )
+
+            return True
         except:
-            log.error("Failed to remove binding method %s for perspective of type %d" % (callback, type))
+            log.error(
+                "Failed to remove binding method %s for perspective of type %s" % \
+                (callback, PerspectiveType.types[type])
+            )
+
+        return False
 
     def __pack_widgets(self):
         "Pack widgets"
@@ -332,17 +424,23 @@ class MainWindow(gtk.Window):
 
     def __on_maintab_page_added(self, notebook, page, pagenum):
         for perspective in page.perspectives:
-            idx = PerspectiveType.types[type(perspective)]
+            try:
+                idx = PerspectiveType.types[type(perspective)]
 
-            for callback in self.perspective_binder[idx]:
-                callback(perspective, idx, False, True)
+                for callback in self.perspective_binder[idx]:
+                    callback(perspective, idx, False, True)
+            except:
+                pass
 
     def __on_maintab_page_removed(self, notebook, page, pagenum):
         for perspective in page.perspectives:
-            idx = PerspectiveType.types[type(perspective)]
+            try:
+                idx = PerspectiveType.types[type(perspective)]
 
-            for callback in self.perspective_binder[idx]:
-                callback(perspective, idx, True, False)
+                for callback in self.perspective_binder[idx]:
+                    callback(perspective, idx, True, False)
+            except:
+                pass
 
     def __on_toggle_tab_menu(self, menuitem, tab):
         if menuitem.get_active():

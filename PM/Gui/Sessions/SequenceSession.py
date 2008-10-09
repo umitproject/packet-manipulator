@@ -25,7 +25,7 @@ from PM.Gui.Pages.SequencePage import SequencePage
 
 class SequenceSession(Session):
     def create_ui(self, show_packet=True, show_sequence=True):
-        self.pack_start(self.paned)
+        self.type_id = 0
 
         self.sequence_page = self.add_perspective(SequencePage, show_sequence,
                                                   True, False)
@@ -33,8 +33,10 @@ class SequenceSession(Session):
         self.packet_page = self.add_perspective(PacketPage, show_packet,
                                                 True, False)
 
-        self.show_all()
         self.reload()
+
+        self.pack_start(self.paned)
+        self.show_all()
 
     def reload_editor(self):
         self.packet_page.reload()

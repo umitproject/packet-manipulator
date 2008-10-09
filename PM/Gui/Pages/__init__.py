@@ -25,8 +25,8 @@ This module contains perspectives called also Pages:
     - SequencePage
 """
 
-from PacketPage import PacketPage
 from SniffPage import SniffPage
+from PacketPage import PacketPage
 from SequencePage import SequencePage
 
 class PerspectiveType:
@@ -37,5 +37,9 @@ class PerspectiveType:
     types = {
         PacketPage   : 0,
         SniffPage    : 1,
-        SequencePage : 2
+        SequencePage : 2,
+
+        0 : PacketPage,
+        1 : SniffPage,
+        2 : SequencePage
     }

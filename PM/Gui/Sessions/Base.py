@@ -24,6 +24,8 @@ from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
+from PM.Gui.Core.App import PMApp
+
 from PM.Gui.Widgets.MultiPaneds import VMultiPaned
 from PM.Gui.Widgets.Expander import AnimatedExpander
 from PM.Gui.Widgets.ClosableLabel import ClosableLabel
@@ -35,6 +37,8 @@ class Session(gtk.VBox):
         self.paned = VMultiPaned()
         self.perspectives = []
 
+        self.type_id = None
+
         self.packet = None
         self.context = ctx
         self.context.title_callback = self.__on_change_title
@@ -44,9 +48,25 @@ class Session(gtk.VBox):
         self.set_border_width(4)
         self.create_ui()
 
+        # Now apply the bindings for this Session
+        PMApp().main_window.apply_bindings(self, self.type_id)
+
     def create_ui(self):
         pass
     
+    def remove_perspective(self, klass):
+        """
+        Remove the perspective from the current session
+
+        @param klass the perspective klass to remove
+        @return True if everything is ok
+        """
+
+        for persp in self.perspectives:
+            if isinstance(persp, klass):
+                self.perspectives.remove(persp)
+                self.paned.remove_child(persp)
+
     def add_perspective(self, klass, show_pers=True, resize=False, shrink=True):
         """
         Add the perspective to the current session
@@ -69,6 +89,8 @@ class Session(gtk.VBox):
             widget.add_widget(pers, show_pers)
 
         self.paned.add_child(widget, resize, shrink)
+
+        widget.show()
 
         return pers
 
