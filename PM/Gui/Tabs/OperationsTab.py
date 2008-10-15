@@ -112,7 +112,7 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
 
     def __create_session(self):
         nb = PMApp().main_window.get_tab("MainTab").session_notebook
-        self.session = nb.create_context_session(self, packet=False)
+        self.session = nb.create_sniff_session(self)
 
     def __send_callback(self, packet, idx, udata):
         self.notify_parent()

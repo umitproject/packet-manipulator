@@ -72,11 +72,7 @@ class SessionNotebook(gtk.Notebook):
         return self.create_sequence_session([packet])
 
     def create_sniff_session(self, ctx):
-        session = SniffSession(ctx, show_packet=False)
-        return self.__append_session(session)
-
-    def create_context_session(self, ctx, sniff=True, packet=True):
-        session = SniffSession(ctx, show_sniff=sniff, show_packet=packet)
+        session = SniffSession(ctx)
         return self.__append_session(session)
 
     def load_static_session(self, fname):

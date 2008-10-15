@@ -254,6 +254,11 @@ class MainWindow(gtk.Window):
         new_item.show()
         menu.append(new_item)
 
+    def create_session(self):
+        pass
+    def delete_session(self):
+        pass
+
     def bind_session(self, ptype, persp_klass, show_pers=True, resize=False, shrink=True):
         """
         Bind the perspective 'pers_klass' to Session 'ptype'

@@ -313,6 +313,9 @@ class SequencePage(Perspective):
 
     def reload(self, packet=None):
         # Should be the selected
+        
+        if self.tree.get_selection().get_mode() == gtk.SELECTION_MULTIPLE:
+            return
 
         if packet is not None:
             ret = self.tree.get_selection().get_selected()

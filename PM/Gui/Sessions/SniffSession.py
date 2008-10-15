@@ -27,10 +27,10 @@ class SniffSession(Session):
     def create_ui(self):
         self.type_id = 1
 
-        self.sniff_page = self.add_perspective(SniffPage, show_sniff,
+        self.sniff_page = self.add_perspective(SniffPage, True,
                                                True, False)
 
-        self.packet_page = self.add_perspective(PacketPage, show_packet,
+        self.packet_page = self.add_perspective(PacketPage, False,
                                                 True, False)
 
         self.packet_page.reload()
