@@ -425,7 +425,7 @@ class AnimatedExpander(gtk.VBox):
         self._arrow.connect('clicked', self.do_toggle_animation)
         self._arrow.connect('force-clicked', self.do_force_animation)
         
-        self._label = gtk.Label()
+        self._label = gtk.Label('')
         self._label.set_alignment(0, 0.5)
         self.label = label
         
