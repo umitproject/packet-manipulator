@@ -365,8 +365,8 @@ class HIGTooltip(gtk.Window):
         (make x, y optional)
         """
 
-        assert (self != HIGTooltip.__instance, \
-                "You should create another HIGTooltip object to do it")
+        assert self != HIGTooltip.__instance, \
+               "You should create another HIGTooltip object to do it"
 
         if self._timeout_started or \
            self.flags() & gtk.VISIBLE or \
@@ -395,8 +395,8 @@ class HIGTooltip(gtk.Window):
         """
         Hide the widget resetting values used and also destroy window
         """
-        assert (self != HIGTooltip.__instance, \
-                "You should create another HIGTooltip object to do it")
+        assert self != HIGTooltip.__instance, \
+               "You should create another HIGTooltip object to do it"
 
         self._hover = None
         self._timeout_started = False

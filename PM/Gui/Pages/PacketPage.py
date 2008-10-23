@@ -150,7 +150,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
         obj = model.get_value(iter, 2)
         
-        assert (Backend.is_proto(obj), "Should be a Protocol instance.")
+        assert Backend.is_proto(obj), "Should be a Protocol instance."
 
         return self.session.packet, obj
 

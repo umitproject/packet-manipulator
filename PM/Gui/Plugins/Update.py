@@ -20,7 +20,7 @@
 from __future__ import with_statement
 
 import os
-import md5
+import hashlib
 
 from threading import RLock
 from tempfile import mkstemp
@@ -199,7 +199,7 @@ class UpdateEngine(object):
                     data = obj.fd.read()
                 
                 # Not locked it could freeze the ui
-                hasher = md5.new()
+                hasher = hashlib.md5()
                 hasher.update(data)
                 
                 with obj.lock:

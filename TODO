@@ -6,7 +6,7 @@ TODO list (not ordered):
 - I18N, make the mo files
 - new logo (pacchetto)
 - dict editor / list editor (ex TCP dport)
-- hexview with insert mode
+- hexview with insert mode (see also bless)
 - switching to pyprocessing?
 - documentation and test cases
 - rewrite the UMPA backend (complete/remove)
@@ -19,3 +19,8 @@ TODO list (not ordered):
 - implementing a tree to see results of sequence
 - custom perspectives (reload_[container|viewer])
 - vim scripting?
+- attack loader (dhcp attack)
+- scripting interface
+- uge file import
+- console application
+- route editor
