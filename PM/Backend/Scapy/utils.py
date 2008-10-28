@@ -120,32 +120,48 @@ def route_remove(self, host, net, gw, dev):
 ###############################################################################
 
 def find_all_devs():
-    ifaces = get_if_list()
 
-    ips = []
-    hws = []
-    for iface in ifaces:
-        ip = "0.0.0.0"
-        hw = "00:00:00:00:00:00"
-        
-        try:
-            ip = get_if_addr(iface)
-        except Exception:
-            pass
+    # Use dnet as fallback
 
-        try:
-            hw = get_if_hwaddr(iface)
-        except Exception:
-            pass
+    if DARWIN or NETBSD or OPENBSD or FREEBSD:
+        ret = []
 
-        ips.append(ip)
-        hws.append(hw)
+        for obj in dnet.intf():
+            try:
+                ret.append(
+                    VirtualIFace(obj['name'], obj['link_addr'], obj['addr'])
+                )
+            except:
+                pass
 
-    ret = []
-    for iface, ip, hw in zip(ifaces, ips, hws):
-        ret.append(VirtualIFace(iface, hw, ip))
+        return ret
+    else:
+        ifaces = get_if_list()
 
-    return ret
+        ips = []
+        hws = []
+        for iface in ifaces:
+            ip = "0.0.0.0"
+            hw = "00:00:00:00:00:00"
+            
+            try:
+                ip = get_if_addr(iface)
+            except Exception:
+                pass
+
+            try:
+                hw = get_if_hwaddr(iface)
+            except Exception:
+                pass
+
+            ips.append(ip)
+            hws.append(hw)
+
+        ret = []
+        for iface, ip, hw in zip(ifaces, ips, hws):
+            ret.append(VirtualIFace(iface, hw, ip))
+
+        return ret
 
 ###############################################################################
 # Send Context functions

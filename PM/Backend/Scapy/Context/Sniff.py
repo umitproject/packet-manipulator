@@ -121,11 +121,7 @@ def register_sniff_context(BaseSniffContext):
                 inmask = [self.socket]
 
                 try:
-                    if FREEBSD or DARWIN:
-                        inp, out, err = select(inmask, inmask, inmask, 0.05)
-                        if len(inp) == 0 or self.socket in inp:
-                            r = self.socket.nonblock_recv()
-                    elif WINDOWS:
+                    if WINDOWS:
                         r = self.socket.recv(MTU)
                     else:
                         inp, out, err = select(inmask, inmask, inmask, None)
