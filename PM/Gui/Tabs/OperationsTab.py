@@ -53,9 +53,10 @@ class Operation(object):
         pass
 
 class SendOperation(Backend.SendContext, Operation):
-    def __init__(self, packet, count, inter):
+    def __init__(self, packet, count, inter, iface):
         Operation.__init__(self)
-        Backend.SendContext.__init__(self, packet, count, inter, self.__send_callback, None)
+        Backend.SendContext.__init__(self, packet, count, inter, iface, \
+                                     self.__send_callback, None)
 
     def __send_callback(self, packet, udata=None):
         self.notify_parent()

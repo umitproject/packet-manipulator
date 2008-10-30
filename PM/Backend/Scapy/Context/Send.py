@@ -24,8 +24,10 @@ from PM.Core.I18N import _
 def register_send_context(BaseSendContext):
 
     class SendContext(BaseSendContext):
-        def __init__(self, metapacket, count, inter, callback, udata=None):
-            BaseSendContext.__init__(self, metapacket, count, inter, callback, udata)
+        def __init__(self, metapacket, count, inter, iface, callback, \
+                     udata=None):
+            BaseSendContext.__init__(self, metapacket, count, inter, iface,
+                                     callback, udata)
 
             self.thread = None
             self.internal = False
@@ -39,6 +41,7 @@ def register_send_context(BaseSendContext):
                     self.thread = send_packet(self.packet,
                                               self.tot_count - self.count,
                                               self.inter,
+                                              self.iface,
                                               self.__send_callback,
                                               self.udata)
                 except Exception, err:

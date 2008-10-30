@@ -24,13 +24,14 @@ from PM.Backend.Abstract.Context import register_send_context
 class BaseSendContext(TimedContext):
     "A context to only send packets"
 
-    def __init__(self, metapacket, count, inter, callback, udata=None):
+    def __init__(self, metapacket, count, inter, iface, callback, udata=None):
         """
         Create a BaseSendContext object
 
         @param metapacket the packet to send
         @param count the n metapacket to send
         @param inter the interval of time between two consecutive send
+        @param iface the interface to use for sending
         @param callback the function to call at every send
         @param udata the user data to pass to callback
         """
@@ -39,6 +40,7 @@ class BaseSendContext(TimedContext):
         self.tot_count = count
         self.count = 0
         self.inter = float(inter) / 1000.0
+        self.iface = iface
         self.callback = callback
         self.udata = udata
 

@@ -42,11 +42,14 @@ def get_iface_from_ip(metapacket):
 
     return iff
 
-def get_socket_for(metapacket, want_layer_2=False):
+def get_socket_for(metapacket, want_layer_2=False, iff=None):
     # We should check if the given packet has a IP layer but not an
     # Ether one so we could send it trough layer 3
+    
+    if iff is None:
+        iff = get_iface_from_ip(metapacket)
 
-    iff = get_iface_from_ip(metapacket)
+    log.debug("Interface selected: %s" % iff)
 
     if not metapacket.haslayer(Ether) and not want_layer_2:
         sock = conf.L3socket(iface=iff)
@@ -212,20 +215,21 @@ class SenderConsumer(Thread, Interruptable):
         log.debug("Forcing exit of the thread by setting count to 0")
         self.count = 0
 
-def send_packet(metapacket, count, inter, callback, udata=None):
+def send_packet(metapacket, count, inter, iface, callback, udata=None):
     """
     Send a metapacket in thread context
 
     @param metapacket the packet to send
     @param count send n count metapackets
     @param inter interval between two consecutive sends
+    @param iface the interface to use for sending
     @param callback a callback to call at each send (of type packet, udata)
            when True is returned the send thread is stopped
     @param udata the userdata to pass to the callback
     """
 
     try:
-        sock = get_socket_for(metapacket)
+        sock = get_socket_for(metapacket, iff=iface)
     except socket.error, (errno, err):
         raise Exception(err)
 
@@ -400,8 +404,8 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
         packet = SetGen(packet)
 
     try:
-        sock = get_socket_for(metapacket, True)
-        sock_send = get_socket_for(metapacket)
+        sock = get_socket_for(metapacket, True, iface)
+        sock_send = get_socket_for(metapacket, iff=iface)
 
         if not sock:
             raise Exception('Unable to create a valid socket')
@@ -420,7 +424,7 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
 ###############################################################################
 
 class SequenceConsumer(Interruptable):
-    def __init__(self, tree, count, inter, strict, \
+    def __init__(self, tree, count, inter, iface, strict, \
                  scallback, rcallback, sudata, rudata, excback):
 
         assert len(tree) > 0
@@ -429,6 +433,7 @@ class SequenceConsumer(Interruptable):
         self.count = count
         self.inter = inter
         self.strict = strict
+        self.iface = iface
         self.timeout = 10
 
         self.sockets = []
@@ -630,7 +635,7 @@ class SequenceConsumer(Interruptable):
 
         obj = node.get_data()
 
-        sock = get_socket_for(obj.packet)
+        sock = get_socket_for(obj.packet, iff=self.iface)
 
         if node.is_parent():
             # Here we should add the node to the dict
@@ -721,10 +726,10 @@ class SequenceConsumer(Interruptable):
             log.debug("recv_callback want to exit")
             self.internal = False
 
-def execute_sequence(sequence, count, inter, strict, iface, \
+def execute_sequence(sequence, count, inter, iface, strict, \
                      scallback, rcallback, sudata, rudata, excback):
 
-    consumer = SequenceConsumer(sequence, count, inter, strict, \
+    consumer = SequenceConsumer(sequence, count, inter, iface, strict, \
                                 scallback, rcallback, sudata, rudata, excback)
     consumer.start()
 

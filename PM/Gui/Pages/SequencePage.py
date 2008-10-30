@@ -33,6 +33,7 @@ from PM.Backend import SequencePacket
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Icons import get_pixbuf
+from PM.Gui.Widgets.Interfaces import InterfacesCombo
 from PM.Gui.Widgets.CellRenderer import GridRenderer
 from PM.higwidgets.higtooltips import HIGTooltip, HIGTooltipData
 
@@ -119,6 +120,13 @@ class SequencePage(Perspective):
         # Toolbar
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
+
+        self.intf_combo = InterfacesCombo()
+
+        item = gtk.ToolItem()
+        item.add(self.intf_combo)
+
+        self.toolbar.insert(item, -1)
 
         action = gtk.Action(None, None, _('Run the sequence'), gtk.STOCK_EXECUTE)
         action.connect('activate', self.__on_run)
@@ -377,7 +385,8 @@ class SequencePage(Perspective):
         count = self.packet_count.get_value_as_int()
         inter = self.packet_interval.get_value_as_int()
 
-        operation = SequenceOperation(tree, count, inter, None,
+        operation = SequenceOperation(tree, count, inter,
+                                      self.intf_combo.get_interface(),
                                       self.check_strict.get_active(),
                                       self.check_received.get_active(),
                                       self.check_sent.get_active())
@@ -397,7 +406,10 @@ class SequencePage(Perspective):
         inter = self.packet_interval.get_value_as_int()
 
         tab = PMApp().main_window.get_tab("OperationsTab")
-        tab.tree.append_operation(SendOperation(packet, count, inter))
+        tab.tree.append_operation(
+            SendOperation(packet, count, inter,
+                          self.intf_combo.get_interface())
+        )
 
     def __on_send_receive(self, action):
         packet = self.session.packet
@@ -411,7 +423,10 @@ class SequencePage(Perspective):
         inter = self.packet_interval.get_value_as_int()
 
         tab = PMApp().main_window.get_tab("OperationsTab")
-        tab.tree.append_operation(SendReceiveOperation(packet, count, inter))
+        tab.tree.append_operation(
+            SendReceiveOperation(packet, count, inter,
+                                 self.intf_combo.get_interface())
+        )
 
     def __txt_cell_data(self, col, rend, model, iter):
         if self.merging:
