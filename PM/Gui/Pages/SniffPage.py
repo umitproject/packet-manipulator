@@ -376,6 +376,9 @@ class SniffPage(Perspective):
 
         packet = model.get_value(iter, 0)
 
+        if not packet:
+            return False
+
         strs = (
             str(model.get_path(iter)[0] + 1),
             packet.get_time(),
