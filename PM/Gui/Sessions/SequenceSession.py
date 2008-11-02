@@ -24,10 +24,11 @@ from PM.Gui.Pages.PacketPage import PacketPage
 from PM.Gui.Pages.SequencePage import SequencePage
 
 class SequenceSession(Session):
-    def create_ui(self):
-        # FIXME: this should be set automatically
-        self.type_id = 0
+    session_id = 0
+    session_name = "SEQUENCE"
+    session_menu = _("New empty sequence")
 
+    def create_ui(self):
         self.sequence_page = self.add_perspective(SequencePage, True,
                                                   True, False)
 

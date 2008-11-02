@@ -26,18 +26,25 @@ from PM.Manager.PreferenceManager import Prefs
 
 from PM.Gui.Core.App import PMApp
 
-from PM.Gui.Widgets.MultiPaneds import VMultiPaned
+from PM.Gui.Widgets.MultiPaneds import VMultiPaned, HMultiPaned
 from PM.Gui.Widgets.Expander import AnimatedExpander
 from PM.Gui.Widgets.ClosableLabel import ClosableLabel
 
 class Session(gtk.VBox):
+    session_id = 0 # Setted automatically
+    session_name = "" # Shoud be setted
+    session_menu = None # Set it if you want a menu item added in main window
+    session_orientation = gtk.ORIENTATION_VERTICAL
+
     def __init__(self, ctx):
         super(Session, self).__init__(False, 2)
 
-        self.paned = VMultiPaned()
-        self.perspectives = []
+        if self.session_orientation == gtk.ORIENTATION_HORIZONTAL:
+            self.paned = HMultiPaned()
+        else:
+            self.paned = VMultiPaned()
 
-        self.type_id = None
+        self.perspectives = []
 
         self.packet = None
         self.context = ctx
@@ -49,7 +56,7 @@ class Session(gtk.VBox):
         self.create_ui()
 
         # Now apply the bindings for this Session
-        PMApp().main_window.apply_bindings(self, self.type_id)
+        PMApp().main_window.apply_bindings(self, self.session_id)
 
     def create_ui(self):
         pass
@@ -85,7 +92,7 @@ class Session(gtk.VBox):
             widget = gtk.Expander(pers.title)
             widget.add(pers)
         else:
-            widget = AnimatedExpander(pers.title, pers.icon)
+            widget = AnimatedExpander(pers.title, pers.icon, self.session_orientation)
             widget.add_widget(pers, show_pers)
 
         self.paned.add_child(widget, resize, shrink)

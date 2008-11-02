@@ -89,7 +89,7 @@ class PropertyTab(UmitView):
         self._main_widget.set_sensitive(False)
         self.grid.clear()
 
-        if isinstance(page, Session):
+        if isinstance(page, Session) and hasattr(page, 'packet_page'):
             # We need to get the protocol instance
             # from selection or from the first iter
             # so we can repopulate the PropertyGrid

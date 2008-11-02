@@ -93,6 +93,11 @@ class SessionNotebook(gtk.Notebook):
     def create_empty_session(self, title):
         session = SniffSession(title=title)
         return self.__append_session(session)
+    
+    def create_session(self, sessk, ctxk):
+        ctx = ctxk()
+        session = sessk(ctx)
+        return self.__append_session(session)
 
     def __append_session(self, session):
         session.label.connect('close-clicked', self.__on_close_page, session)

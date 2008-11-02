@@ -73,7 +73,7 @@ class Layout(gtk.Container):
                                    (gtk.Adjustment, gtk.Adjustment))
     }
 
-    def __init__(self):
+    def __init__(self, orientation=gtk.ORIENTATION_VERTICAL):
         self._child = None
         self._width = 100
         self._height = 100
@@ -82,6 +82,8 @@ class Layout(gtk.Container):
         self._bin_window = None
         self._hadj_changed_id = -1
         self._vadj_changed_id = -1
+
+        self._orientation = orientation
 
         self._animating = False
         self._stupid = False
@@ -248,16 +250,26 @@ class Layout(gtk.Container):
             if self._to_show:
                 self._current = 0
             else:
-                self._current = -max(self._height, allocation.height)
+                if self._orientation is gtk.ORIENTATION_VERTICAL:
+                    self._current = -max(self._height, allocation.height)
+                else:
+                    self._current = -max(self._width, allocation.width)
 
-            self._move(0, self._current)
+            if self._orientation is gtk.ORIENTATION_VERTICAL:
+                self._move(0, self._current)
+            else:
+                self._move(self._current, 0)
 
         if self._stupid:
             self._stupid = False
 
             self._to_show = not self._to_show
 
-            self._speed = max(self._height, allocation.height)
+            if self._orientation is gtk.ORIENTATION_VERTICAL:
+                self._speed = max(self._height, allocation.height)
+            else:
+                self._speed = max(self._width, allocation.width)
+
             self._speed /= self._time_tot / self._time_int
             self._speed = int(max(self._speed, 5))
 
@@ -266,7 +278,10 @@ class Layout(gtk.Container):
             if self._to_show:
                 self._dest = 0
             else:
-                self._dest = -max(self._height, allocation.height)
+                if self._orientation is gtk.ORIENTATION_VERTICAL:
+                    self._dest = -max(self._height, allocation.height)
+                else:
+                    self._dest = -max(self._width, allocation.width)
 
             gobject.timeout_add(self._time_int, self._do_animation)
 
@@ -354,13 +369,21 @@ class Layout(gtk.Container):
         if self._to_show:
             if self._current < 0:
                 self._current += self._speed
-                self._move(0, self._current)
+
+                if self._orientation is gtk.ORIENTATION_VERTICAL:
+                    self._move(0, self._current)
+                else:
+                    self._move(self._current, 0)
 
                 return True
         else:
             if self._current > self._dest:
                 self._current -= self._speed
-                self._move(0, self._current)
+
+                if self._orientation is gtk.ORIENTATION_VERTICAL:
+                    self._move(0, self._current)
+                else:
+                    self._move(self._current, 0)
 
                 return True
 
@@ -383,12 +406,20 @@ class Layout(gtk.Container):
     def _set_expanded(self):
         if self._to_show:
             self._current = 0
-            self._move(0, self._current)
+
+            if self._orientation is gtk.ORIENTATION_VERTICAL:
+                self._move(0, self._current)
+            else:
+                self._move(self._current, 0)
 
             self.show()
         else:
-            self._current = -self.allocation.height
-            self._move(0, self._current)
+            if self._orientation is gtk.ORIENTATION_VERTICAL:
+                self._current = -self.allocation.height
+                self._move(0, self._current)
+            else:
+                self._current = -self.allocation.width
+                self._move(self._current, 0)
 
             self.hide()
 
@@ -409,16 +440,21 @@ class Layout(gtk.Container):
 
 Layout.set_set_scroll_adjustments_signal('set-scroll-adjustments')
 
-class AnimatedExpander(gtk.VBox):
-    __gtype_name__ = "AnimatedExpander"
-    
-    def __init__(self, label=None, image=gtk.STOCK_PROPERTIES):
-        super(AnimatedExpander, self).__init__(False, 2)
+class AnimatedExpander(gtk.EventBox):
+    def __init__(self, label=None, image=gtk.STOCK_PROPERTIES,
+                 orientation=gtk.ORIENTATION_VERTICAL):
+        
+        gtk.EventBox.__init__(self)
+        
+        if orientation is gtk.ORIENTATION_VERTICAL:
+            self.mainbox = gtk.VBox(False, 2)
+        else:
+            self.mainbox = gtk.HBox(False, 2)
         
         # What we need is the arrow button a label with markup and
         # optionally a close button :)
         
-        self._arrow = HIGArrowButton(gtk.ORIENTATION_VERTICAL)
+        self._arrow = HIGArrowButton(orientation)
         self._arrow.set_relief(gtk.RELIEF_NONE)
         self._arrow.set_size_request(20, 20)
 
@@ -426,34 +462,42 @@ class AnimatedExpander(gtk.VBox):
         self._arrow.connect('force-clicked', self.do_force_animation)
         
         self._label = gtk.Label('')
-        self._label.set_alignment(0, 0.5)
         self.label = label
         
         self._image = gtk.Image()
         self.image = image
         
         # The layout part
-        self._layout = Layout()
+        self._layout = Layout(orientation)
         
         # Pack all
-        hbox = gtk.HBox(False, 2)
-        hbox.pack_start(self._arrow, False, False)
-        hbox.pack_start(self._image, False, False)
-        hbox.pack_start(self._label)
-        
+
+        if orientation is gtk.ORIENTATION_VERTICAL:
+            box = gtk.HBox(False, 2)
+            self._label.set_alignment(0, 0.5)
+        else:
+            box = gtk.VBox(False, 2)
+            self._label.set_angle(270)
+            self._label.set_alignment(0.5, 0)
+
+        box.pack_start(self._arrow, False, False)
+        box.pack_start(self._image, False, False)
+        box.pack_start(self._label)
+
         frame = gtk.Frame()
-        frame.add(hbox)
+        frame.add(box)
         
         self._happy_box = gtk.EventBox()
         self._happy_box.add(frame)
         
-        self.pack_start(self._happy_box, False, False)
-        self.pack_start(self._layout)
-        
+        self.mainbox.pack_start(self._happy_box, False, False)
+        self.mainbox.pack_start(self._layout)
+
+        gtk.EventBox.add(self, self.mainbox)
         self.show_all()
 
     def do_realize(self):
-        gtk.VBox.do_realize(self)
+        gtk.EventBox.do_realize(self)
 
         bg_color = gtk.gdk.color_parse("#FFFFDC")
         gtk.gdk.colormap_get_system().alloc_color(bg_color)
@@ -516,7 +560,7 @@ class ToolPage(AnimatedExpander):
     def __init__(self, parent, label=None, image=gtk.STOCK_PROPERTIES, expand=True):
         assert(isinstance(parent, ToolBox))
 
-        super(ToolPage, self).__init__(label, image)
+        AnimatedExpander.__init__(self, label, image)
 
         self._parent = parent
         self._expand = expand

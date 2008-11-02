@@ -254,9 +254,35 @@ class MainWindow(gtk.Window):
         new_item.show()
         menu.append(new_item)
 
-    def create_session(self):
-        pass
-    def delete_session(self):
+    def create_session(self, menu, (sessklass, ctxklass)):
+        maintab = self.get_tab("MainTab")
+        maintab.session_notebook.create_session(sessklass, ctxklass)
+
+    def register_session(self, sessklass, ctxklass=None):
+        """
+        Register a custom session class and returns the new id
+        of the SessionType
+
+        @param sessklass the custom session class
+        @param ctxklass the context class to use
+        @return id
+        """
+
+        if sessklass.session_menu is not None:
+            item = self.ui_manager.get_widget('/menubar/File')
+            menu = item.get_submenu()
+
+            item = gtk.MenuItem(sessklass.session_menu)
+            item.connect('activate', self.create_session, (sessklass, ctxklass))
+            item.show()
+
+            menu.insert(item, 2)
+
+            sessklass.session_menu = item
+
+        return SessionType.add_session(sessklass)
+
+    def deregister_session(self, sessklass):
         pass
 
     def bind_session(self, ptype, persp_klass, show_pers=True, resize=False, shrink=True):

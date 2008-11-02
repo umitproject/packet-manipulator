@@ -31,6 +31,8 @@ from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Plugins.Atoms import StringFile
 from PM.Gui.Plugins.Parser import Parser
 
+from PM.Core.Const import PM_PLUGINS_TEMP_DIR
+
 from PM.Core.Logger import log
 
 # For setup functionality
@@ -171,6 +173,23 @@ class PluginReader(object):
 
     def get_path(self):
         return self.path
+
+    def extract_file(self, zip_path):
+        plug_subdir = os.path.join(PM_PLUGINS_TEMP_DIR, self.name)
+
+        log.debug("Extracting %s into %s " % (zip_path, plug_subdir))
+
+        if not os.path.exists(plug_subdir):
+            os.mkdir(plug_subdir)
+
+        name = os.path.join(plug_subdir,
+                            os.path.basename(zip_path))
+
+        f = open(name, 'wb')
+        f.write(self.file.read(zip_path))
+        f.close()
+
+        return name
 
     # Code ripped from gettext
     def expand_lang(self, locale):

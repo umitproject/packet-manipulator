@@ -18,16 +18,31 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+from PM.Core.Logger import log
 from SniffSession import SniffSession
 from SequenceSession import SequenceSession
 
 class SessionType:
-    SEQUENCE_SESSION, SNIFF_SESSION = range(2)
+    types = {}
+    sessions = []
 
-    types = {
-        SequenceSession : 0,
-        SniffSession    : 1,
-        
-        0 : SequenceSession,
-        1 : SniffSession
-    }
+    @staticmethod
+    def add_session(session):
+        session.session_id = len(SessionType.sessions)
+
+        setattr(SessionType, "%s_SESSION" % session.session_name,
+                session.session_id)
+
+        SessionType.types[session.session_id] = session
+        SessionType.types[session] = session.session_id
+
+        SessionType.sessions.append(session)
+
+        log.debug("Registering %s (%d, %s)" % (session,
+                                               session.session_id,
+                                               session.session_name))
+
+        return session.session_id
+
+SessionType.add_session(SequenceSession)
+SessionType.add_session(SniffSession)
