@@ -40,11 +40,11 @@ class Plugin(object):
     """
     Plugin base class
     """
-    def start(self, core):
-        "This is the main for your plugin"
+    def start(self, reader):
+        "This is the main for your plugin (reader could be None if testing)"
         pass
 
-    def stop(self, core):
+    def stop(self):
         "This is the exit point of you plugin"
         pass
 

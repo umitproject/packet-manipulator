@@ -22,7 +22,7 @@ import os
 import os.path
 
 from fnmatch import fnmatch
-from zipfile import ZipFile, BadZipfile
+from zipfile import ZipFile, BadZipfile, ZIP_DEFLATED
 from xml.dom.minidom import parseString, getDOMImplementation
 from tempfile import mktemp
 
@@ -304,7 +304,7 @@ class PluginWriter(object):
             'locale' : '*'
         }
         
-        self.file = ZipFile(fields['output'], "w")
+        self.file = ZipFile(fields['output'], "w", ZIP_DEFLATED)
 
         os.chdir("output")
 
