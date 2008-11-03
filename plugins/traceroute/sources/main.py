@@ -23,8 +23,6 @@ import sys, os, os.path
 import gtk
 import gobject
 
-import GeoIP
-
 from libtrace import tracert
 
 from threading import Thread
@@ -140,7 +138,7 @@ class Traceroute(Perspective):
                       (traceroute, target, dport, maxttl, timeout))
 
             ans, unans = traceroute(target, dport, maxttl=maxttl,
-                                    timeout=timeout, verbose=True)
+                                    timeout=timeout, verbose=False)
 
             self.session.context.set_trace(ans, unans)
             gobject.idle_add(self.session.reload)
@@ -207,7 +205,7 @@ class TracerouteMap(Perspective):
         try:
             global glocator
 
-            map = tracert.create_map(ret[0], glocator)
+            map = tracert.create_map(ret[0])
             self.webview.load_string(map, "text/html", "iso-8859-15", "file:///")
 
             log.info("Plotted")
@@ -246,21 +244,6 @@ class TracerouteSession(Session):
     def reload_container(self, packet=None):
         self.trace_page.populate()
 
-class Locator(object):
-    def __init__(self, path):
-        self.city = GeoIP.open(
-            os.path.join(path, 'GeoLiteCity.dat'),
-            GeoIP.GEOIP_STANDARD
-        )
-
-    def lon_lat(self, ip):
-        dct = self.city.record_by_addr(ip)
-
-        try:
-            return (dct['longitude'], dct['latitude'])
-        except:
-            return None
-
 class TraceroutePlugin(Plugin):
     def start(self, reader):
         if reader:
@@ -272,10 +255,7 @@ class TraceroutePlugin(Plugin):
 
             ret = reader.extract_file('data/GeoLiteCity.dat')
 
-            global glocator
-            glocator = Locator(os.path.dirname(ret))
-
-            log.debug(glocator)
+            tracert.glocator = tracert.Locator(os.path.dirname(ret))
 
         id = PMApp().main_window.register_session(TracerouteSession,
                                                   TracerouteContext)

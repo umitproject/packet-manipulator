@@ -18,8 +18,28 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import GeoIP
 import urllib
+import os.path
+
 from PM.Core.Logger import log
+
+class Locator(object):
+    def __init__(self, path):
+        self.city = GeoIP.open(
+            os.path.join(path, 'GeoLiteCity.dat'),
+            GeoIP.GEOIP_STANDARD
+        )
+
+    def lon_lat(self, ip):
+        dct = self.city.record_by_addr(ip)
+
+        try:
+            return (dct['longitude'], dct['latitude'])
+        except:
+            return None
+
+glocator = None
 
 def get_my_ip():
     url = urllib.URLopener()
@@ -120,7 +140,11 @@ function initialize() {
 
     return head 
 
-def create_map(ans, locator):
+def create_map(ans):
+    if glocator is None:
+        log.error("OMG you have not setted the global locator!")
+        return
+
     log.debug("Creating map")
 
     dct = ans.get_trace()
@@ -130,12 +154,12 @@ def create_map(ans, locator):
     routes.sort()
 
     ip = get_my_ip()
-    last = locator.lon_lat(ip)
+    last = glocator.lon_lat(ip)
 
     points = []
 
     for k, (ip, is_ok) in routes:
-        loc = locator.lon_lat(ip)
+        loc = glocator.lon_lat(ip)
 
         if loc is None:
             loc = last
