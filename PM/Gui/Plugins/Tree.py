@@ -543,7 +543,7 @@ class PluginsTree(object):
                     ret.append(inst)
                 except Exception, err:
                     log.critical("Error while starting %s from %s:" % (plug, pkg))
-                    log.critical(err)
+                    log.critical(generate_traceback())
                     log.critical("Ignoring instance.")
 
             if not ret:
