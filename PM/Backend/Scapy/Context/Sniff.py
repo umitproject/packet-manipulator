@@ -122,7 +122,10 @@ def register_sniff_context(BaseSniffContext):
 
                 try:
                     if WINDOWS:
-                        r = self.socket.recv(MTU)
+                        try:
+                            r = self.socket.recv(MTU)
+                        except PcapTimeoutElapsed:
+                            continue
                     else:
                         inp, out, err = select(inmask, inmask, inmask, None)
                         if self.socket in inp:
