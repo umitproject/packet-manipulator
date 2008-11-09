@@ -32,6 +32,7 @@ def __new_write(fd, txt):
 os.write = __new_write
 
 PM_USE_NEW_SCAPY = False
+DARWIN, NETBSD, OPENBSD, FREEBSD = False, False, False, False
 
 try:
     from scapy import *
