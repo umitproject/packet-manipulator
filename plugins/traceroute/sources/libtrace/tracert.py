@@ -125,6 +125,9 @@ def create_map(ans, locator):
 
     dct = ans.get_trace()
 
+    if not dct.keys():
+        return ""
+
     key = dct.keys()[0]
     routes = dct[key].items()
     routes.sort()

@@ -64,6 +64,7 @@ class Traceroute(Perspective):
 
     def create_ui(self):
         self.toolbar = gtk.Toolbar()
+        self.toolbar.set_style(gtk.TOOLBAR_ICONS)
         
         # Entry / dport / maxttl / timeout
         self.target = gtk.Entry()
@@ -118,8 +119,15 @@ class Traceroute(Perspective):
         self.pack_start(sw)
         self.show_all()
 
+        # Register the lock/unlock callback
+        self.session.context.lock_callback = \
+            lambda: self.toolbar.set_sensitive(False)
+        self.session.context.unlock_callback = \
+            lambda: self.toolbar.set_sensitive(True)
+
     def __on_trace(self, action):
-        self.toolbar.set_sensitive(False)
+        self.session.context.lock()
+
         self.store.clear()
 
         self.store.append([0, _("Tracing..."), ""])
@@ -140,7 +148,7 @@ class Traceroute(Perspective):
                       (traceroute, target, dport, maxttl, timeout))
 
             ans, unans = traceroute(target, dport, maxttl=maxttl,
-                                    timeout=timeout, verbose=True)
+                                    timeout=timeout, verbose=False)
 
             self.session.context.set_trace(ans, unans)
             gobject.idle_add(self.session.reload)
@@ -181,6 +189,9 @@ class TracerouteMap(Perspective):
 
     def create_ui(self):
         self.webview = webkit.WebView()
+
+        self.ready = True
+        self.html_map = ""
         
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -204,27 +215,59 @@ class TracerouteMap(Perspective):
             self.webview.load_string("", "text/html", "iso-8859-15", "about:blank")
             return
 
-        try:
-            global glocator
+        self.ready = False
+        gobject.timeout_add(500, self.check_status)
 
-            map = tracert.create_map(ret[0], glocator)
-            self.webview.load_string(map, "text/html", "iso-8859-15", "file:///")
+        thread = Thread(target=self.map_thread, args=(ret[0], ))
+        thread.setDaemon(True)
+        thread.start()
+
+    def check_status(self):
+        log.debug("Checking for result")
+
+        if self.ready:
+            self.webview.load_string(self.html_map, "text/html", "iso-8859-15", "file:///")
+            self.session.context.unlock()
+
+            return False
+
+        return True
+
+    def map_thread(self, ans):
+        try:
+            log.debug("Plotting async")
+
+            global glocator
+            self.html_map = tracert.create_map(ans, glocator)
 
             log.info("Plotted")
         except Exception, err:
             log.error("Error while plotting")
             log.error(generate_traceback())
 
-            self.webview.load_string("", "text/html", "iso-8859-15", "about:blank")
+            self.html_map = "<pre>Error while plotting</pre>"
+
+        self.ready = True
 
 class TracerouteContext(StaticContext):
     def __init__(self, fname=None):
         StaticContext.__init__(self, 'Traceroute', fname)
         self.status = self.SAVED
 
+        self.lock_callback = None
+        self.unlock_callback = None
+
     def set_trace(self, ans, unans):
         self.set_data([ans, unans])
 
+    def lock(self):
+        if callable(self.lock_callback):
+            self.lock_callback()
+
+    def unlock(self):
+        if callable(self.unlock_callback):
+            self.unlock_callback()
+    
 class TracerouteSession(Session):
     session_name = "TRACEROUTE"
     session_menu = "Traceroute"
