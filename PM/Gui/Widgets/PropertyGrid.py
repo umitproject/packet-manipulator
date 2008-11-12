@@ -676,17 +676,63 @@ class PropertyGridTree(gtk.ScrolledWindow):
             return
 
         model, iter = self.tree.get_selection().get_selected()
-        field = model.get_value(iter, 1)
+        field = model.get_value(iter, 0)
 
-        if not Backend.is_field(field):
+        if not isinstance(field, TField):
             return
 
+        # We could reset the selected field, all the field in the current
+        # protocol, the field in the current protocol and the protocols
+        # above, and for all the packet.
+
         menu = gtk.Menu()
-        item = gtk.MenuItem("Toggle editability of %s" % field.name)
-        menu.append(item)
+
+        stocks = (
+            gtk.STOCK_GO_FORWARD,
+            gtk.STOCK_GO_DOWN,
+            gtk.STOCK_GOTO_BOTTOM,
+            gtk.STOCK_GOTO_TOP
+        )
+
+        labels = (
+            _('Reset selected field'),
+            _('Reset fields in this protocol'),
+            _('Reset fields in above protocols'),
+            _('Reset all the packet fields')
+        )
+
+        callbacks = (
+            self.__on_reset_field,
+            self.__on_reset_proto_fields,
+            self.__on_reset_above_protos_fields,
+            self.__on_reset_packet_fields
+        )
+
+        for stock, label, cback, in zip(stocks, labels, callbacks):
+            action = gtk.Action(None, label, None, stock)
+            action.connect('activate', cback)
+
+            item = action.create_menu_item()
+            menu.append(item)
 
         menu.show_all()
         menu.popup(None, None, None, event.button, event.time)
+
+    def __on_reset_field(self, action):
+        packet, proto, field = self.get_selected_field()
+        packet.reset(proto, field=field)
+
+    def __on_reset_proto_fields(self, action):
+        packet, proto, field = self.get_selected_field()
+        packet.reset(proto)
+    
+    def __on_reset_above_protos_fields(self, action):
+        packet, proto, field = self.get_selected_field()
+        packet.reset(startproto=proto)
+
+    def __on_reset_packet_fields(self, action):
+        packet, proto, field = self.get_selected_field()
+        packet.reset()
 
     def __on_finish_edit(self, entry, editor):
         self.emit('finish-edit', entry)

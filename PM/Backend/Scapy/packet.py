@@ -145,19 +145,60 @@ class MetaPacket:
 
         return lst
     
-    def reset(self, protocol):
-        find = self.root
+    def reset(self, protocol=None, startproto=None, field=None):
+        """
+        Reset the packet
 
-        while isinstance(find, Packet):
-            if find is protocol:
+        @param protocol the protocol to reset or None to match all
+        @param startproto the start protocolo to start from
+        @param field the field to reset or None to match all
+        @return True if reset is ok or False
+        """
 
-                for k in protocol.fields.keys():
-                    del protocol.fields[k]
+        protocol_found = False
+        current = (startproto is not None) and (startproto) or (self.root)
 
-                return True
+        while isinstance(current, Packet) and \
+              not isinstance(current, NoPayload):
 
-        return False
+            if protocol is not None and \
+               protocol is current:
+                protocol_found = True
 
+            elif protocol is not None and not protocol_found:
+                # We could skip the entire body of function because
+                # proto filtering is active and the current is not
+                # the target protocol.
+
+                current = find.payload
+                continue
+
+            if field is not None:
+                # We should look for field in the current protocol
+
+                if field in current.fields_desc:
+                    delattr(current, field.name)
+
+                    # Ok. Let's return because we have reached our
+                    # field!
+
+                    return
+            else:
+                # If we are here we should reset all the fields!
+                # kill them all man!
+                
+                for k in current.fields.keys():
+                    delattr(current, k)
+
+            # If we have reached our proto we are sure that
+            # we have resetted the selected fields correctly 
+            # at this point so it's safe to return
+
+            if protocol_found:
+                return
+
+            current = current.payload
+    
     def haslayer(self, layer):
         return bool(self.root.haslayer(layer))
 
