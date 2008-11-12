@@ -48,7 +48,7 @@ class UmitViewWidget(gtk.VBox):
     def _create_top_bar(self):
         self._top_bar = gtk.HBox()
         self.pack_start(self._top_bar, expand=False)
-        self._title_label = gtk.Label()
+        self._title_label = gtk.Label('')
         self._top_bar.pack_start(self._title_label)
         self._top_buttons = gtk.HBox()
         self._top_bar.pack_start(self._top_buttons, expand=False)

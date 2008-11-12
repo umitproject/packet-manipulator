@@ -45,6 +45,7 @@ except ImportError:
     from PM.Core.Errors import PMErrorException
     raise PMErrorException("Cannot use this backend without scapy installed")
 
+from PM.Core.I18N import _
 from PM.Manager.PreferenceManager import Prefs
 
 if not 'WINDOWS' in globals():
