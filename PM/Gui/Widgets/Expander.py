@@ -440,11 +440,14 @@ class Layout(gtk.Container):
 
 Layout.set_set_scroll_adjustments_signal('set-scroll-adjustments')
 
-class AnimatedExpander(gtk.EventBox):
+class AnimatedExpander(gtk.Frame):
+    __gtype_name__ = "AnimatedExpander"
+
     def __init__(self, label=None, image=gtk.STOCK_PROPERTIES,
                  orientation=gtk.ORIENTATION_VERTICAL):
         
-        gtk.EventBox.__init__(self)
+        gtk.Frame.__init__(self)
+        self.set_shadow_type(gtk.SHADOW_NONE)
         
         if orientation is gtk.ORIENTATION_VERTICAL:
             self.mainbox = gtk.VBox(False, 2)
@@ -493,11 +496,11 @@ class AnimatedExpander(gtk.EventBox):
         self.mainbox.pack_start(self._happy_box, False, False)
         self.mainbox.pack_start(self._layout)
 
-        gtk.EventBox.add(self, self.mainbox)
+        gtk.Frame.add(self, self.mainbox)
         self.show_all()
 
     def do_realize(self):
-        gtk.EventBox.do_realize(self)
+        gtk.Frame.do_realize(self)
 
         bg_color = gtk.gdk.color_parse("#FFFFDC")
         gtk.gdk.colormap_get_system().alloc_color(bg_color)
@@ -560,7 +563,7 @@ class ToolPage(AnimatedExpander):
     def __init__(self, parent, label=None, image=gtk.STOCK_PROPERTIES, expand=True):
         assert(isinstance(parent, ToolBox))
 
-        AnimatedExpander.__init__(self, label, image)
+        super(ToolPage, self).__init__(label, image)
 
         self._parent = parent
         self._expand = expand

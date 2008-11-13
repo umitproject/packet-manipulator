@@ -29,6 +29,7 @@ from PM import Backend
 from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
+from PM.Gui.Widgets.StatusBar import StatusBar
 from PM.higwidgets.higdialogs import HIGAlertDialog
 
 if Prefs()['gui.docking'].value:
@@ -90,6 +91,8 @@ class MainWindow(gtk.Window):
         self.__create_widgets()
         self.__pack_widgets()
         self.__connect_signals()
+
+        self.statusbar.push(_("Ready."), image=gtk.STOCK_YES)
 
         self.show_all()
 
@@ -171,6 +174,7 @@ class MainWindow(gtk.Window):
         self.main_paned = UmitPaned()
 
         self.vbox = gtk.VBox(False, 2)
+        self.statusbar = StatusBar()
 
         self.plugin_window = PluginWindow()
 
@@ -421,6 +425,7 @@ class MainWindow(gtk.Window):
         item.remove_submenu()
         
         self.vbox.pack_start(self.main_paned)
+        self.vbox.pack_start(self.statusbar, False, False)
 
         # Tabs
         self.register_tab(MainTab())
