@@ -28,7 +28,7 @@ class BaseSniffContext(TimedContext):
     has_resume = False
     has_restart = True
 
-    def __init__(self, iface, filter=None, maxsize=0, capfile=None, \
+    def __init__(self, iface, filter=None, minsize=0, maxsize=0, capfile=None, \
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
                  resmac=True, resname=False, restransport=True, promisc=True, \
                  background=False, callback=None, udata=None):
@@ -38,6 +38,7 @@ class BaseSniffContext(TimedContext):
 
         @param iface the interface to sniff from
         @param filter the BPF filter to apply
+        @param minsize the min size for every packet (0 no filter)
         @param maxsize the max size for every packet (0 no filter)
         @param capfile the file where the packets are saved (in real time)
         @param scount stop after scount packets sniffed (0 no filter)
@@ -56,6 +57,7 @@ class BaseSniffContext(TimedContext):
 
         self.iface = iface
         self.filter = filter
+        self.min_packet_size = minsize
         self.max_packet_size = maxsize
         self.cap_file = capfile
         self.promisc = promisc

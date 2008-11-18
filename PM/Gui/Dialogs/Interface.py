@@ -35,16 +35,17 @@ class CaptureOptions(gtk.Expander):
         self.set_border_width(4)
         self.set_label_widget(self.new_label(_('<b>Options</b>')))
 
-        tbl = gtk.Table(7, 3, False)
+        tbl = gtk.Table(8, 3, False)
         tbl.set_border_width(4)
         tbl.set_col_spacings(4)
 
         tbl.attach(self.new_label(_('Filter:')), 0, 1, 0, 1, yoptions=gtk.SHRINK)
         tbl.attach(self.new_label(_('Capture file:')), 0, 1, 1, 2, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Max packet size:')), 0, 1, 2, 3, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 3, 4, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Min packet size:')), 0, 1, 2, 3, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Max packet size:')), 0, 1, 3, 4, yoptions=gtk.SHRINK)
         tbl.attach(self.new_label(_('Stop after:')), 0, 1, 4, 5, yoptions=gtk.SHRINK)
         tbl.attach(self.new_label(_('Stop after:')), 0, 1, 5, 6, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 6, 7, yoptions=gtk.SHRINK)
 
         self.filter = gtk.Entry()
 
@@ -71,7 +72,10 @@ class CaptureOptions(gtk.Expander):
 
         tbl.attach(hbox, 1, 2, 1, 2, yoptions=gtk.SHRINK)
 
-        max_size, self.max_size = self.new_combo(68, maxint, [_("byte(s)")])
+        min_size, self.min_size, self.min_check = \
+                self.new_combo(68, maxint, [_("byte(s)")], True)
+        max_size, self.max_size, self.max_check = \
+                self.new_combo(68, maxint, [_("byte(s)")], True)
 
         stop_packets, self.stop_packets = self.new_combo(0, maxint, [_("packet(s)")])
         self.stop_size_box, self.stop_size = self.new_combo(0, 1024, [_("KB"), _("MB"), _("GB")])
@@ -79,13 +83,14 @@ class CaptureOptions(gtk.Expander):
 
         group = gtk.SizeGroup(gtk.SIZE_GROUP_BOTH)
 
-        for widget in max_size, stop_packets, self.stop_size_box, self.stop_time_box:
+        for widget in min_size, max_size, stop_packets, self.stop_size_box, self.stop_time_box:
             group.add_widget(widget)
 
-        tbl.attach(max_size, 1, 2, 2, 3, yoptions=gtk.SHRINK)
-        tbl.attach(stop_packets, 1, 2, 3, 4, yoptions=gtk.SHRINK)
-        tbl.attach(self.stop_size_box, 1, 2, 4, 5, yoptions=gtk.SHRINK)
-        tbl.attach(self.stop_time_box, 1, 2, 5, 6, yoptions=gtk.SHRINK)
+        tbl.attach(min_size, 1, 2, 2, 3, yoptions=gtk.SHRINK)
+        tbl.attach(max_size, 1, 2, 3, 4, yoptions=gtk.SHRINK)
+        tbl.attach(stop_packets, 1, 2, 4, 5, yoptions=gtk.SHRINK)
+        tbl.attach(self.stop_size_box, 1, 2, 5, 6, yoptions=gtk.SHRINK)
+        tbl.attach(self.stop_time_box, 1, 2, 6, 7, yoptions=gtk.SHRINK)
 
         self.res_mac = gtk.CheckButton(_('Enable MAC name resolution'))
         self.res_name = gtk.CheckButton(_('Enable network name resolution'))
@@ -125,7 +130,7 @@ class CaptureOptions(gtk.Expander):
 
         return lbl
 
-    def new_combo(self, min, max, lbls):
+    def new_combo(self, min, max, lbls, check=False):
         if len(lbls) == 1:
             combo = gtk.Label(lbls[0])
             combo.set_alignment(0, 0.5)
@@ -139,9 +144,20 @@ class CaptureOptions(gtk.Expander):
 
         spin = gtk.SpinButton(gtk.Adjustment(min, min, max, 1, 10))
 
-        hbox = gtk.HBox(True, 2)
+        hbox = gtk.HBox(False, 2)
         hbox.pack_start(spin)
         hbox.pack_start(combo)
+
+        if check:
+            chk = gtk.CheckButton()
+            hbox.pack_start(chk, False, False)
+
+            chk.connect('toggled',
+                lambda w, b: b.set_sensitive(w.get_active()), spin)
+
+            spin.set_sensitive(False)
+
+            return hbox, spin, chk
 
         return hbox, spin
 
@@ -158,7 +174,15 @@ class CaptureOptions(gtk.Expander):
         if not capfile:
             capfile = None
 
-        maxsize = self.max_size.get_value_as_int()
+        if self.min_check.get_active():
+            minsize = self.min_size.get_value_as_int()
+        else:
+            minsize = 0
+
+        if self.max_check.get_active():
+            maxsize = self.max_size.get_value_as_int()
+        else:
+            maxsize = 0
 
         scount = self.stop_packets.get_value_as_int()
 
@@ -196,6 +220,7 @@ class CaptureOptions(gtk.Expander):
 
         dct = {
             'filter'       : filter,
+            'minsize'      : minsize,
             'maxsize'      : maxsize,
             'capfile'      : capfile,
             'scount'       : scount,

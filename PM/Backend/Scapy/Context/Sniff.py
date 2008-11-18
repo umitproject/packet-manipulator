@@ -138,6 +138,15 @@ def register_sniff_context(BaseSniffContext):
                     break
 
                 packet = MetaPacket(r)
+                packet_size = packet.get_size()
+
+                if self.max_packet_size and packet_size - self.max_packet_size > 0:
+                    log.debug("Skipping current packet (max_packet_size)")
+                    continue
+
+                if self.min_packet_size and packet_size - self.min_packet_size < 0:
+                    log.debug("Skipping current packet (min_packet_size)")
+                    continue
 
                 self.tot_count += 1
                 self.tot_size += packet.get_size()

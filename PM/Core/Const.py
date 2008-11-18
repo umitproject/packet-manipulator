@@ -46,8 +46,8 @@ CURRENT_DIR = os.getcwd()
 PM_HOME = os.path.join(HOME, '.PacketManipulator')
 
 PM_PLUGINS_DIR = os.path.join(PM_HOME, 'plugins')
-PM_PLUGINS_TEMP_DIR = os.path.join(PM_PLUGINS_DIR, 'temp')
-PM_PLUGINS_DOWNLOAD_DIR = os.path.join(PM_PLUGINS_DIR, 'download')
+PM_PLUGINS_TEMP_DIR = os.path.join(PM_PLUGINS_DIR, 'plugins-temp')
+PM_PLUGINS_DOWNLOAD_DIR = os.path.join(PM_PLUGINS_DIR, 'plugins-download')
 
 main_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 main_dir = os.path.dirname(main_dir)
