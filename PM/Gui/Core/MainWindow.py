@@ -492,7 +492,10 @@ class MainWindow(gtk.Window):
 
     def __on_routing(self, action):
         dialog = RoutesDialog(self)
-        dialog.run()
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            dialog.save()
+
         dialog.hide()
         dialog.destroy()
 

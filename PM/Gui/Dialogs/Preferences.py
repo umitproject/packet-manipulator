@@ -252,7 +252,7 @@ class PreferenceDialog(gtk.Dialog):
         self.vbox.set_border_width(4)
         self.vbox.set_spacing(6)
 
-        self.set_size_request(600, 400)
+        self.set_size_request(600, -1)
 
         self.tree.get_selection().connect('changed', self.__on_switch_page)
         self.connect('response', self.__on_response)

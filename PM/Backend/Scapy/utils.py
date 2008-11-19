@@ -105,18 +105,35 @@ def analyze_connections(pktlist, strict=False):
 # Routing related functions
 ###############################################################################
 
-def route_resync():
-    conf.route.resync()
-
 def route_list():
     for net, msk, gw, iface, addr in conf.route.routes:
         yield (ltoa(net), ltoa(msk), gw, iface, addr)
 
-def route_add(self, host, net, gw, dev):
-    conf.route.add({'host':host, 'net':net, 'gw':gw, 'dev':dev})
+def reset_routes(to=None):
+    """
+    Reset the routes
+    @param to a list of tuples in the form of (net, mask, gw, iface, outip) or None
+    """
 
-def route_remove(self, host, net, gw, dev):
-    conf.route.delt({'host':host, 'net':net, 'gw':gw, 'dev':dev})
+    if not to:
+        conf.route.resync()
+    else:
+        conf.route.routes = []
+
+        for (net, msk, gw, iface, outip) in to:
+            # We need to pack netmask to net
+            # so we need to count the bits of the netmask
+            
+            mask = bin(struct.unpack(">L", socket.inet_aton(msk))[0])[2:]
+
+            try:
+                bits = mask.index("0")
+            except:
+                bits = len(mask)
+
+            log.debug("Mask: %s -> %d bits" % (msk, bits))
+            log.debug("%s/%d on %s (%s) -> %s" % (net, bits, outip, iface, gw))
+            conf.route.add(net=("%s/%d" % (net, bits)), gw=gw, dev=iface)
 
 ###############################################################################
 # Sniffing related functions

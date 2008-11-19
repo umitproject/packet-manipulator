@@ -59,6 +59,7 @@ class ProtocolTree(gtk.VBox):
         
         self.store = gtk.TreeStore(gtk.gdk.Pixbuf, str, object)
         self.tree = gtk.TreeView()
+        self.tree.set_headers_visible(False)
         
         txt = gtk.CellRendererText()
         pix = gtk.CellRendererPixbuf()

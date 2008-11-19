@@ -79,7 +79,7 @@ class SessionNotebook(gtk.Notebook):
         ctx = Backend.StaticContext(fname, fname)
         ctx.load()
 
-        session = SniffSession(ctx, show_packet=False)
+        session = SniffSession(ctx)
         return self.__append_session(session)
 
     def load_sniff_session(self, fname):
