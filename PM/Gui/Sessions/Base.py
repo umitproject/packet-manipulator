@@ -34,6 +34,7 @@ class Session(gtk.VBox):
     session_id = 0 # Setted automatically
     session_name = "" # Shoud be setted
     session_menu = None # Set it if you want a menu item added in main window
+    session_menu_object = None
     session_orientation = gtk.ORIENTATION_VERTICAL
 
     def __init__(self, ctx):

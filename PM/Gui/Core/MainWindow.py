@@ -282,12 +282,18 @@ class MainWindow(gtk.Window):
 
             menu.insert(item, 2)
 
-            sessklass.session_menu = item
+            sessklass.session_menu_object = item
 
         return SessionType.add_session(sessklass)
 
     def deregister_session(self, sessklass):
-        pass
+        if sessklass.session_menu_object:
+            menu = self.ui_manager.get_widget('/menubar/File').get_submenu()
+            sessklass.session_menu_object.hide()
+
+            menu.remove(sessklass.session_menu_object)
+
+        return SessionType.remove_session(sessklass)
 
     def bind_session(self, ptype, persp_klass, show_pers=True, resize=False, shrink=True):
         """

@@ -25,10 +25,12 @@ from SequenceSession import SequenceSession
 class SessionType:
     types = {}
     sessions = []
+    _refcount = 0
 
     @staticmethod
     def add_session(session):
-        session.session_id = len(SessionType.sessions)
+        session.session_id = SessionType._refcount
+        SessionType._refcount += 1
 
         setattr(SessionType, "%s_SESSION" % session.session_name,
                 session.session_id)
@@ -43,6 +45,15 @@ class SessionType:
                                                session.session_name))
 
         return session.session_id
+
+    @staticmethod
+    def remove_session(session):
+        del SessionType.types[session.session_id]
+        del SessionType.types[session]
+
+        log.debug("Deregistering %s (%d, %s)" % (session, 
+                                                 session.session_id,
+                                                 session.session_name))
 
 SessionType.add_session(SequenceSession)
 SessionType.add_session(SniffSession)

@@ -323,4 +323,7 @@ class TraceroutePlugin(Plugin):
                                                   TracerouteContext)
         log.debug("Traceroute session binded with id %d" % id)
 
+    def stop(self):
+        PMApp().main_window.deregister_session(TracerouteSession)
+
 __plugins__ = [TraceroutePlugin]
