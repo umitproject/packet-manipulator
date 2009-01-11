@@ -26,9 +26,9 @@ import base64
 import string
 
 try:
-    from hashlib.md5 import md5
-    from hashlib.sha1 import sha1
-    from hashlib.sha256 import sha256
+    from hashlib import md5
+    from hashlib import sha1
+    from hashlib import sha256
 
     SHA256_ENABLED = True
 
