@@ -63,7 +63,7 @@ class Variable(object):
     @staticmethod
     def setted(value):
         "Just convenient method to check a value"
-        return value != None
+        return value is not None
 
     @staticmethod
     def convert(value, exc_on_error=False):
@@ -101,7 +101,7 @@ class Variable(object):
         except Exception:
             pass
 
-        if getattr(self, varname) != None:
+        if getattr(self, varname) is not None:
             return True
 
         return False

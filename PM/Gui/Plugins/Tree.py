@@ -461,7 +461,7 @@ class PluginsTree(object):
         sys.path.insert(0, os.path.abspath(modpath))
 
         if start_file in sys.modules:
-            sys.modules.pop(pkg.start_file)
+            sys.modules.pop(start_file)
 
         try:
             __builtin__.__import__ = hook_import
@@ -572,7 +572,7 @@ class PluginsTree(object):
                 inst.stop()
             except Exception, err:
                 log.critical("Error while stopping %s from %s:" % (inst, pkg))
-                log.critical(err)
+                log.critical(generate_traceback())
                 log.critical("Ignoring instance.")
         
         try:

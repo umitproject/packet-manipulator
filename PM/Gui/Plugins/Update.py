@@ -20,8 +20,8 @@
 import os
 
 try:
-    from hashlib.md5 import md5
-except:
+    from hashlib import md5
+except ImportError:
     from md5 import md5
 
 from threading import RLock

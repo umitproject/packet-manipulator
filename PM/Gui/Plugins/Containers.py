@@ -257,9 +257,9 @@ class PluginReader(object):
 
         LANG, ENC = locale.getdefaultlocale()
 
-        if ENC == None:
+        if ENC is None:
             ENC = "utf8"
-        if LANG == None:
+        if LANG is None:
             LANG = "en_US"
         
         # FIXME: is the '/' os indipendent?
