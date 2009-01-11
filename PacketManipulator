@@ -26,6 +26,6 @@ os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep, os.getenv('PYTHONPA
 
 if os.name == 'nt':
     os.chdir('PM')
-    os.system('python -3 PacketManipulator')
+    os.system('python PacketManipulator')
 else:
     os.system('PM/PacketManipulator')
