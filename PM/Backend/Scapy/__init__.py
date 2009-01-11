@@ -18,10 +18,10 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from packet import *
-from wrapper import *
-from utils import *
-from doc import apply_doc
+from PM.Backend.Scapy.packet import *
+from PM.Backend.Scapy.wrapper import *
+from PM.Backend.Scapy.utils import *
+from PM.Backend.Scapy.doc import apply_doc
 
 apply_doc()
 

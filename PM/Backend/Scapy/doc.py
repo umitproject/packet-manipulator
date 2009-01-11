@@ -202,7 +202,7 @@
 import sys
 from xml.sax import handler, make_parser, parseString
 
-import wrapper
+from PM.Backend.Scapy import wrapper
 from PM.Core.Logger import log
 
 class DocLoader(handler.ContentHandler):
