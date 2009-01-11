@@ -25,9 +25,9 @@ import gobject
 import pangocairo
 
 from PM import Backend
+from PM.Core.Atoms import defaultdict
 
 from math import pi
-from collections import defaultdict
 
 class Plotter(gtk.DrawingArea):
     __gtype_name__ = "Plotter"

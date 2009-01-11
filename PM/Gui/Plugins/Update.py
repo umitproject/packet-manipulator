@@ -17,10 +17,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from __future__ import with_statement
-
 import os
-import hashlib
+
+try:
+    from hashlib.md5 import md5
+except:
+    from md5 import md5
 
 from threading import RLock
 from tempfile import mkstemp
@@ -175,21 +177,25 @@ class UpdateEngine(object):
         """
 
         if isinstance(exc, ErrorNetException):
+            obj.lock.acquire()
 
-            with obj.lock:
+            try:
                 obj.status = FILE_ERROR
                 obj.label = exc.reason
                 obj.fract = 1
                 
                 self.__process_next_download()
                 return
+            finally:
+                obj.lock.release()
         
         elif isinstance(exc, StopNetException):
             if obj.hash:
 
                 data = ""
+                obj.lock.acquire()
 
-                with obj.lock:
+                try:
                     obj.label = _('Checking validity ...')
                     obj.status = FILE_CHECKING
                 
@@ -197,26 +203,40 @@ class UpdateEngine(object):
                     obj.fd.seek(0)
 
                     data = obj.fd.read()
+                finally:
+                    obj.lock.release()
                 
                 # Not locked it could freeze the ui
-                hasher = hashlib.md5()
-                hasher.update(data)
+                hasher = md5(data)
                 
-                with obj.lock:
+                obj.lock.acquire()
+
+                try:
                     if hasher.hexdigest() == obj.hash:
                         obj.label = _('Updated. Restart to take effect')
                         obj.status = FILE_GETTED
                     else:
                         obj.label = _('Corrupted file.')
                         obj.status = FILE_ERROR
+                finally:
+                    obj.lock.release()
+
             else:
-                with obj.lock:
+                obj.lock.acquire()
+
+                try:
                     obj.label = _('Updated. Restart to take effect')
                     obj.status = FILE_GETTED
+                finally:
+                    obj.lock.release()
             
-            with obj.lock:
+            obj.lock.acquire()
+
+            try:
                 obj.fd.close()
                 obj.fract = 1
+            finally:
+                obj.lock.release()
             
             try:
                 if obj.status == FILE_ERROR:
@@ -231,7 +251,9 @@ class UpdateEngine(object):
             self.__process_next()
         
         elif isinstance(exc, StartNetException):
-            with obj.lock:
+            obj.lock.acquire()
+
+            try:
                 try:
                     obj.status = FILE_GETTING
                     obj.size = 0
@@ -240,6 +262,8 @@ class UpdateEngine(object):
                     pass
             
                 obj.label = _('Downloading ...')
+            finally:
+                obj.lock.release()
 
         elif not exc:
             if obj.total:
@@ -266,12 +290,16 @@ class UpdateEngine(object):
         """
 
         if isinstance(exc, ErrorNetException):
-            with obj.lock:
+            obj.lock.acquire()
+
+            try:
                 obj.status = LATEST_ERROR
                 obj.label = _('Cannot find newer version (%s)') % exc.reason
                 
                 self.__process_next()
                 return
+            finally:
+                obj.lock.release()
         
         elif isinstance(exc, StopNetException):
             url, version, hash = obj.parse_latest_file()
@@ -286,7 +314,9 @@ class UpdateEngine(object):
             elif cur_v < new_v:
                 type = 1
 
-            with obj.lock:
+            obj.lock.acquire()
+
+            try:
                 if url and version and type >= 0:
 
                     # We check if the path is the plugins in config_dir
@@ -318,6 +348,8 @@ class UpdateEngine(object):
                         obj.label = _('No applicable updates found')
 
                 self.__process_next()
+            finally:
+                obj.lock.release()
 
         elif not exc:
             obj.buffer.append(data)

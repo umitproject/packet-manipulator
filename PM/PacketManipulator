@@ -33,12 +33,31 @@ try:
 except ImportError:
     print "No psyco no party! :("
 
+import pygtk
+pygtk.require("2.0")
+
 import gtk
 import cgitb
 import tempfile
 
 from PM.Core.I18N import _
 from PM.Core.Const import PM_DEVELOPMENT, PM_VERSION
+
+if gtk.pygtk_version[1] < 10:
+    try:
+        import PM.higwidgets
+        from PM.higwidgets.higdialogs import HIGAlertDialog
+    except Warning, e:
+        print e.message
+        sys.exit(-2)
+
+    d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+        message_format=_("PyGTK version unsupported"),
+        secondary_text=_("I need PyGTK 2.10 or above to work while your is %s."
+                         "\n\nUpgrade and then restart PM.") % \
+                        ".".join(map(str, gtk.pygtk_version)))
+    d.run()
+    sys.exit(-1)
 
 #########################
 

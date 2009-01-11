@@ -17,8 +17,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from __future__ import with_statement
-
 import os
 import gtk
 import gobject
@@ -202,7 +200,9 @@ class PluginPage(gtk.VBox):
         working = False
         
         for obj in self.p_window.update_eng.list:
-            with obj.lock:
+            obj.lock.acquire()
+
+            try:
                 if obj.status == FILE_GETTING or \
                    obj.status == FILE_CHECKING:
                     working = True
@@ -210,6 +210,8 @@ class PluginPage(gtk.VBox):
                 row = obj.object
                 row.message = obj.label
                 row.progress = obj.fract
+            finally:
+                obj.lock.release()
         
         if not working:
             
@@ -298,8 +300,9 @@ class PluginPage(gtk.VBox):
         working = False
         
         for upd_obj in self.p_window.update_eng.list:
-            with upd_obj.lock:
+            upd_obj.lock.acquire()
 
+            try:
                 # Check if we are working
                 if upd_obj.status == LATEST_GETTING:
                     working = True
@@ -307,6 +310,8 @@ class PluginPage(gtk.VBox):
                 # Update the row
                 row = upd_obj.object
                 row.message = upd_obj.label
+            finally:
+                upd_obj.lock.release()
         
         # No locking from here we have finished
 

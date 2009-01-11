@@ -29,7 +29,7 @@ import os.path
 
 from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
-from xml.sax.xmlreader import AttributesNSImpl
+from xml.sax.xmlreader import AttributesImpl
 
 from PM.Core.Logger import log
 from PM.Core.Const import PM_HOME, PM_PLUGINS_DIR, PLUGINS_DIR
@@ -134,13 +134,13 @@ class PreferenceLoader(handler.ContentHandler):
                 self.options[opt_name] = Option(opt_value)
 
 class PreferenceWriter:
-    def startElement(self, names, qnames, attrs):
+    def startElement(self, names, attrs):
         self.depth_idx += 1
         self.writer.characters('  ' * self.depth_idx)
-        self.writer.startElementNS(names, qnames, attrs)
+        self.writer.startElement(names, attrs)
 
-    def endElement(self, names, qnames):
-        self.writer.endElementNS(names, qnames)
+    def endElement(self, name):
+        self.writer.endElement(name)
         self.writer.characters('\n')
         self.depth_idx -= 1
 
@@ -150,8 +150,7 @@ class PreferenceWriter:
         self.writer = XMLGenerator(output, 'utf-8')
         self.writer.startDocument()
 
-        self.startElement((None, 'PacketManipulator'),
-                                 'PacketManipulator', {})
+        self.startElement('PacketManipulator', {}),
         self.writer.characters('\n')
 
         items = options.items()
@@ -164,21 +163,12 @@ class PreferenceWriter:
                 (None, u'value') : str(option.value)
             }
 
-            attr_qnames = {
-                (None, u'id') : u'id',
-                (None, u'value') : u'value'
-            }
+            attrs = AttributesImpl(attr_vals)
 
-            attrs = AttributesNSImpl(attr_vals, attr_qnames)
+            self.startElement(str(option.type), attrs)
+            self.endElement(str(option.type))
 
-            self.startElement((None, str(option.type)),
-                              str(option.type), attrs)
-
-            self.endElement((None, str(option.type)),
-                            str(option.type))
-
-        self.endElement((None, 'PacketManipulator'),
-                                 'PacketManipulator')
+        self.endElement('PacketManipulator')
         self.writer.endDocument()
         output.close()
 

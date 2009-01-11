@@ -18,10 +18,9 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from __future__ import with_statement
-
 from threading import Lock
 from PM.Core.I18N import _
+from PM.Core.Atoms import with_decorator
 from PM.Backend.Scapy.utils import send_receive_packet
 
 def register_send_receive_context(BaseSendReceiveContext):
@@ -42,17 +41,17 @@ def register_send_receive_context(BaseSendReceiveContext):
             self.internal = False
             self.title = _('Send/receive %s') % metapacket.summary()
 
+        @with_decorator
         def get_all_data(self):
-            with self.lock:
-                return BaseSendReceiveContext.get_all_data(self)
+            return BaseSendReceiveContext.get_all_data(self)
 
+        @with_decorator
         def get_data(self):
-            with self.lock:
-                return BaseSendReceiveContext.get_data(self)
+            return BaseSendReceiveContext.get_data(self)
 
+        @with_decorator
         def set_data(self, val):
-            with self.lock:
-                self.data = val
+            self.data = val
 
         def __threads_active(self):
             if self.thread and self.thread.isAlive():

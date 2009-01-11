@@ -24,7 +24,19 @@ import pango
 
 import base64
 import string
-import hashlib
+
+try:
+    from hashlib.md5 import md5
+    from hashlib.sha1 import sha1
+    from hashlib.sha256 import sha256
+
+    SHA256_ENABLED = True
+
+except ImportError:
+    from md5 import md5
+    from sha import sha as sha1
+
+    SHA256_ENABLED = False
 
 from PM.Core.I18N import _
 from PM.Gui.Core.Views import UmitView
@@ -98,6 +110,9 @@ class HackBar(gtk.VBox):
 
             item = action.create_menu_item()
             action.connect('activate', cb)
+
+            if lbl == "SHA-256":
+                item.set_sensitive(SHA256_ENABLED)
 
             root.append(item)
 
@@ -197,15 +212,18 @@ class HackBar(gtk.VBox):
 
     @text_getter
     def __crypt_md5(self, txt):
-        return hashlib.md5(txt).hexdigest()
+        return md5(txt).hexdigest()
 
     @text_getter
     def __crypt_sha1(self, txt):
-        return hashlib.sha1(txt).hexdigest()
+        return sha1(txt).hexdigest()
 
     @text_getter
     def __crypt_sha256(self, txt):
-        return hashlib.sha256(txt).hexdigest()
+        try:
+            return sha256(txt).hexdigest()
+        except:
+            return ""
 
     @text_getter
     def __crypt_rot13(self, txt):

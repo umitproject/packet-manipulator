@@ -64,11 +64,12 @@ def hook_import(lib, globals=None, locals=None, fromlist=None, level=-1):
             
             try:
                 sys.path.insert(0, path)
-                
-                return original_import(name.replace(get_config_vars("SO")[0], ""), \
-                                         level=0)
-            except Exception, exc:
-                continue
+
+                try:
+                    return original_import(name.replace(
+                               get_config_vars("SO")[0], ""), level=0)
+                except Exception, exc:
+                    continue
             finally:
                 sys.path.pop(0)
 
@@ -519,12 +520,13 @@ class PluginsTree(object):
 
         try:
             # We add to modules to avoid deleting and stop working plugin ;)
-            sys.plugins_path.insert(0, pkg)
-            module = self.__cache_import(pkg)
-        
-        except Exception, err:
-            sys.plugins_path.pop(0)
-            raise PluginException(pkg, str(err))
+            try:
+                sys.plugins_path.insert(0, pkg)
+                module = self.__cache_import(pkg)
+            
+            except Exception, err:
+                sys.plugins_path.pop(0)
+                raise PluginException(pkg, str(err))
         
         finally:
             # Check that

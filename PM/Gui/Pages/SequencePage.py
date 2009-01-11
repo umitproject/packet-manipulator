@@ -22,13 +22,12 @@ import gtk
 import pango
 
 from sys import maxint
-from collections import defaultdict
 
 from PM import Backend
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 
-from PM.Core.Atoms import Node
+from PM.Core.Atoms import Node, defaultdict
 from PM.Backend import SequencePacket
 
 from PM.Gui.Core.App import PMApp

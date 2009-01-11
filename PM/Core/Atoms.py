@@ -31,6 +31,60 @@ import threading
 import traceback, StringIO
 from PM.Core.Logger import log
 
+try:
+    from collections import defaultdict
+except ImportError:
+    class defaultdict(dict):
+        def __init__(self, default_factory=None, *a, **kw):
+            if (default_factory is not None and
+                not hasattr(default_factory, '__call__')):
+                raise TypeError('first argument must be callable')
+            dict.__init__(self, *a, **kw)
+            self.default_factory = default_factory
+        def __getitem__(self, key):
+            if key in self:
+                return dict.__getitem__(self, key)
+            else:
+                return self.__missing__(key)
+        def __missing__(self, key):
+            if self.default_factory is None:
+                raise KeyError(key)
+            self[key] = value = self.default_factory()
+            return value
+        def __reduce__(self):
+            if self.default_factory is None:
+                args = tuple()
+            else:
+                args = self.default_factory,
+            return type(self), args, None, None, self.iteritems()
+        def copy(self):
+            return self.__copy__()
+        def __copy__(self):
+            return type(self)(self.default_factory, self)
+        def __deepcopy__(self, memo):
+            import copy
+            return type(self)(self.default_factory,
+                              copy.deepcopy(self.items()))
+        def __repr__(self):
+            return 'defaultdict(%s, %s)' % (self.default_factory,
+                                            dict.__repr__(self))
+
+# Simple decorator for compatibility with python 2.4 (with statement)
+def with_decorator(func):
+    def proxy(self, *args, **kwargs):
+        self.lock.acquire()
+
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            self.lock.release()
+
+    proxy.__name__ = func.__name__
+    proxy.__dict__ = func.__dict__
+    proxy.__doc__ = func.__doc__
+
+    return proxy
+
 def generate_traceback():
     fp = StringIO.StringIO()
     traceback.print_exc(file=fp)

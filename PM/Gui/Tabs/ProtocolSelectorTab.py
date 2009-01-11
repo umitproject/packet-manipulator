@@ -22,7 +22,7 @@ import gtk
 
 from PM import Backend
 from PM.Core.I18N import _
-from collections import defaultdict
+from PM.Core.Atoms import defaultdict
 
 from PM.Gui.Core.Views import UmitView
 from PM.Gui.Core.Icons import get_pixbuf

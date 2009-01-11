@@ -18,13 +18,12 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from __future__ import with_statement
-
 from datetime import datetime
 from threading import Thread, Lock
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
+from PM.Core.Atoms import with_decorator
 from PM.Backend.Scapy import *
 
 def register_sniff_context(BaseSniffContext):
@@ -47,17 +46,17 @@ def register_sniff_context(BaseSniffContext):
             self.title = _('%s capture') % self.iface
             self.thread = None
 
+        @with_decorator
         def get_all_data(self):
-            with self.lock:
-                return BaseSniffContext.get_all_data(self)
+            return BaseSniffContext.get_all_data(self)
 
+        @with_decorator
         def get_data(self):
-            with self.lock:
-                return BaseSniffContext.get_data(self)
+            return BaseSniffContext.get_data(self)
 
+        @with_decorator
         def set_data(self, val):
-            with self.lock:
-                self.data = val
+            self.data = val
 
         def get_percentage(self):
             if self.state != self.RUNNING:

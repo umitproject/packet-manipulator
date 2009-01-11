@@ -45,7 +45,6 @@ import os, os.path
 
 # UI stuff
 import pygtk
-pygtk.require('2.0')
 
 import gtk
 import pango

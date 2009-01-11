@@ -23,10 +23,9 @@ import sys
 
 from datetime import datetime
 from threading import Thread, Lock, Condition
-from collections import defaultdict
 
 from PM.Core.Logger import log
-from PM.Core.Atoms import Node, ThreadPool, Interruptable
+from PM.Core.Atoms import Node, ThreadPool, Interruptable, with_decorator, defaultdict
 
 from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *

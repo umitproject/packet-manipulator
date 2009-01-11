@@ -18,11 +18,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from __future__ import with_statement
 from threading import Lock
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
+from PM.Core.Atoms import with_decorator
 from PM.Backend.Scapy.serialize import load_sequence, save_sequence
 from PM.Backend.Scapy.utils import execute_sequence
 
@@ -73,26 +73,26 @@ def register_sequence_context(BaseSequenceContext):
             self.status = self.NOT_SAVED
             return False
 
+        @with_decorator
         def get_all_data(self):
-            with self.lock:
-                return BaseSequenceContext.get_all_data(self)
+            return BaseSequenceContext.get_all_data(self)
 
+        @with_decorator
         def get_data(self):
-            with self.lock:
-                return BaseSequenceContext.get_data(self)
+            return BaseSequenceContext.get_data(self)
 
+        @with_decorator
         def set_data(self, val):
-            with self.lock:
-                return BaseSequenceContext.set_data(self)
+            return BaseSequenceContext.set_data(self)
 
         # We really need this lock here?
+        @with_decorator
         def get_sequence(self):
-            with self.lock:
-                return BaseSequenceContext.get_sequence(self)
+            return BaseSequenceContext.get_sequence(self)
 
+        @with_decorator
         def set_sequence(self, val):
-            with self.lock:
-                return BaseSequenceContext.set_sequence(self, val)
+            return BaseSequenceContext.set_sequence(self, val)
 
         def _start(self):
             if not self.tot_loop_count or self.tot_packet_count - self.packet_count > 0 or \

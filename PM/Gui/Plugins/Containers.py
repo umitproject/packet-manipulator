@@ -43,7 +43,15 @@ from distutils.core import setup_keywords, extension_keywords
 
 from distutils.command.install import install as installcmd
 from distutils.command.install_lib import install_lib as install_libcmd
-from distutils.command.install_egg_info import install_egg_info as install_egginfocmd
+
+try:
+    from distutils.command.install_egg_info import install_egg_info as install_egginfocmd
+
+    class PlugEggInstaller(install_egginfocmd):
+        def run(self):
+            pass
+except ImportError:
+    pass
 
 # For removing directory trees we need
 import shutil
@@ -366,10 +374,6 @@ class PlugInstaller(installcmd):
 
     def run(self):
         installcmd.run(self)
-
-class PlugEggInstaller(install_egginfocmd):
-    def run(self):
-        pass
 
 class PlugDistribution(Distribution):
     def __init__(self, *attrs):

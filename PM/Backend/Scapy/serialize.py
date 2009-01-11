@@ -20,7 +20,7 @@
 
 from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
-from xml.sax.xmlreader import AttributesNSImpl
+from xml.sax.xmlreader import AttributesImpl
 
 from PM.Core.Atoms import Node
 from PM.Core.Logger import log
@@ -162,8 +162,7 @@ class SequenceWriter(object):
         self.writer = XMLGenerator(output, 'utf-8')
 
         self.writer.startDocument()
-        self.startElementNS((None, 'PMScapySequence'),
-                                   'PMScapySequence', {})
+        self.startElement('PMScapySequence', {})
 
         self.current_node = None
 
@@ -173,8 +172,7 @@ class SequenceWriter(object):
 
         self.current_node = None
 
-        self.endElementNS((None, 'PMScapySequence'),
-                                 'PMScapySequence')
+        self.endElement('PMScapySequence')
 
         self.writer.endDocument()
         output.close()
@@ -186,20 +184,20 @@ class SequenceWriter(object):
         if txt:
             self.writer.characters(txt)
 
-    def startElementNS(self, name, qname, attrs, indent=True):
+    def startElement(self, name, attrs, indent=True):
         if indent:
             self.writer.characters('\n')
 
         self.depth_idx += 1
 
         self.writeSpaces()
-        self.writer.startElementNS(name, qname, attrs)
+        self.writer.startElement(name, attrs)
 
-    def endElementNS(self, name, qname, indent=True):
+    def endElement(self, name, indent=True):
         if indent:
             self.writeSpaces('\n')
 
-        self.writer.endElementNS(name, qname)
+        self.writer.endElement(name)
 
         self.depth_idx -= 1
 
@@ -219,18 +217,13 @@ class SequenceWriter(object):
         attr_vals = {(None, u'interval') : str(inter),
                      (None, u'filter') : filter or ''}
 
-        attr_qnames = {(None, u'interval') : u'interval',
-                       (None, u'filter') : u'filter'}
-
-        attrs = AttributesNSImpl(attr_vals, attr_qnames)
-        self.startElementNS((None, 'SequencePacket'),
-                                   'SequencePacket', attrs)
+        attrs = AttributesImpl(attr_vals)
+        self.startElement('SequencePacket', attrs)
 
         self.start_xml_packet(seq_packet.packet)
 
     def end_xml_node(self):
-        self.endElementNS((None, 'SequencePacket'),
-                                 'SequencePacket')
+        self.endElement('SequencePacket')
 
     def start_xml_packet(self, metapacket):
         protocols = metapacket.get_protocols()
@@ -239,10 +232,9 @@ class SequenceWriter(object):
         for proto in protocols:
             attr_vals = {(None, u'id') : get_proto_name(proto),
                          (None, u'time') : "%.6f" % proto.time}
-            attr_qnames = {(None, u'id') : u'id', (None, u'time') : u'time'}
 
-            attrs = AttributesNSImpl(attr_vals, attr_qnames)
-            self.startElementNS((None, 'proto'), 'proto', attrs)
+            attrs = AttributesImpl(attr_vals)
+            self.startElement('proto', attrs)
 
 
             for field in get_proto_fields(proto):
@@ -250,17 +242,16 @@ class SequenceWriter(object):
                 value = get_field_value(proto, field)
 
                 attr_vals = {(None, u'id') : name}
-                attr_qnames = {(None, u'id') : u'id'}
 
                 self.writer.characters('\n')
 
-                attrs = AttributesNSImpl(attr_vals, attr_qnames)
-                self.startElementNS((None, 'field'), 'field', attrs, False)
+                attrs = AttributesImpl(attr_vals)
+                self.startElement('field', attrs, False)
                 self.writer.characters(str(value))
-                self.endElementNS((None, 'field'), 'field', False)
+                self.endElement('field', False)
 
         for idx in xrange(len(protocols)):
-            self.endElementNS((None, 'proto'), 'proto')
+            self.endElement('proto')
 
 def save_sequence(fname, sequence):
     assert isinstance(sequence, Node)
