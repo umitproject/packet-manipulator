@@ -159,8 +159,8 @@ class PreferenceWriter:
         for key, option in items:
 
             attr_vals = {
-                (None, u'id') : key,
-                (None, u'value') : str(option.value)
+                'id' : key,
+                'value' : str(option.value)
             }
 
             attrs = AttributesImpl(attr_vals)

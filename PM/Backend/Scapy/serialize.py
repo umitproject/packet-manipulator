@@ -214,8 +214,8 @@ class SequenceWriter(object):
         inter = seq_packet.inter
         filter = seq_packet.filter
 
-        attr_vals = {(None, u'interval') : str(inter),
-                     (None, u'filter') : filter or ''}
+        attr_vals = {'interval' : str(inter),
+                     'filter' : filter or ''}
 
         attrs = AttributesImpl(attr_vals)
         self.startElement('SequencePacket', attrs)
@@ -230,8 +230,8 @@ class SequenceWriter(object):
         protocols.reverse()
 
         for proto in protocols:
-            attr_vals = {(None, u'id') : get_proto_name(proto),
-                         (None, u'time') : "%.6f" % proto.time}
+            attr_vals = {'id' : get_proto_name(proto),
+                         'time' : "%.6f" % proto.time}
 
             attrs = AttributesImpl(attr_vals)
             self.startElement('proto', attrs)
@@ -241,7 +241,7 @@ class SequenceWriter(object):
                 name = get_field_name(field)
                 value = get_field_value(proto, field)
 
-                attr_vals = {(None, u'id') : name}
+                attr_vals = {'id' : name}
 
                 self.writer.characters('\n')
 
