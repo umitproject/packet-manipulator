@@ -275,7 +275,7 @@ class DocLoader(handler.ContentHandler):
                 self.attribute_doc = ''
                 self.in_attr = False
         except Exception, err:
-            print err
+            pass
 
     def escape(self, txt):
         txt = txt.replace("\r", "\n").replace("\t", " ")

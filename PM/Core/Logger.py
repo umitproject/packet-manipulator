@@ -26,6 +26,7 @@ Use PM_LOGLEVEL to set the loglevel
 
 import os
 from logging import Logger, StreamHandler, Formatter, addLevelName
+from logging import __status__ as STATUS
 
 if os.name == 'posix':
     reset = "\033[1;0m"
@@ -65,8 +66,9 @@ class PMLogger(Logger, object):
     def set_formatter(self, fmt):
         self.__formatter = Formatter(fmt)
 
-
-    format = "(%(levelname)s) %(threadName)s:%(msecs)dms at %(filename)s:%(lineno)d %(funcName)s(): %(message)s"
+    format = "(%(levelname)s) %(threadName)s:%(msecs)dms at %(filename)s:%(lineno)d $(): %(message)s".replace("$",
+        (STATUS != "beta") and ("%(funcName)s") or ("")
+    )
 
     formatter = property(get_formatter, set_formatter, doc="")
     __formatter = Formatter(format)
