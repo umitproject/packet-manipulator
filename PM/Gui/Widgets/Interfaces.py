@@ -20,7 +20,7 @@
 
 import gtk
 
-import Backend
+from PM import Backend
 from PM.Core.I18N import _
 
 class InterfacesCombo(gtk.ComboBox):
