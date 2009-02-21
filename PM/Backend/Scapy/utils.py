@@ -142,7 +142,7 @@ def find_all_devs():
 
     # Use dnet as fallback
 
-    if DARWIN or NETBSD or OPENBSD or FREEBSD:
+    if WINDOWS or DARWIN or NETBSD or OPENBSD or FREEBSD:
         ret = []
 
         for obj in dnet.intf():

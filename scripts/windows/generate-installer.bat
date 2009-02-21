@@ -1,6 +1,17 @@
 @echo off
 
+rem In this script we assume that you have installed NSIS, gtk-dev,
+rem mingw (make and cc), Python2.5, pygtk, pygobject, pycairo,
+rem py2exe, scapy win32 and rem relative dependencies
+rem (http://trac.secdev.org/scapy/wiki/WindowsInstallationGuide)
+rem respectively in:
+rem C:\Program files\NSIS, C:\GTK, C:\Mingw, C:\python25
+
+rem We also assume that you have PATH setted as:
+rem C:\gtk\bin;C:\mingw\bin;c:\python25;$PATH
+
 echo Setting installation variables...
+set PM_DOCKING=1
 set PythonEXE=C:\Python25\python.exe
 set PMOrig=.
 set PMDir=C:\PMTemp
@@ -8,7 +19,7 @@ set DistDir=%PMDir%\dist
 set GTKDir=C:\GTK
 set WinInstallDir=%PMDir%\scripts\windows
 set Output=%PMDir%\win_install.log
-set MakeNSIS=C:\Programmi\NSIS\makensis.exe
+set MakeNSIS="C:\Program Files\NSIS\makensis.exe"
 
 echo Writing output to %Output%
 rd %Output% /S /Q

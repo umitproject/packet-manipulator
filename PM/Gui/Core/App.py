@@ -31,6 +31,7 @@ import sys
 
 from PM.Core.I18N import _
 from PM.Core.Atoms import Singleton
+from PM.Gui.Core.Splash import SplashScreen
 from PM.Gui.Plugins.Engine import PluginEngine
 
 class PMApp(Singleton):
@@ -44,7 +45,8 @@ class PMApp(Singleton):
         try:
             # FIXME: add maemo
             if sys.platform == 'win32':
-                root = True
+                import ctypes
+                root = bool(ctypes.windll.shell32.IsUserAnAdmin())
             elif os.getuid() == 0:
                 root = True
         except: pass
@@ -63,18 +65,43 @@ class PMApp(Singleton):
             if ret == gtk.RESPONSE_NO:
                 sys.exit(-1)
 
-        from Icons import register_icons
+        self.phase = 0
+        self.splash = SplashScreen()
 
-        register_icons()
+    def _idle(self):
 
-        from MainWindow import MainWindow
-        from PM.Manager.PreferenceManager import Prefs
-
-        self.prefs = Prefs()
-        self.main_window = MainWindow()
-        self.main_window.connect_tabs_signals()
-        self.plugin_engine = PluginEngine()
-        self.plugin_engine.load_selected_plugins()
+        if self.phase == 0:
+            self.splash.text = _("Registering icons ...")
+            
+            from Icons import register_icons
+            register_icons()
+        elif self.phase == 1:
+            self.splash.text = _("Loading preferences ...")
+            
+            from PM.Manager.PreferenceManager import Prefs
+            self.prefs = Prefs()
+        elif self.phase == 2:
+            self.splash.text = _("Creating main window ...")
+            
+            from MainWindow import MainWindow
+            self.main_window = MainWindow()
+            self.main_window.connect_tabs_signals()
+            self.plugin_engine = PluginEngine()
+            self.plugin_engine.load_selected_plugins()
+            
+            # Destroy the splash screen
+            self.splash.hide()
+            self.splash.destroy()
+            self.splash.finished = True
+            
+            del self.splash
+            
+            return False
+        
+        self.phase += 1
+        return True
 
     def run(self):
+        self.splash.show_all()
+        gobject.idle_add(self._idle)
         gtk.main()
