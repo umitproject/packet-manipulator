@@ -516,7 +516,7 @@ class MainWindow(gtk.Window):
         dialog = gtk.AboutDialog()
 
         dialog.set_logo(gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png')))
-
+        dialog.set_name("PacketManipulator")
         dialog.set_version(PM_VERSION)
 
         dialog.set_website(PM_SITE)
