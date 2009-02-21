@@ -257,7 +257,7 @@ setup(name         = 'PacketManipulator',
       options      = {'py2exe' : {
                           'compressed' : 1,
                           'packages' : 'encodings, scapy',
-                          'includes' : 'gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk'},
+                          'includes' : 'gtk.keysyms,gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk'},
                       'build': {'compiler' : 'mingw32'}},
       ext_modules  = modules,
       cmdclass     = {'py2exe' : pm_install}
