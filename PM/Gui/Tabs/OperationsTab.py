@@ -148,8 +148,7 @@ class SniffOperation(Backend.SniffContext, Operation):
 
         if ret and self.session:
             self.session.sniff_page.clear()
-
-        self.session.sniff_page.reload()
+            self.session.sniff_page.reload()
 
         return ret
 
