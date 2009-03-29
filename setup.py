@@ -18,13 +18,20 @@
 # along with this program; if not, write to the Free Software         
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import re
 import sys
 import glob
-import os, os.path
+
+import os
+import os.path
 
 from distutils.core import setup, Extension
 from distutils.command.install import install
+from distutils.command.build import build
 from PM.Core.Const import PM_VERSION, PM_SITE
+
+BASE_DOCS_DIR = os.path.join('share', 'doc', 'PacketManipulator-%s' % PM_VERSION)
+DOCS_DIR = os.path.join('generated-doc', 'html')
 
 def getoutput(cmd):
     """Return output (stdout or stderr) of executing cmd in a shell."""
@@ -123,6 +130,38 @@ for filepath in glob.glob("PM/share/locale/*/LC_MESSAGES/*.mo"):
     targetpath = os.path.dirname(os.path.join("share/locale",lang))
     mo_files.append((targetpath, [filepath]))
 
+class pm_build(build):
+    def build_html_doc(self):
+        """Build the html documentation."""
+
+        try:
+            import sphinx
+        except ImportError:
+            self.warn("sphinx not found, documentation won't be build.")
+            return
+
+        sphinx_ver = sphinx.__version__
+        def digits(x):
+            res = re.match('\d+', x)
+            if res is None:
+                return 0
+            else:
+                return int(res.group())
+        if map(digits, sphinx_ver.split('.')) < [0, 5, 1]:
+            self.warn("Sphinx's version is too old (%s, expected at least "
+                      "0.5.1, documentation won't be build." % sphinx_ver)
+            return
+
+        # Build the documentation just like it is done through the Makefile
+        sphinx.main([__file__,
+            "-b", "html",
+            "-d", os.path.join("PM", "share", "doc", "doctrees"),
+            os.path.join("PM", "share", "doc", "src"), DOCS_DIR])
+    
+    def run(self):
+        self.build_html_doc()
+        build.run(self)
+
 class pm_install(install):
     def run(self):
         print
@@ -220,8 +259,12 @@ setup(name         = 'PacketManipulator',
                       'PM.Gui.Plugins',
                       'PM.higwidgets'
                      ],
-      data_files   = [('share/pixmaps/umit', glob.glob("PM/share/pixmaps/umit/*"))] + mo_files, 
+      data_files   = [('share/pixmaps/umit',
+                       glob.glob("PM/share/pixmaps/umit/*")),
+                      (BASE_DOCS_DIR, glob.glob(DOCS_DIR + "/*/*")),
+                     ] + mo_files, 
       scripts      = ['PM/PacketManipulator'],
       ext_modules  = modules,
-      cmdclass     = {'install' : pm_install}
+      cmdclass     = {'install' : pm_install,
+                      'build' : pm_build}
 )
