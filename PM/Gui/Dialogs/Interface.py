@@ -316,9 +316,13 @@ class InterfaceDialog(gtk.Dialog):
         self.vbox.pack_start(self.if_list)
         self.vbox.pack_start(self.options, False, False)
 
+        self.if_list.tree.connect('row-activated',
+            lambda tree, path, view, diag:
+                diag.response(gtk.RESPONSE_ACCEPT), self)
+
         self.show_all()
         self.set_size_request(620, 400)
-    
+
     def get_selected(self):
         "@return the selected interface for sniffing or None"
         return self.if_list.get_selected()
