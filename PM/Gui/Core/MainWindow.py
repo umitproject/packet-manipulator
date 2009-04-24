@@ -72,7 +72,7 @@ class MainWindow(gtk.Window):
         self.set_title("Packet Manipulator")
         self.set_icon_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png'))
         self.set_size_request(600, 400)
-        
+
         self.registered_tabs = {}
 
         # Binders for plugins
@@ -133,7 +133,7 @@ class MainWindow(gtk.Window):
             ('Views', None, _('Views'), None),
 
             ('Help', None, _('Help'), None),
-            
+
             ('About', gtk.STOCK_ABOUT, _('About'), None, None, self.__on_about),
         ]
 
@@ -177,7 +177,7 @@ class MainWindow(gtk.Window):
         self.main_accel_group = gtk.AccelGroup()
         self.main_action_group = gtk.ActionGroup('MainActionGroup')
         self.main_action_group.add_actions(self.main_actions)
-        
+
         self.add_accel_group(self.main_accel_group)
 
         for action in self.main_action_group.list_actions():
@@ -203,7 +203,7 @@ class MainWindow(gtk.Window):
         """
 
         return self.registered_tabs[name]
-    
+
     def deregister_tab(self, tab):
         """
         Deregister a tab deleting his CheckMenu and tab from the paned
@@ -374,7 +374,7 @@ class MainWindow(gtk.Window):
     def apply_bindings(self, page, ptype):
         for persp_klass, show, resize, shrink in self.session_binder[ptype]:
             page.add_perspective(persp_klass, show, resize, shrink)
-    
+
     def bind_perspective(self, ptype, callback):
         """
         Bind the perspective 'type'
@@ -450,7 +450,7 @@ class MainWindow(gtk.Window):
 
         item = self.ui_manager.get_widget('/menubar/Views')
         item.remove_submenu()
-        
+
         self.vbox.pack_start(self.main_paned)
         self.vbox.pack_start(self.statusbar, False, False)
 
@@ -611,7 +611,7 @@ class MainWindow(gtk.Window):
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             ctx = None
             fname = dialog.get_filename()
-            
+
             try:
                 find = fname.split('.')[-1]
 
@@ -643,6 +643,45 @@ class MainWindow(gtk.Window):
 
         dialog.hide()
         dialog.destroy()
+
+    def open_generic_file(self, fname):
+        """
+        Open a generic file (pcap/sequence and other supported file format)
+        @param fname the path to the file to open
+        @return a PM.Session.Base.Session object or None on errors
+        """
+
+        if not os.path.isfile(fname):
+            return None
+
+        types = {}
+        sessions = (Backend.StaticContext,
+                    Backend.SequenceContext,
+                    Backend.SniffContext)
+
+        for ctx in sessions:
+            for name, pattern in ctx.file_types:
+                types[pattern] = (name, ctx)
+
+        try:
+            find = fname.split('.')[-1]
+
+            for pattern in types:
+                if pattern.split('.')[-1] == find:
+                    ctx = types[pattern][1]
+        except:
+            pass
+
+        tab = self.get_tab("MainTab")
+
+        if ctx is Backend.SequenceContext:
+            return tab.session_notebook.load_sequence_session(fname)
+
+        elif ctx is Backend.SniffContext:
+            return tab.session_notebook.load_sniff_session(fname)
+
+        elif ctx is Backend.StaticContext:
+            return tab.session_notebook.load_static_session(fname)
 
     def __on_save_session(self, action):
         maintab = self.get_tab("MainTab")

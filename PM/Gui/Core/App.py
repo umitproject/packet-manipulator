@@ -29,6 +29,8 @@ import gobject
 import os
 import sys
 
+from optparse import OptionParser
+
 from PM.Core.I18N import _
 from PM.Core.Atoms import Singleton
 from PM.Gui.Core.Splash import SplashScreen
@@ -37,9 +39,14 @@ from PM.Gui.Plugins.Engine import PluginEngine
 class PMApp(Singleton):
     "The PacketManipulator application singleton object"
 
-    def __init__(self):
+    def __init__(self, args):
+        """
+        PacketManipulator Application class
+        @param args pass sys.argv
+        """
         gobject.threads_init()
 
+        self._args = args
         root = False
 
         try:
@@ -61,7 +68,7 @@ class PMApp(Singleton):
             ret = dialog.run()
             dialog.hide()
             dialog.destroy()
-            
+
             if ret == gtk.RESPONSE_NO:
                 sys.exit(-1)
 
@@ -72,32 +79,39 @@ class PMApp(Singleton):
 
         if self.phase == 0:
             self.splash.text = _("Registering icons ...")
-            
+
             from Icons import register_icons
             register_icons()
         elif self.phase == 1:
             self.splash.text = _("Loading preferences ...")
-            
+
             from PM.Manager.PreferenceManager import Prefs
             self.prefs = Prefs()
         elif self.phase == 2:
             self.splash.text = _("Creating main window ...")
-            
+
             from MainWindow import MainWindow
             self.main_window = MainWindow()
             self.main_window.connect_tabs_signals()
             self.plugin_engine = PluginEngine()
             self.plugin_engine.load_selected_plugins()
-            
+
             # Destroy the splash screen
             self.splash.hide()
             self.splash.destroy()
             self.splash.finished = True
-            
+
             del self.splash
-            
+
+            # Now let's parse the args passed in the constructor
+            parser = self._create_parser()
+            options, args = parser.parse_args(self._args)
+
+            if options.fread:
+                self.main_window.open_generic_file(options.fread)
+
             return False
-        
+
         self.phase += 1
         return True
 
@@ -105,3 +119,15 @@ class PMApp(Singleton):
         self.splash.show_all()
         gobject.idle_add(self._idle)
         gtk.main()
+
+    def _create_parser(self):
+        """
+        @return an OptionParser object that can handle the sys.argv passed in
+                the constructor.
+        """
+
+        opt = OptionParser()
+        opt.add_option('-r', None, dest="fread",
+                       help="Read packets/sequence from file.")
+
+        return opt

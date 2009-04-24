@@ -19,13 +19,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import os
+import sys
 
 os.putenv('PM_DEVELOPMENT', '1')
 os.putenv('PM_LOGLEVEL', '1')
-os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep, os.getenv('PYTHONPATH', '')))
+os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep,
+                                    os.getenv('PYTHONPATH', '')))
 
 if os.name == 'nt':
     os.chdir('PM')
-    os.system('python PacketManipulator')
+    os.system('python PacketManipulator %s' % ' '.join(sys.argv[1:]))
 else:
-    os.system('PM/PacketManipulator')
+    os.system('PM/PacketManipulator %s' % ' '.join(sys.argv[1:]))

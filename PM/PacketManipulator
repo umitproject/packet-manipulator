@@ -148,7 +148,7 @@ def main(args):
     from PM.higwidgets.higdialogs import HIGAlertDialog
 
     try:
-        app = PMApp()
+        app = PMApp(sys.argv[1:])
         app.run()
     except PMErrorException, err:
         d = HIGAlertDialog(type=gtk.MESSAGE_WARNING,
