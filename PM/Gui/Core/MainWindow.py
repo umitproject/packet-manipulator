@@ -101,22 +101,39 @@ class MainWindow(gtk.Window):
 
         self.main_actions = [
             ('File', None, _('File'), None),
-            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o', _('Open session'), self.__on_open_session),
-            ('Save', gtk.STOCK_SAVE, _('_Save'), '<Control>s', _('Save session'), self.__on_save_session),
-            ('SaveAs', gtk.STOCK_SAVE_AS, _('_Save as'), '<Control><Shift>s', _('Save session as'), self.__on_save_session_as),
-            ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q', _('Quit from application'), self.__on_quit),
-            
+
+            ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o',
+                _('Open session'), self.__on_open_session),
+
+            ('Save', gtk.STOCK_SAVE, _('_Save'), '<Control>s',
+                _('Save session'), self.__on_save_session),
+
+            ('SaveAs', gtk.STOCK_SAVE_AS, _('_Save as'), '<Control><Shift>s',
+                _('Save session as'), self.__on_save_session_as),
+
+            ('Quit', gtk.STOCK_QUIT, _('_Quit'), '<Control>q',
+                _('Quit from application'), self.__on_quit),
+
             ('Capture', None, _('Capture'), None),
-            ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i', _('Capture from interface'), self.__on_select_iface),
+
+            ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i',
+                _('Capture from interface'), self.__on_select_iface),
 
             ('Options', None, _('Options'), None),
-            ('Routes', gtk.STOCK_NETWORK, _('Routing table'), '<Control>r', _('Routes editor'), self.__on_routing),
-            ('Plugins', 'extension_small', _('Plugins'), None, _('Plugin manager'), self.__on_plugins),
-            ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'), '<Control>p', _('Preferences'), self.__on_preferences),
+
+            ('Routes', gtk.STOCK_NETWORK, _('Routing table'), '<Control>r',
+                _('Routes editor'), self.__on_routing),
+
+            ('Plugins', 'extension_small', _('Plugins'), None,
+                _('Plugin manager'), self.__on_plugins),
+
+            ('Preferences', gtk.STOCK_PREFERENCES, _('_Preferences'),
+                '<Control>p', _('Preferences'), self.__on_preferences),
 
             ('Views', None, _('Views'), None),
 
             ('Help', None, _('Help'), None),
+            
             ('About', gtk.STOCK_ABOUT, _('About'), None, None, self.__on_about),
         ]
 
@@ -295,7 +312,8 @@ class MainWindow(gtk.Window):
 
         return SessionType.remove_session(sessklass)
 
-    def bind_session(self, ptype, persp_klass, show_pers=True, resize=False, shrink=True):
+    def bind_session(self, ptype, persp_klass, show_pers=True, resize=False, \
+                     shrink=True):
         """
         Bind the perspective 'pers_klass' to Session 'ptype'
 
@@ -303,7 +321,8 @@ class MainWindow(gtk.Window):
         @param persp_klass the perspective class to add to the selected Session
         @param show_pers choose to show the perspective
         @param resize if True child should resize when the paned is resized
-        @param shrink if True child can be made smaller than its minimum size request
+        @param shrink if True child can be made smaller than its minimum size
+                      request
         """
 
         log.debug(
@@ -311,7 +330,8 @@ class MainWindow(gtk.Window):
             (persp_klass, SessionType.types[ptype])
         )
 
-        self.session_binder[ptype].append((persp_klass, show_pers, resize, shrink))
+        self.session_binder[ptype].append((persp_klass, show_pers, \
+                                           resize, shrink))
 
         klass = SessionType.types[ptype]
         maintab = self.get_tab("MainTab")
@@ -410,7 +430,8 @@ class MainWindow(gtk.Window):
             return True
         except:
             log.error(
-                "Failed to remove binding method %s for perspective of type %s" % \
+                "Failed to remove binding method %s "
+                "for perspective of type %s" % \
                 (callback, PerspectiveType.types[type])
             )
 
@@ -461,8 +482,10 @@ class MainWindow(gtk.Window):
         # so we could manage easilly the bind_perspective calls
 
         maintab = self.get_tab("MainTab")
-        maintab.session_notebook.connect('page-added', self.__on_maintab_page_added)
-        maintab.session_notebook.connect('page-removed', self.__on_maintab_page_removed)
+        maintab.session_notebook.connect('page-added',
+                                         self.__on_maintab_page_added)
+        maintab.session_notebook.connect('page-removed',
+                                         self.__on_maintab_page_removed)
 
     def connect_tabs_signals(self):
         "Used to connect signals between tabs"
@@ -515,7 +538,10 @@ class MainWindow(gtk.Window):
     def __on_about(self, action):
         dialog = gtk.AboutDialog()
 
-        dialog.set_logo(gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png')))
+        dialog.set_logo(
+            gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR,
+                                                      'pm-logo.png'))
+        )
         dialog.set_name("PacketManipulator")
         dialog.set_version(PM_VERSION)
 

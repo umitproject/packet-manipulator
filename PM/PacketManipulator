@@ -83,12 +83,15 @@ class PMExceptionHook(object):
         higwidgets_version = getattr(PM.higwidgets, "__version__", "< 0.9.5")
         python_version = sys.version
 
-        versions = _("Versions:\nGTK: %s\nPyGTK: %s\nHIGWidgets: %s\nPython: %s") % \
-                   (gtk_version, pygtk_version, higwidgets_version, python_version)
+        versions = _("Versions:\nGTK: %s\n"
+                     "PyGTK: %s\nHIGWidgets: %s\nPython: %s") % \
+                (gtk_version, pygtk_version, higwidgets_version, python_version)
         
         if etype == ImportError:
-            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, message_format=_("Import error"),
-                secondary_text=_("\nA required module was not found.\n\nError: %s" % emsg))
+            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, \
+                               message_format=_("Import error"),
+                               secondary_text=_("\nA required module was not " \
+                                                "found.\n\nError: %s" % emsg))
 
             d.run()
             d.destroy()
@@ -106,7 +109,8 @@ class PMExceptionHook(object):
 
         try:
             try:
-                cwin = BugReport("PacketManipulator Crash - '%s'" % emsg, crashmsg_dialog, crash_text)
+                cwin = BugReport("PacketManipulator Crash - '%s'" % emsg,\
+                                 crashmsg_dialog, crash_text)
                 cwin.show_all()
                 while True: 
                     # keeping running while bug report is not sent successfully,
@@ -124,10 +128,10 @@ class PMExceptionHook(object):
                 d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
                     message_format=_("Bug not reported"),
                     secondary_text=_("A critical error occourried during "
-                        "PacketManipulator execution, \nand it was not properly reported " 
-                        "to our bug tracker. The crash description was saved to: "
-                        "%s, so you can still report it on our bug "
-                        "tracker.") % tempname)
+                        "PacketManipulator execution, \nand it was not properly"
+                        " reported to our bug tracker. The crash description "
+                        "was saved to: %s, so you can still report it on our "
+                        "bug tracker.") % tempname)
                 os.close(tempfd)
                 d.run()
                 d.destroy()
@@ -147,8 +151,9 @@ def main(args):
         app = PMApp()
         app.run()
     except PMErrorException, err:
-        d = HIGAlertDialog(type=gtk.MESSAGE_WARNING, message_format=_("General Error"),
-            secondary_text=_(str(err)))
+        d = HIGAlertDialog(type=gtk.MESSAGE_WARNING,
+                           message_format=_("General Error"),
+                           secondary_text=_(str(err)))
         d.run()
         d.destroy()
     except KeyboardInterrupt:
