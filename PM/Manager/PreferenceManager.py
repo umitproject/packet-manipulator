@@ -109,7 +109,7 @@ class PreferenceLoader(handler.ContentHandler):
                     opt_name = attrs.get(attr)
                 if attr == 'value':
                     opt_value = attrs.get(attr)
-            
+
             try:
                 if name == 'bool':
                     if opt_value.lower() == 'true' or opt_value == '1':
@@ -186,7 +186,10 @@ class Prefs(Singleton):
         'gui.maintab.askforsave' : True,
 
         'gui.statustab.font' : 'Monospace 10',
-        
+
+        'gui.operationstab.uniqueupdate' : True,
+        'gui.operationstab.updatetimeout' : 500,
+
         'gui.views.protocol_selector_tab' : True,
         'gui.views.property_tab' : True,
         'gui.views.status_tab' : True,
@@ -205,7 +208,7 @@ class Prefs(Singleton):
     def __init__(self):
         need_save = True
         self.fname = os.path.join(PM_HOME, 'pm-prefs.xml')
-        
+
         try:
             opts = self.load_options()
             self.options.update(self.load_options())

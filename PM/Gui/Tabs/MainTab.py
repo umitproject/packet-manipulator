@@ -93,11 +93,13 @@ class SessionNotebook(gtk.Notebook):
     def create_empty_session(self, title):
         session = SniffSession(title=title)
         return self.__append_session(session)
-    
-    def create_session(self, sessk, ctxk):
-        ctx = ctxk()
+
+    def bind_session(self, sessk, ctx):
         session = sessk(ctx)
         return self.__append_session(session)
+
+    def create_session(self, sessk, ctxk):
+        return self.bind_session(sessk, ctxk())
 
     def __append_session(self, session):
         session.label.connect('close-clicked', self.__on_close_page, session)
@@ -143,12 +145,13 @@ class SessionNotebook(gtk.Notebook):
                                            gtk.DIALOG_DESTROY_WITH_PARENT,
                                            gtk.MESSAGE_QUESTION,
                                            gtk.BUTTONS_YES_NO,
-                                           _('The session is running.\nDo you want stop it?'))
+                                           _('The session is running.\n'
+                                             'Do you want stop it?'))
                 id = dialog.run()
 
                 dialog.hide()
                 dialog.destroy()
-                
+
                 if id == gtk.RESPONSE_YES:
                     session.context.stop()
 
@@ -162,16 +165,17 @@ class SessionNotebook(gtk.Notebook):
                                        gtk.DIALOG_DESTROY_WITH_PARENT,
                                        gtk.MESSAGE_QUESTION,
                                        gtk.BUTTONS_YES_NO,
-                                       _('The session has unsaved changes.\nDo you want to save them?'))
+                                       _('The session has unsaved changes.\n'
+                                         'Do you want to save them?'))
 
             id = dialog.run()
 
             dialog.hide()
             dialog.destroy()
-            
+
             if id == gtk.RESPONSE_NO or \
                (id == gtk.RESPONSE_YES and session.save()):
-                
+
                 self.__remove_session(session)
 
 class MainTab(UmitView):
@@ -219,8 +223,6 @@ class MainTab(UmitView):
 
         idx = self.session_notebook.get_current_page()
         return self.session_notebook.get_nth_page(idx)
-
-    #===========================================================================
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
         "drag-data-received callback"

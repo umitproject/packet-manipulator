@@ -1,38 +1,47 @@
-#!/usr/bin/env python                               
-# -*- coding: utf-8 -*-                             
-# Copyright (C) 2008 Adriano Monteiro Marques       
-#                                                   
-# Author: Francesco Piccinno <stack.box@gmail.com>  
-#                                                   
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
 import gobject
 
+from threading import Thread
+
 from PM import Backend
 from PM.Core.I18N import _
+from PM.Core.Tracing import trace
+from PM.Core.Logger import log
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Views import UmitView
 from PM.Gui.Core.Icons import get_pixbuf
+
+from PM.Manager.PreferenceManager import Prefs
 
 class Operation(object):
     """
     This is an abstract class representing a network operation
     like sending packets or receiving packets and should be ovverriden
     """
+
+    # CHECKME: Add this to avoid multiple request of that prefs.
+    SKIP_UPDATE = Prefs()['gui.operationstab.uniqueupdate'].value
 
     def __init__(self):
         self.iter = None
@@ -41,7 +50,7 @@ class Operation(object):
     def set_iter(self, model, iter):
         self.iter = iter
         self.model = model
-    
+
     def notify_parent(self):
         # emit a row-changed to update the model
 
@@ -52,6 +61,143 @@ class Operation(object):
         "Called when the user clicks on the row"
         pass
 
+class FileOperation(Operation):
+    """
+    Abstract class to manage file operations like save/load
+    """
+    TYPE_LOAD, TYPE_SAVE = range(2)
+    RUNNING, NOT_RUNNING = range(2)
+
+    has_pause = False
+    has_stop = False
+    has_start = True
+    has_restart = False
+
+    def __init__(self, file, type):
+        Operation.__init__(self)
+
+        self.file = file
+        self.type = type
+        self.percentage = 0
+        self.thread = None
+        self.state = self.NOT_RUNNING
+
+        if type == FileOperation.TYPE_LOAD:
+            self.summary = _('Loading of %s pending.') % self.file
+        else:
+            self.summary = _('Saving to %s pending.') % self.file
+
+    def start(self):
+        if self.state == self.RUNNING:
+            return
+
+        self.state = self.RUNNING
+
+        if self.type == FileOperation.TYPE_LOAD:
+            self.summary = _('Loading %s') % self.file
+            self._read_file()
+        else:
+            self.summary = _('Saving to %s') % self.file
+            self._save_file()
+
+    def get_percentage(self):
+        if self.state == self.RUNNING:
+            self.percentage = (self.percentage + 536870911) % gobject.G_MAXINT
+            return None
+        else:
+            return self.percentage
+
+    def get_summary(self):
+        return self.summary
+
+    def _save_file(self):
+        pass
+
+    @trace
+    def _read_file(self):
+        types = {}
+        sessions = (Backend.StaticContext,
+                    Backend.SequenceContext,
+                    Backend.SniffContext)
+
+        for ctx in sessions:
+            for name, pattern in ctx.file_types:
+                types[pattern] = (name, ctx)
+
+        try:
+            find = fname.split('.')[-1]
+
+            for pattern in types:
+                if pattern.split('.')[-1] == find:
+                    ctx = types[pattern][1]
+        except:
+            pass
+
+        if ctx is not Backend.SequenceContext and \
+           ctx is not Backend.SniffContext and \
+           ctx is not Backend.StaticContext:
+
+            self.summary = _('Unable to recognize file type.')
+        else:
+            self.start_async_thread((ctx, ))
+
+    @trace
+    def start_async_thread(self, udata):
+        self.thread = Thread(target=self._thread_main, name="FileOperation",
+                             args=udata)
+        self.thread.setDaemon(True)
+        self.thread.start()
+
+    @trace
+    def __on_idle(self, udata):
+        if self.type == FileOperation.TYPE_LOAD:
+            ctx, rctx = udata
+
+            log.debug('Creating a new session after loading for %s' % str(ctx))
+
+            tab = PMApp().main_window.get_tab("MainTab")
+
+            if ctx is Backend.SequenceContext:
+
+                from PM.Gui.Sessions.SequenceSession import SequenceSession
+                tab.session_notebook.bind_session(SequenceSession, rctx)
+
+            elif ctx is Backend.SniffContext or \
+                 ctx is Backend.StaticContext:
+
+                from PM.Gui.Sessions.SniffSession import SniffSession
+                tab.session_notebook.bind_session(SniffSession, rctx)
+
+        else:
+            pass
+
+        self.percentage = 100.0
+        self.state = self.NOT_RUNNING
+        return False
+
+    @trace
+    def _thread_main(self, udata=None):
+        if self.type == FileOperation.TYPE_LOAD:
+            ctx = udata
+            rctx = None
+
+            log.debug('Loading file as %s' % str(ctx))
+
+            if ctx is Backend.SequenceContext:
+                rctx = Backend.SequenceContext(self.file)
+
+            elif ctx is Backend.SniffContext or \
+                 ctx is Backend.StaticContext:
+
+                rctx = Backend.StaticContext(self.file, self.file)
+                rctx.load()
+
+            if rctx is not None:
+                # Now let's add a callback to when
+                gobject.idle_add(self.__on_idle, (ctx, rctx))
+        else:
+            pass
+
 class SendOperation(Backend.SendContext, Operation):
     def __init__(self, packet, count, inter, iface):
         Operation.__init__(self)
@@ -59,7 +205,8 @@ class SendOperation(Backend.SendContext, Operation):
                                      self.__send_callback, None)
 
     def __send_callback(self, packet, udata=None):
-        self.notify_parent()
+        if not self.SKIP_UPDATE:
+            self.notify_parent()
 
 
 class SendReceiveOperation(Backend.SendReceiveContext, Operation):
@@ -89,7 +236,7 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
                                             self.__send_callback,
                                             self.__receive_callback,
                                             None, None)
-        
+
         if background:
             self.session = None
         else:
@@ -116,10 +263,12 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
         self.session = nb.create_sniff_session(self)
 
     def __send_callback(self, packet, idx, udata):
-        self.notify_parent()
+        if not self.SKIP_UPDATE:
+            self.notify_parent()
 
     def __receive_callback(self, reply, is_reply, udata):
-        self.notify_parent()
+        if not self.SKIP_UPDATE:
+            self.notify_parent()
 
     def activate(self):
         if not self.session:
@@ -129,13 +278,15 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
 class SniffOperation(Backend.SniffContext, Operation):
     def __init__(self, iface, filter=None, minsize=0, maxsize=0, capfile=None, \
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
-                 resmac=True, resname=False, restransport=True, promisc=True, background=False):
+                 resmac=True, resname=False, restransport=True, promisc=True, \
+                 background=False):
 
         Operation.__init__(self)
-        Backend.SniffContext.__init__(self, iface, filter, minsize, maxsize, capfile,
-                                      scount, stime, ssize, real, scroll,
-                                      resmac, resname, restransport, promisc,
-                                      background, self.__recv_callback, None)
+        Backend.SniffContext.__init__(self, iface, filter, minsize, maxsize,
+                                      capfile, scount, stime, ssize, real,
+                                      scroll, resmac, resname, restransport,
+                                      promisc, background, self.__recv_callback,
+                                      None)
 
         if not self.background:
             nb = PMApp().main_window.get_tab("MainTab").session_notebook
@@ -158,7 +309,8 @@ class SniffOperation(Backend.SniffContext, Operation):
             self.session = nb.create_sniff_session(self)
 
     def __recv_callback(self, packet, udata):
-        self.notify_parent()
+        if not self.SKIP_UPDATE:
+            self.notify_parent()
 
 
 class SequenceOperation(Backend.SequenceContext, Operation):
@@ -175,10 +327,12 @@ class SequenceOperation(Backend.SequenceContext, Operation):
         self.session = nb.create_sniff_session(self)
 
     def __send_callback(self, packet, want_reply, loop, count, udata):
-        self.notify_parent()
+        if not self.SKIP_UPDATE:
+            self.notify_parent()
 
     def __receive_callback(self, packet, reply, udata):
-        self.notify_parent()
+        if not self.SKIP_UPDATE:
+            self.notify_parent()
 
     def _start(self):
         ret = Backend.SequenceContext._start(self)
@@ -222,6 +376,54 @@ class OperationTree(gtk.TreeView):
 
         self.icon_operation = get_pixbuf('operation_small')
         self.connect('button-release-event', self.__on_button_release)
+
+        self.timeout_id = None
+        self.timeout_update()
+
+    def is_someone_running(self):
+        def check_running(model, path, iter, lst):
+            op = model.get_value(iter, 0)
+
+            if op.state == op.RUNNING:
+                lst[0] = True
+                return True
+
+        lst = [False]
+        self.store.foreach(check_running, lst)
+
+        return lst[0]
+
+    def timeout_update(self):
+        if Prefs()['gui.operationstab.uniqueupdate'].value == True and \
+           not self.timeout_id and self.is_someone_running():
+
+            # We're not empty so we can set a timeout callback to update all
+            # actives iters at the same time reducing the CPU usage.
+
+            self.timeout_id = gobject.timeout_add(
+                Prefs()['gui.operationstab.updatetimeout'].value or 500,
+                self.__timeout_cb
+            )
+
+            log.debug('Adding a timeout function to update the OperationsTab')
+
+    def __timeout_cb(self):
+        def update(model, path, iter, idx):
+            operation = model.get_value(iter, 0)
+
+            if operation.state == operation.RUNNING:
+                operation.notify_parent()
+                idx[0] += 1
+
+        idx = [0]
+        self.store.foreach(update, idx)
+
+        if not idx[0]:
+            log.debug('Removing the timeout callback for OperationsTab updates')
+            self.timeout_id = None
+            return False
+
+        return True
 
     def __pix_data_func(self, col, cell, model, iter):
         cell.set_property('pixbuf', self.icon_operation)
@@ -284,7 +486,7 @@ class OperationTree(gtk.TreeView):
             action =  gtk.Action(None, lbl, None, stock)
             action.connect('activate', cb, operation)
             item = action.create_menu_item()
-            
+
             if idx in (1, 2) and not operation.has_pause or \
                idx == 3 and not operation.has_stop or \
                idx == 4 and not operation.has_restart:
@@ -298,7 +500,7 @@ class OperationTree(gtk.TreeView):
         menu.popup(None, None, None, evt.button, evt.time)
 
     # Public functions
-    
+
     def append_operation(self, operation, start=True):
         """
         Append an operation to the store
@@ -310,10 +512,13 @@ class OperationTree(gtk.TreeView):
         assert (isinstance(operation, Operation))
 
         iter = self.store.append([operation])
-        operation.set_iter(self.store, iter) # This is for managing real-time updates
-        
+        # This is for managing real-time updates
+        operation.set_iter(self.store, iter)
+
         if start:
             operation.start()
+
+        self.timeout_update()
 
     def remove_operation(self, operation):
         """
@@ -345,14 +550,14 @@ class OperationTree(gtk.TreeView):
 
     def __on_stop(self, action, operation):
         operation.stop()
-     
+
     def __on_restart(self, action, operation):
         operation.restart()
 
     def __on_clear(self, action, operation):
         def scan(model, path, iter, lst):
             op = model.get_value(iter, 0)
-            
+
             if op.state == op.NOT_RUNNING:
                 lst.append(gtk.TreeRowReference(model, path))
 

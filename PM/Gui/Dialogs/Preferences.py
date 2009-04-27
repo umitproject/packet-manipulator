@@ -79,7 +79,7 @@ class Page(gtk.Table):
 
         self.create_ui()
         self.show_all()
-    
+
     def create_widgets(self):
         pass
 
@@ -124,31 +124,40 @@ class Page(gtk.Table):
 
                 idx = 0
                 for name, lbl, widget in options[1]:
-                    lbl, widget = self.__create_option_widgets(name, lbl, widget)
+                    lbl, widget = self.__create_option_widgets(name, lbl,
+                                                               widget)
 
                     if lbl:
                         lsizegroup.add_widget(lbl)
                         wsizegroup.add_widget(widget)
 
-                        table.attach(lbl, 0, 1, idx, idx + 1, yoptions=gtk.SHRINK)
-                        table.attach(widget, 1, 2, idx, idx + 1, yoptions=gtk.SHRINK)
+                        table.attach(lbl, 0, 1, idx, idx + 1,
+                                     yoptions=gtk.SHRINK)
+                        table.attach(widget, 1, 2, idx, idx + 1,
+                                     yoptions=gtk.SHRINK)
                     else:
-                        table.attach(widget, 0, 2, idx, idx + 1, yoptions=gtk.SHRINK)
+                        table.attach(widget, 0, 2, idx, idx + 1,
+                                     yoptions=gtk.SHRINK)
 
                     idx += 1
 
                 self.attach(frame, 0, 2, gidx, gidx + 1, yoptions=gtk.SHRINK)
             else:
-                lbl, widget = self.__create_option_widgets(options[0], options[1], options[2])
+                lbl, widget = self.__create_option_widgets(options[0],
+                                                           options[1],
+                                                           options[2])
 
                 if lbl:
                     lsizegroup.add_widget(lbl)
                     wsizegroup.add_widget(widget)
 
-                    self.attach(lbl, 0, 1, gidx, gidx + 1, yoptions=gtk.SHRINK)
-                    self.attach(widget, 1, 2, gidx, gidx + 1, yoptions=gtk.SHRINK)
+                    self.attach(lbl, 0, 1, gidx, gidx + 1,
+                                yoptions=gtk.SHRINK)
+                    self.attach(widget, 1, 2, gidx, gidx + 1,
+                                yoptions=gtk.SHRINK)
                 else:
-                    self.attach(widget, 0, 2, gidx, gidx + 1, yoptions=gtk.SHRINK)
+                    self.attach(widget, 0, 2, gidx, gidx + 1,
+                                yoptions=gtk.SHRINK)
 
             gidx += 1
 
@@ -158,28 +167,68 @@ class GUIPage(Page):
 
     def create_widgets(self):
         self.widgets = [
+
         (_('General'),
-          (('gui.docking', None, gtk.CheckButton(_('Use docking windows'))),
-           ('gui.expander.standard', None, gtk.CheckButton(_('Use standard expanders'))))),
-        
+          (
+           ('gui.docking', None,
+                gtk.CheckButton(_('Use docking windows'))),
+           ('gui.expander.standard', None,
+                gtk.CheckButton(_('Use standard expanders'))),
+          )
+        ),
+
         (_('Sessions'),
-          (('gui.maintab.askforsave', None, gtk.CheckButton(_('Ask on unsaved changes'))),
-           ('gui.maintab.autostop', None, gtk.CheckButton(_('Automatically stop sessions on close'))))),
-        
+          (
+           ('gui.maintab.askforsave', None,
+                gtk.CheckButton(_('Ask on unsaved changes'))),
+           ('gui.maintab.autostop', None,
+                gtk.CheckButton(_('Automatically stop sessions on close'))),
+          )
+        ),
+
         (_('Sniff perspective'),
-          (('gui.maintab.sniffview.font', _('Sniff view font:'), gtk.FontButton()),
-           ('gui.maintab.sniffview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
+          (
+           ('gui.maintab.sniffview.font', _('Sniff view font:'),
+                gtk.FontButton()),
+           ('gui.maintab.sniffview.usecolors', None,
+                gtk.CheckButton(_('Colorize rows'))),
+          )
+        ),
 
         (_('Sequence perspective'),
-          (('gui.maintab.sequenceview.font', _('Sequence view font:'), gtk.FontButton()),
-           ('gui.maintab.sequenceview.usecolors', None, gtk.CheckButton(_('Colorize rows'))))),
+          (
+           ('gui.maintab.sequenceview.font', _('Sequence view font:'),
+                gtk.FontButton()),
+           ('gui.maintab.sequenceview.usecolors', None,
+                gtk.CheckButton(_('Colorize rows'))),
+          )
+        ),
 
         (_('Hex view window'),
-          (('gui.maintab.hexview.font', _('HexView font:'), gtk.FontButton()),
-           ('gui.maintab.hexview.bpl', _('Bytes per line:'), gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1))))),
+          (
+           ('gui.maintab.hexview.font', _('HexView font:'),
+                gtk.FontButton()),
+           ('gui.maintab.hexview.bpl', _('Bytes per line:'),
+                gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1))),
+          )
+        ),
 
         (_('Status tab'),
-          (('gui.statustab.font', _('Status tab font:'), gtk.FontButton()),))
+          (
+           ('gui.statustab.font', _('Status tab font:'), gtk.FontButton()),
+          )
+        ),
+
+        (_('Operations tab'),
+          (
+           ('gui.operationstab.uniqueupdate', None,
+                gtk.CheckButton(_('Use a unique function to update '
+                                  'progress of operations (CPU saving - '
+                                  'Restart required)'))),
+           ('gui.operationstab.updatetimeout', _('Update timeout interval'),
+                gtk.SpinButton(gtk.Adjustment(500, 100, 1000, 100, 100))),
+          )
+        )
         ]
 
 class ViewsPage(Page):
@@ -189,13 +238,27 @@ class ViewsPage(Page):
     def create_widgets(self):
         self.widgets = [
         (_('Show views at startup'),
-          (('gui.views.protocol_selector_tab', None, gtk.CheckButton(_('Protocol selector'))),
-           ('gui.views.property_tab', None, gtk.CheckButton(_('Protocol properties'))),
-           ('gui.views.status_tab', None, gtk.CheckButton(_('Status view'))),
-           ('gui.views.operations_tab', None, gtk.CheckButton(_('Operations'))),
-           ('gui.views.vte_tab', None, gtk.CheckButton(_('Terminal'))),
-           ('gui.views.hack_tab', None, gtk.CheckButton(_('Payload Hack tab'))),
-           ('gui.views.console_tab', None, gtk.CheckButton(_('Python shell')))))
+          (('gui.views.protocol_selector_tab', None,
+                gtk.CheckButton(_('Protocol selector'))),
+
+           ('gui.views.property_tab', None,
+                gtk.CheckButton(_('Protocol properties'))),
+
+           ('gui.views.status_tab', None,
+                gtk.CheckButton(_('Status view'))),
+
+           ('gui.views.operations_tab', None,
+                gtk.CheckButton(_('Operations'))),
+
+           ('gui.views.vte_tab', None,
+                gtk.CheckButton(_('Terminal'))),
+
+           ('gui.views.hack_tab', None,
+                gtk.CheckButton(_('Payload Hack tab'))),
+
+           ('gui.views.console_tab', None,
+                gtk.CheckButton(_('Python shell')))
+        ))
         ]
 
 class BackendPage(Page):

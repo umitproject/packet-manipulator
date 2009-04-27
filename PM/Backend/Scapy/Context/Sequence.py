@@ -27,7 +27,7 @@ from PM.Backend.Scapy.serialize import load_sequence, save_sequence
 from PM.Backend.Scapy.utils import execute_sequence
 
 def register_sequence_context(BaseSequenceContext):
-    
+
     class SequenceContext(BaseSequenceContext):
         file_types = [(_('Scapy sequence'), '*.pms')]
 
@@ -44,10 +44,12 @@ def register_sequence_context(BaseSequenceContext):
             self.lock = Lock()
 
             if count:
-                self.summary = _('Executing sequence (%d packets %d times)') % (self.tot_packet_count, count)
+                self.summary = _('Executing sequence (%d packets %d times)') % \
+                                (self.tot_packet_count, count)
             else:
-                self.summary = _('Looping sequence (%d packets)') % self.tot_packet_count
-        
+                self.summary = _('Looping sequence (%d packets)') % \
+                                self.tot_packet_count
+
         def load(self):
             log.debug("Loading sequence from %s" % self.cap_file)
 
@@ -95,7 +97,8 @@ def register_sequence_context(BaseSequenceContext):
             return BaseSequenceContext.set_sequence(self, val)
 
         def _start(self):
-            if not self.tot_loop_count or self.tot_packet_count - self.packet_count > 0 or \
+            if not self.tot_loop_count or \
+               self.tot_packet_count - self.packet_count > 0 or \
                self.tot_loop_count - self.loop_count > 0:
 
                 self.internal = True
@@ -118,7 +121,7 @@ def register_sequence_context(BaseSequenceContext):
                 return False
 
             return self._start()
-        
+
         def _restart(self):
             if self.sequencer and self.sequencer.isAlive():
                 return False
@@ -153,14 +156,17 @@ def register_sequence_context(BaseSequenceContext):
                 self.loop_count += 1
 
                 if self.tot_loop_count:
-                    self.summary = _('Running sequence %d of %d times') % (self.loop_count, self.tot_loop_count)
+                    self.summary = _('Running sequence %d of %d times') % \
+                                    (self.loop_count, self.tot_loop_count)
                 else:
-                    self.summary = _('Sequence runned for %d times') % self.loop_count
+                    self.summary = _('Sequence runned for %d times') % \
+                                    self.loop_count
             else:
                 self.packet_count += 1
 
                 if want_reply:
-                    self.summary = _('Sending packet %s and waiting a reply') % packet.summary()
+                    self.summary = _('Sending packet %s and waiting a reply') \
+                                   % packet.summary()
                 else:
                     self.summary = _('Sending packet %s') % packet.summary()
 
@@ -169,24 +175,27 @@ def register_sequence_context(BaseSequenceContext):
 
             pkts = self.packet_count % self.tot_packet_count
 
-            if self.packet_count >= self.tot_packet_count and pkts == 0 and not self.tot_loop_count:
+            if self.packet_count >= self.tot_packet_count and pkts == 0 and \
+               not self.tot_loop_count:
                 pkts = 1
             else:
                 pkts /= float(self.tot_packet_count)
 
             # Calculate percentage using also the loop counter if we
             # are not in infinite loop.
-            
+
             if self.tot_loop_count:
                 self.percentage = \
                         ((pkts * (1.0 / self.tot_loop_count)) + \
-                        (float(self.loop_count) / float(self.tot_loop_count))) * 100.0
+                        (float(self.loop_count) /
+                         float(self.tot_loop_count))) * 100.0
             else:
                 self.percentage = pkts * 100.0
 
             if self.scallback:
                 # FIXME: THIS FUCKING UDATA also in other files
-                self.scallback(packet, want_reply, self.loop_count, self.packet_count, udata)
+                self.scallback(packet, want_reply, self.loop_count,
+                               self.packet_count, udata)
 
             if not self.internal:
                 self.state = self.NOT_RUNNING
@@ -198,8 +207,9 @@ def register_sequence_context(BaseSequenceContext):
             if reply is None:
                 if self.loop_count == self.tot_loop_count:
                     self.internal = False
-                    self.summary = _('Sequence finished with %d packets sent and %d received') % \
-                                    (self.packet_count, self.received)
+                    self.summary = _('Sequence finished with %d packets sent '
+                                     'and %d received') % (self.packet_count,
+                                                           self.received)
                 else:
                     self.summary = _('Looping sequence')
             else:

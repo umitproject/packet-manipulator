@@ -62,9 +62,10 @@ class PMApp(Singleton):
             dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL,
                                        gtk.MESSAGE_WARNING,
                                        gtk.BUTTONS_YES_NO,
-                                       _('You are running Packet Manipulator as non-root user!\n'
-                                         'Some functionalities need root privileges to work\n\n'
-                                         'Do you want to continue?'))
+                                       _('You are running Packet Manipulator as'
+                                         ' non-root user!\nSome functionalities'
+                                         ' need root privileges to work\n\nDo '
+                                         'you want to continue?'))
             ret = dialog.run()
             dialog.hide()
             dialog.destroy()

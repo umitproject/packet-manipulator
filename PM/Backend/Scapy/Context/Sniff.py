@@ -1,21 +1,21 @@
-#!/usr/bin/env python                                   
-# -*- coding: utf-8 -*-                                 
-# Copyright (C) 2008 Adriano Monteiro Marques           
-#                                                       
-# Author: Francesco Piccinno <stack.box@gmail.com>      
-#                                                       
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from datetime import datetime
@@ -74,7 +74,9 @@ def register_sniff_context(BaseSniffContext):
 
             if self.iface:
                 try:
-                    self.socket = conf.L2listen(type=ETH_P_ALL, iface=self.iface, filter=self.filter)
+                    self.socket = conf.L2listen(type=ETH_P_ALL,
+                                                iface=self.iface,
+                                                filter=self.filter)
                 except socket.error, (errno, err):
                     self.summary = str(err)
                     return False
@@ -92,7 +94,7 @@ def register_sniff_context(BaseSniffContext):
             self.thread.start()
 
             return True
-        
+
         def _stop(self):
             if self.internal:
                 self.internal = False
@@ -139,11 +141,15 @@ def register_sniff_context(BaseSniffContext):
                 packet = MetaPacket(r)
                 packet_size = packet.get_size()
 
-                if self.max_packet_size and packet_size - self.max_packet_size > 0:
+                if self.max_packet_size and \
+                   packet_size - self.max_packet_size > 0:
+
                     log.debug("Skipping current packet (max_packet_size)")
                     continue
 
-                if self.min_packet_size and packet_size - self.min_packet_size < 0:
+                if self.min_packet_size and \
+                   packet_size - self.min_packet_size < 0:
+
                     log.debug("Skipping current packet (min_packet_size)")
                     continue
 
@@ -165,14 +171,18 @@ def register_sniff_context(BaseSniffContext):
                 lst = []
 
                 if self.stop_count:
-                    lst.append(float(float(self.tot_count) / float(self.stop_count)))
+                    lst.append(float(float(self.tot_count) /
+                                     float(self.stop_count)))
                 if self.stop_time:
-                    lst.append(float(float(self.tot_time) / float(self.stop_time)))
+                    lst.append(float(float(self.tot_time) /
+                                     float(self.stop_time)))
                 if self.stop_size:
-                    lst.append(float(float(self.tot_size) / float(self.stop_size)))
+                    lst.append(float(float(self.tot_size) /
+                                     float(self.stop_size)))
 
                 if lst:
-                    self.percentage = float(float(sum(lst)) / float(len(lst))) * 100.0
+                    self.percentage = float(float(sum(lst)) /
+                                            float(len(lst))) * 100.0
 
                     if self.percentage >= 100:
                         self.internal = False
@@ -202,7 +212,8 @@ def register_sniff_context(BaseSniffContext):
 
             status += "%d pks" % (self.tot_count)
 
-            self.summary = _('Finished sniffing on %s (%s)') % (self.iface, status)
+            self.summary = _('Finished sniffing on %s (%s)') % (self.iface,
+                                                                status)
 
             if self.callback:
                 self.callback(None, self.udata)

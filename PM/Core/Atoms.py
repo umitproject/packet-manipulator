@@ -132,7 +132,8 @@ class Node(object):
     
     def __repr__(self):
         if self.root != None:
-            return "%sChild -> %s (%d)" % ("  " * self.get_depth(), self.data, len(self.children))
+            return "%sChild -> %s (%d)" % ("  " * self.get_depth(), self.data, 
+                                           len(self.children))
         else:
             return "Tree %s" % object.__repr__(self)
 
@@ -352,7 +353,6 @@ class ThreadPool(object):
             self.waiters.remove(ct)
 
         self.threads.remove(ct)
-
 
 class Interruptable:
     """
