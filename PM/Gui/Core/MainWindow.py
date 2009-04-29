@@ -275,7 +275,14 @@ class MainWindow(gtk.Window):
         new_item.show()
         menu.append(new_item)
 
-    def create_session(self, menu, (sessklass, ctxklass)):
+    def create_session(self, menu, tuple):
+        """
+        Create a new session using ctxklass and sessklass
+
+        @param menu gtk.MenuItem
+        @param tuple a tuple containing (sessklass, ctxklass)
+        """
+        sessklass, ctxklass = tup
         maintab = self.get_tab("MainTab")
         maintab.session_notebook.create_session(sessklass, ctxklass)
 

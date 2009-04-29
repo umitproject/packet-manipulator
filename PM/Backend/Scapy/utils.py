@@ -1,21 +1,21 @@
-#!/usr/bin/env python                                   
-# -*- coding: utf-8 -*-                                 
-# Copyright (C) 2008 Adriano Monteiro Marques           
-#                                                       
-# Author: Francesco Piccinno <stack.box@gmail.com>      
-#                                                       
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import os
@@ -44,7 +44,7 @@ def get_iface_from_ip(metapacket):
 def get_socket_for(metapacket, want_layer_2=False, iff=None):
     # We should check if the given packet has a IP layer but not an
     # Ether one so we could send it trough layer 3
-    
+
     if iff is None:
         iff = get_iface_from_ip(metapacket)
 
@@ -122,7 +122,16 @@ def reset_routes(to=None):
         for (net, msk, gw, iface, outip) in to:
             # We need to pack netmask to net
             # so we need to count the bits of the netmask
-            
+
+            try:
+                if bin(0): pass
+            except NameError, ne:
+                bin = lambda x: (
+                                 lambda: '-' + bin(-x),
+                                 lambda: '0b' + '01'[x & 1],
+                                 lambda: bin(x >> 1) + '01'[x & 1]
+                                )[1 + (x > 1) - (x < 0)]()
+
             mask = bin(struct.unpack(">L", socket.inet_aton(msk))[0])[2:]
 
             try:
@@ -162,7 +171,7 @@ def find_all_devs():
         for iface in ifaces:
             ip = "0.0.0.0"
             hw = "00:00:00:00:00:00"
-            
+
             try:
                 ip = get_if_addr(iface)
             except Exception:
@@ -364,7 +373,7 @@ class SendReceiveConsumer(Interruptable):
 
             if notans == 0:
                 break
-        
+
         try:
             ac = cPickle.load(self.rdpipe)
         except EOFError:
@@ -428,7 +437,7 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
     except socket.error, (errno, err):
         raise Exception(err)
 
-    consumer = SendReceiveConsumer(sock_send, sock, metapacket, count, 
+    consumer = SendReceiveConsumer(sock_send, sock, metapacket, count,
                                    inter, strict, scallback, rcallback,
                                    sudata, rudata)
     consumer.start()
@@ -553,7 +562,7 @@ class SequenceConsumer(Interruptable):
                     self.receiving = False
                     log.debug("Timeout here!")
                     break
-            
+
             if not inmask:
                 time.sleep(0.05)
 
@@ -716,7 +725,7 @@ class SequenceConsumer(Interruptable):
 
         packet = None
         parent = False
-        
+
         if node is not None:
             packet = node.get_data().packet
             parent = node.is_parent()
@@ -733,7 +742,7 @@ class SequenceConsumer(Interruptable):
             return
 
         packet = None
-        
+
         if node is not None:
             packet = node.get_data().packet
 
