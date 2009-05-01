@@ -86,7 +86,7 @@ class PMExceptionHook(object):
         versions = _("Versions:\nGTK: %s\n"
                      "PyGTK: %s\nHIGWidgets: %s\nPython: %s") % \
                 (gtk_version, pygtk_version, higwidgets_version, python_version)
-        
+
         if etype == ImportError:
             d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, \
                                message_format=_("Import error"),
@@ -102,7 +102,7 @@ class PMExceptionHook(object):
         crash_text= "{{{\n%s\n%s\n}}}" % (versions, crash_text)
 
         extrainfo_dialog = "%-17s %s\n%-17s %s\n%-17s %s\n" % (
-            "sys.platform", sys.platform, "os.name", os.name, 
+            "sys.platform", sys.platform, "os.name", os.name,
             "PacketManipulator", PM_VERSION)
         crashmsg_dialog = "Crash Report\n%s\n%s\nDescription\n%s\n" % \
                         ('=' * 10, extrainfo_dialog, '-' * 20)
@@ -112,7 +112,7 @@ class PMExceptionHook(object):
                 cwin = BugReport("PacketManipulator Crash - '%s'" % emsg,\
                                  crashmsg_dialog, crash_text)
                 cwin.show_all()
-                while True: 
+                while True:
                     # keeping running while bug report is not sent successfully,
                     # or until the user closes the window.
                     result = cwin.run()
@@ -148,6 +148,20 @@ def main(args):
     from PM.higwidgets.higdialogs import HIGAlertDialog
 
     try:
+        if '--profile' in sys.argv:
+            import hotshot, hotshot.stats
+            prof = hotshot.Profile("pm.prof")
+            args = sys.argv[1:]
+            args.remove('--profile')
+            app = PMApp(args)
+            prof.runcall(app.run)
+            prof.close()
+
+            stats = hotshot.stats.load("pm.prof")
+            stats.strip_dirs()
+            stats.sort_stats('time').print_stats(100)
+            sys.exit(0)
+
         app = PMApp(sys.argv[1:])
         app.run()
     except PMErrorException, err:

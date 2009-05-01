@@ -53,7 +53,19 @@ class SniffPage(Perspective):
     icon = 'sniff_small'
     title = _('Sniff perspective')
 
+    COLORS = (
+              gtk.gdk.color_parse('#FFFA99'),
+              gtk.gdk.color_parse('#8DFF7F'),
+              gtk.gdk.color_parse('#FFE3E5'),
+              gtk.gdk.color_parse('#C797FF'),
+              gtk.gdk.color_parse('#A0A0A0'),
+              gtk.gdk.color_parse('#D6E8FF'),
+              gtk.gdk.color_parse('#C2C2FF'),
+    )
+
     def create_ui(self):
+        self.use_colors = True
+
         self.set_border_width(2)
 
         self.__create_toolbar()
@@ -63,19 +75,6 @@ class SniffPage(Perspective):
         self.pack_start(self.statusbar, False, False)
 
         self.show_all()
-
-        self.use_colors = True
-
-        # TODO: get from preference
-        self.colors = (
-            gtk.gdk.color_parse('#FFFA99'),
-            gtk.gdk.color_parse('#8DFF7F'),
-            gtk.gdk.color_parse('#FFE3E5'),
-            gtk.gdk.color_parse('#C797FF'),
-            gtk.gdk.color_parse('#A0A0A0'),
-            gtk.gdk.color_parse('#D6E8FF'),
-            gtk.gdk.color_parse('#C2C2FF'),
-        )
 
         Prefs()['gui.maintab.sniffview.font'].connect(self.__modify_font)
         Prefs()['gui.maintab.sniffview.usecolors'].connect(self.__modify_colors)
@@ -133,7 +132,8 @@ class SniffPage(Perspective):
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         self.store = gtk.TreeStore(object)
-        self.tree = gtk.TreeView(self.store)
+        self.tree = gtk.TreeView(None)
+        self.tree.set_fixed_height_mode(True)
 
         # Create a filter function
         self.model_filter = self.store.filter_new()
@@ -143,14 +143,21 @@ class SniffPage(Perspective):
 
         idx = 0
         rend = GridRenderer()
+        rend.set_property('ellipsize', pango.ELLIPSIZE_END)
 
-        for txt in (_('No.'), _('Time'), _('Source'), \
-                    _('Destination'), _('Protocol'), _('Info')):
+        titles = (_('No.'), _('Time'), _('Source'), _('Destination'),
+                  _('Protocol'), _('Info'))
+        width = (50, 150, 120, 120, 80, 200)
 
+        for txt, wid in zip(titles, width):
             col = gtk.TreeViewColumn(txt, rend)
+            col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+            col.set_min_width(wid)
+            col.set_fixed_width(wid)
+            col.set_resizable(True)
             col.set_cell_data_func(rend, self.__cell_data_func, idx)
-            self.tree.append_column(col)
 
+            self.tree.insert_column(col, idx)
             idx += 1
 
         sw.add(self.tree)
@@ -173,7 +180,7 @@ class SniffPage(Perspective):
             cell.set_property('text', packet.summary())
 
         cell.set_property('cell-background-gdk', self.__get_color(packet))
-       
+
     def __modify_font(self, font):
         try:
             desc = pango.FontDescription(font)
@@ -187,7 +194,7 @@ class SniffPage(Perspective):
             # Block change
 
             return True
-    
+
     def __modify_colors(self, value):
         self.use_colors = value
         self.tree.set_rules_hint(not self.use_colors)
@@ -195,15 +202,18 @@ class SniffPage(Perspective):
         self.__redraw_rows()
 
     def __redraw_rows(self):
-        def emit_row_changed(model, path, iter):
-            model.row_changed(path, iter)
+        #def emit_row_changed(model, path, iter):
+        #    model.row_changed(path, iter)
 
-        self.store.foreach(emit_row_changed)
+        #self.store.foreach(emit_row_changed)
+
+        # Queue draw should be enough here
+        self.queue_draw()
 
     def __get_color(self, packet):
         if self.use_colors:
             proto = packet.get_protocol_str()
-            return self.colors[hash(proto) % len(self.colors)]
+            return self.COLORS[hash(proto) % len(self.COLORS)]
         else:
             return None
 
@@ -282,7 +292,7 @@ class SniffPage(Perspective):
         menu.popup(None, None, None, evt.button, evt.time)
 
         return True
-    
+
     def __get_packets_selected(self, tree=False):
         if tree:
             node = Node()
