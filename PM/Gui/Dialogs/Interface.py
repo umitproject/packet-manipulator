@@ -100,7 +100,7 @@ class CaptureOptions(gtk.Expander):
         self.gui_scroll = gtk.CheckButton(_('Automatic view scrolling'))
 
         self.net_promisc = gtk.CheckButton(_('Capture in promiscuous mode'))
-        
+
         self.background = gtk.CheckButton(_('Start in background mode'))
 
         tbl.attach(self.gui_real, 2, 3, 0, 1, yoptions=gtk.SHRINK)
@@ -197,7 +197,7 @@ class CaptureOptions(gtk.Expander):
             factor = 60 ** 2
 
         stime = stime * factor
-        
+
         ssize = self.stop_size.get_value_as_int()
         factor = self.stop_size_box.get_children()[1].get_active()
 
@@ -260,30 +260,30 @@ class InterfaceList(gtk.VBox):
         col = gtk.TreeViewColumn(_('Name'))
         col.pack_start(pix_renderer, False)
         col.pack_start(txt_renderer)
-        
+
         col.set_attributes(pix_renderer, stock_id=0)
         col.set_attributes(txt_renderer, text=1)
 
         self.tree.append_column(col)
-        
+
         idx = 2
         for name in (_('Description'), _('IP')):
             col = gtk.TreeViewColumn(name, gtk.CellRendererText(), text=idx)
             self.tree.append_column(col)
             idx += 1
-        
+
         self.tree.set_rules_hint(True)
-        
+
         sw = gtk.ScrolledWindow()
-        
+
         sw.set_border_width(4)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.add(self.tree)
-        
+
         self.frame.add(sw)
         self.pack_start(self.frame)
-        
+
         self.__populate()
 
     def __populate(self):
@@ -291,13 +291,13 @@ class InterfaceList(gtk.VBox):
             self.store.append(
                 [gtk.STOCK_CONNECT, iface.name, iface.description, iface.ip]
             )
-    
+
     def get_selected(self):
         model, iter = self.tree.get_selection().get_selected()
 
         if not iter:
             return
-        
+
         # The first column is the name
         return model.get_value(iter, 1)
 
@@ -309,12 +309,24 @@ class InterfaceDialog(gtk.Dialog):
             (gtk.STOCK_CLOSE, gtk.RESPONSE_REJECT,
              gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT)
         )
-        
+
         self.if_list = InterfaceList()
         self.options = CaptureOptions()
 
         self.vbox.pack_start(self.if_list)
         self.vbox.pack_start(self.options, False, False)
+
+        for widget in self.get_action_area():
+            if self.get_response_for_widget(widget) == gtk.RESPONSE_ACCEPT:
+                widget.set_sensitive(False)
+
+                self.if_list.tree.get_selection().connect(
+                    'changed',
+                    self.__on_selection_changed,
+                    widget
+                )
+
+                break
 
         self.if_list.tree.connect('row-activated',
             lambda tree, path, view, diag:
@@ -330,3 +342,9 @@ class InterfaceDialog(gtk.Dialog):
     def get_options(self):
         "@return the actived options in a dict"
         return self.options.get_options()
+
+    def __on_selection_changed(self, selection, btn):
+        if selection.get_selected()[1]:
+            btn.set_sensitive(True)
+        else:
+            btn.set_sensitive(False)

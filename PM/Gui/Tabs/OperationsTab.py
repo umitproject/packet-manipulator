@@ -126,7 +126,7 @@ class FileOperation(Operation):
                 types[pattern] = (name, ctx)
 
         try:
-            find = fname.split('.')[-1]
+            find = self.file.split('.')[-1]
 
             for pattern in types:
                 if pattern.split('.')[-1] == find:

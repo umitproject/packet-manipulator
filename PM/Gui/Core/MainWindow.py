@@ -102,6 +102,9 @@ class MainWindow(gtk.Window):
         self.main_actions = [
             ('File', None, _('File'), None),
 
+            ('NewSequence', gtk.STOCK_NEW, _('_New sequence'), '<Control>n',
+                _('Create a new sequence'), self.__on_new_sequence),
+
             ('Open', gtk.STOCK_OPEN, _('_Open'), '<Control>o',
                 _('Open session'), self.__on_open_session),
 
@@ -139,6 +142,7 @@ class MainWindow(gtk.Window):
 
         self.default_ui = """<menubar>
             <menu action='File'>
+                <menuitem action='NewSequence'/>
                 <menuitem action='Open'/>
                 <menuitem action='Save'/>
                 <menuitem action='SaveAs'/>
@@ -590,6 +594,10 @@ class MainWindow(gtk.Window):
         dialog.hide()
         dialog.destroy()
 
+    def __on_new_sequence(self, action):
+        tab = self.get_tab("MainTab")
+        tab.session_notebook.create_sequence_session([])
+
     def __on_open_session(self, action):
         types = {}
         sessions = (Backend.StaticContext,
@@ -627,8 +635,6 @@ class MainWindow(gtk.Window):
                         ctx = types[pattern][1]
             except:
                 pass
-
-            tab = self.get_tab("MainTab")
 
             if ctx is not Backend.SequenceContext and \
                ctx is not Backend.SniffContext and \
