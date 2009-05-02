@@ -44,7 +44,9 @@ def register_sniff_context(BaseSniffContext):
             self.internal = True
 
             self.title = _('%s capture') % self.iface
+            self.summary = _('Sniffing on %s') % self.iface
             self.thread = None
+            self.priv = []
 
         @with_decorator
         def get_all_data(self):
@@ -84,7 +86,6 @@ def register_sniff_context(BaseSniffContext):
                     self.summary = str(err)
                     return False
 
-            self.summary = _('Sniffing on %s') % self.iface
             self.state = self.RUNNING
             self.internal = True
             self.data = []
@@ -133,10 +134,54 @@ def register_sniff_context(BaseSniffContext):
                             r = self.socket.recv(MTU)
                     if r is None:
                         continue
+
+                    self.priv.append(r)
                 except:
                     self.internal = False
                     self.socket = None
                     break
+
+            log.debug("Exiting from thread")
+
+            self.priv = []
+
+            self.state = self.NOT_RUNNING
+            self.percentage = 100.0
+            status = ""
+
+            if self.tot_size >= 1024 ** 3:
+                status = "%.1f GB/" % (self.tot_size / (1024.0 ** 3))
+            elif self.tot_size >= 1024 ** 2:
+                status = "%.1f MB/" % (self.tot_size / (1024.0 ** 2))
+            else:
+                status = "%.1f KB/" % (self.tot_size / (1024.0))
+
+            if self.tot_time >= 60 ** 2:
+                status += "%d h/" % (self.tot_time / (60 ** 2))
+            elif self.tot_time >= 60:
+                status += "%d m/" % (self.tot_time / 60)
+            else:
+                status += "%d s/" % (self.tot_time)
+
+            status += "%d pks" % (self.tot_count)
+
+            self.summary = _('Finished sniffing on %s (%s)') % (self.iface,
+                                                                status)
+
+            if self.callback:
+                self.callback(None, self.udata)
+
+        def check_finished(self):
+
+            priv = self.priv
+            self.priv = []
+
+            for r in priv:
+                # This code should not be in the thread and called in the
+                # main thread of the GUI so we can avoid packet loss.
+                # It's better to have a temporary list object to store raw
+                # packets captured from socket.recv(MTU) function and then joins
+                # everything in self.data
 
                 packet = MetaPacket(r)
                 packet_size = packet.get_size()
@@ -165,6 +210,7 @@ def register_sniff_context(BaseSniffContext):
 
                 self.data.append(packet)
 
+                # FIXME: This probably should be moved inside the run() function
                 if self.callback:
                     self.callback(MetaPacket(packet), self.udata)
 
@@ -189,33 +235,5 @@ def register_sniff_context(BaseSniffContext):
                 else:
                     # ((goject.G_MAXINT / 4) % gobject.G_MAXINT)
                     self.percentage = (self.percentage + 536870911) % 2147483647
-
-            log.debug("Exiting from thread")
-
-            self.state = self.NOT_RUNNING
-            self.percentage = 100.0
-            status = ""
-
-            if self.tot_size >= 1024 ** 3:
-                status = "%.1f GB/" % (self.tot_size / (1024.0 ** 3))
-            elif self.tot_size >= 1024 ** 2:
-                status = "%.1f MB/" % (self.tot_size / (1024.0 ** 2))
-            else:
-                status = "%.1f KB/" % (self.tot_size / (1024.0))
-
-            if self.tot_time >= 60 ** 2:
-                status += "%d h/" % (self.tot_time / (60 ** 2))
-            elif self.tot_time >= 60:
-                status += "%d m/" % (self.tot_time / 60)
-            else:
-                status += "%d s/" % (self.tot_time)
-
-            status += "%d pks" % (self.tot_count)
-
-            self.summary = _('Finished sniffing on %s (%s)') % (self.iface,
-                                                                status)
-
-            if self.callback:
-                self.callback(None, self.udata)
 
     return SniffContext

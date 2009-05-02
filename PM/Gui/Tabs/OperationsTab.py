@@ -81,6 +81,7 @@ class FileOperation(Operation):
         self.percentage = 0
         self.thread = None
         self.state = self.NOT_RUNNING
+        self.loading_view = False
 
         if type == FileOperation.TYPE_LOAD:
             self.summary = _('Loading of %s pending.') % self.file
@@ -101,7 +102,7 @@ class FileOperation(Operation):
             self._save_file()
 
     def get_percentage(self):
-        if self.state == self.RUNNING:
+        if self.loading_view:
             self.percentage = (self.percentage + 536870911) % gobject.G_MAXINT
             return None
         else:
@@ -153,6 +154,8 @@ class FileOperation(Operation):
         if self.type == FileOperation.TYPE_LOAD:
             ctx, rctx = udata
 
+            self.loading_view = True
+
             log.debug('Creating a new session after loading for %s' % str(ctx))
 
             tab = PMApp().main_window.get_tab("MainTab")
@@ -171,8 +174,12 @@ class FileOperation(Operation):
         else:
             pass
 
+        self.loading_view = False
         self.percentage = 100.0
         self.state = self.NOT_RUNNING
+
+        # Force update.
+        self.notify_parent()
         return False
 
     @trace
@@ -190,13 +197,15 @@ class FileOperation(Operation):
                  ctx is Backend.StaticContext:
 
                 rctx = Backend.StaticContext(self.file, self.file)
-                rctx.load()
+                rctx.load(operation=self) # Let's update our operation directly from load
 
             if rctx is not None:
                 # Now let's add a callback to when
                 gobject.idle_add(self.__on_idle, (ctx, rctx))
         else:
             pass
+
+        self.thread = None
 
 class SendOperation(Backend.SendContext, Operation):
     def __init__(self, packet, count, inter, iface):
@@ -297,8 +306,12 @@ class SniffOperation(Backend.SniffContext, Operation):
     def _start(self):
         ret = Backend.SniffContext._start(self)
 
-        if ret and self.session:
-            self.session.sniff_page.clear()
+        if self.session:
+            if ret:
+                self.session.sniff_page.clear()
+
+            # We have to call it also in case of start failed to set up the correct
+            # summary on the label.
             self.session.sniff_page.reload()
 
         return ret

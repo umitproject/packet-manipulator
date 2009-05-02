@@ -218,10 +218,15 @@ class SniffPage(Perspective):
             return None
 
     def __update_tree(self):
+        self.session.context.check_finished()
+
         for packet in self.session.context.get_data():
             self.store.append(None, [packet])
 
-            # Scroll to end
+            #while gtk.events_pending():
+            #    gtk.main_iteration_do()
+
+            # TODO: better handle the situation.
             if getattr(self.session.context, 'auto_scroll', True):
                 self.tree.scroll_to_cell(len(self.model_filter) - 1)
 
@@ -236,16 +241,15 @@ class SniffPage(Perspective):
 
     # Public functions
 
-    def populate(self, pktlist):
-        for packet in pktlist:
-            self.store.append(None, [packet])
-
     def clear(self):
         self.store.clear()
 
     def reload(self):
         for packet in self.session.context.get_data():
             self.store.append(None, [packet])
+
+            while gtk.events_pending():
+                gtk.main_iteration_do()
 
         self.statusbar.label = "<b>%s</b>" % self.session.context.summary
 
@@ -254,7 +258,7 @@ class SniffPage(Perspective):
 
         if isinstance(self.session.context, Backend.TimedContext) and \
            self.session.context.state != self.session.context.NOT_RUNNING:
-            self.timeout_id = gobject.timeout_add(200, self.__update_tree)
+            self.timeout_id = gobject.timeout_add(300, self.__update_tree)
 
     # Signals callbacks
 

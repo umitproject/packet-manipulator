@@ -109,7 +109,7 @@ class PMApp(Singleton):
             options, args = parser.parse_args(self._args)
 
             if options.fread:
-                self.main_window.open_generic_file(options.fread)
+                self.main_window.open_generic_file_async(options.fread)
 
             return False
 

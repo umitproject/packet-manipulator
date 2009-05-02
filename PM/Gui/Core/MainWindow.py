@@ -50,7 +50,7 @@ from PM.Gui.Tabs.HackTab import HackTab
 from PM.Gui.Tabs.StatusTab import StatusTab
 from PM.Gui.Tabs.ConsoleTab import ConsoleTab
 from PM.Gui.Tabs.PropertyTab import PropertyTab
-from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation
+from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation, FileOperation
 from PM.Gui.Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
 from PM.Gui.Dialogs.Interface import InterfaceDialog
@@ -630,16 +630,10 @@ class MainWindow(gtk.Window):
 
             tab = self.get_tab("MainTab")
 
-            if ctx is Backend.SequenceContext:
-                tab.session_notebook.load_sequence_session(fname)
+            if ctx is not Backend.SequenceContext and \
+               ctx is not Backend.SniffContext and \
+               ctx is not Backend.StaticContext:
 
-            elif ctx is Backend.SniffContext:
-                tab.session_notebook.load_sniff_session(fname)
-
-            elif ctx is Backend.StaticContext:
-                tab.session_notebook.load_static_session(fname)
-
-            else:
                 d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
                     message_format=_("Unable to open selected session"),
                     secondary_text=_("PacketManipulator is unable to guess the "
@@ -647,9 +641,19 @@ class MainWindow(gtk.Window):
                                      "and to reopen the file."))
                 d.run()
                 d.destroy()
+            else:
+                self.open_generic_file_async(fname)
 
         dialog.hide()
         dialog.destroy()
+
+    def open_generic_file_async(self, fname):
+        """
+        Open a generic file (pcap/sequence and other supported file format)
+        @param fname the path to the file to open
+        """
+        tab = self.get_tab("OperationsTab")
+        tab.tree.append_operation(FileOperation(fname, FileOperation.TYPE_LOAD))
 
     def open_generic_file(self, fname):
         """
