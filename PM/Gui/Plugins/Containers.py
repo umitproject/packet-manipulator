@@ -26,8 +26,6 @@ from zipfile import ZipFile, BadZipfile, ZIP_DEFLATED
 from xml.dom.minidom import parseString, getDOMImplementation
 from tempfile import mktemp
 
-# Needs testing
-from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Plugins.Atoms import StringFile
 from PM.Gui.Plugins.Parser import Parser
 
@@ -50,6 +48,7 @@ try:
     class PlugEggInstaller(install_egginfocmd):
         def run(self):
             pass
+
 except ImportError:
     pass
 
@@ -160,8 +159,6 @@ class PluginReader(object):
     def get_logo(self, w=64, h=64):
         "@return a gtk.dk.Pixbuf"
 
-        import gtk
-
         try:
             # TODO: eliminate the mktemp workaround
             
@@ -170,30 +167,76 @@ class PluginReader(object):
             f.write(self.file.read('data/logo.png'))
             f.close()
 
+            import gtk
+
             p = gtk.gdk.pixbuf_new_from_file_at_size(name, w, h)
             
             os.remove(name)
 
             return p
         except Exception, err:
-            log.critical("PluginReader.get_logo(): %s" % err)
+
+            from PM.Gui.Core.Icons import get_pixbuf
+
             return get_pixbuf('extension_normal', w, h)
 
     def get_path(self):
         return self.path
 
-    def extract_file(self, zip_path):
-        plug_subdir = os.path.join(PM_PLUGINS_TEMP_DIR, self.name)
+    def extract_dir(self, zip_path, maxdepth=0):
+        """
+        Extract a dir full recursive.
+        @param zip_path the directory to extract (for example data/test/)
+        @param maxdepth the max depth. Set 0 for fully recursive extraction.
+        @return a list containing extracted files or []
+        """
+        ret = []
+        if zip_path[-1] != '/':
+            zip_path += '/'
+        if zip_path[0] == '/':
+            zip_path = zip_path[1:]
 
-        log.debug("Extracting %s into %s " % (zip_path, plug_subdir))
+        sep_len = zip_path.count('/')
+
+        log.debug("Extracting files contained in %s" % zip_path)
+
+        for i in self.file.namelist():
+            if i.startswith(zip_path):
+                if maxdepth > 0 and \
+                   i.count('/') - sep_len - maxdepth + 1 != 0:
+
+                   log.debug("Skipping %s for maxdepth %d" % (i, maxdepth))
+                   continue
+
+                p = self.extract_file(i, keep_path=True)
+
+                if p: ret.append(p)
+
+        return ret
+        
+    def extract_file(self, zip_path, keep_path=False):
+        if zip_path not in self.file.namelist():
+            log.debug("The file %s seems to not exists in the zip file" % zip_path)
+            return None
+
+        plug_subdir = os.path.join(Path.config_dir, 'plugins-temp', self.name)
 
         if not os.path.exists(plug_subdir):
             os.mkdir(plug_subdir)
 
+        if keep_path:
+            # Recursive reconstruct the entire path
+            full_path = os.path.join(plug_subdir, os.path.dirname(zip_path))
+            if not os.path.isdir(full_path):
+                os.makedirs(full_path)
+            plug_subdir = full_path
+
+        log.debug("Extracting %s into %s " % (zip_path, plug_subdir))
+
         name = os.path.join(plug_subdir,
                             os.path.basename(zip_path))
 
-        f = open(name, 'wb')
+        f = open(name, 'wb+')
         f.write(self.file.read(zip_path))
         f.close()
 

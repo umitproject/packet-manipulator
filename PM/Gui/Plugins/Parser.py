@@ -19,7 +19,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import re
-from xml.dom.minidom import parse, parseString
+
+from xml.dom.minidom import parse, parseString, getDOMImplementation
+from PM.Core.Logger import log
 
 class Variable(object):
     """
@@ -58,7 +60,7 @@ class Variable(object):
         if not isinstance(self._value, self.__class__.element_type):
             raise Exception("Unable to set a valid type")
         
-        print ">>> Variable()", self._name, self._value
+        log.debug(">>> Variable named '%s' allocate with value '%s'" % (self._name, self._value))
 
     @staticmethod
     def setted(value):
@@ -79,6 +81,14 @@ class Variable(object):
             raise Exception("Cannot convert %s" % value)
         else:
             return None
+    
+    @staticmethod
+    def revert(value, exc_on_error=False):
+        """
+        @param value a type that should be converted to str
+        @param exc_on_error if an Exception should be raised on error
+        """
+        return str(value)
 
     def add_attribute(self, attrs, name, typ, varname):
         """
@@ -117,18 +127,18 @@ class Variable(object):
         Check the value validity and if fail set value to defaul
         """
         if not Variable.setted(self._value):
-            print "check_validity(): Value not setted"
+            log.debug("check_validity(): value is not setted. Falling back to default value")
             self._value = self._def_val
         elif not isinstance(self._value, self.__class__.element_type):
-            print "check_validity(): Not same type"
+            log.debug("check_validity(): value is not of the type. Fallink back to default value")
             self._value = self._def_val
         elif not self.validate():
-            print "check_validity(): Not valid!"
+            log.debug("check_validity(): value is not valid for validate(). Fallink back to default value")
             self._value = self._def_val
         else:
-            print "check_validity(): OK"
+            log.debug("check_validity(): value is OK")
 
-        print "check_validity():", self._value
+        log.debug("check_validity(): Ends out value is '%s'" % self._value)
 
     def validate(self):
         """
@@ -339,6 +349,10 @@ class Boolean(Variable):
         else:
             return None
 
+    @staticmethod
+    def revert(value, exc_on_error=False):
+        return (value) and ('true') or ('false')
+
 class List(Variable):
     "max/min/pattern/maxe/mine -> id"
     __var_names__ = ('list', 'lst', 'l')
@@ -354,8 +368,7 @@ class List(Variable):
         try:
             Variable.__init__(self, value, name, def_value, desc, attrs, dict)
         except Exception, err:
-            print ">>> Ignoring exception.. we are List sir ;)"
-            print err
+            pass
 
         for child in childs:
             try:
@@ -497,18 +510,71 @@ class Parser(object):
         Boolean,
         List
     )
+
+    TRANSLATOR = {
+        str : String,
+        int : Integer,
+        float : Float,
+        bool : Boolean,
+        list : List
+    }
+
     def __getitem__(self, x):
         return self.sections[x]
 
     def __init__(self):
         self.sections = {}
+    def save_to_file(self, fname):
+        doc = self.create_doc()
+        
+        f = open(fname, "w")
+        f.write(doc.toprettyxml('  '))
+        f.close()
+
+    def create_doc(self):
+        doc = getDOMImplementation().createDocument(None, "preferences", None)
+
+        keys = self.sections.keys()
+        keys.sort()
+
+        for sname in keys:
+            section = self.sections[sname]
+
+            sec_element = doc.createElement('section')
+            sec_element.setAttribute('name', sname)
+            doc.documentElement.appendChild(sec_element)
+
+            self.dump_section(doc, sec_element, section)
+
+        return doc
+
+    def dump_section(self, doc, element, section):
+        keys = section.keys()
+        keys.sort()
+
+        for vname in keys:
+            var = section[vname]
+
+            child = doc.createElement(var.__var_names__[-1])
+
+            for attr in ('name', 'value', 'default', 'description') + \
+                         var.__attribs__:
+                attr_val = getattr(var, attr, None)
+
+                if attr_val is not None:
+                    if not isinstance(attr_val, basestring):
+                        attr_val = Parser.TRANSLATOR[type(attr_val)].revert(attr_val)
+                    child.setAttribute(attr, attr_val)
+
+            element.appendChild(child)
+
     def parse_string(self, txt):
         self.parse_doc(parseString(txt))
     def parse_file(self, path):
         self.parse_doc(parse(path))
     def parse_doc(self, doc):
         if not doc.documentElement.tagName == "preferences":
-            return
+            return 
 
         for node in doc.documentElement.childNodes:
             if node.nodeName == "section":
