@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://www.w3schools.com" targetNamespace="http://www.w3schools.com" elementFormDefault="qualified">
+  <!-- Offline Attack type -->
+  <xs:complexType name="offlineAttackType">
+    <xs:sequence>
+      <!-- protocol list -->
+      <!-- cve list -->
+        <!-- class -->
+        <!-- system list -->
+        <!-- version afflicted -->
+        <!-- pubblished -->
+        <!-- discovered -->
+        <!-- reference list -->
+    </xs:sequence>
+  </xs:complexType>
+  <!-- Online Attack type -->
+  <xs:complexType name="onlineAttackType">
+  </xs:complexType>
+  <!-- Common types -->
+  <xs:simpleType name="legacyVersionType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="ui|lib"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="versionType">
+    <xs:restriction base="xs:string">
+      <!-- Use a better regex here -->
+      <xs:pattern value="(\d{1,2})?(\d{1,2}\.)?\d{1,2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="versionlistType">
+    <xs:restriction base="xs:string">
+      <!-- Use a better regex here. That will accept list terminating with ',' -->
+      <xs:pattern value="(([=|&gt;|&lt;|&lt;=|&gt;=](.*)(-(\d{1,2})?(\d{1,2}\.)?\d{1,2})),?)"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="UmitPlugin">
+    <xs:complexType>
+      <!-- This should not be a sequence but all -->
+      <xs:sequence>
+        <!-- Required elements -->
+        <xs:element name="name" type="xs:string"/>
+        <xs:element name="version" type="versionType"/>
+        <xs:element name="start_file" type="xs:string"/>
+        <xs:element name="url" type="xs:anyURI"/>
+        <xs:element name="description" type="xs:string"/>
+        <!-- Optional elements -->
+        <xs:element name="conflicts" type="versionlistType" minOccurs="0"/>
+        <xs:element name="needs" type="versionlistType" minOccurs="0"/>
+        <xs:element name="provides" type="versionlistType" minOccurs="0"/>
+        <xs:element name="author" type="xs:string" minOccurs="0"/>
+        <xs:element name="license" type="xs:string" minOccurs="0"/>
+        <xs:element name="artists" type="xs:string" minOccurs="0"/>
+        <xs:element name="update" type="xs:anyURI" minOccurs="0"/>
+        <xs:element name="copyright" type="xs:string" minOccurs="0"/>
+        <!-- The type element will be the discriminator -->
+        <xs:choice>
+          <xs:element name="type" type="legacyVersionType"/>
+          <xs:element name="onlineAttack" type="offlineAttackType"/>
+          <xs:element name="offlineAttack" type="onlineAttackType"/>
+        </xs:choice>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
