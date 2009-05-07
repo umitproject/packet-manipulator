@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema targetNamespace="http://www.umitproject.org" elementFormDefault="qualified" xmlns="http://www.umitproject.org" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:include schemaLocation="UmitPlugins.xsd"/>
+	<xs:complexType name="offlineAttackType">
+		<xs:sequence>
+		  <!--
+				Here We could pass something like:
+					<protocols>
+						<protocol name="tcp" port="25"/>
+						<protocol name="smtp"/>
+					</protocols>
+				In order to have an alias like syntax.
+			-->
+			<xs:element name="protocols">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="protocol">
+							<xs:complexType>
+								<xs:attribute name="name" type="xs:string" use="required"/>
+								<xs:attribute name="port" type="xs:integer"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element minOccurs="0" name="vulns" nillable="true">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="vuln">
+							<xs:complexType>
+								<xs:all>
+								  <!-- General description of the vulnerability -->
+									<xs:element minOccurs="0" name="description" type="xs:string"/>
+									<!--
+										This is to collect information regarding the class of the vulnerabilty.
+										We could have several class like Design Error, Buffer Overflow, etc...
+									-->
+									<xs:element name="classes">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="class" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<!--
+										A list of systems affected and non goes here. Something like:
+										 - Ubuntu Linux 9.04
+										 - Slackware 11.0
+									-->
+									<xs:element minOccurs="0" name="systems">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="affected" type="xs:string"/>
+												<xs:element maxOccurs="unbounded" minOccurs="0" name="notaffected" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<!--
+										If we are talking about a general software would be nice to list also the version
+										of the software that are affected to this vulnerability. The list will be something like:
+										- samba 3.0
+										- samba 2.5
+									-->
+									<xs:element minOccurs="0" name="versions">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" minOccurs="1" name="affected" type="xs:string"/>
+												<xs:element maxOccurs="unbounded" minOccurs="0" name="notaffected" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<!-- The date indicating when the vulnerability was pubblished -->
+									<xs:element minOccurs="0" name="pubblished" type="xs:date"/>
+									<!-- The name of the author who discovered this vulnerability -->
+									<xs:element minOccurs="0" name="discovered" type="xs:string"/>
+									<!--
+										References could contain generic URI to solutions, CVEs, etc..
+										We could have something like <url type="CVE-2004-0803" href=".../> or
+										<url type="OSVDB.." /> or <url type="SOLUTION" .. etc...
+									-->
+									<xs:element minOccurs="0" name="references">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="url">
+													<xs:complexType>
+														<xs:attribute name="type" type="xs:string" use="optional"/>
+														<xs:attribute name="href" type="xs:anyURI" use="required"/>
+													</xs:complexType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<!-- Platforms includes 'linux', 'macos', 'freebsd', etc.. -->
+									<xs:element minOccurs="0" name="platform" type="xs:string"/>
+									<!-- Obviously the architecture that's afflicted 'x86' 'x86_64' 'ppc'-->
+									<xs:element minOccurs="0" name="arch" type="xs:string"/>
+								</xs:all>
+								<!-- An optional attribute to have a name for every vuln -->
+								<xs:attribute name="name" type="xs:string" use="optional"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="onlineAttackType"/>
+	<xs:complexType name="attackType">
+		<xs:choice>
+			<xs:element name="offline" type="offlineAttackType"/>
+			<xs:element name="online" type="onlineAttackType"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:element name="attack" type="attackType"/>
+</xs:schema>

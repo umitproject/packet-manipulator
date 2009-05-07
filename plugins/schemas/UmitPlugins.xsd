@@ -1,93 +1,89 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-  <xs:simpleType name="legacyVersionType">
-    <xs:restriction base="xs:string">
-      <xs:pattern value="ui|lib"/>
-    </xs:restriction>
-  </xs:simpleType>
+<xs:schema elementFormDefault="qualified" targetNamespace="http://www.umitproject.org" xmlns="http://www.umitproject.org" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:simpleType name="legacyVersionType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="ui|lib"/>
+		</xs:restriction>
+	</xs:simpleType>
   <!-- These are list for conflicts/needs/provides, used by the Tree.py -->
-  <xs:simpleType name="versionType">
-    <xs:restriction base="xs:string">
-      <xs:pattern value="(\d{1,2}\.)?(\d{1,2}\.)?\d{1,2}"/>
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:simpleType name="opVersionType">
-    <xs:restriction base="xs:string">
-      <xs:pattern value="(&lt;|&gt;|=|&lt;=|&gt;=)(.*)(-\d{1,2})?(\d{1,2}\.)?\d{1,2}"/>
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:element name="UmitPluginUpdate">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element maxOccurs="unbounded" name="update">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="version" type="versionType"/>
-              <xs:element minOccurs="0" name="description" type="xs:string"/>
-              <xs:element maxOccurs="unbounded" name="url" type="xs:anyURI"/>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="integrity">
-                <xs:complexType>
-                  <xs:attribute name="type" type="xs:string" use="required"/>
-                  <xs:attribute name="value" type="xs:string" use="required"/>
-                </xs:complexType>
-              </xs:element>
-              <xs:any minOccurs="0"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="UmitPlugin">
-    <xs:complexType>
-      <xs:sequence>
-
-        <!-- Required and descriptive elements -->
-        <xs:element name="name" type="xs:string"/>
-        <xs:element name="version" type="versionType"/>
-        <xs:element name="description" type="xs:string"/>
-        <xs:element name="url" type="xs:anyURI"/>
-
-        <!-- Runtime information -->
-        <xs:element name="runtime">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="start_file" type="xs:string"/>
-              <xs:element minOccurs="0" name="update" type="xs:anyURI"/>
-              <xs:any minOccurs="0"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-
-        <!-- DepTree element (optional)-->
-        <xs:element minOccurs="0" name="deptree">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="provide" type="opVersionType"/>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="need" type="opVersionType"/>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="conflict" type="opVersionType"/>
-              <xs:any minOccurs="0"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-
-        <!-- credits element -->
-        <xs:element name="credits">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element maxOccurs="unbounded" name="license" type="xs:string"/>
-              <xs:element maxOccurs="unbounded" name="copyright" type="xs:string"/>
-              <xs:element maxOccurs="unbounded" name="author" type="xs:string"/>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="contributor" type="xs:string"/>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="translator" type="xs:string"/>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="artist" type="xs:string"/>
-              <xs:any minOccurs="0"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-        <xs:any minOccurs="0"/>
-      </xs:sequence>
-      <xs:attribute default="ui" name="type" type="legacyVersionType" use="optional"/>
-    </xs:complexType>
-  </xs:element>
+	<xs:simpleType name="versionType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="(\d{1,2}\.)?(\d{1,2}\.)?\d{1,2}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="opVersionType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="(&lt;|&gt;|=|&lt;=|&gt;=)(.*)(-\d{1,2})?(\d{1,2}\.)?\d{1,2}"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="UmitPluginType">
+		<xs:sequence>
+      <!-- Required and descriptive elements -->
+			<xs:element name="name" type="xs:string"/>
+			<xs:element name="version" type="versionType"/>
+			<xs:element name="description" type="xs:string"/>
+			<xs:element name="url" type="xs:anyURI"/>
+      <!-- Runtime information -->
+			<xs:element name="runtime">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="start_file" type="xs:string"/>
+						<xs:element minOccurs="0" name="update" type="xs:anyURI"/>
+						<xs:any minOccurs="0"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+      <!-- DepTree element (optional)-->
+			<xs:element minOccurs="0" name="deptree">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="provide" type="opVersionType"/>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="need" type="opVersionType"/>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="conflict" type="opVersionType"/>
+						<xs:any minOccurs="0"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+      <!-- credits element -->
+			<xs:element name="credits">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="license" type="xs:string"/>
+						<xs:element maxOccurs="unbounded" name="copyright" type="xs:string"/>
+						<xs:element maxOccurs="unbounded" name="author" type="xs:string"/>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="contributor" type="xs:string"/>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="translator" type="xs:string"/>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="artist" type="xs:string"/>
+						<xs:any minOccurs="0"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:any minOccurs="0"/>
+		</xs:sequence>
+		<xs:attribute default="ui" name="type" type="legacyVersionType" use="optional"/>
+		<xs:anyAttribute/>
+	</xs:complexType>
+	<xs:complexType name="UmitPluginUpdateType">
+		<xs:sequence>
+			<xs:element maxOccurs="unbounded" name="update">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="version" type="versionType"/>
+						<xs:element minOccurs="0" name="description" type="xs:string"/>
+						<xs:element maxOccurs="unbounded" name="url" type="xs:anyURI"/>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="integrity">
+							<xs:complexType>
+								<xs:attribute name="type" type="xs:string" use="required"/>
+								<xs:attribute name="value" type="xs:string" use="required"/>
+								<xs:anyAttribute/>
+							</xs:complexType>
+						</xs:element>
+						<xs:any minOccurs="0"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="UmitPluginUpdate" type="UmitPluginUpdateType"/>
+	<xs:element name="UmitPlugin" type="UmitPluginType"/>
 </xs:schema>
