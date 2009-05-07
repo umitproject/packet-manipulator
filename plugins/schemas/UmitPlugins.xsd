@@ -5,7 +5,7 @@
 			<xs:pattern value="ui|lib"/>
 		</xs:restriction>
 	</xs:simpleType>
-  <!-- These are list for conflicts/needs/provides, used by the Tree.py -->
+	<!-- These are list for conflicts/needs/provides, used by the Tree.py -->
 	<xs:simpleType name="versionType">
 		<xs:restriction base="xs:string">
 			<xs:pattern value="(\d{1,2}\.)?(\d{1,2}\.)?\d{1,2}"/>
@@ -18,12 +18,12 @@
 	</xs:simpleType>
 	<xs:complexType name="UmitPluginType">
 		<xs:sequence>
-      <!-- Required and descriptive elements -->
+			<!-- Required and descriptive elements -->
 			<xs:element name="name" type="xs:string"/>
 			<xs:element name="version" type="versionType"/>
 			<xs:element name="description" type="xs:string"/>
 			<xs:element name="url" type="xs:anyURI"/>
-      <!-- Runtime information -->
+			<!-- Runtime information -->
 			<xs:element name="runtime">
 				<xs:complexType>
 					<xs:sequence>
@@ -33,7 +33,7 @@
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>
-      <!-- DepTree element (optional)-->
+			<!-- DepTree element (optional)-->
 			<xs:element minOccurs="0" name="deptree">
 				<xs:complexType>
 					<xs:sequence>
@@ -44,7 +44,7 @@
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>
-      <!-- credits element -->
+			<!-- credits element -->
 			<xs:element name="credits">
 				<xs:complexType>
 					<xs:sequence>
