@@ -18,6 +18,7 @@ from Base import Session
 
 from PM import Backend
 from PM.Core.I18N import _
+from PM.Core.Logger import log
 from PM.Gui.Widgets.Expander import AnimatedExpander
 
 from PM.Gui.Pages.SniffPage import SniffPage
@@ -49,19 +50,27 @@ class SniffSession(Session):
             self.sniff_page.clear()
         self.sniff_page.reload()
 
-    def save_session(self, fname):
-        if not fname.lower().endswith('.pcap') or \
+    def save_session(self, fname, async=True):
+        # Probably hated check
+        if not fname.lower().endswith('.pcap') and \
            not fname.lower().endswith('.pcap.gz'):
+
+            log.debug('Appending .pcap.gz suffix to %s before saving.' % fname)
             fname += '.pcap.gz'
 
         ret = super(SniffSession, self).save_session(fname)
 
-        if ret:
-            self.sniff_page.statusbar.image = gtk.STOCK_HARDDISK
-        else:
-            self.sniff_page.statusbar.image = gtk.STOCK_DIALOG_ERROR
+        if not async:
+            if ret:
+                self.sniff_page.statusbar.image = gtk.STOCK_HARDDISK
+            else:
+                self.sniff_page.statusbar.image = gtk.STOCK_DIALOG_ERROR
 
-        self.sniff_page.statusbar.label = "<b>%s</b>" % self.context.summary
+            self.sniff_page.statusbar.label = "<b>%s</b>" % self.context.summary
+        else:
+            self.sniff_page.statusbar.image = gtk.STOCK_HARDDISK
+            self.sniff_page.statusbar.label = "<b>Saving to %s</b>" % fname
+
         self.sniff_page.statusbar.start_animation(True)
 
         return ret

@@ -22,7 +22,7 @@ from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
 
-from PM.Core.Atoms import Node
+from PM.Core.Atoms import Node, generate_traceback
 from PM.Core.Logger import log
 
 from PM.Backend.Scapy import *
@@ -45,12 +45,42 @@ class SequenceLoader(handler.ContentHandler):
 
         self.tree = Node()
         self.current_node = self.tree
+        self.tree_len = 0
 
         handler.ContentHandler.__init__(self)
 
+    def parse(self):
         parser = make_parser()
         parser.setContentHandler(self)
         parser.parse(self.fname)
+        parser.close()
+        parser.reset()
+
+        return self.tree
+
+    def parse_async(self):
+        """
+        @attention Use try/except for this function
+        the functions will be iterable and at every iteration will return a
+        tuple of the type (tree, pktidx, percentage of loading, fsize)
+        """
+        parser = make_parser()
+        parser.setContentHandler(self)
+
+        position = 0
+        fd = open(self.fname, 'r')
+        fd.seek(0, 2)
+        size = float(fd.tell())
+        fd.seek(0)
+
+        for data in fd:
+            parser.feed(data)
+            position += len(data)
+
+            yield self.tree, self.tree_len, (position / size) * 100.0, size
+
+        parser.close()
+        parser.reset()
 
     def add_pending(self):
         if self.current_protocol:
@@ -82,6 +112,9 @@ class SequenceLoader(handler.ContentHandler):
 
                 self.current_node.append_node(node)
                 self.current_node = node
+
+                self.tree_len += 1
+
             except Exception, err:
                 print err
             else:
@@ -149,14 +182,20 @@ class SequenceLoader(handler.ContentHandler):
             except:
                 value = self.field_value
 
-            field = get_proto_field(self.current_protocol,
-                                            self.field_id)
-
+            field = get_proto_field(self.current_protocol, self.field_id)
             set_field_value(self.current_protocol, field, value)
 
 class SequenceWriter(object):
     def __init__(self, fname, sequence):
-        output = open(fname, 'w')
+        self.fname = fname
+        self.seq = sequence
+
+    def save(self):
+        for i in self.save_async():
+            pass
+
+    def save_async(self):
+        output = open(self.fname, 'w')
 
         self.depth_idx = 0
         self.writer = XMLGenerator(output, 'utf-8')
@@ -166,9 +205,15 @@ class SequenceWriter(object):
 
         self.current_node = None
 
-        for node in sequence.get_children():
+        idx = 0
+        slen = float(len(self.seq))
+
+        for node in self.seq.get_children():
             self.current_node = node
             self.write_node(node)
+
+            idx += 1
+            yield idx, (idx / slen) * 100.0, output.tell()
 
         self.current_node = None
 
@@ -259,18 +304,18 @@ def save_sequence(fname, sequence):
     try:
         SequenceWriter(fname, sequence)
     except Exception, err:
-        log.debug("Cannot save sequence to file %s (%s)" % (fname, str(err)))
-        return False
-    else:
-        return True
+        log.error("Cannot while saving sequence to %s" % fname)
+        log.error(generate_traceback())
+        raise err
 
 def load_sequence(fname):
     try:
-        tree = SequenceLoader(fname).tree
-        return tree
+        return SequenceLoader(fname).parse_async()
     except Exception, err:
-        log.debug("Cannot load sequence from file %s (%s)" % (fname, str(err)))
-        return None
+        log.error("Error while loading sequence from %s" % fname)
+        log.error(generate_traceback())
+
+        raise err
 
 if __name__ == "__main__":
     tree = Node()
@@ -286,7 +331,7 @@ if __name__ == "__main__":
     import time
     time.sleep(2)
 
-    new_tree = SequenceLoader("test.xml").tree
+    new_tree = SequenceLoader("test.xml").parse()
 
     print "Checking validity %s" % ((new_tree == tree) and ("ok") or ("wrong"))
 

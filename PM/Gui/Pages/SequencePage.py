@@ -320,7 +320,7 @@ class SequencePage(Perspective):
 
     def reload(self, packet=None):
         # Should be the selected
-        
+
         if self.tree.get_selection().get_mode() == gtk.SELECTION_MULTIPLE:
             return
 
@@ -349,10 +349,11 @@ class SequencePage(Perspective):
 
         tree = self.session.context.get_sequence()
 
-        for child in tree.get_children():
-            self.__add_to_store(child, None)
+        if tree:
+            for child in tree.get_children():
+                self.__add_to_store(child, None)
 
-        self.tree.get_selection().select_path((0, ))
+            self.tree.get_selection().select_path((0, ))
         self.__update_combo()
 
     def __add_to_store(self, child, root):
@@ -480,7 +481,7 @@ class SequencePage(Perspective):
                 if ret:
                     path, pos = ret
                     iter = self.store.get_iter(path)
-                    
+
                     if pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE or \
                        pos == gtk.TREE_VIEW_DROP_INTO_OR_AFTER:
                         self.store.prepend(iter, [packet])
@@ -572,7 +573,7 @@ class SequencePage(Perspective):
         if self.active_diff:
             tab.remove_notify_for(self.active_diff, self.__diff_editing)
             self.active_diff = None
-            
+
         if not self.active_layer or not self.active_packets:
             return
 
@@ -613,7 +614,7 @@ class SequencePage(Perspective):
 
     def __update_combo(self):
         lst = []
-        
+
         def add_to_list(model, path, iter, lst):
             lst.append(model.get_value(iter, 0))
 

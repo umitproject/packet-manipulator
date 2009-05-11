@@ -25,6 +25,7 @@ from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
 from PM.Gui.Core.App import PMApp
+from PM.Gui.Tabs.OperationsTab import FileOperation
 
 from PM.Gui.Widgets.MultiPaneds import VMultiPaned, HMultiPaned
 from PM.Gui.Widgets.Expander import AnimatedExpander
@@ -61,7 +62,7 @@ class Session(gtk.VBox):
 
     def create_ui(self):
         pass
-    
+
     def remove_perspective(self, klass):
         """
         Remove the perspective from the current session
@@ -82,7 +83,8 @@ class Session(gtk.VBox):
         @param klass a Perspective base class of the perspective to add
         @param show_pers choose to show the perspective
         @param resize if True child should resize when the paned is resized
-        @param shrink if True child can be made smaller than its minimum size request
+        @param shrink if True child can be made smaller than its minimum size
+                      request
         @return the perspective instance
         """
 
@@ -93,7 +95,8 @@ class Session(gtk.VBox):
             widget = gtk.Expander(pers.title)
             widget.add(pers)
         else:
-            widget = AnimatedExpander(pers.title, pers.icon, self.session_orientation)
+            widget = AnimatedExpander(pers.title, pers.icon,
+                                      self.session_orientation)
             widget.add_widget(pers, show_pers)
 
         self.paned.add_child(widget, resize, shrink)
@@ -112,19 +115,35 @@ class Session(gtk.VBox):
 
     def save_as(self):
         return self._on_save_as(None)
-    
-    def save_session(self, fname):
+
+    def save_session(self, fname, async=True):
         """
         Override this method to do the real save phase
-        @return True if the content is saved or False
+        @param fname the filename on witch save the context will be saved
+        @param async specify if you want to have an async saving in a separate
+                     thread (new FileOperation) without freezing the gui.
+        @return True if the content is saved or False (if async is False)
         """
 
         if not self.context.file_types:
             log.debug("Saving is disabled (%s)" % self.context)
             return False
-        
+
         self.context.cap_file = fname
-        return self.context.save()
+
+        if not async:
+            return self.context.save()
+        else:
+            tab = PMApp().main_window.get_tab("OperationsTab")
+            tab.tree.append_operation(FileOperation(self,
+                                                    FileOperation.TYPE_SAVE))
+
+    def save_session_async(self, fname):
+        """
+        Async save in a separate thread without returing the status.
+        This is done by adding a new FileOperation in OperationsTab.
+        """
+        self.save_session(fname, async=True)
 
     def add_filters(self, dialog):
         """

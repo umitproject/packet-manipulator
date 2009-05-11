@@ -87,6 +87,8 @@ class SessionNotebook(gtk.Notebook):
 
     def load_sequence_session(self, fname):
         ctx = Backend.SequenceContext(fname)
+        ctx.load()
+
         session = SequenceSession(ctx)
         return self.__append_session(session)
 

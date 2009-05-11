@@ -50,11 +50,47 @@ def register_sequence_context(BaseSequenceContext):
                 self.summary = _('Looping sequence (%d packets)') % \
                                 self.tot_packet_count
 
-        def load(self):
+        def load(self, operation=None):
             log.debug("Loading sequence from %s" % self.cap_file)
 
             if self.cap_file:
-                self.seq = load_sequence(self.cap_file)
+                self.seq = None
+
+                try:
+                    plen = 0
+                    fsize = None
+
+                    for tree, tlen, perc, size in load_sequence(self.cap_file):
+                        if operation and tlen % 10 == 0 :
+
+                            if not fsize:
+                                if size >= 1024 ** 3:
+                                    fsize = "%.1f GB" % (size / (1024.0 ** 3))
+                                elif size >= 1024 ** 2:
+                                    fsize = "%.1f MB" % (size / (1024.0 ** 2))
+                                else:
+                                    fsize = "%.1f KB" % (size / 1024.0)
+
+                            operation.summary = \
+                                _('Loading sequence %s - %d packets (%s)') % \
+                                 (self.cap_file, tlen, fsize)
+                            operation.percentage = perc
+
+                        self.seq = tree
+                        plen = tlen
+
+                    if operation:
+                        operation.summary = \
+                            _('Sequence %s loaded - %d packets (%s)') % \
+                             (self.cap_file, plen, fsize)
+                        operation.percentage = 100.0
+
+                except Exception, err:
+                    self.summary = str(err)
+
+                    if operation:
+                        operation.summary = str(err)
+                        operation.percentage = 100.0
 
                 if self.seq is not None:
                     self.status = self.SAVED
@@ -63,14 +99,56 @@ def register_sequence_context(BaseSequenceContext):
             self.status = self.NOT_SAVED
             return False
 
-        def save(self):
+        def save(self, operation=None):
             log.debug("Saving sequence to %s" % self.cap_file)
 
             if self.cap_file and self.seq is not None and \
                save_sequence(self.cap_file, self.seq):
 
-                self.status = self.SAVED
-                return True
+                try:
+                    idx = 0
+                    size = 0
+
+                    for idx, perc, size in save_sequence(self.cap_file):
+                        if operation and tlen % 10 == 0 :
+
+                            if size >= 1024 ** 3:
+                                fsize = "%.1f GB" % (size / (1024.0 ** 3))
+                            elif size >= 1024 ** 2:
+                                fsize = "%.1f MB" % (size / (1024.0 ** 2))
+                            else:
+                                fsize = "%.1f KB" % (size / 1024.0)
+
+                            operation.summary = \
+                                _('Saving sequence to %s - %d packets (%s)') % \
+                                 (self.cap_file, idx, fsize)
+                            operation.percentage = perc
+
+                    if operation:
+                        if size >= 1024 ** 3:
+                            fsize = "%.1f GB" % (size / (1024.0 ** 3))
+                        elif size >= 1024 ** 2:
+                            fsize = "%.1f MB" % (size / (1024.0 ** 2))
+                        else:
+                            fsize = "%.1f KB" % (size / 1024.0)
+
+                        operation.summary = \
+                                _('Sequence %s saved - %d packets (%s)') % \
+                                 (self.cap_file, idx, fsize)
+                        operation.percentage = 100.0
+
+                    self.status = self.SAVED
+                    return True
+
+                except Exception, err:
+                    self.summary = str(err)
+
+                    if operation:
+                        operation.summary = str(err)
+                        operation.percentage = 100.0
+
+                    self.status = self.NOT_SAVED
+                    return False
 
             self.status = self.NOT_SAVED
             return False

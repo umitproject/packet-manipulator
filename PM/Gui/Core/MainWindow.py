@@ -50,7 +50,8 @@ from PM.Gui.Tabs.HackTab import HackTab
 from PM.Gui.Tabs.StatusTab import StatusTab
 from PM.Gui.Tabs.ConsoleTab import ConsoleTab
 from PM.Gui.Tabs.PropertyTab import PropertyTab
-from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation, FileOperation
+from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation
+from PM.Gui.Tabs.OperationsTab import FileOperation
 from PM.Gui.Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
 from PM.Gui.Dialogs.Interface import InterfaceDialog

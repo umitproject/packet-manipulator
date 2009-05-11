@@ -22,9 +22,43 @@ import os
 import os.path
 
 from PM.Backend.Scapy.packet import MetaPacket
-from PM.Backend.Scapy.wrapper import RawPcapReader, PcapReader, wrpcap, PacketList
+from PM.Backend.Scapy.wrapper import PcapWriter, PcapReader, wrpcap, PacketList
 
 from PM.Core.I18N import _
+
+class CustomPcapWriter(PcapWriter):
+    def __init__(self, operation, plen, filename, *args, **kargs):
+        self.operation = operation
+
+        self.packet_len = plen
+        self.packet_idx = 0
+
+        PcapWriter.__init__(self, filename, *args, **kargs)
+
+    def _write_packet(self, packet):
+        PcapWriter._write_packet(self, packet)
+
+        self.packet_idx += 1
+
+        if self.packet_idx % 10 == 0:
+            self.update_operation()
+
+    def update_operation(self):
+        size = os.stat(self.filename).st_size
+
+        if size >= 1024 ** 3:
+            fsize = "%.1f GB" % (size / (1024.0 ** 3))
+        elif size >= 1024 ** 2:
+            fsize = "%.1f MB" % (size / (1024.0 ** 2))
+        else:
+            fsize = "%.1f KB" % (size / 1024.0)
+
+        if self.operation:
+            self.operation.summary = _('Writing %s - %d packets (%s)') % \
+                                      (self.filename, self.packet_idx, fsize)
+
+            self.operation.percentage = (float(self.packet_idx) /
+                                         float(self.packet_len)) * 100.0
 
 def register_static_context(BaseStaticContext):
 
@@ -77,7 +111,7 @@ def register_static_context(BaseStaticContext):
 
                         data.append(p)
 
-                for p in PacketList(data, name = os.path.basename(self.cap_file)):
+                for p in PacketList(data, name=os.path.basename(self.cap_file)):
                     self.data.append(MetaPacket(p))
 
                 del data
@@ -89,6 +123,11 @@ def register_static_context(BaseStaticContext):
 
             except IOError, (errno, err):
                 self.summary = str(err)
+
+                if operation:
+                    operation.summary = str(err)
+                    operation.percentage = 100.0
+
                 return False
 
             self.status = self.SAVED
@@ -96,7 +135,7 @@ def register_static_context(BaseStaticContext):
             self.summary = _('%d packets loaded.') % len(self.data)
             return True
 
-        def save(self):
+        def save(self, operation=None):
             if getattr(self, 'get_all_data', False):
                 data = self.get_all_data()
             else:
@@ -112,9 +151,19 @@ def register_static_context(BaseStaticContext):
                 return False
 
             try:
-                wrpcap(self.cap_file, data, gz=('gz' in self.cap_file) and (1) or (0))
+                writer = CustomPcapWriter(operation, len(data), self.cap_file, \
+                                          gz=('gz' in self.cap_file) and 1 or 0)
+                writer.write(data)
+                writer.close()
+
+                writer.update_operation()
+
             except IOError, (errno, err):
                 self.summary = str(err)
+
+                if operation:
+                    operation.summary = str(err)
+
                 return False
 
             self.status = self.SAVED

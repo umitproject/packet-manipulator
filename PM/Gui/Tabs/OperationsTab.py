@@ -73,11 +73,23 @@ class FileOperation(Operation):
     has_start = True
     has_restart = False
 
-    def __init__(self, file, type):
+    def __init__(self, obj, type):
+        """
+        @param obj if type is TYPE_LOAD the path of the file to load or a
+                   Session to save.
+        @param type TYPE_LOAD or TYPE_SAVE
+        """
         Operation.__init__(self)
 
         self.file = file
         self.type = type
+
+        if type == FileOperation.TYPE_LOAD:
+            self.file = obj
+        else:
+            self.session = obj
+            self.ctx = self.session.context
+
         self.percentage = 0
         self.thread = None
         self.state = self.NOT_RUNNING
@@ -86,7 +98,7 @@ class FileOperation(Operation):
         if type == FileOperation.TYPE_LOAD:
             self.summary = _('Loading of %s pending.') % self.file
         else:
-            self.summary = _('Saving to %s pending.') % self.file
+            self.summary = _('Saving to %s pending.') % self.ctx.cap_file
 
     def start(self):
         if self.state == self.RUNNING:
@@ -98,7 +110,7 @@ class FileOperation(Operation):
             self.summary = _('Loading %s') % self.file
             self._read_file()
         else:
-            self.summary = _('Saving to %s') % self.file
+            self.summary = _('Saving to %s') % self.ctx.cap_file
             self._save_file()
 
     def get_percentage(self):
@@ -111,8 +123,20 @@ class FileOperation(Operation):
     def get_summary(self):
         return self.summary
 
+    @trace
     def _save_file(self):
-        pass
+        """
+        @see PM.Gui.Sessions.Base.save_session
+        """
+
+        log.debug('Saving context %s to %s' % (self.ctx, self.ctx.cap_file))
+
+        if isinstance(self.ctx, Backend.StaticContext):
+            self.summary = _('Saving packets to %s') % self.ctx.cap_file
+        elif isinstance(self.ctx, Backend.SequenceContext):
+            self.summary = _('Saving sequence to %s') % self.ctx.cap_file
+
+        self.start_async_thread(())
 
     @trace
     def _read_file(self):
@@ -172,8 +196,11 @@ class FileOperation(Operation):
                 tab.session_notebook.bind_session(SniffSession, rctx)
 
         else:
-            pass
+            from PM.Gui.Sessions.SniffSession import SniffSession
 
+            if isinstance(self.session, SniffSession):
+                self.session.sniff_page.statusbar.label = '<b>%s</b>' % \
+                                                          self.ctx.summary
         self.loading_view = False
         self.percentage = 100.0
         self.state = self.NOT_RUNNING
@@ -197,13 +224,18 @@ class FileOperation(Operation):
                  ctx is Backend.StaticContext:
 
                 rctx = Backend.StaticContext(self.file, self.file)
-                rctx.load(operation=self) # Let's update our operation directly from load
 
             if rctx is not None:
+                # Let's update our operation directly from load
+                rctx.load(operation=self)
+
                 # Now let's add a callback to when
                 gobject.idle_add(self.__on_idle, (ctx, rctx))
         else:
-            pass
+            log.debug('Saving %s to %s' % (self.ctx, self.ctx.cap_file))
+
+            self.ctx.save(operation=self)
+            gobject.idle_add(self.__on_idle, ())
 
         self.thread = None
 
@@ -310,8 +342,8 @@ class SniffOperation(Backend.SniffContext, Operation):
             if ret:
                 self.session.sniff_page.clear()
 
-            # We have to call it also in case of start failed to set up the correct
-            # summary on the label.
+            # We have to call it also in case of start failed to set up the
+            # correct summary on the label.
             self.session.sniff_page.reload()
 
         return ret
@@ -366,7 +398,12 @@ class OperationTree(gtk.TreeView):
         # showing a text
 
         col = gtk.TreeViewColumn(_('Operation'))
+
+        col.set_expand(True)
         col.set_resizable(True)
+        col.set_resizable(True)
+
+        col.set_sizing(gtk.TREE_VIEW_COLUMN_GROW_ONLY)
 
         rend = gtk.CellRendererPixbuf()
         col.pack_start(rend, False)
@@ -380,7 +417,12 @@ class OperationTree(gtk.TreeView):
 
         rend = gtk.CellRendererProgress()
         col = gtk.TreeViewColumn(_('Status'), rend)
+
+        col.set_expand(False)
         col.set_resizable(True)
+        col.set_fixed_width(150)
+        col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+
         col.set_cell_data_func(rend, self.__progress_data_func)
 
         self.append_column(col)
