@@ -134,7 +134,7 @@ def get_field_value_repr(proto, field):
     if isinstance(ret, dict):
         for it in ret:
             if ret[it].get():
-                out += "+%s" % it 
+                out += "+%s" % it
 
         return out[1:]
 
@@ -210,7 +210,8 @@ class MetaPacket:
         return False
 
     def get_protocol_str(self):
-        return get_proto_name(self.root)
+        assert self.root.protos, "No procols in Packet"
+        return get_proto_name(self.root.protos[0])
 
     def summary(self):
         # We need to ask for a method here
