@@ -32,17 +32,27 @@ from PM.Manager.PreferenceManager import Prefs
 from PM.Gui.Widgets.StatusBar import StatusBar
 from PM.higwidgets.higdialogs import HIGAlertDialog
 
-if Prefs()['gui.docking'].value:
+__paned_imported = False
+
+if Prefs()['gui.docking'].value.lower() == 'moo':
     try:
-        from Paned import *
+        from MooPaned import *
+        __paned_imported = True
     except ImportError:
-        log.info("moo is not installed. Using fallback paned ..")
+        log.info("moo library is not installed.")
 
-        Prefs()['gui.docking'].value = False
+elif Prefs()['gui.docking'].value.lower() == 'gdl':
+    try:
+        from GdlPaned import *
+        __paned_imported = True
+    except ImportError:
+        log.info("GDL is not installed. Using fallback paned.")
 
-        from FallbackPaned import *
-else:
+if Prefs()['gui.docking'].value.lower() == 'standard' or not __paned_imported:
     from FallbackPaned import *
+    __paned_imported = True
+
+    log.info('Using fallback paned')
 
 from PM.Gui.Tabs.VteTab import VteTab
 from PM.Gui.Tabs.MainTab import MainTab

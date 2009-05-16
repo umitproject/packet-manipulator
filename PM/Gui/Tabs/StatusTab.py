@@ -1,21 +1,21 @@
-#!/usr/bin/env python                               
-# -*- coding: utf-8 -*-                             
-# Copyright (C) 2008 Adriano Monteiro Marques       
-#                                                   
-# Author: Francesco Piccinno <stack.box@gmail.com>  
-#                                                   
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import pango
@@ -42,7 +42,7 @@ class StatusView(gtk.ScrolledWindow):
         self.view.set_indent(4)
 
         Prefs()['gui.statustab.font'].connect(self.__modify_font)
-        
+
         self.view.set_border_window_size(gtk.TEXT_WINDOW_LEFT, 16)
         self.view.set_editable(False)
 
@@ -58,7 +58,7 @@ class StatusView(gtk.ScrolledWindow):
             get_pixbuf('warning_small'),
             get_pixbuf('error_small')
         )
-        
+
         self.lines = []
 
     def __modify_font(self, val):
@@ -66,7 +66,9 @@ class StatusView(gtk.ScrolledWindow):
             desc = pango.FontDescription(val)
 
             self.view.modify_font(desc)
-            self.view.get_window(gtk.TEXT_WINDOW_LEFT).set_background(self.style.base[gtk.STATE_NORMAL])
+            self.view.get_window(gtk.TEXT_WINDOW_LEFT).set_background(
+                self.style.base[gtk.STATE_NORMAL]
+            )
         except:
             return True
 
@@ -105,11 +107,13 @@ class StatusView(gtk.ScrolledWindow):
         area = event.area
 
         # Now get the first/last iters
-        (_, start_y) = self.view.window_to_buffer_coords(gtk.TEXT_WINDOW_LEFT, 0, area.y)
-        (start_it, _) = self.view.get_line_at_y(start_y)
+        _, start_y = self.view.window_to_buffer_coords(gtk.TEXT_WINDOW_LEFT,
+                                                         0, area.y)
+        start_it, _ = self.view.get_line_at_y(start_y)
 
-        (_, end_y) = self.view.window_to_buffer_coords(gtk.TEXT_WINDOW_LEFT, 0, area.y + area.height - 1)
-        (end_it, _) = self.view.get_line_at_y(end_y)
+        _, end_y = self.view.window_to_buffer_coords(gtk.TEXT_WINDOW_LEFT, 0,
+                                                       area.y + area.height - 1)
+        end_it, _ = self.view.get_line_at_y(end_y)
 
         # Draw stuff
         for line in xrange(start_it.get_line(), end_it.get_line() + 1, 1):
@@ -117,8 +121,8 @@ class StatusView(gtk.ScrolledWindow):
                 continue
 
             pix = self.icons[self.lines[line]]
-            (y, _) = self.view.get_line_yrange(self.buffer.get_iter_at_line(line))
-            (_, y) = self.view.buffer_to_window_coords(gtk.TEXT_WINDOW_LEFT, 0, y)
+            y, _ = self.view.get_line_yrange(self.buffer.get_iter_at_line(line))
+            _, y = self.view.buffer_to_window_coords(gtk.TEXT_WINDOW_LEFT, 0, y)
 
             cr.set_source_pixbuf(pix, 0, y)
             cr.paint()
@@ -136,8 +140,11 @@ class StatusTab(UmitView):
     def create_ui(self):
         self.status = StatusView()
 
-        self.status.info(_("PacketManipulator %s started on %s") % (PM_VERSION, os.name))
-        self.status.info(_("Using %s backend") % Prefs()['backend.system'].value)
+        self.status.info(_("PacketManipulator %s started on %s") % (PM_VERSION,
+                                                                    os.name))
+        self.status.info(_("Using %s as backend") % \
+                         Prefs()['backend.system'].value)
+
         self.status.info(_("What do you wanna pwn today?"))
 
         self._main_widget.add(self.status)

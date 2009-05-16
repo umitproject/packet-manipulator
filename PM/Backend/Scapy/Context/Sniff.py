@@ -221,7 +221,7 @@ def register_sniff_context(BaseSniffContext):
 
                 while self.internal and self.capmethod != 1 and \
                       (not os.path.exists(outfile) or \
-                       os.stat(outfile).st_size != 20):
+                       os.stat(outfile).st_size < 20):
 
                     log.debug("Dumpfile not ready. Waiting 0.5 sec")
                     time.sleep(0.5)
@@ -258,12 +258,16 @@ def register_sniff_context(BaseSniffContext):
             log.debug("Entering in the main loop")
 
             while self.internal:
-                inp, out, err = select([process.stderr],
-                                       [process.stderr],
-                                       [process.stderr])
+                try:
+                    inp, out, err = select([self.process.stderr],
+                                           [self.process.stderr],
+                                           [self.process.stderr])
+                except:
+                    # Here we could have select that hangs after a kill in stop
+                    continue
 
-                if process.stderr in inp:
-                    line = process.stderr.read()
+                if self.process.stderr in inp:
+                    line = self.process.stderr.read()
 
                     if not line:
                         continue

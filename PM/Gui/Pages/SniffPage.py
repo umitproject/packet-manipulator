@@ -240,8 +240,6 @@ class SniffPage(Perspective):
             return None
 
     def __update_tree(self):
-        log.debug("Entering in update callback")
-
         self.session.context.check_finished()
         self.tree.freeze_child_notify()
 
@@ -264,7 +262,6 @@ class SniffPage(Perspective):
             self.statusbar.image = gtk.STOCK_INFO
             self.statusbar.show()
 
-        log.debug("Exiting from update callback")
         return alive
 
     # Public functions

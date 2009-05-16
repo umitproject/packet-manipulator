@@ -35,6 +35,7 @@ from PM.Core.I18N import _
 from PM.Core.Atoms import Singleton
 from PM.Gui.Core.Splash import SplashScreen
 from PM.Gui.Plugins.Engine import PluginEngine
+from PM.Manager.PreferenceManager import Prefs
 
 class PMApp(Singleton):
     "The PacketManipulator application singleton object"
@@ -58,7 +59,26 @@ class PMApp(Singleton):
                 root = True
         except: pass
 
-        if not root:
+        if Prefs()['system.check_pyver'].value == True and \
+           sys.version_info[1] < 6:
+            dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL,
+                                       gtk.MESSAGE_WARNING,
+                                       gtk.BUTTONS_YES_NO,
+                                       _('Packet Manipulator requires at least '
+                                         '2.6 version of Python but you\'ve %s '
+                                         'installed. We not guarantee that all '
+                                         'functionalities works properly.\n\n'
+                                         'Do you want to continue?') % ".".join(
+                                       map(str, sys.version_info[:3])))
+            ret = dialog.run()
+            dialog.hide()
+            dialog.destroy()
+
+            if ret == gtk.RESPONSE_NO:
+                sys.exit(-1)
+
+
+        if Prefs()['system.check_root'].value == True and not root:
             dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL,
                                        gtk.MESSAGE_WARNING,
                                        gtk.BUTTONS_YES_NO,

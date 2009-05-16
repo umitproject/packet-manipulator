@@ -1,3 +1,18 @@
+2009-06-17 Francesco Piccinno <stack.box@gmail.com>
+    * PM/Gui/Dialogs/Preferences.py
+      PM/Gui/Core/App.py
+      PM/Gui/Manager/PreferenceManager.py:
+        - Added a check for python version (that should be >= 2.6)
+        - Making checks for root/correct python version optional by
+          adding it in pm-prefs.xml file, and in SectionPage of
+          Preference dialog.
+    * PM/Gui/Core/MainWindow.py
+      PM/Gui/Core/GdlPaned.py:
+        - Added a gdl paned implementation. You need gnome-python-extra
+          package to use that implementation.
+
+    Fixed various bug and regression.
+
 2009-06-16 Francesco Piccinno <stack.box@gmail.com>
 
     * PacketManipulator:

@@ -174,7 +174,7 @@ class PreferenceWriter:
 
 class Prefs(Singleton):
     options = {
-        'gui.docking' : True,
+        'gui.docking' : 'moo',
         'gui.expander.standard' : False,
         'gui.maintab.sniffview.font' : 'Monospace 10',
         'gui.maintab.sniffview.usecolors' : True,
@@ -205,7 +205,10 @@ class Prefs(Singleton):
         'backend.dumpcap' : '/usr/bin/dumpcap',
 
         'plugins.paths' : os.pathsep.join((PM_PLUGINS_DIR, PLUGINS_DIR)),
-        'plugins.enabled' : ''
+        'plugins.enabled' : '',
+
+        'system.check_pyver' : True,
+        'system.check_root' : True,
     }
 
     def __init__(self):

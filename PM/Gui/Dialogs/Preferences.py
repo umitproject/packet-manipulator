@@ -170,8 +170,8 @@ class GUIPage(Page):
 
         (_('General'),
           (
-           ('gui.docking', None,
-                gtk.CheckButton(_('Use docking windows'))),
+           ('gui.docking', _('Docking library:'),
+                new_combo(('Standard', 'moo', 'GDL'))),
            ('gui.expander.standard', None,
                 gtk.CheckButton(_('Use standard expanders'))),
           )
@@ -281,6 +281,24 @@ class BackendPage(Page):
 
         ]
 
+class SystemPage(Page):
+    title = _("System")
+    icon = gtk.STOCK_PROPERTIES
+
+    def create_widgets(self):
+        self.widgets = [
+        (_('Checks'),
+          (
+           ('system.check_root', None,
+                gtk.CheckButton(_('Check for root privileges at startup'))),
+           ('system.check_pyver', None,
+                gtk.CheckButton(_('Check for compatible Python version')))
+          )
+        ),
+
+        ]
+
+
 class PreferenceDialog(gtk.Dialog):
     def __init__(self, parent):
         super(PreferenceDialog, self).__init__(
@@ -324,13 +342,13 @@ class PreferenceDialog(gtk.Dialog):
         self.vbox.set_border_width(4)
         self.vbox.set_spacing(6)
 
-        self.set_size_request(600, -1)
+        #self.set_size_request(-1, -1)
 
         self.tree.get_selection().connect('changed', self.__on_switch_page)
         self.connect('response', self.__on_response)
 
     def __populate(self):
-        for page in (GUIPage(), ViewsPage(), BackendPage()):
+        for page in (GUIPage(), ViewsPage(), BackendPage(), SystemPage()):
             self.store.append([page.icon, page.title])
             self.notebook.append_page(page)
 
