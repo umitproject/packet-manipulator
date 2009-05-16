@@ -588,7 +588,7 @@ class MainWindow(gtk.Window):
             iface = dialog.get_selected()
             args = dialog.get_options()
 
-            if iface:
+            if iface or args['capmethod'] == 1:
                 tab = self.get_tab("OperationsTab")
                 tab.tree.append_operation(SniffOperation(iface, **args))
 

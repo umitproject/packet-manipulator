@@ -31,6 +31,7 @@ import gobject
 from PM import Backend
 from PM.Core.I18N import _
 from PM.Core.Atoms import Node
+from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
 from PM.Gui.Core.App import PMApp
@@ -80,13 +81,20 @@ class SniffPage(Perspective):
         Prefs()['gui.maintab.sniffview.usecolors'].connect(self.__modify_colors)
 
         self.tree.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
-        self.tree.get_selection().connect('changed', self.__on_selection_changed)
-        self.filter.get_entry().connect('activate', self.__on_apply_filter)
+        self.tree.get_selection().connect('changed',
+                                          self.__on_selection_changed)
+
+        self.filter.get_entry().connect('activate',self.__on_apply_filter)
 
         self.tree.connect('button-press-event', self.__on_popup)
 
+        self.connect('realize', self.__on_realize)
+
         self.timeout_id = None
         self.reload()
+
+    def __on_realize(self, window):
+        self.tree.set_model(self.list_store)
 
     def __create_toolbar(self):
         self.toolbar = gtk.Toolbar()
@@ -131,15 +139,19 @@ class SniffPage(Perspective):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-        self.store = gtk.TreeStore(object)
         self.tree = gtk.TreeView(None)
-        self.tree.set_fixed_height_mode(True)
 
-        # Create a filter function
-        self.model_filter = self.store.filter_new()
+        # We have to create two seperate objects if we want to have more
+        # performance while sniffing. We'll use the tree_store only for
+        # reflowing without a model filter.
+
+        self.tree_store = gtk.TreeStore(object)
+        self.list_store = gtk.ListStore(object)
+        self.active_model = self.list_store
+
+        self.active_filter = None
+        self.model_filter = self.list_store.filter_new()
         self.model_filter.set_visible_func(self.__filter_func)
-
-        self.tree.set_model(self.model_filter)
 
         idx = 0
         rend = GridRenderer()
@@ -151,14 +163,20 @@ class SniffPage(Perspective):
 
         for txt, wid in zip(titles, width):
             col = gtk.TreeViewColumn(txt, rend)
+
             col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+
             col.set_min_width(wid)
             col.set_fixed_width(wid)
             col.set_resizable(True)
+
             col.set_cell_data_func(rend, self.__cell_data_func, idx)
 
             self.tree.insert_column(col, idx)
             idx += 1
+
+        # Set the fixed height mode property to True to speeds up
+        self.tree.set_fixed_height_mode(True)
 
         sw.add(self.tree)
         self.pack_start(sw)
@@ -167,7 +185,11 @@ class SniffPage(Perspective):
         packet = model.get_value(iter, 0)
 
         if idx == self.COL_NO:
-            cell.set_property('text', "%s)" % ".".join([str(i + 1) for i in model.get_path(iter)]))
+            cell.set_property('text', "%s)" % ".".join(
+                [str(i + 1) \
+                    for i in model.get_path(iter)]
+            ))
+
         elif idx == self.COL_TIME:
             cell.set_property('text', packet.get_time())
         elif idx == self.COL_SRC:
@@ -218,17 +240,22 @@ class SniffPage(Perspective):
             return None
 
     def __update_tree(self):
+        log.debug("Entering in update callback")
+
         self.session.context.check_finished()
+        self.tree.freeze_child_notify()
 
         for packet in self.session.context.get_data():
-            self.store.append(None, [packet])
+            self.list_store.append([packet])
 
             #while gtk.events_pending():
             #    gtk.main_iteration_do()
 
-            # TODO: better handle the situation.
-            if getattr(self.session.context, 'auto_scroll', True):
-                self.tree.scroll_to_cell(len(self.model_filter) - 1)
+        self.tree.thaw_child_notify()
+
+        # TODO: better handle the situation.
+        if getattr(self.session.context, 'auto_scroll', True):
+            self.tree.scroll_to_cell(len(self.active_model) - 1)
 
         alive = self.session.context.is_alive()
 
@@ -237,16 +264,20 @@ class SniffPage(Perspective):
             self.statusbar.image = gtk.STOCK_INFO
             self.statusbar.show()
 
+        log.debug("Exiting from update callback")
         return alive
 
     # Public functions
 
     def clear(self):
-        self.store.clear()
+        self.tree_store.clear()
+        self.list_store.clear()
+
+        # Maybe we have to switch back to list store mode?
 
     def reload(self):
         for packet in self.session.context.get_data():
-            self.store.append(None, [packet])
+            self.list_store.append([packet])
 
             while gtk.events_pending():
                 gtk.main_iteration_do()
@@ -333,7 +364,9 @@ class SniffPage(Perspective):
 
     def __on_create_seq(self, action):
         tab = PMApp().main_window.get_tab("MainTab")
-        tab.session_notebook.create_sequence_session(self.__get_packets_selected(True))
+        tab.session_notebook.create_sequence_session(
+            self.__get_packets_selected(True)
+        )
 
     def __on_save_selection(self, action):
         dialog = self.__create_save_dialog()
@@ -344,7 +377,9 @@ class SniffPage(Perspective):
 
             if ctx.save():
                 self.statusbar.image = gtk.STOCK_HARDDISK
-                self.statusbar.label = _('<b>%d selected packets saved to %s</b>') % (len(ctx.data), ctx.cap_file)
+                self.statusbar.label = \
+                    _('<b>%d selected packets saved to %s</b>') % \
+                     (len(ctx.data), ctx.cap_file)
             else:
                 self.statusbar.image = gtk.STOCK_DIALOG_ERROR
                 self.statusbar.label = "<b>%s</b>" % ctx.summary
@@ -359,7 +394,8 @@ class SniffPage(Perspective):
             if self.session.context.state == self.session.context.NOT_RUNNING:
                 packets = self.session.context.get_all_data()
             else:
-                self.statusbar.label = _('<b>Cannot reorganize the flow while sniffing</b>')
+                self.statusbar.label = \
+                    _('<b>Cannot reorganize the flow while sniffing</b>')
                 self.statusbar.start_animation(True)
                 return
 
@@ -371,21 +407,38 @@ class SniffPage(Perspective):
         tree = Backend.analyze_connections(packets)
 
         if tree:
-            self.store.clear()
+            self.tree_store.clear()
 
             for (root, lst) in tree:
-                iter = self.store.append(None, [root])
+                iter = self.tree_store.append(None, [root])
 
                 for child in lst:
-                    self.store.append(iter, [child])
+                    self.tree_store.append(iter, [child])
+
+            self._switch_model(self.tree_store)
+
+    def _switch_model(self, model):
+        """
+        Switch to the new model and reset the filter
+        """
+
+        if self.active_model is not model:
+            self.active_model = model
+            self.model_filter = model.filter_new()
+            self.model_filter.set_visible_func(self.__filter_func)
+
+        if self.active_filter:
+            self.model_filter.refilter()
+            self.tree.set_model(self.model_filter)
+        elif self.tree.get_model() is not model:
+            self.tree.set_model(model)
 
     def __on_apply_filter(self, entry):
-        self.model_filter.refilter()
+        self.active_filter = self.filter.get_text() or None
+        self._switch_model(self.active_model)
 
     def __filter_func(self, model, iter):
-        txt = self.filter.get_text()
-
-        if not txt:
+        if not self.active_filter:
             return True
 
         packet = model.get_value(iter, 0)
@@ -405,7 +458,7 @@ class SniffPage(Perspective):
         # TODO: implement a search engine like num: summary: ?
 
         for pattern in strs:
-            if txt in pattern:
+            if self.active_filter in pattern:
                 return True
 
         return False

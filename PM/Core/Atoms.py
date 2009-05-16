@@ -28,7 +28,9 @@ import copy
 import Queue
 import threading
 
-import traceback, StringIO
+import StringIO
+import traceback
+
 from PM.Core.Logger import log
 
 try:
@@ -129,10 +131,10 @@ class Node(object):
         for child in self.children:
             for c in child:
                 yield c
-    
+
     def __repr__(self):
         if self.root != None:
-            return "%sChild -> %s (%d)" % ("  " * self.get_depth(), self.data, 
+            return "%sChild -> %s (%d)" % ("  " * self.get_depth(), self.data,
                                            len(self.children))
         else:
             return "Tree %s" % object.__repr__(self)
@@ -156,7 +158,7 @@ class Node(object):
             tot += 1
 
         return tot
-    
+
     def get_parent(self):
         return self.root
 
@@ -177,7 +179,7 @@ class Node(object):
         for i in self:
             if value == i.data:
                 return i.get_path()
-        
+
         return None
 
     def get_path(self):
@@ -346,7 +348,7 @@ class ThreadPool(object):
                 log.critical(generate_traceback())
 
             self.working.remove(ct)
-            
+
             self.waiters.append(ct)
 
             obj = self.queue.get()
@@ -373,7 +375,7 @@ class Singleton(object):
     """
 
     instances = {}
-    def __new__(cls, *args, **kwargs): 
+    def __new__(cls, *args, **kwargs):
         from gobject import GObject
 
         if Singleton.instances.get(cls) is None:

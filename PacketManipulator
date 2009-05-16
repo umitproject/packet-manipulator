@@ -30,4 +30,9 @@ if os.name == 'nt':
     os.chdir('PM')
     os.system('python PacketManipulator %s' % ' '.join(sys.argv[1:]))
 else:
-    os.system('PM/PacketManipulator %s' % ' '.join(sys.argv[1:]))
+    if '--debug' in sys.argv:
+        args = sys.argv[1:]
+        args.remove('--debug')
+        os.system('gdb --args python PM/PacketManipulator %s' % ' '.join(args))
+    else:
+        os.system('python PM/PacketManipulator %s' % ' '.join(sys.argv[1:]))

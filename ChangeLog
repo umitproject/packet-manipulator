@@ -1,3 +1,41 @@
+2009-06-16 Francesco Piccinno <stack.box@gmail.com>
+
+    * PacketManipulator:
+        - Added --debug option to spawn a gdb session when the launcher is
+          started.
+    * PM/PacketManipulator: 
+        - now we require pygtk >= 2.14
+    * PM/Gui/Pages/SniffPage.py:
+        - 80 columns line wrap fixed.
+        - Created two differents treemode to store informations (gtk.ListStore
+          to improve the performance while sniffing, and gtk.TreeStore to have
+          the possibility to use the flow organizer)
+    * PM/Gui/Dialogs/Interface.py:
+        - 80 columns line wrap fixed.
+        - Added a new ComboBox to select the method to use for the SniffSession
+        - Set a tooltip to the pcap filter info button
+        - Fixed various alignment bugs.
+    * PM/Gui/Dialogs/Preferences.py:
+        - Adding a new 'Helpers' section letting the user choose the correct 
+          path for tcpdump and dumpcap programs.
+    * PM/Backend/Scapy/Context/Sniff.py:
+        - Adding the possibility to use tcpdump/pcap or virtual interface for
+          sniffing to avoid performance problems or CPU burning as reported.
+
+          These methods (tcpdump/dumpcap) should remove the risk of packet
+          loss also, but uses a temporary file created with tempfile.mktemp()
+
+          In this case we use fcntl to set O_NONBLOCK to stderr pipe created
+          by the subprocess module. This code works on *NIX and *BSD systems
+          that offers select() over simple file descriptor. I should implement
+          the missing code for Windows system and use PeekNamedPipe.
+        - Implemented error propagation trough exit_from_thread() method
+    * PM/Backend/Scapy/Context/Static.py:
+        - Avoid a cumulative call to PacketList constructor to reduce memory
+          usage.
+
+    Various bugfix.
+
 2009-05-11 Francesco Piccinno <stack.box@gmail.com>
 
     Init ChangeLog.

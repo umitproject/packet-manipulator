@@ -201,6 +201,9 @@ class Prefs(Singleton):
         'backend.system' : 'scapy',
         'backend.scapy.interface' : '',
 
+        'backend.tcpdump' : '/usr/sbin/tcpdump',
+        'backend.dumpcap' : '/usr/bin/dumpcap',
+
         'plugins.paths' : os.pathsep.join((PM_PLUGINS_DIR, PLUGINS_DIR)),
         'plugins.enabled' : ''
     }

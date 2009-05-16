@@ -18,12 +18,20 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import fcntl
+import tempfile
+
 from datetime import datetime
+from subprocess import Popen
 from threading import Thread, Lock
+
+import gobject
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import with_decorator
+from PM.Manager.PreferenceManager import Prefs
+
 from PM.Backend.Scapy import *
 
 def register_sniff_context(BaseSniffContext):
@@ -42,6 +50,7 @@ def register_sniff_context(BaseSniffContext):
             self.prevtime = None
             self.socket = None
             self.internal = True
+            self.process = None
 
             self.title = _('%s capture') % self.iface
             self.summary = _('Sniffing on %s') % self.iface
@@ -66,7 +75,8 @@ def register_sniff_context(BaseSniffContext):
             else:
                 if self.stop_count or \
                    self.stop_time or \
-                   self.stop_size:
+                   self.stop_size or \
+                   self.capmethod == 1:
                     return self.percentage
                 else:
                     return None
@@ -90,7 +100,15 @@ def register_sniff_context(BaseSniffContext):
             self.internal = True
             self.data = []
 
-            self.thread = Thread(target=self.run)
+            if self.capmethod == 0:
+                self.thread = Thread(target=self.run)
+
+            elif self.capmethod == 1 or \
+                 self.capmethod == 2 or \
+                 self.capmethod == 3:
+
+                 self.thread = Thread(target=self.run_helper)
+
             self.thread.setDaemon(True)
             self.thread.start()
 
@@ -102,6 +120,18 @@ def register_sniff_context(BaseSniffContext):
 
                 if self.socket:
                     self.socket.close()
+
+                # We have to kill the process directly from here because the
+                # select function is blocking to avoid CPU burning.
+
+                if self.process:
+                    log.debug('Asynchronous process termination requested.')
+                    log.debug('Killing process %s with pid: %d' % \
+                              (self.process, self.process.pid))
+
+                    self.process.kill()
+                    self.process = None
+
                 return True
             else:
                 return False
@@ -117,7 +147,219 @@ def register_sniff_context(BaseSniffContext):
 
             return self._start()
 
+        def run_helper(self):
+            """
+            This function is the thread main procedure for the thread that spawn
+            a new process like tcpdump to avoid packet loss and reads MetaPacket
+            from the pcap file managed from a private process.
+            """
+
+            helper = process = errstr = None
+
+            if self.capmethod == 2:
+                helper = Prefs()['backend.tcpdump'].value
+
+                if self.stop_count:
+                    helper += "-c %d " % self.stop_count
+
+                helper += " -vU -i%s -w%s"
+
+                log.debug("I'm using tcpdump helper to capture packets")
+
+            elif self.capmethod == 3:
+                helper = Prefs()['backend.dumpcap'].value
+
+                if self.stop_count:
+                    helper += "-c %d " % self.stop_count
+
+                if self.stop_time:
+                    helper += "-a duration:%d " % self.stop_time
+
+                if self.stop_size:
+                    helper += "-a filesize:%d " % self.stop_size / 1024
+
+                helper += " -i%s -w%s"
+
+                log.debug("I'm using dumpcap helper to capture packets")
+
+            else:
+                log.debug("I'm using virtual interface method")
+
+            if helper:
+                # TODO: Probably will be better to have a class that organizes
+                #       all the temporary files and than remove them all after
+                #       the program will closed.
+
+                outfile = tempfile.mktemp('.pcap', 'PM-')
+
+                self.process = subprocess.Popen(helper % (self.iface, outfile),
+                                                shell=True, close_fds=True,
+                                                stderr=subprocess.PIPE)
+
+                if os.name != 'nt':
+                    log.debug("Setting O_NONBLOCK stderr file descriptor")
+
+                    flags = fcntl.fcntl(self.process.stderr, fcntl.F_GETFL)
+
+                    if not self.process.stderr.closed:
+                        fcntl.fcntl(self.process.stderr, fcntl.F_SETFL,
+                                    flags| os.O_NONBLOCK)
+
+                # TODO: Fix code for nt system. Probably we should use
+                #       PeekNamedPipe function.
+
+                log.debug("Process spawned as `%s` with pid %d" % \
+                          ((helper % (self.iface, outfile), self.process.pid)))
+                log.debug("Helper started on interface %s. Dumping to %s" % \
+                          (self.iface, outfile))
+            else:
+                outfile = self.cap_file
+
+            try:
+                # Dummy method probably is better to read the stdout in async
+                # way and get the number of packets and continue if n > 0
+
+                while self.internal and self.capmethod != 1 and \
+                      (not os.path.exists(outfile) or \
+                       os.stat(outfile).st_size != 20):
+
+                    log.debug("Dumpfile not ready. Waiting 0.5 sec")
+                    time.sleep(0.5)
+
+                log.debug("Dumpfile seems to be ready.")
+
+                if self.internal:
+                    if self.capmethod == 1:
+                        outfile_size = float(os.stat(outfile).st_size)
+                    else:
+                        outfile_size = None
+
+                    log.debug("Creating a PcapReader object instance")
+
+                    reader = PcapReader(outfile)
+
+                    if getattr(reader.f, 'fileobj', None):
+                        # If fileobj is present we are gzip file and we
+                        # need to get the absolute position not the
+                        # relative to the gzip file.
+                        position = reader.f.fileobj
+                    else:
+                        position = reader.f
+
+            except OSError, err:
+                errstr = err.strerror
+                self.internal = False
+            except Exception, err:
+                errstr = str(err)
+                self.internal = False
+
+            reported_packets = 0
+
+            log.debug("Entering in the main loop")
+
+            while self.internal:
+                inp, out, err = select([process.stderr],
+                                       [process.stderr],
+                                       [process.stderr])
+
+                if process.stderr in inp:
+                    line = process.stderr.read()
+
+                    if not line:
+                        continue
+
+                # Here dumpcap use '\rPackets: %u ' while tcpdump 'Got %u\r'
+                # over stderr file. We use simple split(' ')[1]
+
+                try:
+                    report_idx = int(line.split(' ')[1])
+
+                    if report_idx == reported_packets:
+                        continue
+                    elif report_idx < reported_packets:
+                        log.debug('Some kind of error happened here.')
+                except Exception, err:
+                    continue
+
+                for x in xrange(report_idx - reported_packets):
+
+                    pkt = reader.read_packet()
+
+                    if not pkt:
+                        continue
+
+                    pkt = MetaPacket(pkt)
+                    packet_size = pkt.get_size()
+
+                    if not pkt:
+                        continue
+
+                    if self.max_packet_size and \
+                       packet_size - self.max_packet_size > 0:
+
+                        log.debug("Skipping current packet (max_packet_size)")
+                        continue
+
+                    if self.min_packet_size and \
+                       packet_size - self.min_packet_size < 0:
+
+                        log.debug("Skipping current packet (min_packet_size)")
+                        continue
+
+                    self.tot_count += 1
+                    self.tot_size += packet_size
+
+                    now = datetime.now()
+                    delta = now - self.prevtime
+                    self.prevtime = now
+
+                    if delta == abs(delta):
+                        self.tot_time += delta.seconds
+
+                    self.data.append(pkt)
+
+                    # callback here
+
+                    lst = []
+
+                    if self.stop_count:
+                        lst.append(float(float(self.tot_count) /
+                                         float(self.stop_count)))
+                    if self.stop_time:
+                        lst.append(float(float(self.tot_time) /
+                                         float(self.stop_time)))
+                    if self.stop_size:
+                        lst.append(float(float(self.tot_size) /
+                                         float(self.stop_size)))
+
+                    if outfile_size:
+                        lst.append(position / outfile_size)
+
+                    if lst:
+                        self.percentage = float(float(sum(lst)) /
+                                                float(len(lst))) * 100.0
+
+                        if self.percentage >= 100:
+                            self.internal = False
+                    else:
+                        # ((goject.G_MAXINT / 4) % gobject.G_MAXINT)
+                        self.percentage = (self.percentage + 536870911) % \
+                                          gobject.G_MAXINT
+
+                reported_packets = report_idx
+
+            log.debug("Exiting from thread")
+
+            if self.process:
+                log.debug('Killing helper %s with pid: %d' % (self.process,
+                                                              self.process.pid))
+                self.process.kill()
+
+            self.exit_from_thread(errstr)
+
         def run(self):
+            errstr = None
+
             while self.internal and self.socket is not None:
                 r = None
                 inmask = [self.socket]
@@ -136,11 +378,15 @@ def register_sniff_context(BaseSniffContext):
                         continue
 
                     self.priv.append(r)
-                except:
+                except Exception, err:
+                    errstr = str(err)
                     self.internal = False
                     self.socket = None
                     break
 
+            self.exit_from_thread(errstr)
+
+        def exit_from_thread(self, errstr=None):
             log.debug("Exiting from thread")
 
             self.priv = []
@@ -165,13 +411,18 @@ def register_sniff_context(BaseSniffContext):
 
             status += "%d pks" % (self.tot_count)
 
-            self.summary = _('Finished sniffing on %s (%s)') % (self.iface,
-                                                                status)
+            if errstr:
+                self.summary = _('Error: %s (%s)') % (errstr, status)
+            else:
+                self.summary = _('Finished sniffing on %s (%s)') % (self.iface,
+                                                                    status)
 
             if self.callback:
                 self.callback(None, self.udata)
 
         def check_finished(self):
+            if self.capmethod != 0:
+                return
 
             priv = self.priv
             self.priv = []

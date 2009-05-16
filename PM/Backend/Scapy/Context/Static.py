@@ -81,8 +81,6 @@ def register_static_context(BaseStaticContext):
                 else:
                     fsize = "%.1f KB" % (size / 1024.0)
 
-                data = []
-
                 while True:
                     p = reader.read_packet()
 
@@ -109,12 +107,9 @@ def register_static_context(BaseStaticContext):
                             operation.percentage = \
                                 (pos / float(size)) * 100.0
 
-                        data.append(p)
+                        lst = PacketList([p], os.path.basename(self.cap_file))
+                        self.data.append(MetaPacket(lst[0]))
 
-                for p in PacketList(data, name=os.path.basename(self.cap_file)):
-                    self.data.append(MetaPacket(p))
-
-                del data
 
                 if operation:
                     operation.summary = _('Loaded %s - %d packets (%s)') % \

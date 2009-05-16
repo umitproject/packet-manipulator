@@ -22,11 +22,17 @@
 Interface capturing related dialogs and widgets
 """
 
-import gtk
+import os.path
 from sys import maxint
 
+import gtk
+
 from PM import Backend
+
 from PM.Core.I18N import _
+from PM.Core.Logger import log
+
+from PM.higwidgets.higdialogs import HIGAlertDialog
 
 class CaptureOptions(gtk.Expander):
     def __init__(self):
@@ -35,29 +41,48 @@ class CaptureOptions(gtk.Expander):
         self.set_border_width(4)
         self.set_label_widget(self.new_label(_('<b>Options</b>')))
 
-        tbl = gtk.Table(8, 3, False)
+        tbl = gtk.Table(8, 4, False)
         tbl.set_border_width(4)
         tbl.set_col_spacings(4)
 
-        tbl.attach(self.new_label(_('Filter:')), 0, 1, 0, 1, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Capture file:')), 0, 1, 1, 2, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Min packet size:')), 0, 1, 2, 3, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Max packet size:')), 0, 1, 3, 4, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 4, 5, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 5, 6, yoptions=gtk.SHRINK)
-        tbl.attach(self.new_label(_('Stop after:')), 0, 1, 6, 7, yoptions=gtk.SHRINK)
+        tbl.attach(self.new_label(_('Filter:')),
+                   0, 1, 0, 1, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.new_label(_('Capture file:')),
+                   0, 1, 1, 2, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.new_label(_('Capture method:')),
+                   0, 1, 2, 3, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.new_label(_('Min packet size:')),
+                   0, 1, 3, 4, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.new_label(_('Max packet size:')),
+                   0, 1, 4, 5, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.new_label(_('Stop after:')),
+                   0, 1, 5, 6, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.new_label(_('Stop after:')),
+                   0, 1, 6, 7, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.new_label(_('Stop after:')),
+                   0, 1, 7, 8, yoptions=gtk.SHRINK)
 
         self.filter = gtk.Entry()
 
         btn = gtk.Button()
         btn.add(gtk.image_new_from_stock(gtk.STOCK_INFO, gtk.ICON_SIZE_BUTTON))
         btn.set_relief(gtk.RELIEF_NONE)
+        btn.set_tooltip_markup(_('Enter a pcap filter expression here.\nSee '
+            'also <span foreground="blue">'
+            'http://www.cs.ucr.edu/~marios/ethereal-tcpdump.pdf</span>'))
 
-        hbox = gtk.HBox(False, 2)
-        hbox.pack_start(self.filter)
+        hbox = gtk.HBox(0, False)
         hbox.pack_start(btn, False, False)
 
-        tbl.attach(hbox, 1, 2, 0, 1, yoptions=gtk.SHRINK)
+        tbl.attach(self.filter, 1, 2, 0, 1, yoptions=gtk.SHRINK)
+        tbl.attach(hbox, 2, 3, 0, 1, yoptions=gtk.SHRINK)
 
         self.file = gtk.Entry()
 
@@ -66,31 +91,52 @@ class CaptureOptions(gtk.Expander):
         btn.set_relief(gtk.RELIEF_NONE)
         btn.connect('clicked', self.__on_select_capfile)
 
-        hbox = gtk.HBox(False, 2)
-        hbox.pack_start(self.file)
+        hbox = gtk.HBox(0, False)
         hbox.pack_start(btn, False, False)
 
-        tbl.attach(hbox, 1, 2, 1, 2, yoptions=gtk.SHRINK)
+        tbl.attach(self.file, 1, 2, 1, 2, yoptions=gtk.SHRINK)
+        tbl.attach(hbox, 2, 3, 1, 2, yoptions=gtk.SHRINK)
 
-        min_size, self.min_size, self.min_check = \
+        self.method = gtk.combo_box_new_text()
+        self.method.append_text(_('On the fly'))
+        self.method.append_text(_('Virtual interface'))
+        self.method.append_text(_('tcpdump helper'))
+        self.method.append_text(_('dumpcap helper'))
+
+        self.method.set_active(0)
+
+        tbl.attach(self.method, 1, 2, 2, 3, yoptions=gtk.SHRINK)
+
+        self.min_size, self.min_combo = \
                 self.new_combo(68, maxint, [_("byte(s)")], True)
-        max_size, self.max_size, self.max_check = \
+
+        self.max_size, self.max_combo = \
                 self.new_combo(68, maxint, [_("byte(s)")], True)
 
-        stop_packets, self.stop_packets = self.new_combo(0, maxint, [_("packet(s)")])
-        self.stop_size_box, self.stop_size = self.new_combo(0, 1024, [_("KB"), _("MB"), _("GB")])
-        self.stop_time_box, self.stop_time = self.new_combo(0, maxint, [_("second(s)"), _("minute(s)"), _("hour(s)")])
+        self.stop_packets, stop_packets_lbl = \
+            self.new_combo(0, maxint, [_("packet(s)")])
 
-        group = gtk.SizeGroup(gtk.SIZE_GROUP_BOTH)
+        self.stop_size, self.stop_size_combo = \
+            self.new_combo(0, 1024, [_("KB"), _("MB"), _("GB")])
 
-        for widget in min_size, max_size, stop_packets, self.stop_size_box, self.stop_time_box:
-            group.add_widget(widget)
+        self.stop_time, self.stop_time_combo = \
+            self.new_combo(0, maxint,
+                           [_("second(s)"), _("minute(s)"), _("hour(s)")])
 
-        tbl.attach(min_size, 1, 2, 2, 3, yoptions=gtk.SHRINK)
-        tbl.attach(max_size, 1, 2, 3, 4, yoptions=gtk.SHRINK)
-        tbl.attach(stop_packets, 1, 2, 4, 5, yoptions=gtk.SHRINK)
-        tbl.attach(self.stop_size_box, 1, 2, 5, 6, yoptions=gtk.SHRINK)
-        tbl.attach(self.stop_time_box, 1, 2, 6, 7, yoptions=gtk.SHRINK)
+        tbl.attach(self.min_size, 1, 2, 3, 4)
+        tbl.attach(self.min_combo, 2, 3, 3, 4, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.max_size, 1, 2, 4, 5)
+        tbl.attach(self.max_combo, 2, 3, 4, 5, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.stop_packets, 1, 2, 5, 6)
+        tbl.attach(stop_packets_lbl, 2, 3, 5, 6, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.stop_size, 1, 2, 6, 7)
+        tbl.attach(self.stop_size_combo, 2, 3, 6, 7, yoptions=gtk.SHRINK)
+
+        tbl.attach(self.stop_time, 1, 2, 7, 8)
+        tbl.attach(self.stop_time_combo, 2, 3, 7, 8, yoptions=gtk.SHRINK)
 
         self.res_mac = gtk.CheckButton(_('Enable MAC name resolution'))
         self.res_name = gtk.CheckButton(_('Enable network name resolution'))
@@ -103,16 +149,16 @@ class CaptureOptions(gtk.Expander):
 
         self.background = gtk.CheckButton(_('Start in background mode'))
 
-        tbl.attach(self.gui_real, 2, 3, 0, 1, yoptions=gtk.SHRINK)
-        tbl.attach(self.gui_scroll, 2, 3, 1, 2, yoptions=gtk.SHRINK)
+        tbl.attach(self.gui_real, 3, 4, 0, 1)
+        tbl.attach(self.gui_scroll, 3, 4, 1, 2)
 
-        tbl.attach(self.net_promisc, 2, 3, 2, 3, yoptions=gtk.SHRINK)
+        tbl.attach(self.net_promisc, 3, 4, 2, 3)
 
-        tbl.attach(self.res_mac, 2, 3, 3, 4, yoptions=gtk.SHRINK)
-        tbl.attach(self.res_name, 2, 3, 4, 5, yoptions=gtk.SHRINK)
-        tbl.attach(self.res_transport, 2, 3, 5, 6, yoptions=gtk.SHRINK)
+        tbl.attach(self.res_mac, 3, 4, 3, 4)
+        tbl.attach(self.res_name, 3, 4, 4, 5)
+        tbl.attach(self.res_transport, 3, 4, 5, 6)
 
-        tbl.attach(self.background, 2, 3, 6, 7, yoptions=gtk.SHRINK)
+        tbl.attach(self.background, 3, 4, 6, 7)
 
         # Setting the default values
         self.res_mac.set_active(True)
@@ -131,9 +177,19 @@ class CaptureOptions(gtk.Expander):
         return lbl
 
     def new_combo(self, min, max, lbls, check=False):
+        spin = gtk.SpinButton(gtk.Adjustment(min, min, max, 1, 10))
+
         if len(lbls) == 1:
-            combo = gtk.Label(lbls[0])
-            combo.set_alignment(0, 0.5)
+            if check:
+                combo = gtk.CheckButton(lbls[0])
+
+                combo.connect('toggled',
+                              lambda w, b: b.set_sensitive(w.get_active()), spin)
+
+                spin.set_sensitive(False)
+            else:
+                combo = gtk.Label(lbls[0])
+                combo.set_alignment(0, 0.5)
         else:
             combo = gtk.combo_box_new_text()
 
@@ -142,27 +198,28 @@ class CaptureOptions(gtk.Expander):
 
             combo.set_active(0)
 
-        spin = gtk.SpinButton(gtk.Adjustment(min, min, max, 1, 10))
-
-        hbox = gtk.HBox(False, 2)
-        hbox.pack_start(spin)
-        hbox.pack_start(combo)
-
-        if check:
-            chk = gtk.CheckButton()
-            hbox.pack_start(chk, False, False)
-
-            chk.connect('toggled',
-                lambda w, b: b.set_sensitive(w.get_active()), spin)
-
-            spin.set_sensitive(False)
-
-            return hbox, spin, chk
-
-        return hbox, spin
+        return spin, combo
 
     def __on_select_capfile(self, btn):
-        pass
+        d = gtk.FileChooserDialog(_('Select a capture file'),
+                                  self.get_toplevel(),
+                                  gtk.FILE_CHOOSER_ACTION_SAVE,
+                                  (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+                                   gtk.STOCK_OK, gtk.RESPONSE_ACCEPT)
+                                 )
+
+        path = self.file.get_text()
+
+        if path and os.path.exists(path):
+            d.set_filename(path)
+
+        response_id = d.run()
+        d.hide()
+
+        if response_id == gtk.RESPONSE_ACCEPT:
+            self.file.set_text(d.get_filename())
+
+        d.destroy()
 
     def get_options(self):
         filter = self.filter.get_text()
@@ -174,12 +231,14 @@ class CaptureOptions(gtk.Expander):
         if not capfile:
             capfile = None
 
-        if self.min_check.get_active():
+        method = self.method.get_active()
+
+        if self.min_combo.get_active():
             minsize = self.min_size.get_value_as_int()
         else:
             minsize = 0
 
-        if self.max_check.get_active():
+        if self.max_combo.get_active():
             maxsize = self.max_size.get_value_as_int()
         else:
             maxsize = 0
@@ -187,7 +246,7 @@ class CaptureOptions(gtk.Expander):
         scount = self.stop_packets.get_value_as_int()
 
         stime = self.stop_time.get_value_as_int()
-        factor = self.stop_time_box.get_children()[1].get_active()
+        factor = self.stop_time_combo.get_active()
 
         if factor == 0:
             factor = 1
@@ -199,7 +258,7 @@ class CaptureOptions(gtk.Expander):
         stime = stime * factor
 
         ssize = self.stop_size.get_value_as_int()
-        factor = self.stop_size_box.get_children()[1].get_active()
+        factor = self.stop_size_combo.get_active()
 
         if factor == 0:
             factor = 1024
@@ -222,6 +281,7 @@ class CaptureOptions(gtk.Expander):
             'filter'       : filter,
             'minsize'      : minsize,
             'maxsize'      : maxsize,
+            'capmethod'    : method,
             'capfile'      : capfile,
             'scount'       : scount,
             'stime'        : stime,
@@ -326,14 +386,22 @@ class InterfaceDialog(gtk.Dialog):
                     widget
                 )
 
+                self.options.method.connect(
+                    'changed',
+                    self.__on_method_changed,
+                    widget
+                )
+
                 break
 
         self.if_list.tree.connect('row-activated',
             lambda tree, path, view, diag:
                 diag.response(gtk.RESPONSE_ACCEPT), self)
 
+        self.connect('response', self.__on_response)
+
         self.show_all()
-        self.set_size_request(620, 400)
+        self.if_list.set_size_request(600, 200)
 
     def get_selected(self):
         "@return the selected interface for sniffing or None"
@@ -348,3 +416,31 @@ class InterfaceDialog(gtk.Dialog):
             btn.set_sensitive(True)
         else:
             btn.set_sensitive(False)
+
+    def __on_method_changed(self, combo, btn):
+        if combo.get_active() == 1:
+            btn.set_sensitive(True)
+        else:
+            self.__on_selection_changed(self.if_list.tree.get_selection(), btn)
+
+    def __on_response(self, dialog, response_id):
+        if response_id == gtk.RESPONSE_ACCEPT:
+            opts = self.get_options()
+
+            if opts['capmethod'] == 1 and not opts['capfile']:
+                log.debug('Capture method selected is virtual interface but '
+                          'the file entry is empty. Stopping response emission')
+
+                self.stop_emission('response')
+
+                d = HIGAlertDialog(self, gtk.DIALOG_DESTROY_WITH_PARENT | \
+                                         gtk.DIALOG_MODAL, gtk.MESSAGE_ERROR,
+                                   message_format=_("Some options are missing"),
+                                   secondary_text=_("You've selected Virtual "
+                                                    "interface as capture "
+                                                    "method. You need to "
+                                                    "specify a file source to "
+                                                    "read from"))
+                d.run()
+                d.hide()
+                d.destroy()

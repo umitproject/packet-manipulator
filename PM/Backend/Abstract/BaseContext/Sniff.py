@@ -1,21 +1,21 @@
-#!/usr/bin/env python                                   
-# -*- coding: utf-8 -*-                                 
-# Copyright (C) 2008 Adriano Monteiro Marques           
-#                                                       
-# Author: Francesco Piccinno <stack.box@gmail.com>      
-#                                                       
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from Timed import TimedContext
@@ -23,7 +23,7 @@ from PM.Backend.Abstract.Context import register_sniff_context
 
 class BaseSniffContext(TimedContext):
     "A context to sniff on a given interface"
-    
+
     has_stop = True
     has_resume = False
     has_restart = True
@@ -31,7 +31,7 @@ class BaseSniffContext(TimedContext):
     def __init__(self, iface, filter=None, minsize=0, maxsize=0, capfile=None, \
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
                  resmac=True, resname=False, restransport=True, promisc=True, \
-                 background=False, callback=None, udata=None):
+                 background=False, capmethod=0, callback=None, udata=None):
 
         """
         Create a BaseSniffContext object
@@ -51,9 +51,14 @@ class BaseSniffContext(TimedContext):
         @param restransport enable transport resolution
         @param promisc set the interface to promisc mode
         @param background if the sniff context should be runned in background
+        @param capmethod the method to use (0 for standard, 1 for virtual
+                         interface trough file, 2 for tcpdump helper, 3 for
+                         dumpcap helper)
         @param callback a function to call at every packet sniffed
         @param udata the user data to pass to callback
         """
+
+        TimedContext.__init__(self)
 
         self.iface = iface
         self.filter = filter
@@ -72,6 +77,7 @@ class BaseSniffContext(TimedContext):
         self.mac_resolution = resmac
         self.name_resolution = resname
         self.transport_resoltioin = restransport
+        self.capmethod = capmethod
 
         self.background = background
         self.callback = callback
@@ -80,7 +86,5 @@ class BaseSniffContext(TimedContext):
         self.tot_size = 0
         self.tot_time = 0
         self.tot_count = 0
-
-        TimedContext.__init__(self)
 
 SniffContext = register_sniff_context(BaseSniffContext)

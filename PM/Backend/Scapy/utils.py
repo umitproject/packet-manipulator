@@ -20,6 +20,7 @@
 
 import os
 import sys
+import traceback
 
 from datetime import datetime
 from threading import Thread, Lock, Condition
@@ -712,7 +713,6 @@ class SequenceConsumer(Interruptable):
         else:
             log.debug("Exception not properly handled. Dumping:")
 
-            import traceback
             traceback.print_exc(file=sys.stdout)
 
         self.stop()
