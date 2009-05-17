@@ -1,4 +1,4 @@
-2009-06-17 Francesco Piccinno <stack.box@gmail.com>
+2009-05-17 Francesco Piccinno <stack.box@gmail.com>
     * PM/Gui/Dialogs/Preferences.py
       PM/Gui/Core/App.py
       PM/Gui/Manager/PreferenceManager.py:
@@ -13,12 +13,12 @@
 
     Fixed various bug and regression.
 
-2009-06-16 Francesco Piccinno <stack.box@gmail.com>
+2009-05-16 Francesco Piccinno <stack.box@gmail.com>
 
     * PacketManipulator:
         - Added --debug option to spawn a gdb session when the launcher is
           started.
-    * PM/PacketManipulator: 
+    * PM/PacketManipulator:
         - now we require pygtk >= 2.14
     * PM/Gui/Pages/SniffPage.py:
         - 80 columns line wrap fixed.
@@ -31,7 +31,7 @@
         - Set a tooltip to the pcap filter info button
         - Fixed various alignment bugs.
     * PM/Gui/Dialogs/Preferences.py:
-        - Adding a new 'Helpers' section letting the user choose the correct 
+        - Adding a new 'Helpers' section letting the user choose the correct
           path for tcpdump and dumpcap programs.
     * PM/Backend/Scapy/Context/Sniff.py:
         - Adding the possibility to use tcpdump/pcap or virtual interface for
