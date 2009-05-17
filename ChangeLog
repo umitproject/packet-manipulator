@@ -10,8 +10,21 @@
       PM/Gui/Core/GdlPaned.py:
         - Added a gdl paned implementation. You need gnome-python-extra
           package to use that implementation.
+    * TODO: Cleaned up
+    * PM/Gui/pages/PacketPage.py
+      PM/Gui/Widgets/PyGtkHexView.py:
+        - Added a new implementation of read/write hex view.
+    * PM/Backend/Scapy/packet.py:
+        - Added new method get_protocol_bounds() to MetaPacket class.
+    * PM/Backend/Scapy/wrapper.py:
+        - Added new function get_proto_size() used by MetaPacket.
+    * PM/Gui/Tabs/PropertyTab.py:
+        - Now if the user select a protocol in the ProtocolHierarchy the
+          selection will be propagated to the hexview with the same behaviour
+          of field selection but for the entire protocol. See also wireshark.
 
     Fixed various bug and regression.
+    80 columns line wrap fixed in various files.
 
 2009-05-16 Francesco Piccinno <stack.box@gmail.com>
 

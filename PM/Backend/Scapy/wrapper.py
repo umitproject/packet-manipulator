@@ -1,21 +1,21 @@
-#!/usr/bin/env python                                   
-# -*- coding: utf-8 -*-                                 
-# Copyright (C) 2008 Adriano Monteiro Marques           
-#                                                       
-# Author: Francesco Piccinno <stack.box@gmail.com>      
-#                                                       
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import os
@@ -66,7 +66,8 @@ def load_scapy_protocols():
     import __builtin__
     all = __builtin__.__dict__.copy()
     all.update(globals())
-    objlst = filter(lambda (n,o): isinstance(o,type) and issubclass(o,Packet), all.items())
+    objlst = filter(lambda (n,o): isinstance(o,type) and issubclass(o,Packet), \
+                    all.items())
     objlst.sort(lambda x,y:cmp(x[0],y[0]))
 
     ret = []
@@ -121,6 +122,15 @@ def get_proto_fields(proto_inst):
 
         if not isinstance(proto_inst.payload, NoPayload):
             get_proto_fields(proto_inst.payload)
+
+def get_proto_size(proto_inst):
+    """@return the size of the entire protocol in bits"""
+    size = 0
+
+    for field in get_proto_fields(proto_inst):
+        size += get_field_size(proto_inst, field)
+
+    return size
 
 def get_proto_field(proto_inst, name):
     for f in get_proto_fields(proto_inst):
@@ -188,7 +198,7 @@ def get_field_size(proto, field):
 
 def get_field_offset(packet, proto, field):
     bits = 0
-    
+
     child = packet.root
 
     while not isinstance(child, NoPayload):
@@ -222,7 +232,7 @@ def set_keyflag_value(proto, flag, key, value):
         return
     else:
         ret = get_field_value_repr(proto, flag)
-        
+
         if flag.multi:
             if value:
                 ret += "+" + key

@@ -208,7 +208,7 @@ class GUIPage(Page):
           (
            ('gui.maintab.hexview.font', _('HexView font:'),
                 gtk.FontButton()),
-           ('gui.maintab.hexview.bpl', _('Bytes per line:'),
+           ('gui.maintab.hexview.bpl', _('Bytes per line or group type:'),
                 gtk.SpinButton(gtk.Adjustment(8, 1, 16, 1, 1))),
           )
         ),

@@ -1,24 +1,25 @@
-#!/usr/bin/env python                                   
-# -*- coding: utf-8 -*-                                 
-# Copyright (C) 2008 Adriano Monteiro Marques           
-#                                                       
-# Author: Francesco Piccinno <stack.box@gmail.com>      
-#                                                       
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from PM.Backend.Scapy.wrapper import Packet, NoPayload, Raw, Ether, IP
+from PM.Backend.Scapy.wrapper import Packet, NoPayload, Raw, Ether, IP, \
+                                     get_proto_size
 
 class MetaPacket:
     def __init__(self, proto=None):
@@ -58,7 +59,7 @@ class MetaPacket:
                 self.root = IP() / self.root
 
             self.root = Ether() / self.root
-            
+
             return True
 
         return False
@@ -128,7 +129,7 @@ class MetaPacket:
                 return proto.name
 
             proto = proto.payload
-    
+
     def get_protocols(self):
         "@returns a list containing the name of protocols"
 
@@ -144,7 +145,22 @@ class MetaPacket:
             proto = proto.payload
 
         return lst
-    
+
+    def get_protocol_bounds(self, proto_inst):
+        "@return a tuple (start, len)"
+
+        start = 0
+        proto = self.root
+
+        while isinstance(proto, Packet):
+            if isinstance(proto, NoPayload):
+                return None
+            elif proto_inst is proto:
+                return start, start + get_proto_size(proto_inst) / 8
+
+            start += get_proto_size(proto) / 8
+            proto = proto.payload
+
     def reset(self, protocol=None, startproto=None, field=None):
         """
         Reset the packet
@@ -186,19 +202,19 @@ class MetaPacket:
             else:
                 # If we are here we should reset all the fields!
                 # kill them all man!
-                
+
                 for k in current.fields.keys():
                     delattr(current, k)
 
             # If we have reached our proto we are sure that
-            # we have resetted the selected fields correctly 
+            # we have resetted the selected fields correctly
             # at this point so it's safe to return
 
             if protocol_found:
                 return
 
             current = current.payload
-    
+
     def haslayer(self, layer):
         return bool(self.root.haslayer(layer))
 

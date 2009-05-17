@@ -227,7 +227,7 @@ class SniffPage(Perspective):
         #def emit_row_changed(model, path, iter):
         #    model.row_changed(path, iter)
 
-        #self.store.foreach(emit_row_changed)
+        #self.active_model.foreach(emit_row_changed)
 
         # Queue draw should be enough here
         self.queue_draw()

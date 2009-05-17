@@ -67,7 +67,7 @@ class PropertyTab(UmitView):
             self.notify[packet] = [callback]
 
         log.debug("%d callbacks for %s" % (len(self.notify[packet]), packet))
-    
+
     def remove_notify_for(self, packet, callback):
         if packet in self.notify:
             self.notify[packet].remove(callback)
@@ -78,7 +78,7 @@ class PropertyTab(UmitView):
                 del self.notify[packet]
 
                 log.debug("No callbacks for %s" % packet)
-    
+
     def __on_clear(self, sesss_nb, child, num):
         self._main_widget.set_sensitive(False)
         self.grid.clear()
@@ -93,18 +93,22 @@ class PropertyTab(UmitView):
             # We need to get the protocol instance
             # from selection or from the first iter
             # so we can repopulate the PropertyGrid
-            
-            packet, proto = page.packet_page.proto_hierarchy.get_active_protocol()
+
+            packet, proto = \
+                page.packet_page.proto_hierarchy.get_active_protocol()
 
             if self.prev_page and self.change_id:
-                sel = self.prev_page.packet_page.proto_hierarchy.tree.get_selection()
+                sel = self.prev_page.packet_page.proto_hierarchy.tree.\
+                          get_selection()
+
                 if sel:
                     sel.disconnect(self.change_id)
 
             self.prev_page = page
-            self.change_id = page.packet_page.proto_hierarchy.tree.get_selection().connect('changed',
-                                                               self.__on_hierarchy_selection_changed)
-            
+            self.change_id = page.packet_page.proto_hierarchy.tree. \
+                                get_selection().connect('changed', \
+                                    self.__on_hierarchy_selection_changed)
+
             if not proto and page.packet:
                 packet = page.packet
                 proto = page.packet.root
@@ -113,13 +117,26 @@ class PropertyTab(UmitView):
             self._main_widget.set_sensitive(True)
 
     def __on_hierarchy_selection_changed(self, selection):
-        packet, proto = self.prev_page.packet_page.proto_hierarchy.get_active_protocol()
+        packet, proto = \
+            self.prev_page.packet_page.proto_hierarchy.get_active_protocol()
 
         if not proto:
             return
-        
+
         self.grid.clear()
         self.grid.populate(packet, proto)
+
+        # Let's select entire protocol in the hexview
+
+        tab = PMApp().main_window.get_tab("MainTab")
+        page = tab.session_notebook.get_current_session()
+
+        if page:
+            bounds = packet.get_protocol_bounds(proto)
+
+            if bounds:
+                page.packet_page.hexview.select_block(bounds[0],
+                                                      bounds[1] - bounds[0])
 
         self._main_widget.set_sensitive(True)
 
@@ -132,13 +149,13 @@ class PropertyTab(UmitView):
         page = tab.session_notebook.get_current_session()
 
         # FIXME: check if the packet page object is avaiable
-        # within this session or use isisntance(SessionPage, SequencePage)
+        # within this session or use isinstance(SessionPage, SequencePage)
         if page:
             # No reload to avoid repopulating
             page.packet_page.redraw_hexview()
 
             packet, proto, field = self.grid.tree.get_selected_field()
-            
+
             if packet in self.notify:
                 for cb in self.notify[packet]:
                     cb(packet, proto, field, True)
@@ -163,4 +180,7 @@ class PropertyTab(UmitView):
             length = Backend.get_field_size(proto, field)
 
             page.packet_page.hexview.select_block(start / 8, max(length / 8, 1))
-            page.reload_container(page.packet)
+
+            # This will cause the sniff page to be cleared and repopulated
+            # without any sense.
+            #page.reload_container(page.packet)

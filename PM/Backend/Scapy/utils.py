@@ -26,7 +26,8 @@ from datetime import datetime
 from threading import Thread, Lock, Condition
 
 from PM.Core.Logger import log
-from PM.Core.Atoms import Node, ThreadPool, Interruptable, with_decorator, defaultdict
+from PM.Core.Atoms import Node, ThreadPool, Interruptable, \
+                          with_decorator, defaultdict
 
 from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *
@@ -35,7 +36,8 @@ from PM.Backend.Scapy.packet import MetaPacket
 def get_iface_from_ip(metapacket):
     if metapacket.haslayer(IP):
         iff, a, gw = conf.route.route(metapacket.getlayer(IP).dst)
-        log.debug("Using %s interface to send packet to %s" % (iff, metapacket.root.dst))
+        log.debug("Using %s interface to send packet to %s" % \
+                  (iff, metapacket.root.dst))
     else:
         iff = conf.iface
         log.debug("Using default %s interface" % iff)
@@ -112,7 +114,8 @@ def route_list():
 def reset_routes(to=None):
     """
     Reset the routes
-    @param to a list of tuples in the form of (net, mask, gw, iface, outip) or None
+    @param to a list of tuples in the form of (net, mask, gw, iface, outip) or
+              None
     """
 
     if not to:
@@ -259,7 +262,8 @@ def send_packet(metapacket, count, inter, iface, callback, udata=None):
     except socket.error, (errno, err):
         raise Exception(err)
 
-    send_thread = SenderConsumer(sock, metapacket, count, inter, callback, udata)
+    send_thread = SenderConsumer(sock, metapacket, count, inter, callback,
+                                 udata)
     send_thread.start()
 
     return send_thread
@@ -311,7 +315,9 @@ class SendReceiveConsumer(Interruptable):
                 if self.scount > 0:
                     self.scount -= 1
 
-                if self.scallback(self.metapacket, self.count - self.scount, self.sudata):
+                if self.scallback(self.metapacket, self.count - self.scount, \
+                                  self.sudata):
+
                     log.debug("send callback want to exit")
                     break
 
@@ -319,7 +325,8 @@ class SendReceiveConsumer(Interruptable):
         except SystemExit:
             pass
         except Exception, err:
-            print "Error in _sndrecv_sthread(PID: %d EXC: %s)" % (os.getpid(), str(err))
+            log.error("Error in _sndrecv_sthread(PID: %d EXC: %s)" % \
+                      (os.getpid(), str(err)))
         else:
             if PM_USE_NEW_SCAPY:
                 cPickle.dump(conf.netcache, self.wrpipe)
@@ -356,7 +363,9 @@ class SendReceiveConsumer(Interruptable):
             if r is None:
                 continue
 
-            if not self.strict or r.hashret() == packet_hash and r.answers(packet):
+            if not self.strict or r.hashret() == packet_hash and \
+               r.answers(packet):
+
                 ans += 1
 
                 if notans:
@@ -478,7 +487,8 @@ class SequenceConsumer(Interruptable):
 
         self.sudata, self.rudata = sudata, rudata
 
-        log.debug("%d total packets to send for %d times" % (len(tree), self.count))
+        log.debug("%d total packets to send for %d times" % (len(tree),
+                                                             self.count))
 
     def isAlive(self):
         return self.internal
@@ -526,7 +536,8 @@ class SequenceConsumer(Interruptable):
 
             for node in self.tree.get_children():
                 log.debug("Adding first packet of the sequence")
-                self.pool.queue_work(None, self.__notify_exc, self.__send_worker, node)
+                self.pool.queue_work(None, self.__notify_exc,
+                                     self.__send_worker, node)
                 break
 
             log.debug("Waiting recv to begin another loop")
@@ -678,7 +689,8 @@ class SequenceConsumer(Interruptable):
             key = obj.packet.root.hashret()
             self.recv_list[key].append((len(self.recv_list), sock, node))
 
-            log.debug("Adding socket to the list for receiving my packet %s" % sock)
+            log.debug("Adding socket to the list for receiving my packet %s" % \
+                      sock)
 
         sock.send(obj.packet.root)
 
@@ -694,7 +706,8 @@ class SequenceConsumer(Interruptable):
 
             if next:
                 log.debug("Processing next packet")
-                self.pool.queue_work(None, self.__notify_exc, self.__send_worker, next)
+                self.pool.queue_work(None, self.__notify_exc,
+                                     self.__send_worker, next)
 
             else:
                 log.debug("Last packet of this level")

@@ -26,15 +26,27 @@ import gtk
 
 from PM import Backend
 from PM.Core.I18N import _
+from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Icons import get_pixbuf
-from PM.Gui.Widgets.HexView import HexView
 from PM.Gui.Widgets.Plotter import Plotter
 from PM.Gui.Tabs.OperationsTab import SendOperation, SendReceiveOperation
 
 from PM.Gui.Pages.Base import Perspective
+
+try:
+    from PM.Gui.Widgets.PyGtkHexView import HexView
+
+    log.info('Cool we\'re using read/write hex-view.')
+
+except ImportError:
+    from PM.Gui.Widgets.HexView import HexView
+
+    log.warning('Erm :( We are using read only hex-view. Try to install '
+                'pygtkhexview and restart PM. You could get a copy from: '
+                'http://code.google.com/p/pygtkhex/')
 
 class ProtocolHierarchy(gtk.ScrolledWindow):
     def __init__(self, parent):
@@ -59,7 +71,9 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
         # We pray to be ordered :(
         for proto in Backend.get_packet_protos(self.session.packet):
-            root = self.store.append(root, [self.proto_icon, Backend.get_proto_name(proto), proto])
+            root = self.store.append(root, [self.proto_icon,
+                                            Backend.get_proto_name(proto),
+                                            proto])
 
         self.tree.expand_all()
         self.tree.get_selection().select_path((0, ))
@@ -86,13 +100,15 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         self.tree.set_rules_hint(True)
 
     def __pack_widgets(self):
-        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         self.add(self.tree)
 
     def __connect_signals(self):
-        self.tree.enable_model_drag_dest([('text/plain', 0, 0)], gtk.gdk.ACTION_COPY)
+        self.tree.enable_model_drag_dest([('text/plain', 0, 0)],
+                                         gtk.gdk.ACTION_COPY)
+
         self.tree.connect('drag-data-received', self.__on_drag_data)
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
@@ -115,12 +131,14 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
             if ret:
                 path, pos = ret
-                where = len(path) # because it's a treeview with only one child for row
+
+                # because it's a treeview with only one child for row
+                where = len(path)
 
                 if pos == gtk.TREE_VIEW_DROP_BEFORE or \
                    pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE:
                     where -= 1
-            
+
             # Now try to insert this stuff into the packet
 
             if self.session.packet.insert(packet, where):
@@ -149,7 +167,7 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
             return None, None
 
         obj = model.get_value(iter, 2)
-        
+
         assert Backend.is_proto(obj), "Should be a Protocol instance."
 
         return self.session.packet, obj
@@ -197,9 +215,9 @@ class PacketPage(Perspective):
         self.proto_hierarchy = ProtocolHierarchy(self.session)
         self.hexview = HexView()
 
-        self.hbox.pack_start(self.proto_hierarchy)
+        self.hbox.pack_start(self.proto_hierarchy, False, False, 0)
         self.hbox.pack_start(self.toolbar, False, False)
-        self.hbox.pack_start(self.hexview, False, False)
+        self.hbox.pack_start(self.hexview)#, False, False)
 
         Prefs()['gui.maintab.hexview.font'].connect(self.hexview.modify_font)
         Prefs()['gui.maintab.hexview.bpl'].connect(self.hexview.set_bpl)
@@ -213,7 +231,7 @@ class PacketPage(Perspective):
         if self.session.packet:
             self.hexview.payload = Backend.get_packet_raw(self.session.packet)
         else:
-            self.hexview.payload = ""
+            self.hexview.payload = ''
 
     def reload(self):
         # Hide the toolbar while merging fields
@@ -285,10 +303,10 @@ class PacketPage(Perspective):
                          gtk.FILE_CHOOSER_ACTION_SAVE,
                          (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
                           gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT))
- 
+
             if chooser.run() == gtk.RESPONSE_ACCEPT:
                 fname = chooser.get_filename()
                 dialog.plotter.export_to(fname)
- 
+
             chooser.hide()
             chooser.destroy()
