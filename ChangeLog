@@ -22,6 +22,10 @@
         - Now if the user select a protocol in the ProtocolHierarchy the
           selection will be propagated to the hexview with the same behaviour
           of field selection but for the entire protocol. See also wireshark.
+    * PM/Gui/Widgets/PropertyGrid.py:
+        - Added the possibility to use PyGtkHexView class to edit string fields
+          that can't be converted to utf-8 string. This should close all bugs
+          related to the missing read/write hexview implementation.
 
     Fixed various bug and regression.
     80 columns line wrap fixed in various files.

@@ -1,3 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
 import gtk
 import gtkhex
 import gobject
@@ -14,6 +34,7 @@ class HexView(gtkhex.Hex):
 
         self.show_offsets(True)
         self.set_geometry(8, 5)
+        self.set_read_only_mode(True)
 
     def select_block(self, offset, len, ascii=True):
         """
@@ -30,11 +51,10 @@ class HexView(gtkhex.Hex):
         self.set_selection(offset, offset + len)
 
     def get_payload(self):
-        return self._payload
+        return self._document.get_data(0, self._document.file_size)
     def set_payload(self, val):
-        self._payload = val
-        self._document.set_data(0, len(self._payload), self._document.file_size,
-                                self._payload, False)
+        self._document.set_data(0, len(val), self._document.file_size,
+                                val, False)
 
     def get_font(self):
         return self._font

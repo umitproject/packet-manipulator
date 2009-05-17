@@ -25,12 +25,19 @@ import gobject
 
 from PM import Backend
 from PM.Core.I18N import _
+from PM.Core.Logger import log
 
 from PM.higwidgets.higbuttons import MiniButton
 from PM.higwidgets.hignetwidgets import HIGIpEntry
 
 from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Widgets.Expander import ToolBox
+from PM.Manager.PreferenceManager import Prefs
+
+try:
+    from PM.Gui.Widgets.PyGtkHexView import HexView
+except ImportError:
+    HexView = None
 
 class Editor(gtk.HBox):
 
@@ -65,7 +72,7 @@ class Editor(gtk.HBox):
             Backend.set_keyflag_value(self.protocol, self.field, self.flag_name, value)
         else:
             Backend.set_field_value(self.protocol, self.field, value)
-    
+
     @staticmethod
     def render(field, window, widget, bounds, state):
         return False
@@ -91,10 +98,10 @@ class IntEditor(Editor):
         self.pack_start(self.spin)
         #self.spin.set_has_frame(False)
         self.spin.show()
-    
+
     def connect_signals(self):
         self.spin.connect('value-changed', self.__on_changed)
-    
+
     def calc_bounds(self):
         # Unsigned int / Int? :(
         if Backend.get_field_size(self.protocol, self.field) != None:
@@ -103,11 +110,12 @@ class IntEditor(Editor):
             self.digits = 0
         else:
             import sys
-            print "Hei man we are falling back to sys.maxint for", self.field
+            log.debug("Hei man we are falling back to sys.maxint for %s" % \
+                      self.field)
             self.min = -sys.maxint - 1
             self.max = sys.maxint
             self.digits = 0
-    
+
     def __on_changed(self, spin):
         if isinstance(self.value, int):
             self.value = self.spin.get_value_as_int()
@@ -122,13 +130,13 @@ class BitEditor(Editor):
     def pack_widgets(self):
         self.pack_start(self.btn)
         self.btn.show()
-    
+
     def connect_signals(self):
         self.btn.connect('toggled', self.__on_changed)
-    
+
     def __on_changed(self, btn):
         self.value = self.btn.get_active()
-    
+
     @staticmethod
     def render(field, window, widget, bounds, state):
         if len(field) == 3:
@@ -142,18 +150,18 @@ class BitEditor(Editor):
             raise Exception
 
         size = 15
-        
+
         if size > bounds.height:
             size = bounds.height
         if size > bounds.width:
             size = bounds.width
-            
+
         # Paint a right aligned checkbox
         widget.style.paint_check(window, state, sh, bounds, widget,
                                  "checkbutton", bounds.x,
-                                 bounds.y + (bounds.height - size) / 2, 
+                                 bounds.y + (bounds.height - size) / 2,
                                  size, size)
-        
+
         # Yes we handle the drawing
         return True
 
@@ -182,7 +190,7 @@ class EnumEditor(Editor):
         for value, key in self.odict:
             self.store.append([self.icon, key, value])
 
-            if not set: 
+            if not set:
                 if self.value == value:
                     set = True
                     continue
@@ -195,7 +203,7 @@ class EnumEditor(Editor):
         self.store.append([self.icon, _("Set manually"), -1])
 
         self.int_editor = IntEditor((self.protocol, self.field))
-        
+
         self.undo_btn = MiniButton(stock=gtk.STOCK_UNDO)
         self.undo_btn.set_size_request(24, 24)
 
@@ -230,11 +238,14 @@ class EnumEditor(Editor):
 class StrEditor(Editor):
     def create_widgets(self):
         self.entry = gtk.Entry()
+        self._ignore_changed = False
 
         try:
             self.entry.set_text(unicode(self.value))
+            self.entry.set_sensitive(True)
         except UnicodeDecodeError:
             self.entry.set_text('')
+            self.entry.set_sensitive(False)
 
         self.btn = gtk.Button("...")
 
@@ -246,26 +257,29 @@ class StrEditor(Editor):
     def connect_signals(self):
         self.btn.connect('clicked', self.__on_edit)
         self.entry.connect('changed', self.__on_changed)
-    
+
     def __on_changed(self, entry):
+        if self._ignore_changed:
+            self._ignore_changed = False
+            return
+
         self.value = self.entry.get_text()
 
     def __on_edit(self, widget):
-        # TODO: here we need an hexview but with insert mode
-        #       for now only a simple dialog with a textview
+        if not HexView:
+            try:
+                text = unicode(self.value)
+            except UnicodeDecodeError:
+                dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL,
+                                           gtk.MESSAGE_WARNING, gtk.BUTTONS_OK,
+                _("Cannot edit this field because I can't convert it to utf8.\n"
+                  "Try to edit the field with python shell or simply install "
+                  "pygtkhex that provides a nice HexView to edit raw fields"))
+                dialog.run()
+                dialog.hide()
+                dialog.destroy()
 
-        try:
-            text = unicode(self.value)
-        except UnicodeDecodeError:
-            dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_WARNING, gtk.BUTTONS_OK,
-            _("Cannot edit this field because I can't convert it to unicode.\n" \
-              "Try to edit the field with python shell or see if a new version of PM " \
-              "is avaiable. Maybe nopper added the HexView insert mode :)"))
-            dialog.run()
-            dialog.hide()
-            dialog.destroy()
-
-            return
+                return
 
 
         dialog = gtk.Dialog(_('Editing string field'),
@@ -273,22 +287,46 @@ class StrEditor(Editor):
                             (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
                              gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
 
-        buffer = gtk.TextBuffer()
-        buffer.set_text(unicode(self.value))
-        view = gtk.TextView(buffer)
+        if not HexView:
+            buffer = gtk.TextBuffer()
+            buffer.set_text(text)
 
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        sw.add(view)
-        sw.show_all()
+            view = gtk.TextView(buffer)
+            view.modify_font(pango.FontDescription(
+                Prefs()['gui.maintab.hexview.font'].value))
 
-        dialog.vbox.pack_start(sw)
+            sw = gtk.ScrolledWindow()
+            sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+            sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+            sw.add(view)
+            sw.show_all()
+
+            dialog.vbox.pack_start(sw)
+        else:
+            hex = HexView()
+            hex.set_insert_mode(True)
+            hex.set_read_only_mode(False)
+
+            hex.font = Prefs()['gui.maintab.hexview.font'].value
+            hex.payload = self.value
+
+            hex.show()
+            dialog.vbox.pack_start(hex)
+
         dialog.set_size_request(400, 300)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
-            self.entry.set_text(buffer.get_text(buffer.get_start_iter(),
+            if not HexView:
+                self.entry.set_text(buffer.get_text(buffer.get_start_iter(),
                                                 buffer.get_end_iter(), True))
+            else:
+                self.value = hex.payload
+                self._ignore_changed = True
+
+                try:
+                    self.entry.set_text(unicode(self.value))
+                except UnicodeDecodeError:
+                    self.entry.set_text('')
 
         dialog.hide()
         dialog.destroy()
@@ -393,7 +431,7 @@ gobject.type_register(HackEntry)
 
 class CellRendererGroup(gtk.CellRendererText):
     __gtype_name__ = "CellRendererGroup"
-    
+
     def __init__(self, tree):
         super(CellRendererGroup, self).__init__()
 
@@ -410,7 +448,7 @@ class CellRendererGroup(gtk.CellRendererText):
         dummy_entry = gtk.Entry()
         dummy_entry.set_has_frame(False)
         self.row_height = dummy_entry.size_request()[1] + 2
-    
+
     def do_get_size(self, widget, area):
         w, h = 0, 0
 
@@ -428,7 +466,7 @@ class CellRendererGroup(gtk.CellRendererText):
         # We draw two lines for emulating a box _|
         cr = window.cairo_create()
         cr.save()
-            
+
         area = background_area
         cr.set_operator(cairo.OPERATOR_DEST_OVER)
 
@@ -443,17 +481,17 @@ class CellRendererGroup(gtk.CellRendererText):
 
             cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
             cr.set_line_width(0.5)
-            
+
             # Horiz
             cr.move_to(area.x, area.y + area.height - 1)
             cr.rel_line_to(area.width, 0)
             cr.stroke()
-            
+
             # Vert
             cr.move_to(area.x + area.width - 1, area.y)
             cr.rel_line_to(0, area.height - 1)
             cr.stroke()
-        
+
         cr.restore()
 
         if self.editor != None and self.field != None:
@@ -465,16 +503,16 @@ class CellRendererGroup(gtk.CellRendererText):
             # Don't create any instance. Use the static method instead
             if self.editor.render(self.field, window, widget, cell_area, state):
                 return
-        
+
         return gtk.CellRendererText.do_render(self, window, widget,
                                               background_area, cell_area,
                                               expose_area, flags)
 
 gobject.type_register(CellRendererGroup)
-   
+
 class CellRendererProperty(CellRendererGroup):
     __gtype_name__ = "CellRendererProperty"
-    
+
     def __init__(self, tree):
         super(CellRendererProperty, self).__init__(tree)
         self.set_property('mode', gtk.CELL_RENDERER_MODE_EDITABLE)
@@ -504,17 +542,17 @@ gobject.type_register(CellRendererProperty)
 
 class CellRendererIcon(gtk.CellRendererPixbuf):
     __gtype_name__ = "CellRendererIcon"
-    
+
     def __init__(self):
         super(CellRendererIcon, self).__init__()
-    
+
     def do_render(self, window, widget, background_area, \
                   cell_area, expose_area, flags):
-        
+
         ret = gtk.CellRendererPixbuf.do_render(self, window, widget,
                                                background_area, cell_area,
                                                expose_area, flags)
-        
+
         cr = window.cairo_create()
         cr.save()
 
@@ -531,7 +569,7 @@ class CellRendererIcon(gtk.CellRendererPixbuf):
             cr.set_operator(cairo.OPERATOR_OVER)
             cr.set_source_color(widget.style.mid[gtk.STATE_NORMAL])
             cr.set_line_width(0.5)
-            
+
             cr.move_to(area.x, area.y + area.height - 1)
             cr.rel_line_to(area.width, 0)
             cr.stroke()
@@ -564,7 +602,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)
-       
+
         self.packet = None
         self.store = gtk.TreeStore(object)
         self.tree = gtk.TreeView(self.store)
@@ -578,18 +616,18 @@ class PropertyGridTree(gtk.ScrolledWindow):
         crt.set_property('xpad', 0)
         crt.set_property('cell-background-gdk',
                          self.style.mid[gtk.STATE_NORMAL])
-        
+
         pix = CellRendererIcon()
         pix.set_property('xpad', 0)
         pix.set_property('ypad', 0)
-        
+
         col.pack_start(pix, False)
         col.pack_start(crt, True)
         col.set_resizable(True)
         col.set_expand(True)
         #col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
         col.set_fixed_width(180)
-        
+
         col.set_cell_data_func(crt, self.__group_cell_func)
         col.set_cell_data_func(pix, self.__pixbuf_cell_func)
         self.tree.append_column(col)
@@ -725,7 +763,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
     def __on_reset_proto_fields(self, action):
         packet, proto, field = self.get_selected_field()
         packet.reset(proto)
-    
+
     def __on_reset_above_protos_fields(self, action):
         packet, proto, field = self.get_selected_field()
         packet.reset(startproto=proto)
@@ -741,12 +779,12 @@ class PropertyGridTree(gtk.ScrolledWindow):
         cell.editor, cell.field = None, None
         cell.set_property('editable', False)
         cell.set_property('text', '')
-        
+
         obj = model.get_value(iter, 0)
 
         if isinstance(obj, TField) and Backend.is_flags(obj.ref):
             # Flag container
-            
+
             cell.set_property('cell-background-gdk',
                               self.style.mid[gtk.STATE_NORMAL])
 
@@ -764,7 +802,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
             cell.set_property('cell-background-gdk', None)
 
             # We have a standard field
-            
+
             if isinstance(obj, TField):
                 value = Backend.get_field_value(obj.proto, obj.ref)
 
@@ -781,7 +819,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
             elif isinstance(obj, TFlag):
                 # We have a subkey of Flags
-                
+
                 cell.editor = BitEditor
                 cell.field = (obj.proto, obj.field.ref, obj.ref)
         else:
@@ -798,13 +836,13 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
         elif isinstance(obj, TField):
             # This is a property
-            
+
             name = gobject.markup_escape_text(Backend.get_field_name(obj.ref))
             proto = obj.proto
 
             if not Backend.is_flags(obj.ref):
                 color = None
-            
+
             if Backend.is_field_autofilled(obj.ref):
                 markup = '<i>%s</i>' % name
             else:
@@ -813,14 +851,14 @@ class PropertyGridTree(gtk.ScrolledWindow):
             # Ok. This is the protocol
             name = gobject.markup_escape_text(Backend.get_proto_name(obj))
             markup = '<b>%s</b>' % name
-        
+
         # Setting the values
         cell.set_property('cell-background-gdk', color)
         cell.set_property('markup', markup)
-    
+
     def __pixbuf_cell_func(self, col, cell, model, iter):
         obj = model.get_value(iter, 0)
-        
+
         icon, color = None, self.style.mid[gtk.STATE_NORMAL]
 
         if isinstance(obj, TFlag):
@@ -832,7 +870,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
             if Backend.is_field_autofilled(obj.ref):
                 icon = self.icon_locked
-        
+
         cell.set_property('cell-background-gdk', color)
         cell.set_property('pixbuf', icon)
 
