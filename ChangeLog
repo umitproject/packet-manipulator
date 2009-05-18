@@ -1,3 +1,8 @@
+2009-05-18 Francesco Piccinno <stack.box@gmail.com>
+    * PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/utils.py:
+        - Moving all helper related code to utils.py to make SendReceive and
+          SequenceConsumer benefit of it.
 2009-05-17 Francesco Piccinno <stack.box@gmail.com>
     * PM/Gui/Dialogs/Preferences.py
       PM/Gui/Core/App.py

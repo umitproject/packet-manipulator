@@ -125,11 +125,7 @@ def register_sniff_context(BaseSniffContext):
                 # select function is blocking to avoid CPU burning.
 
                 if self.process:
-                    log.debug('Asynchronous process termination requested.')
-                    log.debug('Killing process %s with pid: %d' % \
-                              (self.process, self.process.pid))
-
-                    self.process.kill()
+                    kill_helper(self.process)
                     self.process = None
 
                 return True
@@ -154,97 +150,32 @@ def register_sniff_context(BaseSniffContext):
             from the pcap file managed from a private process.
             """
 
-            helper = process = errstr = None
+            errstr = reader = None
 
             if self.capmethod == 2:
-                helper = Prefs()['backend.tcpdump'].value
-
-                if self.stop_count:
-                    helper += "-c %d " % self.stop_count
-
-                helper += " -vU -i%s -w%s"
-
-                log.debug("I'm using tcpdump helper to capture packets")
+                # Run tcpdump
+                self.process, outfile = run_helper(0, self.iface,
+                                                      self.stop_count,
+                                                      self.stop_time,
+                                                      self.stop_size)
 
             elif self.capmethod == 3:
-                helper = Prefs()['backend.dumpcap'].value
-
-                if self.stop_count:
-                    helper += "-c %d " % self.stop_count
-
-                if self.stop_time:
-                    helper += "-a duration:%d " % self.stop_time
-
-                if self.stop_size:
-                    helper += "-a filesize:%d " % self.stop_size / 1024
-
-                helper += " -i%s -w%s"
-
-                log.debug("I'm using dumpcap helper to capture packets")
-
+                # Run dumpcap
+                self.process, outfile = run_helper(1, self.iface,
+                                                      self.stop_count,
+                                                      self.stop_time,
+                                                      self.stop_size)
             else:
                 log.debug("I'm using virtual interface method")
-
-            if helper:
-                # TODO: Probably will be better to have a class that organizes
-                #       all the temporary files and than remove them all after
-                #       the program will closed.
-
-                outfile = tempfile.mktemp('.pcap', 'PM-')
-
-                self.process = subprocess.Popen(helper % (self.iface, outfile),
-                                                shell=True, close_fds=True,
-                                                stderr=subprocess.PIPE)
-
-                if os.name != 'nt':
-                    log.debug("Setting O_NONBLOCK stderr file descriptor")
-
-                    flags = fcntl.fcntl(self.process.stderr, fcntl.F_GETFL)
-
-                    if not self.process.stderr.closed:
-                        fcntl.fcntl(self.process.stderr, fcntl.F_SETFL,
-                                    flags| os.O_NONBLOCK)
-
-                # TODO: Fix code for nt system. Probably we should use
-                #       PeekNamedPipe function.
-
-                log.debug("Process spawned as `%s` with pid %d" % \
-                          ((helper % (self.iface, outfile), self.process.pid)))
-                log.debug("Helper started on interface %s. Dumping to %s" % \
-                          (self.iface, outfile))
-            else:
                 outfile = self.cap_file
 
             try:
-                # Dummy method probably is better to read the stdout in async
-                # way and get the number of packets and continue if n > 0
+                for reader in bind_reader(outfile):
+                    if not self.internal:
+                        break
 
-                while self.internal and self.capmethod != 1 and \
-                      (not os.path.exists(outfile) or \
-                       os.stat(outfile).st_size < 20):
-
-                    log.debug("Dumpfile not ready. Waiting 0.5 sec")
-                    time.sleep(0.5)
-
-                log.debug("Dumpfile seems to be ready.")
-
-                if self.internal:
-                    if self.capmethod == 1:
-                        outfile_size = float(os.stat(outfile).st_size)
-                    else:
-                        outfile_size = None
-
-                    log.debug("Creating a PcapReader object instance")
-
-                    reader = PcapReader(outfile)
-
-                    if getattr(reader.f, 'fileobj', None):
-                        # If fileobj is present we are gzip file and we
-                        # need to get the absolute position not the
-                        # relative to the gzip file.
-                        position = reader.f.fileobj
-                    else:
-                        position = reader.f
+                    if reader:
+                        reader, outfile_size, position = reader
 
             except OSError, err:
                 errstr = err.strerror
@@ -258,39 +189,19 @@ def register_sniff_context(BaseSniffContext):
             log.debug("Entering in the main loop")
 
             while self.internal:
-                try:
-                    inp, out, err = select([self.process.stderr],
-                                           [self.process.stderr],
-                                           [self.process.stderr])
-                except:
-                    # Here we could have select that hangs after a kill in stop
+                report_idx = get_n_packets(self.process)
+
+                print report_idx
+
+                if report_idx < reported_packets:
                     continue
 
-                if self.process.stderr in inp:
-                    line = self.process.stderr.read()
-
-                    if not line:
-                        continue
-
-                # Here dumpcap use '\rPackets: %u ' while tcpdump 'Got %u\r'
-                # over stderr file. We use simple split(' ')[1]
-
-                try:
-                    report_idx = int(line.split(' ')[1])
-
-                    if report_idx == reported_packets:
-                        continue
-                    elif report_idx < reported_packets:
-                        log.debug('Some kind of error happened here.')
-                except Exception, err:
-                    continue
-
-                for x in xrange(report_idx - reported_packets):
+                while reported_packets < report_idx:
 
                     pkt = reader.read_packet()
 
                     if not pkt:
-                        continue
+                        break
 
                     pkt = MetaPacket(pkt)
                     packet_size = pkt.get_size()
@@ -321,23 +232,26 @@ def register_sniff_context(BaseSniffContext):
                         self.tot_time += delta.seconds
 
                     self.data.append(pkt)
+                    reported_packets += 1
 
                     # callback here
 
                     lst = []
 
-                    if self.stop_count:
+                    # tcpdump and dumpcap offers this
+                    if self.capmethod < 2 and self.stop_count:
                         lst.append(float(float(self.tot_count) /
                                          float(self.stop_count)))
-                    if self.stop_time:
+                    # Only dumpcap here
+                    if self.capmethod != 3 and self.stop_time:
                         lst.append(float(float(self.tot_time) /
                                          float(self.stop_time)))
-                    if self.stop_size:
+                    if self.capmethod != 3 and self.stop_size:
                         lst.append(float(float(self.tot_size) /
                                          float(self.stop_size)))
 
-                    if outfile_size:
-                        lst.append(position / outfile_size)
+                    if self.capmethod == 1:
+                        lst.append(position() / outfile_size)
 
                     if lst:
                         self.percentage = float(float(sum(lst)) /
@@ -350,14 +264,12 @@ def register_sniff_context(BaseSniffContext):
                         self.percentage = (self.percentage + 536870911) % \
                                           gobject.G_MAXINT
 
-                reported_packets = report_idx
+                report_idx = reported_packets
 
             log.debug("Exiting from thread")
 
             if self.process:
-                log.debug('Killing helper %s with pid: %d' % (self.process,
-                                                              self.process.pid))
-                self.process.kill()
+                kill_helper(self.process)
 
             self.exit_from_thread(errstr)
 

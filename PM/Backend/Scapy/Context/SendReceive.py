@@ -1,21 +1,21 @@
-#!/usr/bin/env python                                   
-# -*- coding: utf-8 -*-                                 
-# Copyright (C) 2008 Adriano Monteiro Marques           
-#                                                       
-# Author: Francesco Piccinno <stack.box@gmail.com>      
-#                                                       
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from threading import Lock
@@ -86,7 +86,7 @@ def register_send_receive_context(BaseSendReceiveContext):
                 return False
 
             return self._start()
-        
+
         def _restart(self):
             if self.thread and self.thread.isAlive():
                 return False
@@ -116,7 +116,8 @@ def register_send_receive_context(BaseSendReceiveContext):
             self.count += 1
 
             if self.tot_count:
-                self.summary = _('Sending packet %d of %d') % (self.count, self.tot_count)
+                self.summary = _('Sending packet %d of %d') % (self.count,
+                                                               self.tot_count)
             else:
                 self.summary = _('Sending packet %s') % packet.summary()
 
@@ -137,10 +138,12 @@ def register_send_receive_context(BaseSendReceiveContext):
         def __recv_callback(self, packet, is_reply, udata):
             if not packet:
                 self.internal = False
-                self.summary = _('%d of %d replie(s) received') % (self.answers, self.received)
+                self.summary = _('%d of %d replie(s) received') % \
+                                (self.answers, self.received)
             else:
                 self.received += 1
-                self.summary = _('Received/Answered/Remaining %d/%d/%d') % (self.received, self.answers, self.remaining)
+                self.summary = _('Received/Answered/Remaining %d/%d/%d') % \
+                                (self.received, self.answers, self.remaining)
 
                 if is_reply:
                     self.answers += 1

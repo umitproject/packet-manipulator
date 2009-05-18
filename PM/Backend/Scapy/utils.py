@@ -22,6 +22,10 @@ import os
 import sys
 import traceback
 
+import fcntl
+import tempfile
+import subprocess
+
 from datetime import datetime
 from threading import Thread, Lock, Condition
 
@@ -29,9 +33,165 @@ from PM.Core.Logger import log
 from PM.Core.Atoms import Node, ThreadPool, Interruptable, \
                           with_decorator, defaultdict
 
+from PM.Manager.PreferenceManager import Prefs
+
 from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *
 from PM.Backend.Scapy.packet import MetaPacket
+
+
+###############################################################################
+# Helper functions
+###############################################################################
+
+def run_helper(helper_type, iface, stop_count=0, stop_time=0, stop_size=0):
+    """
+    Start an helper process for capturing
+    @param helper is integer (0 to use tcpdump, 1 to use pcapdump)
+    @param iface the interface to sniff on
+    @param stop_count stop process after n packets (tcpdump/dumpcap)
+    @param stop_time stop process after n secs (dumpcap only)
+    @param stop_size stop process after n bytes (dumpcap only)
+    @return a tuple (Popen object, outfile path)
+    @see subprocess module for more information
+    """
+    if helper_type == 0:
+        helper = Prefs()['backend.tcpdump'].value
+
+        if stop_count:
+            helper += "-c %d " % stop_count
+
+        helper += " -vU -i%s -w%s"
+
+        log.debug("I'm using tcpdump helper to capture packets")
+
+    else:
+        helper = Prefs()['backend.dumpcap'].value
+
+        if stop_count:
+            helper += "-c %d " % stop_count
+
+        if stop_time:
+            helper += "-a duration:%d " % stop_time
+
+        if stop_size:
+            helper += "-a filesize:%d " % stop_size / 1024
+
+        helper += " -i%s -w%s"
+
+        log.debug("I'm using dumpcap helper to capture packets")
+
+    outfile = tempfile.mktemp('.pcap', 'PM-')
+
+    process = subprocess.Popen(helper % (iface, outfile), shell=True,
+                               close_fds=True, stderr=subprocess.PIPE)
+
+    if os.name != 'nt':
+        log.debug("Setting O_NONBLOCK stderr file descriptor")
+
+        flags = fcntl.fcntl(process.stderr, fcntl.F_GETFL)
+
+        if not process.stderr.closed:
+            fcntl.fcntl(process.stderr, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+    # TODO: Fix code for nt system. Probably we should use
+    #       PeekNamedPipe function.
+
+    log.debug("Process spawned as `%s` with pid %d" % \
+              ((helper % (iface, outfile), process.pid)))
+    log.debug("Helper started on interface %s. Dumping to %s" % \
+              (iface, outfile))
+
+    return process, outfile
+
+def kill_helper(process):
+    """
+    Just a dummy method to kill the process created by run_helper that supports
+    version of python < 2.6
+    """
+    assert isinstance(process, subprocess.Popen)
+
+    if getattr(process, 'kill', None):
+        log.debug('Killing process with pid %d with kill method' % process.pid)
+        process.kill()
+    else:
+        if os.name == 'nt':
+            log.debug('Killing process with pid %d with win32.TerminateProcess'
+                      % process.pid)
+
+            # Kill the process using pywin32
+            import win32api
+            win32api.TerminateProcess(int(process._handle), -1)
+
+            # Kill the process using ctypes
+            #import ctypes
+            #ctypes.windll.kernel32.TerminateProcess(int(process._handle), -1)
+        else:
+            log.debug('Killing process with pid %d with os.kill(SIGKILL) method'
+                      % process.pid)
+
+            import signal
+            os.kill(process.pid, signal.SIGKILL)
+
+def bind_reader(outfile, ts=0.5):
+    """
+    Create a PcapReader to handle outfile created by run_helper.
+    This is generator returning None if the file is not ready, and a tuple
+    (reader, file_size, position_callable) when it is.
+
+    @param outfile the file to poll
+    @param ts the time to sleep while if object is not ready
+    @return
+    """
+    # 20 is the minimum header length for a pcap file
+    while not os.path.exists(outfile) or os.stat(outfile).st_size < 20:
+        log.debug("Dumpfile %s not ready. Waiting %.2f sec" % (outfile, ts))
+        time.sleep(ts)
+        yield None
+
+    log.debug("Dumpfile %s seems to be ready." % outfile)
+    log.debug("Creating a PcapReader object instance")
+
+    reader = PcapReader(outfile)
+    outfile_size = float(os.stat(outfile).st_size)
+
+    if getattr(reader.f, 'fileobj', None):
+        # If fileobj is present we are gzip file and we
+        # need to get the absolute position not the
+        # relative to the gzip file.
+        position = reader.f.fileobj.tell
+    else:
+        position = reader.f.tell
+
+    yield reader, outfile_size, position
+
+def get_n_packets(process):
+    """
+    @param process the process helper created with run_helper
+    @return the number of packets that the helper prints on the stderr >= 0
+            negative on errors.
+    """
+    try:
+        inp, out, err = select([process.stderr],
+                               [process.stderr],
+                               [process.stderr])
+    except:
+        # Here we could have select that hangs after a kill in stop
+        return -1
+
+    if process.stderr in inp:
+        line = process.stderr.read()
+
+        if not line:
+            return -2
+
+    # Here dumpcap use '\rPackets: %u ' while tcpdump 'Got %u\r'
+    # over stderr file. We use simple split(' ')[1]
+
+    try:
+        return int(line.split(' ')[1])
+    except:
+        return -3
 
 def get_iface_from_ip(metapacket):
     if metapacket.haslayer(IP):
@@ -347,6 +507,13 @@ class SendReceiveConsumer(Interruptable):
         inmask = [self.recv_sock, self.rdpipe]
 
         while self.running:
+
+            # TODO: here would be good to separate the thins by creating
+            #       different sniff private function, 1 for darwin, 1 for win,
+            #       1 for linux, 1 for tcpdump helper, 1 for dumpcap helper.
+            #       This should impact also on SniffContext by moving the helper
+            #       related code here.
+
             r = None
             if FREEBSD or DARWIN:
                 inp, out, err = select(inmask, [], [], 0.05)
