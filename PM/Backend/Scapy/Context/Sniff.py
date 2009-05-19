@@ -18,11 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-import fcntl
-import tempfile
-
 from datetime import datetime
-from subprocess import Popen
 from threading import Thread, Lock
 
 import gobject
@@ -152,25 +148,25 @@ def register_sniff_context(BaseSniffContext):
 
             errstr = reader = None
 
-            if self.capmethod == 2:
-                # Run tcpdump
-                self.process, outfile = run_helper(0, self.iface,
-                                                      self.stop_count,
-                                                      self.stop_time,
-                                                      self.stop_size)
-
-            elif self.capmethod == 3:
-                # Run dumpcap
-                self.process, outfile = run_helper(1, self.iface,
-                                                      self.stop_count,
-                                                      self.stop_time,
-                                                      self.stop_size)
-            else:
-                log.debug("I'm using virtual interface method")
-                outfile = self.cap_file
-
             try:
-                for reader in bind_reader(outfile):
+                if self.capmethod == 2:
+                    # Run tcpdump
+                    self.process, outfile = run_helper(0, self.iface,
+                                                          self.stop_count,
+                                                          self.stop_time,
+                                                          self.stop_size)
+
+                elif self.capmethod == 3:
+                    # Run dumpcap
+                    self.process, outfile = run_helper(1, self.iface,
+                                                          self.stop_count,
+                                                          self.stop_time,
+                                                          self.stop_size)
+                else:
+                    log.debug("I'm using virtual interface method")
+                    outfile = self.cap_file
+
+                for reader in bind_reader(self.process, outfile):
                     if not self.internal:
                         break
 
@@ -190,8 +186,6 @@ def register_sniff_context(BaseSniffContext):
 
             while self.internal:
                 report_idx = get_n_packets(self.process)
-
-                print report_idx
 
                 if report_idx < reported_packets:
                     continue

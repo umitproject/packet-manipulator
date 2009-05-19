@@ -139,8 +139,6 @@ class SniffPage(Perspective):
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-        self.tree = gtk.TreeView(None)
-
         # We have to create two seperate objects if we want to have more
         # performance while sniffing. We'll use the tree_store only for
         # reflowing without a model filter.
@@ -148,6 +146,8 @@ class SniffPage(Perspective):
         self.tree_store = gtk.TreeStore(object)
         self.list_store = gtk.ListStore(object)
         self.active_model = self.list_store
+
+        self.tree = gtk.TreeView(self.active_model)
 
         self.active_filter = None
         self.model_filter = self.list_store.filter_new()
@@ -252,7 +252,8 @@ class SniffPage(Perspective):
         self.tree.thaw_child_notify()
 
         # TODO: better handle the situation.
-        if getattr(self.session.context, 'auto_scroll', True):
+        if getattr(self.session.context, 'auto_scroll', True) and \
+           len(self.active_model) > 0:
             self.tree.scroll_to_cell(len(self.active_model) - 1)
 
         alive = self.session.context.is_alive()

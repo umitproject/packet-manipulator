@@ -344,14 +344,6 @@ class InterfaceList(gtk.VBox):
         self.frame.add(sw)
         self.pack_start(self.frame)
 
-        self.__populate()
-
-    def __populate(self):
-        for iface in Backend.find_all_devs():
-            self.store.append(
-                [gtk.STOCK_CONNECT, iface.name, iface.description, iface.ip]
-            )
-
     def get_selected(self):
         model, iter = self.tree.get_selection().get_selected()
 
@@ -376,7 +368,7 @@ class InterfaceDialog(gtk.Dialog):
         self.vbox.pack_start(self.if_list)
         self.vbox.pack_start(self.options, False, False)
 
-        for widget in self.get_action_area():
+        for widget in self.action_area:
             if self.get_response_for_widget(widget) == gtk.RESPONSE_ACCEPT:
                 widget.set_sensitive(False)
 
@@ -399,6 +391,7 @@ class InterfaceDialog(gtk.Dialog):
                 diag.response(gtk.RESPONSE_ACCEPT), self)
 
         self.connect('response', self.__on_response)
+        self.__populate()
 
         self.show_all()
         self.if_list.set_size_request(600, 200)
@@ -417,7 +410,25 @@ class InterfaceDialog(gtk.Dialog):
         else:
             btn.set_sensitive(False)
 
+    def __populate(self):
+        # Let's repopulate the store if the capmethod changes.
+        # This is usefull for WINDOWS in case of using windump/dumpcap
+        # that have a different nomenclature for the interface respect
+        # libdnet python binding.
+
+        # This is useless for Linux and other OS
+
+        self.if_list.store.clear()
+        active_m = self.options.method.get_active()
+
+        for iface in Backend.find_all_devs(active_m):
+            self.if_list.store.append(
+                [gtk.STOCK_CONNECT, iface.name, iface.description, iface.ip]
+            )
+
     def __on_method_changed(self, combo, btn):
+        self.__populate()
+
         if combo.get_active() == 1:
             btn.set_sensitive(True)
         else:

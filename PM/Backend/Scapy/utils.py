@@ -22,7 +22,6 @@ import os
 import sys
 import traceback
 
-import fcntl
 import tempfile
 import subprocess
 
@@ -39,6 +38,15 @@ from PM.Backend import VirtualIFace
 from PM.Backend.Scapy.wrapper import *
 from PM.Backend.Scapy.packet import MetaPacket
 
+if not WINDOWS:
+    import fcntl
+else:
+    import ctypes
+    import msvcrt
+
+    # Function to get stderr async
+    from win32file import ReadFile
+    from win32pipe import PeekNamedPipe
 
 ###############################################################################
 # Helper functions
@@ -55,6 +63,16 @@ def run_helper(helper_type, iface, stop_count=0, stop_time=0, stop_size=0):
     @return a tuple (Popen object, outfile path)
     @see subprocess module for more information
     """
+
+    if WINDOWS:
+        log.debug('Ok we\'re in windows. Extracting idx from %s' % iface)
+
+        iface = iface.split('.', 1)
+        log.debug('Sniffing on interface %s with %s as index' % (iface[0],
+                                                                 iface[1]))
+
+        iface = iface[0]
+
     if helper_type == 0:
         helper = Prefs()['backend.tcpdump'].value
 
@@ -83,10 +101,10 @@ def run_helper(helper_type, iface, stop_count=0, stop_time=0, stop_size=0):
 
     outfile = tempfile.mktemp('.pcap', 'PM-')
 
-    process = subprocess.Popen(helper % (iface, outfile), shell=True,
-                               close_fds=True, stderr=subprocess.PIPE)
+    process = subprocess.Popen(helper % (iface, outfile), shell=(not WINDOWS),
+                               close_fds=(not WINDOWS), stderr=subprocess.PIPE)
 
-    if os.name != 'nt':
+    if not WINDOWS:
         log.debug("Setting O_NONBLOCK stderr file descriptor")
 
         flags = fcntl.fcntl(process.stderr, fcntl.F_GETFL)
@@ -116,16 +134,18 @@ def kill_helper(process):
         process.kill()
     else:
         if os.name == 'nt':
-            log.debug('Killing process with pid %d with win32.TerminateProcess'
-                      % process.pid)
+            # This methods seems to not work on vista. Don't know on other os
+            #log.debug('Killing process with pid %d with win32.TerminateProcess'
+            #          % process.pid)
 
             # Kill the process using pywin32
-            import win32api
-            win32api.TerminateProcess(int(process._handle), -1)
+            #win32api.TerminateProcess(int(process._handle), -1)
+
+            log.debug('Killing process with pid %d with ctypes.TerminateProcess'
+                      % process.pid)
 
             # Kill the process using ctypes
-            #import ctypes
-            #ctypes.windll.kernel32.TerminateProcess(int(process._handle), -1)
+            ctypes.windll.kernel32.TerminateProcess(int(process._handle), -1)
         else:
             log.debug('Killing process with pid %d with os.kill(SIGKILL) method'
                       % process.pid)
@@ -133,21 +153,28 @@ def kill_helper(process):
             import signal
             os.kill(process.pid, signal.SIGKILL)
 
-def bind_reader(outfile, ts=0.5):
+def bind_reader(process, outfile, ts=0.5):
     """
     Create a PcapReader to handle outfile created by run_helper.
     This is generator returning None if the file is not ready, and a tuple
     (reader, file_size, position_callable) when it is.
 
+    @param process the process that generated the outfile
     @param outfile the file to poll
     @param ts the time to sleep while if object is not ready
     @return
     """
     # 20 is the minimum header length for a pcap file
-    while not os.path.exists(outfile) or os.stat(outfile).st_size < 20:
+    while process.poll() is None and \
+          (not os.path.exists(outfile) or os.stat(outfile).st_size < 20):
+
         log.debug("Dumpfile %s not ready. Waiting %.2f sec" % (outfile, ts))
         time.sleep(ts)
         yield None
+
+    if process.poll() is not None:
+        raise Exception('Helper process died unexpectly with %d as returncode' % \
+                        process.returncode)
 
     log.debug("Dumpfile %s seems to be ready." % outfile)
     log.debug("Creating a PcapReader object instance")
@@ -171,18 +198,27 @@ def get_n_packets(process):
     @return the number of packets that the helper prints on the stderr >= 0
             negative on errors.
     """
-    try:
-        inp, out, err = select([process.stderr],
-                               [process.stderr],
-                               [process.stderr])
-    except:
-        # Here we could have select that hangs after a kill in stop
-        return -1
+    if not WINDOWS:
+        try:
+            inp, out, err = select([process.stderr],
+                                   [process.stderr],
+                                   [process.stderr])
+        except:
+            # Here we could have select that hangs after a kill in stop
+            return -1
 
-    if process.stderr in inp:
-        line = process.stderr.read()
+        if process.stderr in inp:
+            line = process.stderr.read()
 
-        if not line:
+            if not line:
+                return -2
+    else:
+        try:
+            # PeekNamedPipe is async here and doesn't block resulting
+            # in gui freeze. So we use directly ReadFile here
+            x = msvcrt.get_osfhandle(process.stderr.fileno())
+            errCode, line = ReadFile(x, 1024, None)
+        except:
             return -2
 
     # Here dumpcap use '\rPackets: %u ' while tcpdump 'Got %u\r'
@@ -311,7 +347,46 @@ def reset_routes(to=None):
 # Sniffing related functions
 ###############################################################################
 
-def find_all_devs():
+def find_all_devs(capmethod=0):
+    """
+    @param capmethod 0 for standard method, 1 for virtual interface,
+                     2 for tcpdump/windump, 3 for dumpcap helper.
+    @return a list containing VirtualIFace objects
+    """
+
+    if capmethod == 1:
+        # This is virtual interface so the list will contain a dummy
+        # VirtualIFace entry
+        return [VirtualIFace('dummy', 
+                             'Virtual interface for reading file',
+                             '0.0.0.0')]
+
+    if WINDOWS and (capmethod == 2 or capmethod == 3):
+        # Ok here we have to get the stdout of %helper% -D
+        if capmethod == 2:
+            helper = Prefs()['backend.tcpdump'].value
+        else:
+            helper = Prefs()['backend.dumpcap'].value
+
+        try:
+            ret = []
+
+            helper = subprocess.Popen(helper + " -D", stdout=subprocess.PIPE)
+            output, _ = helper.communicate()
+
+            for line in output.splitlines():
+                name, desc = line.rsplit("(", 1)
+
+                name = name.replace(" ", "")
+                desc = desc[:-1]
+
+                ret.append(VirtualIFace(name, desc, 'N/A'))
+
+            return ret
+        except Except, err:
+            print err
+            return []
+
 
     # Use dnet as fallback
 
@@ -320,9 +395,8 @@ def find_all_devs():
 
         for obj in dnet.intf():
             try:
-                ret.append(
-                    VirtualIFace(obj['name'], obj['link_addr'], obj['addr'])
-                )
+                ret.append(VirtualIFace(obj['name'], obj['link_addr'],
+                                        obj['addr']))
             except:
                 pass
 
