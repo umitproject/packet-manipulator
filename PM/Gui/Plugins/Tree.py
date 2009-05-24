@@ -38,30 +38,30 @@ def hook_import(lib, globals=None, locals=None, fromlist=None, level=-1):
     try:
         return original_import(lib, globals, locals, fromlist, level)
     except ImportError, err:
-        
+
         # This is a hacky fallback to permit loading of modules
         # with .so or .dll suffix inside .ump files
-        
+
         # The .so/.dll libraries are extracted in a temp directory
         # that is cleaned on UMIT exit/start
-        
+
         for reader in sys.plugins_path:
             path = os.path.join(PM_PLUGINS_TEMP_DIR, \
                                 lib.split('.')[-1] + get_config_vars("SO")[0])
 
             try:
                 out = open(path, 'wb')
-                
+
                 out.write(reader.file.read( \
                     'lib/%s%s' % (lib.replace(".", "/"), get_config_vars("SO")[0])) \
                 )
                 out.close()
             except Exception, exc:
                 continue
-            
+
             path = os.path.dirname(out.name)
             name = os.path.basename(out.name)
-            
+
             try:
                 sys.path.insert(0, path)
 
@@ -434,13 +434,13 @@ class PluginsTree(object):
         if pkg in self.modules:
             return self.modules[pkg]
         else:
-            
+
             try:
                 __builtin__.__import__ = hook_import
                 module = hook_import(pkg.start_file, level=0)
             finally:
                 __builtin__.__import__ = original_import
-            
+
             self.modules[pkg] = module
 
             return module
@@ -504,30 +504,30 @@ class PluginsTree(object):
 
         if pkg in self.instances:
             raise PluginException(pkg, "Already present")
-        
+
         # We need to get the start-file field from pkg and then try
         # to import it
-        
+
         modpath = os.path.join(pkg.get_path(), 'lib')
         sys.path.insert(0, os.path.abspath(modpath))
 
         # This were removed
         fname = os.path.join(pkg.get_path(), 'bin', pkg.start_file)
         sys.path.insert(0, os.path.abspath(os.path.dirname(fname)))
-        
+
         if pkg.start_file in sys.modules:
             sys.modules.pop(pkg.start_file)
 
         try:
-            # We add to modules to avoid deleting and stop working plugin ;)
             try:
+                # We add to modules to avoid deleting and stop working plugin ;)
                 sys.plugins_path.insert(0, pkg)
                 module = self.__cache_import(pkg)
-            
+
             except Exception, err:
                 sys.plugins_path.pop(0)
                 raise PluginException(pkg, str(err))
-        
+
         finally:
             # Check that
             sys.path.pop(0)
@@ -574,12 +574,12 @@ class PluginsTree(object):
                 log.critical("Error while stopping %s from %s:" % (inst, pkg))
                 log.critical(generate_traceback())
                 log.critical("Ignoring instance.")
-        
+
         try:
             sys.plugins_path.remove(pkg)
         except Exception:
             pass
-        
+
         del self.instances[pkg]
 
 
@@ -608,7 +608,7 @@ class PluginsTree(object):
 
         # Instead using types
         def t(): pass
-        
+
         if isinstance(pref_func, type(t)):
             pref_func()
             return True
@@ -623,21 +623,21 @@ class PluginsTree(object):
         """
 
         about_func = None
-        
+
         try:
             module = self.__cache_import(pkg)
             about_func = module.__about__
         except Exception:
             pass
-        
+
         # Instead using types
         def t(): pass
-        
+
         if isinstance(about_func, type(t)):
             about_func()
         else:
             d = Core().about_dialog(pkg)
-            
+
             d.run()
             d.hide()
             d.destroy()

@@ -56,7 +56,7 @@ class PluginPath(object):
     >>> p.get_plugins()
     {}
     """
-    
+
     def __init__(self, path):
         """
         The default constructor
@@ -80,7 +80,7 @@ class PluginPath(object):
 
         for file in os.listdir(self.path):
             path = os.path.join(self.path, file)
-            
+
             if file.endswith(".ump") and \
                os.path.isfile(path):
 
@@ -171,11 +171,11 @@ class PluginEngine(Singleton):
         """
         Check the downloaded plugins and move to the proper location
         """
-        
+
         dest_dir = PM_PLUGINS_DIR
         temp_dir = PM_PLUGINS_TEMP_DIR
         down_dir = PM_PLUGINS_DOWNLOAD_DIR
-        
+
         for file in os.listdir(temp_dir):
             try:
                 os.remove(file)
@@ -195,6 +195,8 @@ class PluginEngine(Singleton):
 
                 if os.path.exists(dst_name):
                     os.remove(dst_name)
+
+                log.debug("Installing new plugin from update: %s" % dst_name)
 
                 os.rename(path, dst_name)
 
@@ -313,7 +315,7 @@ class PluginEngine(Singleton):
     def load_plugin(self, reader, force=False):
         """
         Load a plugin
-        
+
         @param reader a PluginReader
         @param force True to not check depends
         """
@@ -335,21 +337,21 @@ class PluginEngine(Singleton):
             if path in lst:
                 log.debug(">>> Removing plugin from autoload")
                 lst.remove(path)
-                
+
                 self.plugins.plugins = lst
 
             return (True, None)
         except PluginException, err:
             return (False, err)
-        
+
     def uninstall_plugin(self, reader):
         """
         Low level uninstall procedure
-        
+
         @param reader a PluginReader
         @return True if ok or False
         """
-        
+
         try:
             os.remove(reader.get_path())
             self.recache()

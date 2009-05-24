@@ -21,7 +21,6 @@
 The path page for PluginWindow
 """
 
-import os
 import gtk
 
 from PM.Core.I18N import _

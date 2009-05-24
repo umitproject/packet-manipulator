@@ -152,6 +152,7 @@ def register_sniff_context(BaseSniffContext):
                 if self.capmethod == 2:
                     # Run tcpdump
                     self.process, outfile = run_helper(0, self.iface,
+                                                          self.filter,
                                                           self.stop_count,
                                                           self.stop_time,
                                                           self.stop_size)
@@ -159,6 +160,7 @@ def register_sniff_context(BaseSniffContext):
                 elif self.capmethod == 3:
                     # Run dumpcap
                     self.process, outfile = run_helper(1, self.iface,
+                                                          self.filter,
                                                           self.stop_count,
                                                           self.stop_time,
                                                           self.stop_size)

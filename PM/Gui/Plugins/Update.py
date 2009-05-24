@@ -21,11 +21,14 @@ import os
 
 try:
     from hashlib import md5
+    from hashlib import sha1 as sha
 except ImportError:
     from md5 import md5
+    from sha import sha
 
 from threading import RLock
 from tempfile import mkstemp
+from StringIO import StringIO
 from xml.dom.minidom import parseString
 
 from PM.Core.I18N import _
@@ -46,55 +49,92 @@ FILE_GETTED = 5
 FILE_GETTING = 6
 FILE_CHECKING = 7
 
-class UpdateObject(object):
+from xml.sax import handler, make_parser
+
+class Update(object):
+    def __init__(self, version, description, url, integrity):
+        self.version, self.description, self.url, self.integrity = \
+            version, description, url, integrity
+
+class UpdateObject(handler.ContentHandler):
     def __init__(self, obj):
+        self.data = ''
+        self.parse_phase = 0
+        self.updates = []
+
+        self.version = ''
+        self.description = ''
+        self.url = []
+        self.integrity = {}
+
         self.buffer = []
-        
+
         self.status = STATUS_IDLE
-        
+
         self.label = None
         self.fract = None
-        
-        self.url = None
-        self.version = None
-        self.hash = None
-        
+
         self.object = obj
-        
+
         self.fd = None
-        
+
         self.size = None
         self.total = None
+
+        self.last_update_idx = 0
+        self.selected_update_idx = -1
 
         # Simple lock for sync
         self.lock = RLock()
 
     def parse_latest_file(self):
-        """
-        @return url, version or None, None on error
-        """
+        parser = make_parser()
+        parser.setContentHandler(self)
+        parser.parse(StringIO("".join(self.buffer)))
 
-        try:
-            doc = parseString("".join(self.buffer))
-            
-            if doc.documentElement.tagName != 'UmitPluginUpdate':
-                raise Exception("Not valid xml file.")
+    def startElement(self, name, attrs):
+        if name == 'UmitPluginUpdate' and self.parse_phase == 0:
+            self.parse_phase = 1
+        elif name == 'update' and self.parse_phase == 1:
+            self.parse_phase = 2
+        elif name in ('version', 'description', 'url') and \
+             self.parse_phase == 2:
 
-            url, version, hash = None, None, None
+            self.parse_phase = 3
+        elif name == 'integrity' and self.parse_phase == 2 and \
+             'type' in attrs.keys() and 'value' in attrs.keys():
 
-            for node in doc.documentElement.childNodes:
-                if node.nodeName == 'update-uri':
-                    url = node.firstChild.data
-                if node.nodeName == 'version':
-                    version = node.firstChild.data
-                if node.nodeName == 'md5':
-                    hash = node.firstChild.data
+            self.integrity[attrs.get('type')] =  attrs.get('value')
+        else:
+            self.data = ''
 
-            return url, version, hash
-        except Exception, exc:
-            log.warning("__parse_xml: %s" % exc)
-            return None, None, None
+    def characters(self, ch):
+        if self.parse_phase == 3:
+            self.data += ch
 
+    def endElement(self, name):
+        if name in ('version', 'description', 'url'):
+            val = getattr(self, name, None)
+
+            if isinstance(val, basestring):
+                setattr(self, name, self.data)
+            elif isinstance(val, list):
+                val.append(self.data)
+
+        elif name == 'update':
+            if self.version and self.url:
+                self.updates.append(Update(self.version, self.description,
+                                     self.url, self.integrity))
+
+            self.version = ''
+            self.description = ''
+            self.url = []
+            self.integrity = {}
+            self.parse_phase = 1
+            self.data = ''
+        else:
+            self.parse_phase -= 1
+            self.data = ''
 
 class UpdateEngine(object):
     """
@@ -106,7 +146,7 @@ class UpdateEngine(object):
         self.update_lst = None
         self.static_lst = None
         self.updating = False
-    
+
     def stop(self):
         "Mark as stopped"
         self.updating = False
@@ -126,9 +166,9 @@ class UpdateEngine(object):
                 obj.status = LATEST_GETTING
 
             self.__process_next()
-        
+
         self.updating = True
-    
+
     def start_download(self):
         """
         Start the download phas (getting the real files)
@@ -144,9 +184,9 @@ class UpdateEngine(object):
                 obj.status = FILE_GETTING
 
             self.__process_next_download()
-            
+
         self.updating = True
-    
+
     def __process_next_download(self):
         """
         Process the next avaiable download in the list
@@ -154,23 +194,35 @@ class UpdateEngine(object):
 
         if not self.update_lst:
             return
-        
+
         obj = self.update_lst.pop(0)
-        
+
         try:
+            user_dir = os.path.join(Path.config_dir)
             filename = os.path.basename(obj.object.reader.get_path())
-            
+
             obj.fd = open(mkstemp(".part", filename, \
                           PM_PLUGINS_TEMP_DIR)[1], "wb+")
-                         
-            Network.get_url(obj.url, self.__process_plugin, obj)
+
+            Network.get_url(
+                # Maybe too long string? :P
+                obj.updates[obj.selected_update_idx].url[obj.last_update_idx],
+                self.__process_plugin, obj
+            )
         except Exception, err:
             obj.status = FILE_ERROR
             obj.label = err
             obj.fract = None
-            
+
             self.__process_next_download()
-    
+
+    def __remove_file(self, obj):
+        try:
+            obj.fd.close()
+            os.remove(obj.fd.name)
+        except:
+            log.error('Error while removing temp %s file' % obj.fd.name)
+
     def __process_plugin(self, file, data, exc, obj):
         """
         Process callback for plugin data
@@ -180,17 +232,28 @@ class UpdateEngine(object):
             obj.lock.acquire()
 
             try:
-                obj.status = FILE_ERROR
-                obj.label = exc.reason
-                obj.fract = 1
-                
+                if obj.last_update_idx + 1 < \
+                   len(obj.updates[obj.selected_update_idx].url):
+
+                    obj.last_update_idx += 1
+
+                    obj.status = FILE_GETTING
+                    obj.label = _('Cycling to next update url. Waiting...')
+                else:
+                    obj.status = FILE_ERROR
+                    obj.label = _('Download failed: %s') % str(exc.reason)
+                    obj.fract = 1
+
+                self.__remove_file(obj)
+
                 self.__process_next_download()
                 return
             finally:
                 obj.lock.release()
-        
+
         elif isinstance(exc, StopNetException):
-            if obj.hash:
+            #TODO: CHECK THIS
+            if obj.updates[obj.selected_update_idx].integrity:
 
                 data = ""
                 obj.lock.acquire()
@@ -198,21 +261,29 @@ class UpdateEngine(object):
                 try:
                     obj.label = _('Checking validity ...')
                     obj.status = FILE_CHECKING
-                
+
                     obj.fd.flush()
                     obj.fd.seek(0)
 
                     data = obj.fd.read()
                 finally:
                     obj.lock.release()
-                
+
                 # Not locked it could freeze the ui
-                hasher = md5(data)
-                
+                md5_hash = sha_hash = None
+                sums = obj.updates[obj.selected_update_idx].integrity
+
+                if 'md5' in sums:
+                    md5_hash = md5(data)
+                if 'sha1' in sums:
+                    sha_hash = sha(data)
+
                 obj.lock.acquire()
 
                 try:
-                    if hasher.hexdigest() == obj.hash:
+                    if (md5_hash and md5_hash.hexdigest() == sums['md5']) or \
+                       (sha_hash and sha_hash.hexdigest() == sums['sha1']):
+
                         obj.label = _('Updated. Restart to take effect')
                         obj.status = FILE_GETTED
                     else:
@@ -229,7 +300,7 @@ class UpdateEngine(object):
                     obj.status = FILE_GETTED
                 finally:
                     obj.lock.release()
-            
+
             obj.lock.acquire()
 
             try:
@@ -237,7 +308,7 @@ class UpdateEngine(object):
                 obj.fract = 1
             finally:
                 obj.lock.release()
-            
+
             try:
                 if obj.status == FILE_ERROR:
                     os.remove(obj.fd.name)
@@ -247,9 +318,9 @@ class UpdateEngine(object):
             except Exception:
                 # TODO: add more sensed control?
                 pass
-            
+
             self.__process_next()
-        
+
         elif isinstance(exc, StartNetException):
             obj.lock.acquire()
 
@@ -260,7 +331,7 @@ class UpdateEngine(object):
                     obj.total = int(file.info()['Content-Length'])
                 except:
                     pass
-            
+
                 obj.label = _('Downloading ...')
             finally:
                 obj.lock.release()
@@ -270,7 +341,7 @@ class UpdateEngine(object):
                 obj.size += len(data)
                 obj.fract = float(obj.size) / float(obj.total)
             obj.fd.write(data)
-    
+
     def __process_next(self):
         """
         Forward to the next update (download the next latest.xml)
@@ -278,9 +349,12 @@ class UpdateEngine(object):
 
         if not self.update_lst:
             return
-        
+
         obj = self.update_lst.pop(0)
-        Network.get_url("%s/latest.xml" % obj.object.reader.update, \
+        obj.label = _('Downloading update information...')
+
+        Network.get_url("%s/latest.xml" % \
+                        obj.object.reader.update[obj.last_update_idx], \
                         self.__process_manifest, obj)
 
     def __process_manifest(self, file, data, exc, obj):
@@ -293,31 +367,60 @@ class UpdateEngine(object):
             obj.lock.acquire()
 
             try:
-                obj.status = LATEST_ERROR
-                obj.label = _('Cannot find newer version (%s)') % exc.reason
-                
+                if obj.last_update_idx + 1 < len(obj.object.reader.update):
+                    obj.last_update_idx += 1
+
+                    obj.status = LATEST_GETTING
+                    obj.label = _('Cycling to next update url. Waiting...')
+
+                    self.update_lst.append(obj)
+                elif isinstance(exc, ErrorNetException):
+                    obj.status = LATEST_ERROR
+                    obj.label = _('Cannot find newer version (%s)') % exc.reason
+
                 self.__process_next()
                 return
             finally:
                 obj.lock.release()
-        
+
         elif isinstance(exc, StopNetException):
-            url, version, hash = obj.parse_latest_file()
+            try:
+                obj.parse_latest_file()
+            except Exception, exc:
 
-            new_v = Version(version)
-            cur_v = Version(obj.object.reader.version)
+                if obj.last_update_idx + 1 < len(obj.object.reader.update):
+                    obj.last_update_idx += 1
 
+                    obj.status = LATEST_GETTING
+                    obj.label = _('Cycling to next update url. Waiting...')
+
+                    self.update_lst.append(obj)
+                else:
+                    obj.status = LATEST_ERROR
+                    obj.label = _('Cannot find newer version (%s)') % str(exc)
+
+                self.__process_next()
+                return
+
+            version = None
             type = -1 # -1 no action / 0 update / 1 downgrade
 
-            if new_v > cur_v:
-                type = 0
-            elif cur_v < new_v:
-                type = 1
+            # If we have only 1 update..
+            if len(obj.updates) == 1:
+                version = obj.updates[0].version
+
+                new_v = Version(version)
+                cur_v = Version(obj.object.reader.version)
+
+                if new_v > cur_v:
+                    type = 0
+                elif cur_v < new_v:
+                    type = 1
 
             obj.lock.acquire()
 
             try:
-                if url and version and type >= 0:
+                if obj.updates:
 
                     # We check if the path is the plugins in config_dir
 
@@ -328,17 +431,19 @@ class UpdateEngine(object):
 
                         obj.status = LATEST_ERROR
 
-                        if not type:
-                            obj.label = _('Version %s avaiable but need manual update.') % version
-                        else:
-                            obj.label = _('Version %s avaiable but need manual downgrade.') % version
+                        if type == -1:
+                            obj.label = _('Various versions available but require manual intervention.')
+                        elif type == 0:
+                            obj.label = _('Version %s available but need manual update.') % version
+                        elif type == 1:
+                            obj.label = _('Version %s available but need manual downgrade.') % version
                     else:
                         obj.status = LATEST_GETTED
-                        obj.label = _('Version %s avaiable.') % version
-                    
-                    obj.version = version
-                    obj.url = url
-                    obj.hash = hash
+                        if type == -1:
+                            obj.label = _('Various versions available')
+                        else:
+                            obj.label = _('Version %s available.') % version
+
                 else:
                     obj.status = LATEST_ERROR
 
@@ -353,22 +458,29 @@ class UpdateEngine(object):
 
         elif not exc:
             obj.buffer.append(data)
-    
+
     def get_list(self):
         "Getter for list"
         return self.static_lst
-    
+
     def set_list(self, value):
         "Setter for list"
         lst = []
-        
+
         for iter in value:
             if isinstance(iter, UpdateObject):
                 lst.append(iter)
             else:
                 lst.append(UpdateObject(iter))
-                
+
         self.update_lst = lst
         self.static_lst = tuple(self.update_lst)
-        
+
     list = property(get_list, set_list)
+
+if __name__ == "__main__":
+    parser = make_parser()
+    loader = UpdateObject(1)
+    parser.setContentHandler(loader)
+    parser.parse(open('test.xml'))
+    print loader.updates

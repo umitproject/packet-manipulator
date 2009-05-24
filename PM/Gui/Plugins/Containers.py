@@ -20,14 +20,21 @@
 
 import os
 import os.path
+import sys
 
 from fnmatch import fnmatch
 from zipfile import ZipFile, BadZipfile, ZIP_DEFLATED
-from xml.dom.minidom import parseString, getDOMImplementation
+
+from StringIO import StringIO
+
+from xml.sax import handler, make_parser
+from xml.sax.saxutils import XMLGenerator
+from xml.sax.xmlreader import AttributesImpl
+
 from tempfile import mktemp
 
-from PM.Gui.Plugins.Atoms import StringFile
 from PM.Gui.Plugins.Parser import Parser
+from PM.Gui.Plugins.Atoms import StringFile
 
 from PM.Core.Const import PM_PLUGINS_TEMP_DIR
 
@@ -55,32 +62,234 @@ except ImportError:
 # For removing directory trees we need
 import shutil
 
-# FIXME: add others fields
-FIELDS = (
-    "url",
-    "conflicts",
-    "provides",
-    "needs",
-    "type",
-    "start_file",
-    "name",
-    "version", # only a convenient field
-    "description",
-    "author",
-    "license",
-    "artist",
-    "copyright",
-    "update"
-)
-
 SIGNATURE = "UmitPlugin"
+
+class ManifestObject(object):
+    def __init__(self):
+
+        # Ok here we're using list object because py2.5 seems to not support
+        # index() for tuple. Stupid 2.5 :)
+
+        self.elements = [
+            ['name', 'version', 'description', 'url'],
+            ['start_file', 'update'],
+            ['provide', 'need', 'conflict'],
+            ['license', 'copyright', 'author',
+             'contributor', 'translator', 'artist']
+        ]
+
+        self.containers = [SIGNATURE, 'runtime', 'deptree', 'credits']
+
+        self.name = ''
+        self.version = ''
+        self.description = ''
+        self.url = ''
+
+        self.start_file = ''
+        self.update = []
+
+        self.provide = []
+        self.need = []
+        self.conflict = []
+
+        self.license = []
+        self.copyright = []
+        self.author = []
+        self.contributor = []
+        self.translator = []
+        self.artist = []
+
+        self.attr_type = ''
+
+    def check_validity(self, use_print=False):
+        """
+        Checks the fields presents and validity
+
+        @return True if it's ok
+        """
+
+        # This fields should be present and not null
+        fields = ('name', 'version', 'description', 'url', 'start_file',
+                  'license', 'copyright', 'author')
+
+        for element in fields:
+            if not getattr(self, element, None):
+                txt = 'Element named %s should not be null.' % (element)
+
+                if use_print:
+                    print txt
+                else:
+                    log.warning(txt)
+
+                return False
+
+        return True
+
+    def get_provides(self): return self.provide
+    def get_conflicts(self): return self.conflict
+    def get_needs(self): return self.need
+
+    provides = property(get_provides)
+    conflicts = property(get_conflicts)
+    needs = property(get_needs)
+
+class ManifestLoader(handler.ContentHandler, ManifestObject):
+    def __init__(self):
+        ManifestObject.__init__(self)
+
+        self.element_idx = 0
+        self.parsing_pass = -1
+        self.current_element = None
+        self.data = None
+
+    def startElement(self, name, attrs):
+        try:
+            self.element_idx = self.elements[self.parsing_pass].index(name)
+            self.current_element = \
+                self.elements[self.parsing_pass][self.element_idx]
+
+        except IndexError:
+            log.debug('Element named `%s` is not in %s' % \
+                      (name, self.elements[self.parsing_pass]))
+
+        except ValueError:
+            try:
+                idx = self.containers.index(name)
+
+                if self.parsing_pass < idx:
+                    self.parsing_pass = idx
+                else:
+                    log.warning('Element `%s` is not valid at this point. ' \
+                                'Should compare before %s' % (name,
+                                            self.containers[self.parsing_pass]))
+
+                if self.parsing_pass == 0:
+                    if type in attrs.keys():
+                        self.attr_type = attrs.get('type')
+                    else:
+                        self.attr_type = 'ui'
+
+            except ValueError:
+                log.debug('Element named `%s` not excepted.' % name)
+
+    def characters(self, ch):
+        if not self.current_element:
+            return
+
+        if not self.data:
+            self.data = ch
+        else:
+            self.data += ch
+
+    def endElement(self, name):
+        if self.current_element == name:
+            try:
+                attr = getattr(self, name)
+
+                if isinstance(attr, basestring):
+                    setattr(self, name, self.data)
+                elif isinstance(attr, list):
+                    attr.append(self.data)
+            finally:
+                self.current_element = None
+                self.data = None
+
+class ManifestWriter(object):
+    def startElement(self, names, attrs):
+        self.depth_idx += 1
+        self.writer.characters('  ' * self.depth_idx)
+        self.writer.startElement(names, attrs)
+
+    def endElement(self, name):
+        self.writer.endElement(name)
+        self.writer.characters('\n')
+        self.depth_idx -= 1
+
+    def __init__(self, manifest):
+        assert isinstance(manifest, ManifestObject)
+
+        self.output = StringIO()
+        self.depth_idx = -1
+        self.manifest = manifest
+        self.writer = XMLGenerator(self.output, 'utf-8')
+        self.writer.startDocument()
+
+        attr_vals = {
+            'xmlns' : 'http://www.umitproject.org',
+            'xsi:schemaLocation' : 'http://www.umitproject.org UmitPlugins.xsd',
+            'xmlns:xsi' : 'http://www.w3.org/2001/XMLSchema-instance',
+            'type' : manifest.attr_type or 'ui'
+        }
+
+        self.startElement('UmitPlugin', AttributesImpl(attr_vals)),
+        self.writer.characters('\n')
+
+        # First phase saving
+        for elem in manifest.elements[0]:
+            self.add_element(elem)
+
+        # Runtime block
+        self.startElement('runtime', {})
+        self.writer.characters('\n')
+
+        self.add_element('start_file')
+        self.add_element('update')
+
+        self.writer.characters('  ' * self.depth_idx)
+        self.endElement('runtime')
+
+        # Deptree block
+        if manifest.provide or manifest.need or manifest.conflict:
+            self.startElement('deptree', {})
+            self.writer.characters('\n')
+
+            self.add_element('provide')
+            self.add_element('need')
+            self.add_element('conflict')
+
+            self.writer.characters('  ' * self.depth_idx)
+            self.endElement('deptree')
+
+        # Credits block
+        self.startElement('credits', {})
+        self.writer.characters('\n')
+
+        for elem in manifest.elements[3]:
+            self.add_element(elem)
+
+        self.writer.characters('  ' * self.depth_idx)
+        self.endElement('credits')
+
+        self.endElement('UmitPlugin')
+        self.writer.endDocument()
+
+    def add_element(self, name):
+        value = getattr(self.manifest, name, None)
+
+        if not value:
+            return
+
+        if isinstance(value, basestring):
+            self.startElement(name, {})
+            self.writer.characters(value)
+            self.endElement(name)
+        elif isinstance(value, list):
+            for item in value:
+                self.startElement(name, {})
+                self.writer.characters(item)
+                self.endElement(name)
+
+    def get_output(self):
+        return self.output.getvalue()
 
 class BadPlugin(Exception):
     "Used to track exceptions while loading Plugin"
     pass
 
-class PluginReader(object):
+class PluginReader(ManifestLoader):
     def __init__(self, file):
+        ManifestLoader.__init__(self)
+
         self.path = file
         self.enabled = False
         self.hasprefs = False
@@ -88,12 +297,12 @@ class PluginReader(object):
 
         try:
             self.file = ZipFile(file, "r")
-        except BadZipfile:
+        except:
             raise BadPlugin("Not a valid umit plugin format")
-        
+
         if not self.parse_manifest():
             raise BadPlugin("Not a valid umit plugin manifest")
-        
+
         if not self.check_validity():
             raise BadPlugin("Validation phase not passed")
 
@@ -103,34 +312,26 @@ class PluginReader(object):
     def parse_manifest(self):
         """
         Parse the Manifest.xml inside the zip file and set the fields
-        
+
         @return
                 False if the Manifest is not in the proper format
                 True if everything is ok
         """
-        
+
         try:
-            data = self.file.read("Manifest.xml")
-            doc = parseString(data)
-        except Exception:
+            # TODO: add validation of the manifest
+
+            # Py2.5 doesn't have open on ZipFile object
+            fileobj = StringIO(self.file.read('Manifest.xml'))
+
+            parser = make_parser()
+            parser.setContentHandler(self)
+
+            parser.parse(fileobj)
+        except Exception, err:
+            log.debug('Exception in parse_manifest(): %s' % str(err))
             return False
-        
-        if doc.documentElement.tagName != SIGNATURE:
-            return False
-        
-        for field in FIELDS:
-            setattr(self, field, "")
-        
-        for node in doc.documentElement.childNodes:
-            if node.nodeName in FIELDS and node.firstChild:
-                if node.nodeName in ('needs', 'provides', 'conflicts'):
-                    # Convert to list
-                    data = node.firstChild.data
-                    setattr(self, node.nodeName, \
-                            data.replace(" ", "").split(","))
-                else:
-                    setattr(self, node.nodeName, node.firstChild.data)
-        
+
         return True
 
     def parse_preferences(self):
@@ -141,17 +342,7 @@ class PluginReader(object):
             self.parser.parse_string(data)
         except Exception, err:
             return
-    
-    def check_validity(self):
-        """
-        Checks the fields presents and validity
-        
-        @return True if it's ok
-        """
-        # TODO: implement me!
-        
-        return True
-    
+
     def __repr__(self):
         #FIXME: that
         return "[%s::Plugin]" % self.name
@@ -161,7 +352,7 @@ class PluginReader(object):
 
         try:
             # TODO: eliminate the mktemp workaround
-            
+
             name = mktemp('.png')
             f = open(name, 'wb')
             f.write(self.file.read('data/logo.png'))
@@ -170,7 +361,7 @@ class PluginReader(object):
             import gtk
 
             p = gtk.gdk.pixbuf_new_from_file_at_size(name, w, h)
-            
+
             os.remove(name)
 
             return p
@@ -213,7 +404,7 @@ class PluginReader(object):
                 if p: ret.append(p)
 
         return ret
-        
+
     def extract_file(self, zip_path, keep_path=False):
         if zip_path not in self.file.namelist():
             log.debug("The file %s seems to not exists in the zip file" % zip_path)
@@ -288,9 +479,9 @@ class PluginReader(object):
         """
         @return a catalog on success or None
         """
-        
+
         # We foreach inside locale dir and find a proper dir
-        
+
         try:
             import gettext
             import locale
@@ -304,8 +495,7 @@ class PluginReader(object):
             ENC = "utf8"
         if LANG is None:
             LANG = "en_US"
-        
-        # FIXME: is the '/' os indipendent?
+
         dir_lst = filter( \
             lambda x: x.startswith("locale/") and x.endswith("%s.mo" % mofile), \
             self.file.namelist() \
@@ -313,13 +503,13 @@ class PluginReader(object):
         dir_lst.sort()
 
         avaiable_langs = []
-        
+
         for dirname in dir_lst:
             t = dirname.split("/")
 
             if len(t) < 3:
                 continue
-            
+
             avaiable_langs.append(t[-2])
 
         request = self.expand_lang(".".join([LANG, ENC]))
@@ -331,30 +521,36 @@ class PluginReader(object):
                 return gettext.GNUTranslations(StringFile( \
                     self.file.read("locale/%s/%s.mo" % (req, mofile)) \
                 ))
-            
+
         return None
 
-class PluginWriter(object):
+class PluginWriter(ManifestObject):
     def __init__(self, **fields):
+        ManifestObject.__init__(self)
+
         # Set to None and filter out the unused fields
-        
-        for i in FIELDS:
-            setattr(self, i, "")
-        
+
+        FIELDS = ('name', 'version', 'description', 'url', 'start_file',
+                  'update', 'provide', 'need', 'conflict', 'license',
+                  'copyright', 'author', 'contributor', 'translator', 'artist')
+
+        # Filter out fields that are not related to the schema
+
         for i in fields:
             if i in FIELDS:
                 setattr(self, i, fields[i])
-        
-        for i in FIELDS:
-            print "Field %s setted to %s" % (i, getattr(self, i))
-        
+
+        if not self.check_validity(use_print=True):
+            print "!! Manifest could not be created."
+            sys.exit(-1)
+
         dirs = {
             'bin'  : '*',
             'data' : '*',
             'lib'  : '*',
             'locale' : '*'
         }
-        
+
         self.file = ZipFile(fields['output'], "w", ZIP_DEFLATED)
 
         os.chdir("output")
@@ -363,41 +559,42 @@ class PluginWriter(object):
             self.dir_foreach(i, dirs[i])
 
         os.chdir("..")
-        
-        self.file.writestr("Manifest.xml", self.create_manifest())
+
+        writer = ManifestWriter(self)
+        self.file.writestr('Manifest.xml', writer.get_output())
         self.file.close()
-        
+
         print ">> Plugin %s created." % fields['output']
-    
+
     def dir_foreach(self, dir, pattern):
         "Add files contained in dir and that pass the pattern validation phase."
 
         for path, dirs, files in os.walk(dir):
             if not files:
                 continue
-            
+
             for file in files:
                 if not fnmatch(file, pattern):
                     continue
 
                 print "Adding file %s %s %s" % (path, file, dir)
-                
+
                 self.file.write(os.path.join(path, file),
                                 os.path.join(path, file))
-    
+
     def create_manifest(self):
         """
         Create a Manifest.xml file
-        
+
         @return an xml manifest as string
         """
         doc = getDOMImplementation().createDocument(None, SIGNATURE, None)
-        
+
         for field in FIELDS:
             node = doc.createElement(field)
             node.appendChild(doc.createTextNode(getattr(self, field)))
             doc.documentElement.appendChild(node)
-        
+
         print "Manifest.xml created"
         return doc.toxml()
 
@@ -452,3 +649,10 @@ def setup(**attrs):
     print ">> Cleaning up"
     shutil.rmtree('build')
     shutil.rmtree('output')
+
+if __name__ == "__main__":
+    parser = make_parser()
+    loader = ManifestLoader()
+    parser.setContentHandler(loader)
+    parser.parse(open('test.xml'))
+    loader.dump()

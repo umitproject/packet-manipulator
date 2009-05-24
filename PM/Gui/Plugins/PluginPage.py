@@ -29,9 +29,11 @@ from PM.higwidgets.higdialogs import HIGAlertDialog
 from PM.higwidgets.higrichlists import HIGRichList, PluginRow
 
 from PM.Gui.Plugins.Core import Core
+from PM.Gui.Plugins.Atoms import Version
 from PM.Gui.Plugins.Update import FILE_GETTING, FILE_CHECKING, \
-                                  LATEST_GETTED, LATEST_ERROR, \
-                                  LATEST_GETTING
+                                  FILE_ERROR, LATEST_GETTED, \
+                                  LATEST_ERROR, LATEST_GETTING
+
 
 class PluginPage(gtk.VBox):
     def __init__(self, parent):
@@ -42,7 +44,7 @@ class PluginPage(gtk.VBox):
 
         self.__create_widgets()
         self.__pack_widgets()
-        
+
         self.install_updates_btn.hide()
 
     def __create_widgets(self):
@@ -60,24 +62,24 @@ class PluginPage(gtk.VBox):
         self.skip_install_btn = \
             HIGButton(_('Skip'), gtk.STOCK_CANCEL)
         self.restart_btn = \
-            HIGButton(_('Restart Umit'), gtk.STOCK_REFRESH)
-    
+            HIGButton(_('Restart PacketManipulator'), gtk.STOCK_REFRESH)
+
     def __pack_widgets(self):
         self.hbbox.pack_start(self.find_updates_btn)
         self.hbbox.pack_start(self.skip_install_btn)
         self.hbbox.pack_start(self.install_updates_btn)
         self.hbbox.pack_start(self.restart_btn)
-        
+
         self.pack_start(self.richlist)
         self.pack_start(self.hbbox, False, False, 0)
-        
+
         self.find_updates_btn.connect('clicked', self.__on_find_updates)
         self.install_updates_btn.connect('clicked', self.__on_install_updates)
         self.skip_install_btn.connect('clicked', self.__on_skip_updates)
         self.restart_btn.connect('clicked', self.__on_restart)
 
         self.show_all()
-    
+
     def clear(self, include_loaded=True):
         if include_loaded:
             self.richlist.clear()
@@ -139,8 +141,7 @@ class PluginPage(gtk.VBox):
     def __on_restart(self, widget):
         "Called when the user click on the restart button"
 
-        # TODO: implement me
-        log.critical("Restart is not implemented!")
+        Core().mainwindow.emit('delete-event', None)
 
     def __on_skip_updates(self, widget):
         "Called when the user click on the skip button"
@@ -150,8 +151,18 @@ class PluginPage(gtk.VBox):
         self.populate()
 
         self.p_window.toolbar.unset_status()
-        self.p_window.animated_bar.label = \
-                _('Update skipped')
+
+        if self.restart_btn.flags() & gtk.VISIBLE:
+            # That callback is called from a self.___on_install_updates
+
+            self.restart_btn.hide()
+            self.p_window.animated_bar.label = \
+                _('Rembember to restart PacketManipulator to use new version of plugins.')
+
+        else:
+            self.p_window.animated_bar.label = \
+                    _('Update skipped')
+
         self.p_window.animated_bar.start_animation(True)
 
         self.skip_install_btn.hide()
@@ -159,7 +170,7 @@ class PluginPage(gtk.VBox):
         self.find_updates_btn.show()
 
         self.menu_enabled = True
-    
+
     def __on_install_updates(self, widget):
         """
         Called when the user click on 'install updates' button
@@ -173,12 +184,17 @@ class PluginPage(gtk.VBox):
         for obj in self.p_window.update_eng.list:
             if obj.status != LATEST_GETTED:
                 self.richlist.remove_row(obj.object)
-            
+                continue
+
             if obj.object.show_include:
                 lst.append(obj)
-            
+
             obj.object.show_include = False
-        
+
+            # Reset indexes
+            obj.last_update_idx = 0
+            obj.selected_update_idx = obj.object.versions_button.get_active()-1
+
         self.install_updates_btn.set_sensitive(False)
         self.skip_install_btn.set_sensitive(False)
 
@@ -190,7 +206,7 @@ class PluginPage(gtk.VBox):
             file=os.path.join(Path.pixmaps_dir, "Throbber.gif") \
         )
         gobject.timeout_add(300, self.__refresh_row_download)
-    
+
     def __refresh_row_download(self):
         """
         This is the timeout callback called to update the gui
@@ -198,7 +214,7 @@ class PluginPage(gtk.VBox):
         """
 
         working = False
-        
+
         for obj in self.p_window.update_eng.list:
             obj.lock.acquire()
 
@@ -206,38 +222,45 @@ class PluginPage(gtk.VBox):
                 if obj.status == FILE_GETTING or \
                    obj.status == FILE_CHECKING:
                     working = True
-                    
+
                 row = obj.object
                 row.message = obj.label
                 row.progress = obj.fract
             finally:
                 obj.lock.release()
-        
+
         if not working:
-            
+
+            errors = ''
+
             for obj in self.p_window.update_eng.list:
                 row = obj.object
                 row.message = obj.label
                 row.progress = None
-            
+
+                if not errors and obj.status == FILE_ERROR:
+                    errors = ' but with <b>some errors</b>'
+
             # Only warn the user about changes take effects on restart
             # on restart just move the plugins stored in home directory
             # in the proper location
-            
+
             self.p_window.animated_bar.label = \
-                _('Update phase complete. Now restart ' \
-                  'Umit to changes make effects.')
+                _('Update phase complete%s. Now restart ' \
+                  'PacketManipulator to changes make effects.') % errors
             self.p_window.animated_bar.start_animation(True)
-            
+
             self.p_window.toolbar.unset_status()
-            
+
             self.install_updates_btn.hide()
-            self.skip_install_btn.hide()
+
+            # Let the user to choose to restart or not PacketManipulator
+            self.skip_install_btn.set_sensitive(True)
 
             self.restart_btn.show()
-        
+
         return working
-    
+
     def __on_find_updates(self, widget):
         """
         Called when the user click on 'find updates' button
@@ -249,7 +272,7 @@ class PluginPage(gtk.VBox):
 
         self.find_updates_btn.set_sensitive(False)
         self.menu_enabled = False
-        
+
         lst = []
 
         def append(row, lst):
@@ -291,6 +314,21 @@ class PluginPage(gtk.VBox):
         # Add a timeout function to update label
         gobject.timeout_add(300, self.__update_rich_list)
 
+    def __query_tooltip_versions_button(self, widget, x, y, keyboard_tip, \
+                                        tooltip, obj):
+
+        idx = obj.object.versions_button.get_active() - 1
+
+        if idx >= 0:
+            desc = obj.updates[idx].description
+
+            if desc:
+                tooltip.set_markup(desc)
+                tooltip.set_icon_from_stock(gtk.STOCK_INDEX, gtk.ICON_SIZE_MENU)
+                return True
+
+        return False
+
     def __update_rich_list(self):
         """
         This is the timeout callback called to update the gui
@@ -298,7 +336,7 @@ class PluginPage(gtk.VBox):
         """
 
         working = False
-        
+
         for upd_obj in self.p_window.update_eng.list:
             upd_obj.lock.acquire()
 
@@ -306,20 +344,20 @@ class PluginPage(gtk.VBox):
                 # Check if we are working
                 if upd_obj.status == LATEST_GETTING:
                     working = True
-                
+
                 # Update the row
                 row = upd_obj.object
                 row.message = upd_obj.label
             finally:
                 upd_obj.lock.release()
-        
+
         # No locking from here we have finished
 
         if not working:
             # Mark as finished
             self.p_window.update_eng.stop()
             self.find_updates_btn.set_sensitive(True)
-            
+
             lst = filter( \
                 lambda x: (x.status == LATEST_GETTED) and (x) or (None),\
                 self.p_window.update_eng.list \
@@ -328,14 +366,14 @@ class PluginPage(gtk.VBox):
                 lambda x: (x.status == LATEST_ERROR) and (x) or (None),\
                 self.p_window.update_eng.list \
             )
-            
+
             if not lst and not elst:
                 self.p_window.toolbar.unset_status()
 
                 self.p_window.animated_bar.label = \
                     _('<b>No updates found</b>')
                 self.p_window.animated_bar.start_animation(True)
-                
+
                 self.richlist.clear()
                 self.populate()
 
@@ -357,21 +395,59 @@ class PluginPage(gtk.VBox):
                 for obj in self.p_window.update_eng.list:
                     row = obj.object
                     active = (obj.status == LATEST_GETTED)
-                    
+
                     if active:
+                        obj.last_update_idx = 0
                         row.show_include = True
+
+                        log.debug("Connecting 'query-tooltip' for %s" % obj)
+
+                        # The tooltip is showed and hidden continuously
+                        row.versions_button.props.has_tooltip = True
+                        row.versions_button.connect(
+                            'query-tooltip',
+                            self.__query_tooltip_versions_button, obj
+                        )
+
+                        row.versions_model.clear()
+
+                        row.versions_model.append([
+                            gtk.STOCK_CANCEL, _("Skip")
+                        ])
+
+                        for update in obj.updates:
+                            cur_v = Version(row.reader.version)
+                            new_v = Version(update.version)
+
+                            if new_v > cur_v:
+                                row.versions_model.append([
+                                    gtk.STOCK_GO_UP, _("Update to %s") % \
+                                    update.version
+                                ])
+                            elif new_v == cur_v:
+                                row.versions_model.append([
+                                    gtk.STOCK_REFRESH, _("Reinstall %s") % \
+                                    update.version
+                                ])
+                            else:
+                                row.versions_model.append([
+                                    gtk.STOCK_GO_DOWN, _("Downgrade to %s") % \
+                                    update.version
+                                ])
+
+                        row.versions_button.set_active(0)
                         row.message = obj.label
                     else:
                         row.saturate = True
-                
+
                 if lst:
                     self.install_updates_btn.show()
-                    
+
                 self.find_updates_btn.hide()
                 self.skip_install_btn.show()
 
         return working
-    
+
     def __on_row_popup(self, row, evt):
         "Popup menu"
 
@@ -475,7 +551,7 @@ class PluginPage(gtk.VBox):
 
             if r == gtk.RESPONSE_YES:
                 r, err = self.p_window.engine.unload_plugin(row.reader)
-                
+
                 if not r:
                     d = dialog( \
                         _('Can not disable Plugin'), \
@@ -500,21 +576,21 @@ class PluginPage(gtk.VBox):
         "Uninstall semi-low level function"
 
         row.activatable = False
-        
+
         if self.p_window.engine.uninstall_plugin(row.reader):
             del row
             self.richlist.clear()
             self.p_window.plug_page.populate()
         else:
             row.activatable = True
-            
+
             self.p_window.animated_bar.label = \
                 _('Unable to uninstall %s plugin.') % row.reader
             self.p_window.animated_bar.start_animation(True)
 
     def __on_row_preference(self, widget, row):
         "Preference button callback"
-        
+
         if not self.p_window.engine.tree.show_preferences(row.reader):
             self.p_window.animated_bar.label = \
                 _('No preferences for %s') % row.reader.name

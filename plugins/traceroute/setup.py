@@ -27,8 +27,10 @@ if not os.path.exists("dist/GeoLiteCity.dat"):
 setup(
     name='Traceroute',
     version='1.0',
-    author='Francesco Piccinno',
-    url='http://snippets.pornosecurity.org',
+    author=['Francesco Piccinno'],
+    license=['GPL'],
+    copyright=['2008 Adriano Monteiro Marques'],
+    url='http://blog.archpwn.org',
     scripts=['sources/main.py'],
     start_file="main",
     data_files=[('data', ['dist/logo.png',
@@ -36,7 +38,7 @@ setup(
                 )],
     package_dir={'libtrace' : 'sources/libtrace'},
     packages=['libtrace'],
-    provides='=Traceroute-1.0',
+    provide=['=Traceroute-1.0'],
     description='Simple traceroute plugin',
     output='traceroute.ump'
 )

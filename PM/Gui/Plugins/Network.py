@@ -46,7 +46,8 @@ def safecall(func):
         try:
             func(*args, **kwargs)
         except Exception, err:
-            log.error(_('>>> safecall(): Ignoring exception %s') % err)
+            log.error(_('>>> safecall(): Ignoring exception %s -> %s (%s, %s)')\
+                      % (err, func, args, kwargs))
     return proxy
 
 #
@@ -62,12 +63,15 @@ class ErrorNetException(NetException):
         NetException.__init__(self)
 
         self.args = obj.args
-        
+
         # FIXME: check this
         if isinstance(obj, urllib2.HTTPError):
             self.reason = '%d %s' % (obj.code, obj.msg)
         else:
-            self.reason = obj.reason
+            try:
+                self.reason = obj.reason
+            except:
+                self.reason = str(obj)
 
 class StartNetException(NetException):
     "Raised when download is started"
@@ -105,7 +109,7 @@ class Network(object):
         @param cb is the callback
         @param udata the additional data to pass to the callback
         """
-        
+
         log.debug(_(">>> Calling get_url() for %s") % url)
 
         ufile = None
@@ -149,7 +153,7 @@ def test():
             m = md5.new()
             m.update("".join(udata))
             print "MD5", m.hexdigest()
-            
+
             return
 
         if isinstance(exc, ErrorNetException):

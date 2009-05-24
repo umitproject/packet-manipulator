@@ -11,6 +11,20 @@
 	   - Add the possibility to edit the packet directly from the HexView.
 	* PM/Gui/Widgets/PyGtkHexView.py:
 	   - Added a popup menu for common actions like cut/copy/paste.
+    * PM/Gui/Plugins/Network.py
+      PM/Gui/Plugins/PathPage.py
+      PM/Gui/Plugins/PluginPage.py
+      PM/Gui/Plugins/Tree.py
+      PM/Gui/Plugins/Update.py
+      PM/Gui/Plugins/Containers.py
+      PM/Gui/Plugins/Engine.py
+      PM/Gui/Plugins/Window.py
+      PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/utils.py:
+        - Switch to new plugin schema.
+    * plugins/geoip/setup.py
+      plugins/traceroute/setup.py:
+        - Fix the setup.py to fit schema change.
 
 	Insert mode for HexView implemented.
 	80 columns line wrap fixed in various files and general bug fixing.

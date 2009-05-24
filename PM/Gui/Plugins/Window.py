@@ -17,8 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import os
+import os.path
+
 import gtk
-import gobject
 
 from PM.higwidgets.higwindows import HIGWindow
 from PM.higwidgets.higboxes import HIGVBox, HIGHBox
@@ -34,8 +36,7 @@ from PM.Gui.Plugins.Engine import PluginEngine
 
 from Network import *
 from PM.Core.I18N import _
-
-import os, os.path
+from PM.Core.Const import PIXMAPS_DIR
 
 class PluginWindow(HIGWindow):
     def __init__(self):
@@ -47,6 +48,7 @@ class PluginWindow(HIGWindow):
         self.set_title(_('Plugin Manager'))
         self.set_position(gtk.WIN_POS_CENTER)
         self.set_size_request(600, 400)
+        self.set_icon_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png'))
 
         self.__create_widgets()
         self.__pack_widgets()
@@ -97,7 +99,7 @@ class PluginWindow(HIGWindow):
         self.plug_page.install_updates_btn.hide()
         self.plug_page.skip_install_btn.hide()
         self.plug_page.restart_btn.hide()
-        
+
         self.connect('delete-event', self.__on_delete_event)
 
     def __on_delete_event(self, widget, evt):
@@ -109,6 +111,6 @@ class PluginWindow(HIGWindow):
 
         self.plug_page.populate()
         self.path_page.populate()
-    
+
     def __on_switch_page(self, widget, id):
         self.notebook.set_current_page(id)

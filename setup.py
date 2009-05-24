@@ -1,21 +1,21 @@
-#!/usr/bin/env python                                   
-# -*- coding: utf-8 -*-                                 
-# Copyright (C) 2008 Adriano Monteiro Marques           
-#                                                       
-# Author: Francesco Piccinno <stack.box@gmail.com>      
-#                                                       
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import re
@@ -157,7 +157,7 @@ class pm_build(build):
             "-b", "html",
             "-d", os.path.join("PM", "share", "doc", "doctrees"),
             os.path.join("PM", "share", "doc", "src"), DOCS_DIR])
-    
+
     def run(self):
         self.build_html_doc()
         build.run(self)
@@ -262,7 +262,7 @@ setup(name         = 'PacketManipulator',
       data_files   = [('share/pixmaps/umit',
                        glob.glob("PM/share/pixmaps/umit/*")),
                       (BASE_DOCS_DIR, glob.glob(DOCS_DIR + "/*/*")),
-                     ] + mo_files, 
+                     ] + mo_files,
       scripts      = ['PM/PacketManipulator'],
       ext_modules  = modules,
       cmdclass     = {'install' : pm_install,

@@ -23,12 +23,14 @@ from PM.Gui.Plugins.Containers import setup
 setup(
     name='GeoStats',
     version='1.0',
-    author='Francesco Piccinno',
-    url='http://snippets.pornosecurity.org',
+    author=['Francesco Piccinno'],
+    license=['GPL'],
+    copyright=['2008 Adriano Monteiro Marques'],
+    url='http://blog.archpwn.org',
     scripts=['sources/main.py'],
     start_file="main",
     data_files=[('data', ['dist/logo.png'])],
-    provides='=GeoStats-1.0',
+    provide=['=GeoStats-1.0'],
     description='Create stats from the current sniff perspective',
     output='geostats.ump'
 )

@@ -52,11 +52,13 @@ else:
 # Helper functions
 ###############################################################################
 
-def run_helper(helper_type, iface, stop_count=0, stop_time=0, stop_size=0):
+def run_helper(helper_type, iface, filter=None, stop_count=0, stop_time=0, \
+               stop_size=0):
     """
     Start an helper process for capturing
     @param helper is integer (0 to use tcpdump, 1 to use pcapdump)
     @param iface the interface to sniff on
+    @param filter the tcpdump filter to use
     @param stop_count stop process after n packets (tcpdump/dumpcap)
     @param stop_time stop process after n secs (dumpcap only)
     @param stop_size stop process after n bytes (dumpcap only)
@@ -81,6 +83,9 @@ def run_helper(helper_type, iface, stop_count=0, stop_time=0, stop_size=0):
 
         helper += " -vU -i%s -w%s"
 
+        if filter:
+            helper += " " + filter
+
         log.debug("I'm using tcpdump helper to capture packets")
 
     else:
@@ -96,6 +101,9 @@ def run_helper(helper_type, iface, stop_count=0, stop_time=0, stop_size=0):
             helper += "-a filesize:%d " % stop_size / 1024
 
         helper += " -i%s -w%s"
+
+        if filter:
+            helper += " " + filter
 
         log.debug("I'm using dumpcap helper to capture packets")
 
@@ -357,7 +365,7 @@ def find_all_devs(capmethod=0):
     if capmethod == 1:
         # This is virtual interface so the list will contain a dummy
         # VirtualIFace entry
-        return [VirtualIFace('dummy', 
+        return [VirtualIFace('dummy',
                              'Virtual interface for reading file',
                              '0.0.0.0')]
 
