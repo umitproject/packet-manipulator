@@ -1,3 +1,20 @@
+2009-05-24  Francesco Piccinno  <stack.box@gmail.com>
+	* PM/Gui/Widgets/Plotter.py
+	  PM/Gui/Widgets/PropertyGrid.py:
+	   - Fixing various bugs due to ConditionalField used by Scapy.
+	* PM/Backend/Scapy/wrapper.py:
+	   - Added a new function is_showable_field() to manage this situation.
+	   - Various fix for ConditionalField.
+	* PM/Backend/Scapy/packet.py:
+	   - Added rebuild_from_raw_payload() to MetaPacket.
+	* PM/Gui/Pages/PacketPage.py:
+	   - Add the possibility to edit the packet directly from the HexView.
+	* PM/Gui/Widgets/PyGtkHexView.py:
+	   - Added a popup menu for common actions like cut/copy/paste.
+
+	Insert mode for HexView implemented.
+	80 columns line wrap fixed in various files and general bug fixing.
+
 2009-05-19 Francesco Piccinno <stack.box@gmail.com>
     * PM/Backend/Scapy/Context/Sniff.py
       PM/Backend/Scapy/utils.py:

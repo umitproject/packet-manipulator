@@ -71,7 +71,7 @@ class Plotter(gtk.DrawingArea):
         layout.set_text('A')
 
         atom_w, atom_h = layout.get_pixel_size()
-        
+
         fields = 0
         protos = [proto for proto in self.packet.get_protocols()]
 
@@ -124,7 +124,7 @@ class Plotter(gtk.DrawingArea):
 
         self.fields = {}
         self.protocols = []
-        
+
         for protocol in self.packet.get_protocols():
             self.protocols.append(
                     (protocol,
@@ -166,7 +166,7 @@ class Plotter(gtk.DrawingArea):
         cr = self.window.cairo_create()
         self.__cairo_draw(cr)
         return True
-    
+
     def draw_line(self, cr, proto, fieldname):
         points = self.fields[(proto, fieldname)]
 
@@ -231,6 +231,10 @@ class Plotter(gtk.DrawingArea):
         for protocol, color in self.protocols:
 
             for field in Backend.get_proto_fields(protocol):
+
+                if not Backend.is_showable_field(field, self.packet):
+                    continue
+
                 start = Backend.get_field_offset(self.packet, protocol, field)
                 end = Backend.get_field_size(protocol, field)
 
@@ -278,10 +282,12 @@ class Plotter(gtk.DrawingArea):
                     top_right = " ".join(["%02X" % ord(x) for x in top_right])
                     layout.set_text(top_right)
 
-                    cr.move_to(start_x + (line_x * atom_x), (line_y + protocol_idx) * atom_y + 4)
+                    cr.move_to(start_x + (line_x * atom_x),
+                               (line_y + protocol_idx) * atom_y + 4)
 
                     # Here we shoul write <==
-                    self.draw_box(cr, layout, fill=fill_color, border=border_color, right=False)
+                    self.draw_box(cr, layout, fill=fill_color,
+                                  border=border_color, right=False)
 
                     w, h = 0, 0
                     txt = txt[start:]
@@ -300,32 +306,38 @@ class Plotter(gtk.DrawingArea):
                         if i == lines - 1:
                             right = True
 
-                        cr.move_to(start_x, (line_y + protocol_idx + i + 1) * atom_y + 4)
-                        
+                        cr.move_to(start_x,
+                                   (line_y + protocol_idx + i + 1) * atom_y + 4)
+
                         part = " ".join(["%02X" % ord(x) for x in part])
                         layout.set_text(part)
 
 
-                        w, h = self.draw_box(cr, layout, fill=fill_color, border=border_color, 
+                        w, h = self.draw_box(cr, layout, fill=fill_color,
+                                             border=border_color,
                                              right=right, left=left)
 
                     # End point
-                    self.fields[(protocol, field_name)].append((start_x + (w / 2.0),
-                                                               (line_y + protocol_idx + lines + 1) * atom_y + 8))
+                    self.fields[(protocol, field_name)].append(
+                            (start_x + (w / 2.0),
+                            (line_y + protocol_idx + lines + 1) * atom_y + 8))
                 else:
                     txt = " ".join(["%02X" % ord(x) for x in txt])
                     layout.set_text(txt)
 
-                    cr.move_to(start_x + (line_x * atom_x), (line_y + protocol_idx) * atom_y + 4)
+                    cr.move_to(start_x + (line_x * atom_x),
+                               (line_y + protocol_idx) * atom_y + 4)
 
-                    w, h = self.draw_box(cr, layout, fill=fill_color, border=border_color)
+                    w, h = self.draw_box(cr, layout, fill=fill_color,
+                                         border=border_color)
 
                     tot_w += w + 4
                     tot_h = max(tot_h, h)
 
                     # End point
-                    self.fields[(protocol, field_name)].append((start_x + (line_x * atom_x) + (w / 2.0),
-                                                               (tot_h + (protocol_idx + line_y) * atom_y + 8)))
+                    self.fields[(protocol, field_name)].append(
+                                (start_x + (line_x * atom_x) + (w / 2.0),
+                                (tot_h + (protocol_idx + line_y) * atom_y + 8)))
 
                 self.draw_line(cr, protocol, field_name)
 
@@ -356,9 +368,13 @@ class Plotter(gtk.DrawingArea):
             cr.move_to(x + 10, y)
 
             for field in Backend.get_proto_fields(protocol):
+
+                if not Backend.is_showable_field(field, self.packet):
+                    continue
+
                 name = Backend.get_field_name(field)
                 value = str(Backend.get_field_value_repr(protocol, field))
-                
+
                 text = '%s: %s' % (name, value)
 
                 if len(text) > 35:
@@ -381,11 +397,12 @@ class Plotter(gtk.DrawingArea):
         return layout.get_pixel_size()
 
     def set_color(self, cr, color, offset=0.05, rgba=1.0):
-        cr.set_source_rgba(float(color.red) / 65535 - offset, 
+        cr.set_source_rgba(float(color.red) / 65535 - offset,
                           float(color.green) / 65535 - offset,
                           float(color.blue) / 65535 - offset, rgba)
 
-    def draw_box(self, cr, layout, fill=None, border=None, bottom=True, top=True, right=True, left=True):
+    def draw_box(self, cr, layout, fill=None, border=None, bottom=True, \
+                 top=True, right=True, left=True):
 
         w, h = layout.get_pixel_size()
         x, y = cr.get_current_point()

@@ -63,13 +63,15 @@ class Editor(gtk.HBox):
 
     def get_value(self):
         if self.flag_name != None:
-            return Backend.get_keyflag_value(self.protocol, self.field, self.flag_name)
+            return Backend.get_keyflag_value(self.protocol, self.field,
+                                             self.flag_name)
         else:
             return Backend.get_field_value(self.protocol, self.field)
 
     def set_value(self, value):
         if self.flag_name != None:
-            Backend.set_keyflag_value(self.protocol, self.field, self.flag_name, value)
+            Backend.set_keyflag_value(self.protocol, self.field, self.flag_name,
+                                      value)
         else:
             Backend.set_field_value(self.protocol, self.field, value)
 
@@ -106,7 +108,9 @@ class IntEditor(Editor):
         # Unsigned int / Int? :(
         if Backend.get_field_size(self.protocol, self.field) != None:
             self.min = 0
-            self.max = (2 ** Backend.get_field_size(self.protocol, self.field)) - 1 # (2 ^ n) - 1
+            # (2 ^ n) - 1
+            self.max = (2 ** Backend.get_field_size(self.protocol,
+                                                    self.field)) - 1
             self.digits = 0
         else:
             import sys
@@ -334,7 +338,9 @@ class StrEditor(Editor):
 class IPv4Editor(Editor):
     def create_widgets(self):
         self.entry = HIGIpEntry()
-        self.entry.set_text(self.value)
+
+        if self.value:
+            self.entry.set_text(self.value)
         #self.entry.set_has_frame(False)
 
     def pack_widgets(self):
@@ -349,7 +355,9 @@ class IPv4Editor(Editor):
 def get_editor(field):
     "@return the corresponding editor class for field or None"
 
-    assert Backend.is_field(field)
+    if not Backend.is_field(field):
+        log.error('%s is not a valid field' % field)
+        return None
 
     # MACField
     # IPField
@@ -382,7 +390,8 @@ def get_editor(field):
 class HackEntry(gtk.Entry):
     __gtype_name__ = "HackEntry"
     __gsignals__ = {
-        'finish-edit' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, ))
+        'finish-edit' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                         (gobject.TYPE_OBJECT, ))
     }
 
     def __init__(self):
@@ -414,7 +423,8 @@ class HackEntry(gtk.Entry):
         # I wanna be extra large! mc donalds rules
         if self.allocation.width > alloc.width and \
            self.allocation.height > alloc.height:
-            alloc.width, alloc.height = self.allocation.width, self.allocation.height
+            alloc.width, alloc.height = self.allocation.width, \
+                                        self.allocation.height
 
         gtk.Entry.do_size_allocate(self, alloc)
 
@@ -593,12 +603,18 @@ class TFlag:
 
 class PropertyGridTree(gtk.ScrolledWindow):
     __gsignals__ = {
-        'finish-edit'    : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, )),
-        'field-selected' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT)),
-        'desc-changed'   : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_STRING, )),
+        'finish-edit'    : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                            (gobject.TYPE_OBJECT, )),
+        'field-selected' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                            (gobject.TYPE_PYOBJECT, gobject.TYPE_PYOBJECT,
+                             gobject.TYPE_PYOBJECT)),
+        'desc-changed'   : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                            (gobject.TYPE_STRING, )),
     }
 
-    printable = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ '
+    printable = \
+        '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' \
+        '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ '
 
     def __init__(self):
         gtk.ScrolledWindow.__init__(self)
@@ -652,7 +668,8 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.icon_locked = get_pixbuf("locked_small")
         self.finish_callback = self.__on_finish_edit
 
-        self.tree.get_selection().connect('changed', self.__on_selection_changed)
+        self.tree.get_selection().connect('changed',
+                                          self.__on_selection_changed)
         self.tree.connect('button-release-event', self.__on_button_release)
 
     def get_selected_field(self):
@@ -702,7 +719,8 @@ class PropertyGridTree(gtk.ScrolledWindow):
             self.emit('desc-changed', Backend.get_field_desc(field))
         else:
             # We have selected the protocol
-            self.emit('desc-changed', "%s protocol." % Backend.get_proto_name(proto))
+            self.emit('desc-changed', "%s protocol." % \
+                      Backend.get_proto_name(proto))
 
     def __on_button_release(self, widget, event):
         # We should get the selection and show the popup
@@ -790,9 +808,13 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
             value = Backend.get_field_value_repr(obj.proto, obj.ref)
 
-            if value:
-                cell.set_property('markup', '<tt>%s</tt>' % \
-                                  gobject.markup_escape_text(value))
+            try:
+                if value:
+                    cell.set_property('markup', '<tt>%s</tt>' % \
+                                  gobject.markup_escape_text(unicode(value)))
+            except UnicodeDecodeError:
+                cell.set_property('markup', _('<tt>N/A</tt>'))
+
 
         # If we are a field or a string (a sub field of flags)
         elif isinstance(obj, (TField, TFlag)):
@@ -807,8 +829,12 @@ class PropertyGridTree(gtk.ScrolledWindow):
                 value = Backend.get_field_value(obj.proto, obj.ref)
 
                 if value is not None:
-                    value = gobject.markup_escape_text(str(value))
-                else:
+                    try:
+                        value = gobject.markup_escape_text(unicode(value))
+                    except UnicodeDecodeError:
+                        value = None
+
+                if not value:
                     value = _("N/A")
 
                 cell.set_property('markup', '<tt>%s</tt>' % value)
@@ -897,6 +923,9 @@ class PropertyGridTree(gtk.ScrolledWindow):
         # We have to use the get_fields method
         for field in Backend.get_proto_fields(proto_inst):
 
+            if not Backend.is_showable_field(field, packet):
+                continue
+
             tfield = TField(field, proto_inst)
             flag_iter = self.store.append(root_iter, [tfield])
 
@@ -937,7 +966,9 @@ class PropertyGrid(gtk.VBox):
 
         toolbox = ToolBox()
         toolbox.append_page(self.tree, '<b>Protocol</b>', gtk.STOCK_CONNECT)
-        toolbox.append_page(sw, '<b>Description</b>', gtk.STOCK_JUSTIFY_FILL, expand=False)
+        toolbox.append_page(sw, '<b>Description</b>', gtk.STOCK_JUSTIFY_FILL,
+                            expand=False)
+
         self.pack_start(toolbox)
 
         self.clear = self.tree.clear

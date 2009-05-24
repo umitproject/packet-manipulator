@@ -86,7 +86,9 @@ class OffsetText(BaseText):
             alloc.width = w
 
 class AsciiText(BaseText):
-    _printable = """0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""
+    _printable = \
+        "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%" \
+        "&'()*+,-./:;<=>?@[\]^_`{|}~"
 
     def __init__(self, parent):
         BaseText.__init__(self, parent)
@@ -107,7 +109,8 @@ class AsciiText(BaseText):
         output = []
 
         convert = lambda i: "".join(
-            map(lambda x: (x in AsciiText._printable) and (x) or ('.'), list(i)))
+            map(lambda x: (x in AsciiText._printable) and (x) or ('.'),
+                list(i)))
 
         for i in xrange(tot_lines):
             to_fill = 0
@@ -141,8 +144,12 @@ class AsciiText(BaseText):
             alloc.width = w
 
     def select_blocks(self, start=None, end=None):
-        if self.prev_start and self.prev_end and self.prev_start != self.prev_end:
-            self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start, self.prev_end)
+
+        if self.prev_start and self.prev_end and \
+           self.prev_start != self.prev_end:
+
+            self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start,
+                                   self.prev_end)
 
         if not start and not end:
             return
@@ -187,11 +194,13 @@ class HexText(BaseText):
             if i * bpl + bpl > len(txt):
                 to_fill = (i * bpl) + bpl - len(txt)
                 output.append(
-                    " ".join(map(lambda x: convert(str(hex(ord(x)))[2:]), txt[i * bpl:]))
+                    " ".join(map(lambda x: convert(str(hex(ord(x)))[2:]),
+                                 txt[i * bpl:]))
                 )
             else:
                 output.append(
-                    " ".join(map(lambda x: convert(str(hex(ord(x)))[2:]), txt[i * bpl:(i * bpl) + bpl]))
+                    " ".join(map(lambda x: convert(str(hex(ord(x)))[2:]),
+                                 txt[i * bpl:(i * bpl) + bpl]))
                 )
 
         if output:
@@ -206,15 +215,20 @@ class HexText(BaseText):
         font = ctx.load_font(pango.FontDescription(self._parent.font))
         metric = font.get_metrics(ctx.get_language())
 
-        w = pango.PIXELS(metric.get_approximate_char_width()) * (self._parent.bpl * 3 - 1)
+        w = pango.PIXELS(metric.get_approximate_char_width()) * \
+                        (self._parent.bpl * 3 - 1)
         w += 2
 
         if alloc.width < w:
             alloc.width = w
 
     def select_blocks(self, start=None, end=None):
-        if self.prev_start and self.prev_end and self.prev_start != self.prev_end:
-            self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start, self.prev_end)
+
+        if self.prev_start and self.prev_end and \
+           self.prev_start != self.prev_end:
+
+            self.buffer.remove_tag(self._parent.tag_sec_sel, self.prev_start,
+                                   self.prev_end)
 
         if not start and not end:
             return
@@ -301,13 +315,13 @@ class HexView(gtk.HBox):
     def __on_menu_popup(self, widget, menu):
         item = gtk.SeparatorMenuItem()
         item.show()
-        
+
         menu.append(item)
 
         action = gtk.Action('', 'Copy from both', '', gtk.STOCK_COPY)
         item = action.create_menu_item()
         item.connect('activate', self.__on_copy_from_both)
-        
+
         menu.append(item)
 
     def __on_copy_from_both(self, widget):
@@ -337,7 +351,9 @@ class HexView(gtk.HBox):
             # Ascii active
 
             start, end = self.ascii_text.buffer.get_selection_bounds()
-            ascii = list(self.ascii_text.buffer.get_text(start, end).replace("\n", ""))
+            ascii = list(
+                self.ascii_text.buffer.get_text(start, end).replace("\n", "")
+            )
             hex_s = map(lambda x: str(hex(ord(x)))[2:], ascii)
 
             extend = self.bpl - len(ascii) % self.bpl
@@ -430,7 +446,7 @@ class HexView(gtk.HBox):
         self._payload = val
 
         for view in (self.offset_text, self.hex_text, self.ascii_text):
-            
+
             # Invalidate previous iters
             if hasattr(view, 'prev_start'):
                 view.prev_start = None

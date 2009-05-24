@@ -22,19 +22,154 @@ import gtk
 import gtkhex
 import gobject
 
+from PM.Core.I18N import _
 from PM.Core.Logger import log
+
+class HexDocument(gtkhex.Document):
+    __gtype_name__ = "PyGtkHexDocument"
+    __gsignals__ = {
+        'changed' : (gobject.SIGNAL_RUN_LAST,
+                     gobject.TYPE_NONE, (gobject.TYPE_PYOBJECT,
+                                         gobject.TYPE_BOOLEAN)),
+    }
+
+    def __init__(self):
+        super(HexDocument, self).__init__()
+
+    def do_document_changed(self, cdata, push_undo):
+        self.emit('changed', cdata, push_undo)
 
 class HexView(gtkhex.Hex):
     __gtype_name__ = "PyGtkHexView"
 
     def __init__(self):
-        self._document = gtkhex.Document()
+        self._document = HexDocument()
 
         super(HexView, self).__init__(self._document)
 
         self.show_offsets(True)
         self.set_geometry(8, 5)
         self.set_read_only_mode(True)
+        self._trapped = True
+
+        self.changed_callback = None
+        self._document.connect('changed', self.__wrap_on_changed)
+
+        self.set_events(gtk.gdk.BUTTON_PRESS_MASK)
+
+        self.hdisp, self.adisp = self.get_children()[0:2]
+
+        #self.hdisp.add_events(gtk.gdk.BUTTON_PRESS_MASK)
+        #self.adisp.add_events(gtk.gdk.BUTTON_PRESS_MASK)
+
+        # Hex / Ascii
+        self.hdisp.connect('button-press-event', self.__on_button_press, 0)
+        self.adisp.connect('button-press-event', self.__on_button_press, 1)
+
+    def __on_cut(self, action, typo):
+        self.cut_to_clipboard()
+
+    def __on_copy(self, action, typo):
+        bounds = self.get_selection()
+
+        if not bounds:
+            return
+
+        data = self._document.get_data(bounds[0], bounds[1])
+
+        def hexdump():
+            idx = 0
+            out = ''
+
+            for x in data:
+                i = hex(ord(x))[2:].upper()
+
+                if len(i) == 1:
+                    out += "0"
+
+                out += "%s" % i
+                idx += 1
+
+                if idx % 8 == 0:
+                    out += '\n'
+                    idx = 0
+                else:
+                    out += ' '
+            return out
+
+        def asciidump():
+            idx = 0
+            out = ''
+
+            for x in data:
+                i = x.isalpha() and x or '.'
+
+                out += "%s" % i
+                idx += 1
+
+                if idx % 8 == 0:
+                    out += '\n'
+                    idx = 0
+            return out
+
+        if typo == 0:
+            gtk.clipboard_get().set_text(hexdump())
+
+        elif typo == 1:
+            self.copy_to_clipboard()
+        else:
+            out = ''
+
+            for h, a in zip(hexdump().splitlines(), asciidump().splitlines()):
+                padding = 8 - len(a)
+                out += h + (" " * ((padding * 3) - 1)) + "\t" + a + "\n"
+
+            gtk.clipboard_get().set_text(out)
+
+    def __on_bcopy(self, action, typo):
+        self.__on_copy(action, 3)
+
+    def __on_paste(self, action, typo):
+        self.paste_from_clipboard()
+
+    def __on_button_press(self, widget, evt, typo):
+        if evt.button != 3:
+            return
+
+        menu = gtk.Menu()
+
+        # OK show a popup to copy and paste
+        # cut/copy/paste/delete
+
+        txts = (_('Cu_t'), _('_Copy'), _('_Paste'), _('Copy from _both'))
+        icons = (gtk.STOCK_CUT, gtk.STOCK_COPY, gtk.STOCK_PASTE, gtk.STOCK_COPY)
+        cbcs = (self.__on_cut, self.__on_copy, self.__on_paste, self.__on_bcopy)
+
+        clipboard_sel = gtk.clipboard_get().wait_for_text() and True or False
+
+        idx = 0
+
+        for txt, icon, cbc in zip(txts, icons, cbcs):
+            action = gtk.Action(None, txt, None, icon)
+            action.connect('activate', cbc, typo)
+
+            item = action.create_menu_item()
+
+            if not clipboard_sel and idx == 2:
+                item.set_sensitive(False)
+
+            menu.append(item)
+
+            idx += 1
+
+        menu.popup(None, None, None, evt.button, evt.time, None)
+        menu.show_all()
+
+    def __wrap_on_changed(self, document, cdata, push_undo):
+        if callable(self.changed_callback) and self._trapped:
+           self.changed_callback(document, cdata, push_undo)
+
+        self._trapped = True
 
     def select_block(self, offset, len, ascii=True):
         """
@@ -53,6 +188,7 @@ class HexView(gtkhex.Hex):
     def get_payload(self):
         return self._document.get_data(0, self._document.file_size)
     def set_payload(self, val):
+        self._trapped = False
         self._document.set_data(0, len(val), self._document.file_size,
                                 val, False)
 

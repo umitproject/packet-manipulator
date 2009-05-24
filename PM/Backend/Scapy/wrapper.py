@@ -271,7 +271,7 @@ def is_field(field):
     if isinstance(field, Emph):
         return True
 
-    return isinstance(field, Field)
+    return isinstance(field, (Field, ConditionalField))
 
 def is_flags(field):
     return isinstance(field, FlagsField)
@@ -280,7 +280,13 @@ def is_proto(proto):
     return isinstance(proto, Packet)
 
 def implements(obj, klass):
-    if isinstance(obj, Emph):
+    if isinstance(obj, (Emph, ConditionalField)):
         return isinstance(obj.fld, klass)
 
     return isinstance(obj, klass)
+
+def is_showable_field(field, metapkt):
+    if not isinstance(field, ConditionalField):
+        return True
+
+    return field._evalcond(metapkt.root)

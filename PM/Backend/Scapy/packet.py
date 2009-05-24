@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+from PM.Core.Logger import log
 from PM.Backend.Scapy.wrapper import Packet, NoPayload, Raw, Ether, IP, \
                                      get_proto_size
 
@@ -223,3 +224,15 @@ class MetaPacket:
 
     def get_raw(self):
         return str(self.root)
+
+    def rebuild_from_raw_payload(self, newpayload):
+        log.debug('Rebuilding packet starting from %s' % \
+                  str(self.root.__class__))
+
+        try:
+            new_proto = self.root.__class__(newpayload)
+            self.root = new_proto
+            return True
+        except Exception, err:
+            log.debug('Rebuild from raw failed (%s)' % str(err))
+            return False

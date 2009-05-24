@@ -67,6 +67,9 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
         if not self.session.packet:
             return
 
+        log.debug('Reloading ProtocolHierarchy with %s' % \
+                  self.session.packet.summary())
+
         root = None
 
         # We pray to be ordered :(
@@ -215,6 +218,17 @@ class PacketPage(Perspective):
         self.proto_hierarchy = ProtocolHierarchy(self.session)
         self.hexview = HexView()
 
+        try:
+            # Only the read write hexview provide this
+            self.hexview.set_insert_mode(True)
+            self.hexview.set_read_only_mode(False)
+            self.hexview.changed_callback = self.__on_hexview_changed
+            self.hexview.connect('focus-out-event', self.__on_hexview_focus_out)
+
+            self._packet_changed = False
+        except:
+            pass
+
         self.hbox.pack_start(self.proto_hierarchy, False, False, 0)
         self.hbox.pack_start(self.toolbar, False, False)
         self.hbox.pack_start(self.hexview)#, False, False)
@@ -232,6 +246,24 @@ class PacketPage(Perspective):
             self.hexview.payload = Backend.get_packet_raw(self.session.packet)
         else:
             self.hexview.payload = ''
+
+    def __on_hexview_focus_out(self, widget, evt):
+        if self._packet_changed and \
+           self.session.packet.rebuild_from_raw_payload(self.hexview.payload):
+            # Ok we've created a correct packet. Strange? Yes it is
+            # At this point we have to repopulate protocol hierarchy widget at
+            # first and the follow with property tab
+
+            self.session.reload()
+            #self.reload()
+        else:
+            self.redraw_hexview()
+
+        self._packet_changed = False
+
+    def __on_hexview_changed(self, hexdoc, cdata, push_undo):
+        # Dummy function. Let's the focus-out-event make the rest
+        self._packet_changed = True
 
     def reload(self):
         # Hide the toolbar while merging fields
