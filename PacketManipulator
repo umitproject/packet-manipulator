@@ -33,6 +33,8 @@ else:
     if '--debug' in sys.argv:
         args = sys.argv[1:]
         args.remove('--debug')
-        os.system('gdb --args python PM/PacketManipulator %s' % ' '.join(args))
+        os.system('gdb --args %s PM/PacketManipulator %s' % (sys.executable,
+                                                             ' '.join(args)))
     else:
-        os.system('python PM/PacketManipulator %s' % ' '.join(sys.argv[1:]))
+        os.system('%s PM/PacketManipulator %s' % (sys.executable,
+                                                  ' '.join(sys.argv[1:])))
