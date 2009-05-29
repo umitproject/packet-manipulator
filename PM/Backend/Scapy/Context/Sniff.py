@@ -80,7 +80,7 @@ def register_sniff_context(BaseSniffContext):
         def _start(self):
             self.prevtime = datetime.now()
 
-            if self.iface:
+            if self.iface and self.capmethod != 1:
                 try:
                     self.socket = conf.L2listen(type=ETH_P_ALL,
                                                 iface=self.iface,
@@ -187,12 +187,14 @@ def register_sniff_context(BaseSniffContext):
             log.debug("Entering in the main loop")
 
             while self.internal:
-                report_idx = get_n_packets(self.process)
 
-                if report_idx < reported_packets:
-                    continue
+                if self.capmethod != 1:
+                    report_idx = get_n_packets(self.process)
 
-                while reported_packets < report_idx:
+                    if report_idx < reported_packets:
+                        continue
+
+                while self.capmethod == 1 or reported_packets < report_idx:
 
                     pkt = reader.read_packet()
 
@@ -230,7 +232,8 @@ def register_sniff_context(BaseSniffContext):
                     self.data.append(pkt)
                     reported_packets += 1
 
-                    # callback here
+                    if self.callback:
+                        self.callback(pkt, self.udata)
 
                     lst = []
 

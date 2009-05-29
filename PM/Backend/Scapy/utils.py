@@ -167,22 +167,25 @@ def bind_reader(process, outfile, ts=0.5):
     This is generator returning None if the file is not ready, and a tuple
     (reader, file_size, position_callable) when it is.
 
-    @param process the process that generated the outfile
+    @param process the process that generated the outfile or None
     @param outfile the file to poll
     @param ts the time to sleep while if object is not ready
     @return
     """
-    # 20 is the minimum header length for a pcap file
-    while process.poll() is None and \
-          (not os.path.exists(outfile) or os.stat(outfile).st_size < 20):
 
-        log.debug("Dumpfile %s not ready. Waiting %.2f sec" % (outfile, ts))
-        time.sleep(ts)
-        yield None
+    if process:
+        # 20 is the minimum header length for a pcap file
+        while process.poll() is None and \
+              (not os.path.exists(outfile) or os.stat(outfile).st_size < 20):
 
-    if process.poll() is not None:
-        raise Exception('Helper process died unexpectly with %d as returncode' % \
-                        process.returncode)
+            log.debug("Dumpfile %s not ready. Waiting %.2f sec" % (outfile, ts))
+            time.sleep(ts)
+            yield None
+
+        if process.poll() is not None:
+            raise Exception(
+                    'Helper process died unexpectly with %d as returncode' % \
+                    process.returncode)
 
     log.debug("Dumpfile %s seems to be ready." % outfile)
     log.debug("Creating a PcapReader object instance")
