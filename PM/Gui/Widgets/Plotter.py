@@ -285,7 +285,7 @@ class Plotter(gtk.DrawingArea):
                     cr.move_to(start_x + (line_x * atom_x),
                                (line_y + protocol_idx) * atom_y + 4)
 
-                    # Here we shoul write <==
+                    # Here we should write <==
                     self.draw_box(cr, layout, fill=fill_color,
                                   border=border_color, right=False)
 

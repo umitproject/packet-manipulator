@@ -19,8 +19,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from PM.Core.Logger import log
-from PM.Backend.Scapy.wrapper import Packet, NoPayload, Raw, Ether, IP, \
-                                     get_proto_size
+from PM.Backend.Scapy.translator import global_trans
+from PM.Backend.Scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
+                                     Raw, IP, get_proto_size
+from PM.Core.NetConst import IL_TYPE_ETH, IL_TYPE_TR, IL_TYPE_FDDI, \
+                             IL_TYPE_RAWIP, IL_TYPE_WIFI, IL_TYPE_COOK, \
+                             IL_TYPE_PRISM
 
 class MetaPacket:
     def __init__(self, proto=None):
@@ -225,6 +229,9 @@ class MetaPacket:
     def get_raw(self):
         return str(self.root)
 
+    def get_raw_layer(self, layer):
+        return str(self.getlayer(layer))
+
     def rebuild_from_raw_payload(self, newpayload):
         log.debug('Rebuilding packet starting from %s' % \
                   str(self.root.__class__))
@@ -236,3 +243,23 @@ class MetaPacket:
         except Exception, err:
             log.debug('Rebuild from raw failed (%s)' % str(err))
             return False
+
+    # standard functions
+    def get_datalink(self):
+        if isinstance(self.root, Ether):
+            return IL_TYPE_ETH
+        if isinstance(self.root, RadioTap):
+            return IL_TYPE_WIFI
+        return None
+
+    def get_field(self, fieldname):
+        try:
+            ret = fieldname.split('.')
+            layer = self.root.getlayer(global_trans[ret[0]][0])
+
+            if len(ret) > 1:
+                return getattr(layer, ret[1])
+            else:
+                return str(layer)
+        except Exception, err:
+            raise err

@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+###############################################################################
+# Layers
+###############################################################################
+
+IFACE_LAYER   = 1
+LINK_LAYER    = 2
+NET_LAYER     = 3
+PROTO_LAYER   = 4
+
+# Here goes dissectors
+APP_LAYER     = 5
+APP_LAYER_TCP = 51
+APP_LAYER_UDP = 52
+
+###############################################################################
+# Layer types
+###############################################################################
+
+# IFACE_LAYER types
+IL_TYPE_ETH   = 0x01 # ethernet
+IL_TYPE_TR    = 0x06 # token ring
+IL_TYPE_FDDI  = 0x0a # fiber distributed data interface
+IL_TYPE_RAWIP = 0x0c # raw ip dump file
+IL_TYPE_WIFI  = 0x69 # wireless
+IL_TYPE_COOK  = 0x71 # linux cooked
+IL_TYPE_PRISM = 0x77 # prism2 header for wifi dumps
+
+# LINK_LAYER types
+LL_TYPE_IP   = 0x0800
+LL_TYPE_IP6  = 0x86DD
+LL_TYPE_ARP  = 0x0806
+LL_TYPE_PPP  = 0x880B
+LL_TYPE_VLAN = 0x8100
+
+# NET_LAYER types
+NL_TYPE_ICMP  = 0x01
+NL_TYPE_ICMP6 = 0x3a
+NL_TYPE_TCP   = 0x06
+NL_TYPE_UDP   = 0x11
+NL_TYPE_GRE   = 0x2f
+NL_TYPE_OSPF  = 0x59
+NL_TYPE_VRRP  = 0x70
+
+# PROTO_LAYER types
+PL_DEFAULT  = 0x0000

@@ -201,16 +201,19 @@ def get_field_offset(packet, proto, field):
 
     child = packet.root
 
-    while not isinstance(child, NoPayload):
+    while not isinstance(child, NoPayload) and proto != child:
         for f in child.fields_desc:
-            if field == f:
-                return bits
-
             bits += get_field_size(child, f)
 
         child = child.payload
 
-    return bits
+    for f in child.fields_desc:
+        if field == f:
+            return bits
+
+        bits += get_field_size(child, f)
+
+    raise Exception('Field or protocol is not present in the packet')
 
 def get_field_enumeration_s2i(field):
     return field.s2i.items()

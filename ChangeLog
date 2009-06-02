@@ -1,3 +1,44 @@
+2009-06-02 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/offline/wifi/sources/main.py:
+       - First (dummy) implementation of Wifi decoder module.
+    * attacks/offline/ethernet/sources/main.py:
+       - First implementation of Ethernet decoder module.
+    * attacks/offline/ip/sources/main.py:
+       - First implementation of IP decoder module.
+    * attacks/offline/tcp/sources/main.py:
+       - First implementation of TCP decoder module.
+    * attacks/attacktester.py:
+       - Simple script to test the decoders/dissectors/attacks from command
+         line.
+    * PM/Backend/Scapy/translator.py:
+       - Global translator script for fields that does not respect wireshark
+         visible filters nomenclature. (Used in get_field of MetaPacket)
+    * PM/Backend/Scapy/wrapper.py:
+       - Fixing a bug related to the wrong implementation of get_field_size.
+    * PM/Backend/Scapy/packet.py:
+       - Add get_raw_layer function.
+       - Add get_field function that should respect wireshark filters.
+       - Add get_datalink function to return the correct datalink for the
+         selected packet.
+    * PM/Core/NetConst.py:
+       - Module that contains constants used in AttackFramework implementation.
+    * PM/Manager/AttackManager.py:
+       - Real code for AttackFramework idea.
+       - Add coroutine decorator to create more performant filters, decoders
+         or dissectors.
+       - Add Decoder class if the OOP design is preferred.
+       - Add AttackManager singleton class that contains all the references
+         to decoders and filters used in PM.
+       - Add AttackDispatcher class to separate the feed behaviour from the
+         Singleton class. This lets you call various dispatcher without
+         having the mess to create a single AttackManager for every invocation.
+       - Add AttackPlugin as base class and the derived one OfflineAttack, 
+         OnlineAttack.
+       - Add AttackTester class used for testing purpose.
+
+     Scapy bugfixing.
+     First approach of AttackFramework idea.
+
 2009-05-24  Francesco Piccinno  <stack.box@gmail.com>
     * PM/Gui/Widgets/Plotter.py
       PM/Gui/Widgets/PropertyGrid.py:
