@@ -70,6 +70,8 @@ from PM.Gui.Dialogs.Routes import RoutesDialog
 from PM.Gui.Plugins.Window import PluginWindow
 
 from PM.Gui.Pages import PerspectiveType
+
+from PM.Gui.Sessions.Base import Session
 from PM.Gui.Sessions import SessionType
 
 from PM.Core.I18N import _
@@ -82,7 +84,7 @@ class MainWindow(gtk.Window):
 
         self.set_title("Packet Manipulator")
         self.set_icon_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png'))
-        self.set_size_request(600, 400)
+        self.set_default_size(600, 400)
 
         self.registered_tabs = {}
 
@@ -526,6 +528,9 @@ class MainWindow(gtk.Window):
                 pass
 
     def __on_maintab_page_removed(self, notebook, page, pagenum):
+        if not isinstance(page, Session):
+            return
+
         for perspective in page.perspectives:
             try:
                 idx = PerspectiveType.types[type(perspective)]
@@ -734,7 +739,8 @@ class MainWindow(gtk.Window):
         lst = []
 
         for page in maintab.session_notebook:
-            if isinstance(page.context, Backend.TimedContext):
+            if isinstance(page, Session) and \
+               isinstance(page.context, Backend.TimedContext):
                 lst.append(page.context)
 
         for ctx in lst:

@@ -8,6 +8,7 @@
        - 80 columns line wrap fix.
        - Switching to standard tooltip scheme instead of HIGTooltip.
        - Implemented a context menu to copy, delete and paste selected packet.
+       - Fixed text label.
     * PM/Gui/Tabs/OperationsTab.py:
        - Fixing a bug due to not checking for the load()/save() correctness.
     * PM/Backend/Scapy/Context/Sequence.py:
@@ -35,8 +36,14 @@
        - Added a copy() function to MetaPacket.
     * PM/Gui/Tabs/ProtocolSelectorTab.py:
        - Fix wrong colorized rows when the packets are organized per layer.
+    * PM/Gui/Core/MainWindow.py:
+       - Fixing the size of the application by suggesting a default_size
+       - Various fix to avoid exceptions if page remove are not a Session.
+    * PM/Gui/Tabs/MainTab.py:
+       - Sexy stuff like IntroPage introduced.
 
     Bug fixing.
+    UI improvements.
     Helper methods for SendReceiveContext and SequenceContext.
 
 2009-06-02 Francesco Piccinno <stack.box@gmail.com>

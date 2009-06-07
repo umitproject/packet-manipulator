@@ -33,16 +33,65 @@ from PM.Gui.Sessions.SequenceSession import SequenceSession
 
 from PM.Manager.PreferenceManager import Prefs
 
+import os.path
+from PM.Core.Const import PIXMAPS_DIR
+
+class IntroPage(gtk.HBox):
+    def __init__(self):
+        gtk.HBox.__init__(self, False, 2)
+
+        pix = gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR,
+                                                         'pm-logo.png'))
+        saturate = pix.copy()
+
+        pix.saturate_and_pixelate(pix, 0, False)
+        saturate.saturate_and_pixelate(saturate, 10, False)
+
+        self.pixbufs = (pix, saturate)
+
+        self.image = gtk.Image()
+        self.image.set_from_pixbuf(self.pixbufs[0])
+
+        ebox = gtk.EventBox()
+        ebox.add(self.image)
+
+        alignment = gtk.Alignment(0.5, 1.0)
+        alignment.add(ebox)
+
+        #self.pack_start(gtk.Label('Drop a packet here'))
+        self.pack_end(alignment, False, False)
+
+        self.set_tooltip_markup('<span size="large"><b>'
+                                'Drag and drop a packet here.'
+                                '</b></span>')
+        self.image.set_tooltip_markup('<tt>PM: now nopper addicted.</tt>')
+
+        ebox.connect('enter-notify-event', self.__on_enter)
+        ebox.connect('leave-notify-event', self.__on_leave)
+
+    def __on_enter(self, widget, evt):
+        self.image.set_from_pixbuf(self.pixbufs[1])
+
+    def __on_leave(self, widget, evt):
+        self.image.set_from_pixbuf(self.pixbufs[0])
+
 class SessionNotebook(gtk.Notebook):
     def __init__(self):
         gtk.Notebook.__init__(self)
 
         self.set_show_border(False)
         self.set_scrollable(True)
+        self.set_show_tabs(False)
+
+        self._intro_page = IntroPage()
+        self.append_page(self._intro_page)
 
         # We have a static page to manage the packets
         # selected from sniff perspective
         self.view_page = None
+
+        self.connect('page-added', self.__check_last_page)
+        self.connect('page-removed', self.__check_last_page)
 
     def create_sequence_session(self, packets):
         """
@@ -133,6 +182,14 @@ class SessionNotebook(gtk.Notebook):
             return obj
 
         return None
+
+    def __check_last_page(self, widget, child, pagenum):
+        if self.get_n_pages() == 1:
+            self.set_show_tabs(False)
+            self._intro_page.show()
+        else:
+            self._intro_page.hide()
+            self.set_show_tabs(True)
 
     def __on_close_page(self, label, session):
         # Check if are stopped

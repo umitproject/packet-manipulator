@@ -153,7 +153,7 @@ class SequencePage(Perspective):
         self.packet_interval = gtk.SpinButton(gtk.Adjustment(500, 0, maxint,
                                                              1, 10))
 
-        for lbl, widget in zip((_('No:'), _('Interval:')),
+        for lbl, widget in zip((_('No:'), _('Interval (ms):')),
                                (self.packet_count, self.packet_interval)):
 
             hbox = gtk.HBox(False, 4)
