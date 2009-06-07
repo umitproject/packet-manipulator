@@ -27,12 +27,12 @@ def register_send_receive_context(BaseSendReceiveContext):
 
     class SendReceiveContext(BaseSendReceiveContext):
         def __init__(self, metapacket, count, inter, iface, \
-                     strict, report_recv, report_sent, \
-                     scallback, rcallback, sudata=None, rudata=None):
+                      strict, report_recv, report_sent, capmethod, \
+                      scallback, rcallback, sudata=None, rudata=None):
 
             BaseSendReceiveContext.__init__(self, metapacket, count,
                                             inter, iface, strict,
-                                            report_recv, report_sent,
+                                            report_recv, report_sent, capmethod,
                                             scallback, rcallback,
                                             sudata, rudata)
 
@@ -67,8 +67,9 @@ def register_send_receive_context(BaseSendReceiveContext):
                 try:
                     self.thread = send_receive_packet( \
                         self.packet, self.tot_count - self.count, self.inter, \
-                        self.iface, self.strict, self.__send_callback, \
-                        self.__recv_callback, self.sudata, self.rudata)
+                        self.iface, self.strict, self.capmethod, \
+                        self.__send_callback, self.__recv_callback, \
+                        self.sudata, self.rudata)
 
                 except Exception, err:
                     self.internal = False

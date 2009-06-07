@@ -40,6 +40,7 @@ from PM.Gui.Widgets.CellRenderer import GridRenderer
 from PM.higwidgets.higanimates import HIGAnimatedBar
 
 from PM.Gui.Pages.Base import Perspective
+from PM.Backend import SniffContext
 
 class SniffPage(Perspective):
     COL_NO     = 0
@@ -240,7 +241,9 @@ class SniffPage(Perspective):
             return None
 
     def __update_tree(self):
-        self.session.context.check_finished()
+        if isinstance(self.session.context, SniffContext):
+            self.session.context.check_finished()
+
         self.tree.freeze_child_notify()
 
         for packet in self.session.context.get_data():

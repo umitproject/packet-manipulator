@@ -28,7 +28,8 @@ import os
 from logging import Logger, StreamHandler, Formatter, addLevelName
 from logging import __status__ as STATUS
 
-if os.name == 'posix':
+# Avoid coloring the terminal if PM_NOCOLORTERM is setted
+if os.name == 'posix' and not os.getenv('PM_NOCOLORTERM', ''):
     reset = "\033[1;0m"
     yellow = "\033[1;33m"
     green = "\033[1;32m"

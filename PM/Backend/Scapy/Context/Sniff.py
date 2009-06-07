@@ -103,7 +103,7 @@ def register_sniff_context(BaseSniffContext):
                  self.capmethod == 2 or \
                  self.capmethod == 3:
 
-                 self.thread = Thread(target=self.run_helper)
+                self.thread = Thread(target=self.run_helper)
 
             self.thread.setDaemon(True)
             self.thread.start()
@@ -149,24 +149,17 @@ def register_sniff_context(BaseSniffContext):
             errstr = reader = None
 
             try:
-                if self.capmethod == 2:
-                    # Run tcpdump
-                    self.process, outfile = run_helper(0, self.iface,
-                                                          self.filter,
-                                                          self.stop_count,
-                                                          self.stop_time,
-                                                          self.stop_size)
-
-                elif self.capmethod == 3:
-                    # Run dumpcap
-                    self.process, outfile = run_helper(1, self.iface,
-                                                          self.filter,
-                                                          self.stop_count,
-                                                          self.stop_time,
-                                                          self.stop_size)
-                else:
+                if self.capmethod == 1:
                     log.debug("I'm using virtual interface method")
                     outfile = self.cap_file
+                else:
+                    # Run tcpdump or dumpcap
+                    self.process, outfile = run_helper(self.capmethod - 2,
+                                                       self.iface,
+                                                       self.filter,
+                                                       self.stop_count,
+                                                       self.stop_time,
+                                                       self.stop_size)
 
                 for reader in bind_reader(self.process, outfile):
                     if not self.internal:
@@ -294,7 +287,14 @@ def register_sniff_context(BaseSniffContext):
 
                     self.priv.append(r)
                 except Exception, err:
-                    errstr = str(err)
+
+                    # Ok probably this is an exception raised when the select
+                    # is runned on already closed socket (see also _stop)
+                    # so avoid throwing this exception.
+
+                    if self.internal:
+                        errstr = str(err)
+
                     self.internal = False
                     self.socket = None
                     break

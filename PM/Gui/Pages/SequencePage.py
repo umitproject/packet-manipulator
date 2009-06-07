@@ -28,7 +28,7 @@ from PM.Core.I18N import _
 from PM.Core.Logger import log
 
 from PM.Core.Atoms import Node, defaultdict
-from PM.Backend import SequencePacket
+from PM.Backend import SequencePacket, SequenceContext
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Icons import get_pixbuf
@@ -39,7 +39,8 @@ from PM.higwidgets.higtooltips import HIGTooltip, HIGTooltipData
 from PM.Gui.Pages.Base import Perspective
 
 from PM.Manager.PreferenceManager import Prefs
-from PM.Gui.Tabs.OperationsTab import SequenceOperation, SendOperation, SendReceiveOperation
+from PM.Gui.Tabs.OperationsTab import SequenceOperation, SendOperation, \
+                                      SendReceiveOperation
 
 class FilterLayer(gtk.ComboBox):
     def __init__(self):
@@ -63,7 +64,8 @@ class FilterLayer(gtk.ComboBox):
         dct = defaultdict(int)
 
         for packet in packets:
-            names = [Backend.get_proto_name(proto) for proto in packet.get_protocols()]
+            names = [Backend.get_proto_name(proto) \
+                     for proto in packet.get_protocols()]
 
             for name in names:
                 dct[name] += 1
@@ -127,7 +129,8 @@ class SequencePage(Perspective):
 
         self.toolbar.insert(item, -1)
 
-        action = gtk.Action(None, None, _('Run the sequence'), gtk.STOCK_EXECUTE)
+        action = gtk.Action(None, None, _('Run the sequence'),
+                            gtk.STOCK_EXECUTE)
         action.connect('activate', self.__on_run)
         self.toolbar.insert(action.create_tool_item(), -1)
 
@@ -147,7 +150,8 @@ class SequencePage(Perspective):
         # Count/interval
 
         self.packet_count = gtk.SpinButton(gtk.Adjustment(1, 0, maxint, 1, 10))
-        self.packet_interval = gtk.SpinButton(gtk.Adjustment(500, 0, maxint, 1, 10))
+        self.packet_interval = gtk.SpinButton(gtk.Adjustment(500, 0, maxint,
+                                                             1, 10))
 
         for lbl, widget in zip((_('No:'), _('Interval:')),
                                (self.packet_count, self.packet_interval)):
@@ -185,8 +189,7 @@ class SequencePage(Perspective):
             item = gtk.ToolItem()
             item.add(widget)
 
-            HIGTooltip.add_widget(widget, HIGTooltipData(tip))
-
+            widget.set_tooltip_text(tip)
             self.toolbar.insert(item, -1)
 
         # Combo
@@ -195,11 +198,8 @@ class SequencePage(Perspective):
         space.set_expand(True)
         self.toolbar.insert(space, -1)
 
-        action = gtk.Action(None, None, _('Remove packet'), gtk.STOCK_DELETE)
-        action.connect('activate', self.__on_remove)
-        self.toolbar.insert(action.create_tool_item(), -1)
-
-        action = gtk.Action(None, None, _('Merge selection'), gtk.STOCK_COLOR_PICKER)
+        action = gtk.Action(None, None, _('Merge selection'),
+                            gtk.STOCK_COLOR_PICKER)
         action.connect('activate', self.__on_merge)
         self.toolbar.insert(action.create_tool_item(), -1)
 
@@ -236,9 +236,12 @@ class SequencePage(Perspective):
         target_packet = ('PMPacket', gtk.TARGET_SAME_WIDGET, 0)
         target_plain = ('text/plain', 0, 0)
 
-        self.tree.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, [target_packet], gtk.gdk.ACTION_MOVE)
+        self.tree.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
+                                           [target_packet],
+                                           gtk.gdk.ACTION_MOVE)
         self.tree.enable_model_drag_dest([target_plain, target_packet],
-                                         gtk.gdk.ACTION_MOVE | gtk.gdk.ACTION_COPY)
+                                         gtk.gdk.ACTION_MOVE | \
+                                         gtk.gdk.ACTION_COPY)
 
         sw = gtk.ScrolledWindow()
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
@@ -246,6 +249,24 @@ class SequencePage(Perspective):
         sw.add(self.tree)
 
         self.pack_start(sw)
+
+        self.selected_packets = []
+        self.context_menu = gtk.Menu()
+
+        labels = (_('&Remove selected'),
+                  _('&Copy selected'),
+                  _('&Paste selected'))
+
+        icons = (gtk.STOCK_DELETE, gtk.STOCK_COPY, gtk.STOCK_PASTE)
+        callbacks = (self.__on_remove, self.__on_copy, self.__on_paste)
+
+        for lbl, icon, cb in zip(labels, icons, callbacks):
+            action = gtk.Action(None, None, lbl, icon)
+            action.connect_accelerator()
+            action.connect('activate', cb)
+            self.context_menu.append(action.create_menu_item())
+
+        self.context_menu.show_all()
 
         # Connect signals here
 
@@ -261,11 +282,33 @@ class SequencePage(Perspective):
         )
 
         Prefs()['gui.maintab.sequenceview.font'].connect(self.__modify_font)
-        Prefs()['gui.maintab.sequenceview.usecolors'].connect(self.__modify_colors)
+        Prefs()['gui.maintab.sequenceview.usecolors'].connect(
+            self.__modify_colors
+        )
 
+        self.tree.connect('button-press-event', self.__on_tree_button_pressed)
         self.tree.connect('drag-data-received', self.__on_drag_data)
-        self.tree.get_selection().connect('changed', self.__on_selection_changed)
+        self.tree.get_selection().connect('changed',
+                                          self.__on_selection_changed)
+
         self.combo.connect('changed', self.__on_filter)
+
+        # Setting up the gui controls
+
+        if isinstance(self.session.context, SequenceContext):
+            self.packet_count.set_value(self.session.context.tot_loop_count)
+            self.packet_interval.set_value(self.session.context.inter * 1000.0)
+
+        self.check_received.set_active(self.session.context.report_recv)
+        self.check_sent.set_active(self.session.context.report_sent)
+        self.check_strict.set_active(self.session.context.strict)
+
+        self.check_strict.connect('toggled', self.__on_strict_toggled)
+        self.check_received.connect('toggled', self.__on_recv_toggled)
+        self.check_sent.connect('toggled', self.__on_sent_toggled)
+
+        self.packet_count.connect('value-changed', self.__on_pcount_changed)
+        self.packet_interval.connect('value-changed', self.__on_pinter_changed)
 
     def __modify_font(self, font):
         try:
@@ -354,6 +397,7 @@ class SequencePage(Perspective):
                 self.__add_to_store(child, None)
 
             self.tree.get_selection().select_path((0, ))
+
         self.__update_combo()
 
     def __add_to_store(self, child, root):
@@ -422,11 +466,24 @@ class SequencePage(Perspective):
         count = self.packet_count.get_value_as_int()
         inter = self.packet_interval.get_value_as_int()
 
+        strict = self.check_strict.get_active()
+        recv = self.check_received.get_active()
+        sent = self.check_sent.get_active()
+
         tab = PMApp().main_window.get_tab("OperationsTab")
         tab.tree.append_operation(
             SendReceiveOperation(packet, count, inter,
-                                 self.intf_combo.get_interface())
+                                 self.intf_combo.get_interface(),
+                                 strict, recv, sent)
         )
+
+    def __on_tree_button_pressed(self, widget, evt):
+        if evt.button != 3:
+            return False
+
+        self.context_menu.popup(None, None, None, evt.button, evt.time, None)
+
+        return True
 
     def __txt_cell_data(self, col, rend, model, iter):
         if self.merging:
@@ -531,6 +588,25 @@ class SequencePage(Perspective):
 
                 self.tree.get_selection().select_path((0, ))
 
+    def __on_copy(self, action):
+        if self.merging:
+            return
+
+        model, iter = self.tree.get_selection().get_selected()
+
+        if iter:
+            metapacket = model.get_value(iter, 0)
+            self.selected_packets = [metapacket]
+
+    def __on_paste(self, action):
+        if self.merging or not self.selected_packets:
+            return
+
+        model, iter = self.tree.get_selection().get_selected()
+
+        for packet in self.selected_packets:
+            iter = self.store.insert_after(None, iter, [packet.copy()])
+
     def __on_remove(self, action):
         if self.merging:
             return
@@ -540,6 +616,32 @@ class SequencePage(Perspective):
         if iter:
             model.remove(iter)
             self.session.set_active_packet(None)
+
+
+    def __on_strict_toggled(self, widget):
+        self.session.context.strict = widget.get_active()
+        self.session.context.status = self.session.context.NOT_SAVED
+
+    def __on_recv_toggled(self, widget):
+        self.session.context.report_recv = widget.get_active()
+        self.session.context.status = self.session.context.NOT_SAVED
+
+    def __on_sent_toggled(self, widget):
+        self.session.context.report_sent = widget.get_active()
+        self.session.context.status = self.session.context.NOT_SAVED
+
+    def __on_pcount_changed(self, widget):
+        if isinstance(self.session.context, SequenceContext):
+            self.session.context.tot_loop_count = widget.get_value_as_int()
+            self.session.context.status = self.session.context.NOT_SAVED
+
+    def __on_pinter_changed(self, widget):
+        if isinstance(self.session.context, SequenceContext):
+            # This part / 1000.0 should not compare here. We should instead add
+            # a property to the context to manage this format conversion.
+            self.session.context.inter = widget.get_value_as_int() / 1000.0
+            self.session.context.status = self.session.context.NOT_SAVED
+
 
     def __on_selection_changed(self, sel):
         sel = self.tree.get_selection()
@@ -555,7 +657,9 @@ class SequencePage(Perspective):
                 packet = model.get_value(model.get_iter(path), 1)
                 self.active_packets.append(packet)
 
-            log.debug("Repopulating active_packets with selection %s" % self.active_packets)
+            log.debug("Repopulating active_packets with selection %s" % \
+                      self.active_packets)
+
             self.session.set_active_packet(None)
 
         elif sel.get_mode() == gtk.SELECTION_SINGLE:
@@ -594,7 +698,8 @@ class SequencePage(Perspective):
             # We don't care about selection
             return
 
-        log.debug("Sanity check: %s" % ((packet is self.active_diff) and ("OK") or ("FAILED")))
+        log.debug("Sanity check: %s" % ((packet is self.active_diff) and ("OK")\
+                                        or ("FAILED")))
 
         # Now we have to recursivly set the field value to all active_packets
         val = Backend.get_field_value(proto, field)

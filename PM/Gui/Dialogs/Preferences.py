@@ -27,6 +27,22 @@ import gtk
 from PM.Core.I18N import _
 from PM.Manager.PreferenceManager import Prefs
 
+# Dummy class
+class EnumeratorBox(gtk.ComboBox):
+    pass
+
+def new_combo_enumerator(lst):
+    model = gtk.ListStore(str)
+    for i in lst:
+        model.append([i])
+    combo = EnumeratorBox(model)
+    rend = gtk.CellRendererText()
+
+    combo.pack_start(rend)
+    combo.add_attribute(rend, 'text', 0)
+
+    return combo
+
 def new_combo(lst):
     combo = gtk.combo_box_new_text()
 
@@ -46,6 +62,7 @@ def set_active_text(combo, text):
             return
 
 TYPES = (
+    (EnumeratorBox        , EnumeratorBox.get_active),
     (gtk.FontButton       , gtk.FontButton.get_font_name),
     (gtk.ToggleButton     , gtk.ToggleButton.get_active),
     (gtk.ComboBox         , gtk.ComboBox.get_active_text),
@@ -57,6 +74,7 @@ TYPES = (
 
 CONSTRUCTORS = (
     # The most inheritance class goes upper
+    (EnumeratorBox        , EnumeratorBox.set_active),
     (gtk.FontButton       , gtk.FontButton.set_font_name),
     (gtk.ToggleButton     , gtk.ToggleButton.set_active),
     (gtk.ComboBox         , set_active_text),
@@ -271,6 +289,21 @@ class BackendPage(Page):
 
         ('Scapy',
           (('backend.scapy.interface', _('Default interface'), gtk.Entry()),)),
+
+        ('Capture methods',
+          (
+           ('backend.system.sniff.capmethod', _('Capture method for sniffing:'),
+            new_combo_enumerator(('Native', 'Virtual','TCPDump', 'Dumpcap'))),
+
+           ('backend.system.sendreceive.capmethod',
+            _('Capture method for SendReceive:'),
+            new_combo_enumerator(('Native', 'TCPDump', 'Dumpcap'))),
+
+           ('backend.system.sequence.capmethod',
+            _('Capture method for Sequence:'),
+            new_combo_enumerator(('Native', 'TCPDump', 'Dumpcap'))),
+          )
+        ),
 
         (_('Helpers'),
           (

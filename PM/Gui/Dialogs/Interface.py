@@ -32,6 +32,7 @@ from PM import Backend
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 
+from PM.Manager.PreferenceManager import Prefs
 from PM.higwidgets.higdialogs import HIGAlertDialog
 
 class CaptureOptions(gtk.Expander):
@@ -98,7 +99,7 @@ class CaptureOptions(gtk.Expander):
         tbl.attach(hbox, 2, 3, 1, 2, yoptions=gtk.SHRINK)
 
         self.method = gtk.combo_box_new_text()
-        self.method.append_text(_('On the fly'))
+        self.method.append_text(_('Native'))
         self.method.append_text(_('Virtual interface'))
         self.method.append_text(_('tcpdump helper'))
         self.method.append_text(_('dumpcap helper'))
@@ -184,7 +185,8 @@ class CaptureOptions(gtk.Expander):
                 combo = gtk.CheckButton(lbls[0])
 
                 combo.connect('toggled',
-                              lambda w, b: b.set_sensitive(w.get_active()), spin)
+                              lambda w, b: b.set_sensitive(w.get_active()),
+                              spin)
 
                 spin.set_sensitive(False)
             else:
@@ -389,6 +391,14 @@ class InterfaceDialog(gtk.Dialog):
         self.if_list.tree.connect('row-activated',
             lambda tree, path, view, diag:
                 diag.response(gtk.RESPONSE_ACCEPT), self)
+
+        method = Prefs()['backend.system.sniff.capmethod'].value
+
+        if method < 0 and method > 3:
+            Prefs()['backend.system.sniff.capmethod'] = 0
+            method = 0
+
+        self.options.method.set_active(method)
 
         self.connect('response', self.__on_response)
         self.__populate()

@@ -24,7 +24,7 @@ from PM.Backend.Abstract.Context import register_sequence_context
 
 class BaseSequenceContext(TimedContext):
     def __init__(self, seq, count=1, inter=0, iface=None, \
-                 strict=True, report_recv=False, report_sent=True, \
+                 strict=True, report_recv=False, report_sent=True, capmethod=0,\
                  scallback=None, rcallback=None, sudata=None, rudata=None):
 
         """
@@ -41,6 +41,7 @@ class BaseSequenceContext(TimedContext):
         @param strict strict checking for reply
         @param report_recv report received packets
         @param report_sent report sent packets
+        @param capmethod 0 for native, 1 for tcpdump, 2 for dumpcap
         @param scallback the send callback to call at each send
         @param rcallback the recv callback to call at each recv
         @param sudata the user data for scallback
@@ -51,8 +52,6 @@ class BaseSequenceContext(TimedContext):
 
         if isinstance(seq, basestring):
             self.cap_file = seq
-
-            # TODO: load this field from file
 
             self.title = self.cap_file
 
@@ -68,6 +67,7 @@ class BaseSequenceContext(TimedContext):
             self.strict = True
             self.report_recv = True
             self.report_sent = True
+            self.capmethod = 0
 
         else:
             self.seq = seq
@@ -85,6 +85,7 @@ class BaseSequenceContext(TimedContext):
             self.strict = strict
             self.report_recv = report_recv
             self.report_sent = report_sent
+            self.capmethod = capmethod
 
         self.scallback = scallback
         self.rcallback = rcallback

@@ -32,11 +32,12 @@ def register_sequence_context(BaseSequenceContext):
         file_types = [(_('Scapy sequence'), '*.pms')]
 
         def __init__(self, seq, count=1, inter=0, iface=None, strict=True, \
-                     report_recv=False, report_sent=True, \
+                     report_recv=False, report_sent=True, capmethod=0, \
                      scallback=None, rcallback=None, sudata=None, rudata=None):
 
             BaseSequenceContext.__init__(self, seq, count, inter, iface,
                                          strict, report_recv, report_sent,
+                                         capmethod,
                                          scallback, rcallback, sudata, rudata)
 
             self.sequencer = None
@@ -60,7 +61,9 @@ def register_sequence_context(BaseSequenceContext):
                     plen = 0
                     fsize = None
 
-                    for tree, tlen, perc, size in load_sequence(self.cap_file):
+                    loader = load_sequence(self.cap_file)
+
+                    for tree, tlen, perc, size in loader.parse_async():
                         if operation and tlen % 10 == 0 :
 
                             if not fsize:
@@ -79,13 +82,24 @@ def register_sequence_context(BaseSequenceContext):
                         self.seq = tree
                         plen = tlen
 
+                    self.tot_loop_count = loader.attr_loopcnt
+                    self.inter = loader.attr_inter
+
+                    self.strict = loader.attr_strict
+                    self.report_sent = loader.attr_sent
+                    self.report_recv = loader.attr_recv
+
+                    self.title = self.cap_file
+                    self.summary = \
+                        _('Sequence %s loaded - %d packets (%s)') % \
+                         (self.cap_file, plen, fsize)
+
                     if operation:
-                        operation.summary = \
-                            _('Sequence %s loaded - %d packets (%s)') % \
-                             (self.cap_file, plen, fsize)
+                        operation.summary = self.summary
                         operation.percentage = 100.0
 
                 except Exception, err:
+                    self.seq = None
                     self.summary = str(err)
 
                     if operation:
@@ -102,15 +116,20 @@ def register_sequence_context(BaseSequenceContext):
         def save(self, operation=None):
             log.debug("Saving sequence to %s" % self.cap_file)
 
-            if self.cap_file and self.seq is not None and \
-               save_sequence(self.cap_file, self.seq):
+            if self.cap_file and self.seq is not None:
 
                 try:
                     idx = 0
                     size = 0
 
-                    for idx, perc, size in save_sequence(self.cap_file):
-                        if operation and tlen % 10 == 0 :
+                    for idx, perc, size in save_sequence(self.cap_file,
+                                                         self.seq, self.strict,
+                                                         self.report_recv,
+                                                         self.report_sent,
+                                                         self.tot_loop_count,
+                                                         self.inter):
+
+                        if operation and idx % 10 == 0 :
 
                             if size >= 1024 ** 3:
                                 fsize = "%.1f GB" % (size / (1024.0 ** 3))
@@ -124,17 +143,20 @@ def register_sequence_context(BaseSequenceContext):
                                  (self.cap_file, idx, fsize)
                             operation.percentage = perc
 
-                    if operation:
-                        if size >= 1024 ** 3:
-                            fsize = "%.1f GB" % (size / (1024.0 ** 3))
-                        elif size >= 1024 ** 2:
-                            fsize = "%.1f MB" % (size / (1024.0 ** 2))
-                        else:
-                            fsize = "%.1f KB" % (size / 1024.0)
+                    if size >= 1024 ** 3:
+                        fsize = "%.1f GB" % (size / (1024.0 ** 3))
+                    elif size >= 1024 ** 2:
+                        fsize = "%.1f MB" % (size / (1024.0 ** 2))
+                    else:
+                        fsize = "%.1f KB" % (size / 1024.0)
 
-                        operation.summary = \
-                                _('Sequence %s saved - %d packets (%s)') % \
-                                 (self.cap_file, idx, fsize)
+                    self.title = self.cap_file
+                    self.summary = \
+                        _('Sequence %s saved - %d packets (%s)') % \
+                         (self.cap_file, idx, fsize)
+
+                    if operation:
+                        operation.summary = self.summary[:]
                         operation.percentage = 100.0
 
                     self.status = self.SAVED
@@ -186,6 +208,7 @@ def register_sequence_context(BaseSequenceContext):
                     self.seq,
                     self.tot_loop_count - self.loop_count,
                     self.inter, self.iface, self.strict,
+                    self.capmethod,
                     self.__send_callback, self.__recv_callback,
                     self.sudata, self.rudata, self.__exc_callback
                 )
@@ -264,7 +287,7 @@ def register_sequence_context(BaseSequenceContext):
 
             if self.tot_loop_count:
                 self.percentage = \
-                        ((pkts * (1.0 / self.tot_loop_count)) + \
+                        ((pkts * (1.0 / self.tot_loop_count)) * \
                         (float(self.loop_count) /
                          float(self.tot_loop_count))) * 100.0
             else:

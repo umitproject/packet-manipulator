@@ -226,6 +226,9 @@ def is_field_autofilled(field):
     # automatically
     return field.default == None
 
+def is_default_field(proto_inst, field):
+    return get_field_value(proto_inst, field) == field.default
+
 ###############################################################################
 # Flag fields functions
 ###############################################################################

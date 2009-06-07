@@ -1,3 +1,44 @@
+2009-06-07 Francesco Piccinno <stack.box@gmail.com>
+    * PM/Gui/Pages/SniffPage.py:
+       - Fixing a bug due to check_finished() called on context that doesn't
+         provide, like Sequence.
+    * PM/Gui/Pages/PacketPage.py:
+       - Using get_raw() method instead of get_packet_raw()
+    * PM/Gui/Pages/SequencePage.py:
+       - 80 columns line wrap fix.
+       - Switching to standard tooltip scheme instead of HIGTooltip.
+       - Implemented a context menu to copy, delete and paste selected packet.
+    * PM/Gui/Tabs/OperationsTab.py:
+       - Fixing a bug due to not checking for the load()/save() correctness.
+    * PM/Backend/Scapy/Context/Sequence.py:
+       - Various bug fix. Fixing a regression that doesn't set the title
+         after the file is saved.
+    * PM/Backend/Scapy/Context/Sniff.py:
+       - Fixing "9, Bad file descriptor" bug showed when the sniff session
+         is stopped.
+    * PM/Backend/Scapy/wrapper.py
+      PM/Backend/Scapy/serialize.py:
+       - Various fix.
+       - Avoid to save not edited properties.
+       - Using base64 to serialize field values.
+    * PM/Core/Logger.py:
+       - Adding a PM_NOCOLORTERM environment variable to avoid the use of
+         colors on terminal.
+    * PM/Backend/Scapy/utils.py:
+       - Now the SendReceiveConsumer and SequenceConsumer could use the
+         helpers.
+    * PM/Manager/PreferenceManager.py
+      PM/Gui/Dialogs/Preferences.py:
+       - Introducing enumerator variables.
+       - Add variables to manage the various capmethods.
+    * PM/Backend/Scapy/packet.py:
+       - Added a copy() function to MetaPacket.
+    * PM/Gui/Tabs/ProtocolSelectorTab.py:
+       - Fix wrong colorized rows when the packets are organized per layer.
+
+    Bug fixing.
+    Helper methods for SendReceiveContext and SequenceContext.
+
 2009-06-02 Francesco Piccinno <stack.box@gmail.com>
     * attacks/offline/wifi/sources/main.py:
        - First (dummy) implementation of Wifi decoder module.

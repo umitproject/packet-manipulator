@@ -243,7 +243,7 @@ class PacketPage(Perspective):
         Redraws the hexview
         """
         if self.session.packet:
-            self.hexview.payload = Backend.get_packet_raw(self.session.packet)
+            self.hexview.payload = self.session.packet.get_raw()
         else:
             self.hexview.payload = ''
 

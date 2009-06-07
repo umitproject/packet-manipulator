@@ -199,6 +199,12 @@ class Prefs(Singleton):
         'gui.views.console_tab' : False,
 
         'backend.system' : 'scapy',
+
+        # Capture methods to use native/tcpdump/dumpcap
+        'backend.system.sniff.capmethod' : 0,
+        'backend.system.sendreceive.capmethod' : 0,
+        'backend.system.sequence.capmethod' : 0,
+
         'backend.scapy.interface' : '',
 
         'backend.tcpdump' : '/usr/sbin/tcpdump',

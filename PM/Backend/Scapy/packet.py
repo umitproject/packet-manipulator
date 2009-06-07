@@ -21,7 +21,7 @@
 from PM.Core.Logger import log
 from PM.Backend.Scapy.translator import global_trans
 from PM.Backend.Scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
-                                     Raw, IP, get_proto_size
+                                       Raw, IP, get_proto_size
 from PM.Core.NetConst import IL_TYPE_ETH, IL_TYPE_TR, IL_TYPE_FDDI, \
                              IL_TYPE_RAWIP, IL_TYPE_WIFI, IL_TYPE_COOK, \
                              IL_TYPE_PRISM
@@ -263,3 +263,7 @@ class MetaPacket:
                 return str(layer)
         except Exception, err:
             raise err
+
+    def copy(self):
+        if self.root:
+            return MetaPacket(self.root.copy())

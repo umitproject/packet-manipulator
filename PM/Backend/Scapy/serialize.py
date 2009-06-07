@@ -18,6 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+from base64 import b64decode, b64encode
+
 from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
@@ -34,8 +36,18 @@ class SequenceLoader(handler.ContentHandler):
 
         self.in_node = False
         self.in_packet = False
+
+        # Various attributes
         self.packet_interval = None
         self.packet_filter = None
+
+        self.attr_strict = None
+        self.attr_sent = None
+        self.attr_recv = None
+        self.attr_loopcnt = None
+        self.attr_inter = None
+
+        # Variables used to track document
         self.in_proto = False
         self.protocol = None
         self.current_protocol = None
@@ -86,7 +98,7 @@ class SequenceLoader(handler.ContentHandler):
         if self.current_protocol:
 
             if self.protocol:
-                self.protocol = self.current_protocol / self.protocol
+                self.protocol = self.protocol / self.current_protocol
             else:
                 self.protocol = self.current_protocol
 
@@ -98,6 +110,26 @@ class SequenceLoader(handler.ContentHandler):
     def startElement(self, name, attrs):
         if name == 'PMScapySequence':
             self.in_sequence = True
+
+            try:
+                self.attr_loopcnt = int(attrs['loopcnt'])
+                self.attr_inter = float(attrs['inter'])
+
+                self.attr_recv = int(attrs['report_recv']) != 0
+                self.attr_sent = int(attrs['report_sent']) != 0
+                self.attr_strict = int(attrs['strict']) != 0
+            except Exception:
+                if not isinstance(self.attr_loopcnt, int):
+                    self.attr_loopcnt = 1
+                if not isinstance(self.attr_inter, (float, int)):
+                    self.attr_inter = 500
+                if not isinstance(self.attr_recv, bool):
+                    self.attr_recv = False
+                if not isinstance(self.attr_sent, bool):
+                    self.attr_sent = True
+                if not isinstance(self.attr_strict, bool):
+                    self.attr_strict = True
+
         elif self.in_sequence and name == 'SequencePacket':
 
             self.add_pending()
@@ -116,7 +148,7 @@ class SequenceLoader(handler.ContentHandler):
                 self.tree_len += 1
 
             except Exception, err:
-                print err
+                log.debug(generate_traceback())
             else:
                 self.in_packet = True
 
@@ -131,21 +163,20 @@ class SequenceLoader(handler.ContentHandler):
                 if self.current_protocol is not None:
 
                     if self.protocol is not None:
-                        self.protocol = self.current_protocol / self.protocol
+                        self.protocol = self.protocol / self.current_protocol
                     else:
                         self.protocol = self.current_protocol
 
                 self.current_protocol = protocol
-
             except Exception, err:
-                print err
+                log.debug(generate_traceback())
             else:
                 self.in_proto = True
         elif self.in_proto and name == 'field':
             try:
                 self.field_id = attrs['id']
             except Exception, err:
-                print err
+                log.error('Field seems to not have id attribute')
             else:
                 self.in_field = True
 
@@ -174,21 +205,39 @@ class SequenceLoader(handler.ContentHandler):
             self.field_id = self.field_value = None
 
     def characters(self, content):
-        if self.in_field:
+        if self.in_field and self.field_id and self.current_protocol:
             self.field_value = content
+            value = b64decode(self.field_value)
 
             try:
-                value = eval(self.field_value)
+                # TODO: Not so secure. Here we could have some kind of backdoor
+                value = eval(value)
             except:
-                value = self.field_value
+                pass
 
             field = get_proto_field(self.current_protocol, self.field_id)
-            set_field_value(self.current_protocol, field, value)
+
+            if field:
+                set_field_value(self.current_protocol, field, value)
+            else:
+                log.warning("Field %s is not present in %s protocol. Probably "
+                            "you are loading a sequence created with a newer "
+                            "scapy version" % (self.field_id,
+                                               type(self.current_protocol)))
 
 class SequenceWriter(object):
-    def __init__(self, fname, sequence):
+    def __init__(self, fname, sequence, strict, report_recv, report_sent, \
+                 loopcnt, inter):
+
         self.fname = fname
         self.seq = sequence
+
+        self.attr_loopcnt = loopcnt
+        self.attr_inter = inter
+
+        self.attr_strict = strict
+        self.attr_recv = report_recv
+        self.attr_sent = report_sent
 
     def save(self):
         for i in self.save_async():
@@ -201,7 +250,19 @@ class SequenceWriter(object):
         self.writer = XMLGenerator(output, 'utf-8')
 
         self.writer.startDocument()
-        self.startElement('PMScapySequence', {})
+
+        attr_vals = {'report_recv' : (self.attr_recv) and '1' or '0',
+                     'report_sent' : (self.attr_sent) and '1' or '0',
+                     'strict' : (self.attr_strict) and '1' or '0'}
+
+        if isinstance(self.attr_loopcnt, int):
+            attr_vals['loopcnt'] = str(self.attr_loopcnt)
+        if isinstance(self.attr_inter, (float, int)):
+            attr_vals['inter'] = str(self.attr_inter)
+
+        attrs = AttributesImpl(attr_vals)
+
+        self.startElement('PMScapySequence', attrs)
 
         self.current_node = None
 
@@ -272,7 +333,6 @@ class SequenceWriter(object):
 
     def start_xml_packet(self, metapacket):
         protocols = metapacket.get_protocols()
-        protocols.reverse()
 
         for proto in protocols:
             attr_vals = {'id' : get_proto_name(proto),
@@ -283,6 +343,9 @@ class SequenceWriter(object):
 
 
             for field in get_proto_fields(proto):
+                if is_default_field(proto, field):
+                    continue
+
                 name = get_field_name(field)
                 value = get_field_value(proto, field)
 
@@ -292,17 +355,19 @@ class SequenceWriter(object):
 
                 attrs = AttributesImpl(attr_vals)
                 self.startElement('field', attrs, False)
-                self.writer.characters(str(value))
+                self.writer.characters(b64encode(str(value)))
                 self.endElement('field', False)
 
         for idx in xrange(len(protocols)):
             self.endElement('proto')
 
-def save_sequence(fname, sequence):
+def save_sequence(fname, sequence, strict=True, report_recv=False, \
+                  report_sent=True, tot_loop_count=None, inter=None):
     assert isinstance(sequence, Node)
 
     try:
-        SequenceWriter(fname, sequence)
+        return SequenceWriter(fname, sequence, strict, report_recv, \
+                              report_sent, tot_loop_count, inter).save_async()
     except Exception, err:
         log.error("Cannot while saving sequence to %s" % fname)
         log.error(generate_traceback())
@@ -310,7 +375,7 @@ def save_sequence(fname, sequence):
 
 def load_sequence(fname):
     try:
-        return SequenceLoader(fname).parse_async()
+        return SequenceLoader(fname)
     except Exception, err:
         log.error("Error while loading sequence from %s" % fname)
         log.error(generate_traceback())

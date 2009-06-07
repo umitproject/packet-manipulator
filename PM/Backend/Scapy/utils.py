@@ -120,9 +120,6 @@ def run_helper(helper_type, iface, filter=None, stop_count=0, stop_time=0, \
         if not process.stderr.closed:
             fcntl.fcntl(process.stderr, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-    # TODO: Fix code for nt system. Probably we should use
-    #       PeekNamedPipe function.
-
     log.debug("Process spawned as `%s` with pid %d" % \
               ((helper % (iface, outfile), process.pid)))
     log.debug("Helper started on interface %s. Dumping to %s" % \
@@ -261,6 +258,7 @@ def get_socket_for(metapacket, want_layer_2=False, iff=None):
     log.debug("Interface selected: %s" % iff)
 
     if not metapacket.haslayer(Ether) and not want_layer_2:
+        log.debug("Using layer 3 socket")
         sock = conf.L3socket(iface=iff)
     else:
         log.debug("Using layer 2 socket (Ether: %s Layer 2: %s)" % \
@@ -518,11 +516,33 @@ def send_packet(metapacket, count, inter, iface, callback, udata=None):
 ###############################################################################
 
 class SendReceiveConsumer(Interruptable):
-    def __init__(self, ssock, rsock, metapacket, count, inter, \
-                 strict, sback, rback, sudata, rudata):
+    def __init__(self, ssock, rsock, metapacket, count, inter,  strict, sback, \
+                 rback, sudata, rudata):
+        """
+        Create a SendReceiveConsumer object used to send and receive packets.
+
+        @param ssock the socket to use to send packets.
+        @param rsock a socket object to use to receive packets or a list
+                     returned by the run_helper method
+        @param metapacket the packet to send
+        @param inter the interval to wait between 2 consecutive send
+        @param strict if we should use strict checking on received packets
+        @param sback send callback
+        @param rback receive callback
+        @param sudata send callback user data
+        @param rudata receive callback user data
+        """
 
         self.send_sock = ssock
-        self.recv_sock = rsock
+
+        if isinstance(rsock, tuple):
+            # Here we are using a helper
+            self.process, self.outfile = rsock
+            self.recv_thread = Thread(target=self.__recv_helper_thread)
+        else:
+            self.recv_sock = rsock
+            self.recv_thread = Thread(target=self.__recv_thread)
+
         self.metapacket = metapacket
 
         self.count = count
@@ -541,7 +561,6 @@ class SendReceiveConsumer(Interruptable):
         self.wrpipe = os.fdopen(self.wrpipe, 'w')
 
         self.send_thread = Thread(target=self.__send_thread)
-        self.recv_thread = Thread(target=self.__recv_thread)
 
         self.send_thread.setDaemon(True)
         self.recv_thread.setDaemon(True)
@@ -580,6 +599,83 @@ class SendReceiveConsumer(Interruptable):
 
             self.wrpipe.close()
 
+    def __recv_helper_thread(self):
+        try:
+            for reader in bind_reader(self.process, self.outfile):
+                if not self.running:
+                    break
+
+                if reader:
+                    reader, outfile_size, position = reader
+
+
+            report_idx = 0
+            reported_packets = 0
+
+            ans = 0
+            nbrecv = 0
+            notans = self.count
+
+            force_exit = False
+            packet = self.metapacket.root
+            packet_hash = packet.hashret()
+
+            while self.running:
+                while report_idx < reported_packets:
+                    report_idx = get_n_packets(self.process)
+
+                r = reader.read_packet()
+
+                try:
+                    # The helper capture packets at L2 so we need to drop the
+                    # first protocol to make the match against the packets.
+
+                    r = r[1]
+                except:
+                    continue
+
+                if not r:
+                    break
+
+                if not self.strict or (r.hashret() == packet_hash and \
+                   r.answers(packet)):
+
+                    ans += 1
+
+                    if notans:
+                        notans -= 1
+
+                    if self.rcallback(MetaPacket(r), True, self.rudata):
+                        force_exit = True
+                        break
+                else:
+                    nbrecv += 1
+
+                    if self.rcallback(MetaPacket(r), False, self.rudata):
+                        force_exit = True
+                        break
+
+                if notans == 0:
+                    break
+
+            try:
+                ac = cPickle.load(self.rdpipe)
+            except EOFError:
+                print "Child died unexpectedly. Packets may have not been sent"
+            else:
+                if PM_USE_NEW_SCAPY:
+                    conf.netcache.update(ac)
+                else:
+                    arp_cache.update(ac)
+
+            if self.send_thread and self.send_thread.isAlive():
+                self.send_thread.join()
+
+            if not force_exit:
+                self.rcallback(None, False, self.rudata)
+        except Exception, err:
+            log.error("Error in SendReceiveConsumer: %s" % str(err))
+
     def __recv_thread(self):
         ans = 0
         nbrecv = 0
@@ -592,31 +688,31 @@ class SendReceiveConsumer(Interruptable):
         inmask = [self.recv_sock, self.rdpipe]
 
         while self.running:
-
-            # TODO: here would be good to separate the thins by creating
-            #       different sniff private function, 1 for darwin, 1 for win,
-            #       1 for linux, 1 for tcpdump helper, 1 for dumpcap helper.
-            #       This should impact also on SniffContext by moving the helper
-            #       related code here.
-
             r = None
-            if FREEBSD or DARWIN:
-                inp, out, err = select(inmask, [], [], 0.05)
-                if len(inp) == 0 or selr.recv_sock in inp:
-                    r = self.recv_sock.nonblock_recv()
-            elif WINDOWS:
-                r = self.recv_sock.recv(MTU)
-            else:
-                inp, out, err = select(inmask, [], [], None)
-                if len(inp) == 0:
-                    return
-                if self.recv_sock in inp:
+            try:
+                if FREEBSD or DARWIN:
+                    inp, out, err = select(inmask, [], [], 0.05)
+                    if len(inp) == 0 or selr.recv_sock in inp:
+                        r = self.recv_sock.nonblock_recv()
+                elif WINDOWS:
                     r = self.recv_sock.recv(MTU)
+                else:
+                    inp, out, err = select(inmask, [], [], None)
+                    if len(inp) == 0:
+                        return
+                    if self.recv_sock in inp:
+                        r = self.recv_sock.recv(MTU)
+            except Exception:
+                log.error('Error in recv thread in SendReceiveConsumer: %s' % \
+                          str(err))
+                force_exit = True
+                break
+
             if r is None:
                 continue
 
-            if not self.strict or r.hashret() == packet_hash and \
-               r.answers(packet):
+            if not self.strict or (r.hashret() == packet_hash and \
+               r.answers(packet)):
 
                 ans += 1
 
@@ -660,15 +756,24 @@ class SendReceiveConsumer(Interruptable):
         log.debug("Forcing send thread to exit by setting scount to 0")
         self.scount = 0
 
-        log.debug("Forcing recv thread to exit by closing recv_socket")
-        self.running = False
-        self.recv_sock.close()
+        if getattr(self, 'recv_sock', None):
+            log.debug("Forcing recv thread to exit by closing recv_socket")
+            self.running = False
+            try:
+                self.recv_sock.close()
+            except:
+                pass
+        else:
+            log.debug("Forcing recv thread to exit by killing the helper "
+                      "process")
+            self.running = False
+            kill_helper(self.process)
 
     def isAlive(self):
         return self.send_thread and self.send_thread.isAlive() or \
                self.recv_thread and self.recv_thread.isAlive()
 
-def send_receive_packet(metapacket, count, inter, iface, strict, \
+def send_receive_packet(metapacket, count, inter, iface, strict, capmethod, \
                         scallback, rcallback, sudata=None, rudata=None):
     """
     Send/receive a metapacket in thread context
@@ -678,6 +783,8 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
     @param inter interval between two consecutive sends
     @param iface the interface where to wait for replies
     @param strict strict checking for reply
+    @param capmethod the method to use for sniffing (0 for standard, 1 for
+                     tcpdump helper, 2 for dumpcap helper)
     @param callback a callback to call at each send
            (of type packet, packet_idx, udata)
     @param sudata the userdata to pass to the send callback
@@ -690,8 +797,18 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
     if not isinstance(packet, Gen):
         packet = SetGen(packet)
 
+    if capmethod < 0 or capmethod > 2:
+        raise Exception("capmethod should be in the range of 0 .. 2")
+
     try:
-        sock = get_socket_for(metapacket, True, iface)
+        if capmethod == 1 or capmethod == 2:
+            # Assing the helper to the sock
+            sock = run_helper(capmethod - 1, iface or \
+                                             get_iface_from_ip(metapacket))
+        else:
+            # Here we need a Layer 3 socket
+            sock = get_socket_for(metapacket, False, iface)
+
         sock_send = get_socket_for(metapacket, iff=iface)
 
         if not sock:
@@ -711,8 +828,29 @@ def send_receive_packet(metapacket, count, inter, iface, strict, \
 ###############################################################################
 
 class SequenceConsumer(Interruptable):
-    def __init__(self, tree, count, inter, iface, strict, \
+    # This class most probably suffers when there's repeated sequence
+    # because we destroy and then recreate various process when the refcount
+    # associated to the sockets or process reach 0. Should be optimized to
+    # better handle this situation.
+
+    def __init__(self, tree, count, inter, iface, strict, capmethod, \
                  scallback, rcallback, sudata, rudata, excback):
+
+        """
+        Create a SequenceConsumer object.
+
+        @param tree a tree represantation of the packets to send
+        @param count how many time we have to send the tree
+        @param inter the interval to wait between 2 consecutive sends
+        @param iface the interface to send/recv on
+        @param capmethod the method to use 0 for native, 1 for tcpdump, 2 for
+                         dumpcap
+        @param scallback the send callback
+        @param rcallback the receive callback
+        @param sudata user data for send callback
+        @param rudata user data for receive callback
+        @param excback exception callback
+        """
 
         assert len(tree) > 0
 
@@ -722,12 +860,18 @@ class SequenceConsumer(Interruptable):
         self.strict = strict
         self.iface = iface
         self.timeout = 10
+        self.capmethod = capmethod
 
+        self.procs = {}
         self.sockets = []
+
         self.recv_list = defaultdict(list)
         self.receiving = False
 
         self.internal = False
+
+        self.active_helpers = 0
+        self.active_helpers_lock = Lock()
         self.running = Condition()
 
         self.pool = ThreadPool(2, 10)
@@ -784,7 +928,11 @@ class SequenceConsumer(Interruptable):
                 log.debug("Another loop (infinite)")
 
             self.__notify_send(None)
-            self.pool.queue_work(None, self.__notify_exc, self.__recv_worker)
+
+            if self.capmethod == 0:
+                # If we use native capmethod we should run this
+                self.pool.queue_work(None, self.__notify_exc,
+                                     self.__recv_worker)
 
             for node in self.tree.get_children():
                 log.debug("Adding first packet of the sequence")
@@ -806,6 +954,144 @@ class SequenceConsumer(Interruptable):
             self.pool.stop()
 
         log.debug("Finished")
+
+    def __recv_helper_worker(self, udata):
+        (process, outfile) = udata
+
+        self.active_helpers_lock.acquire()
+
+        if self.active_helpers is not None:
+            self.active_helpers += 1
+
+        self.active_helpers_lock.release()
+
+        if self.timeout is not None:
+            stoptime = time.time() + self.timeout
+
+        for reader in bind_reader(process, outfile):
+            if self.timeout is not None:
+                remain = stoptime - time.time()
+
+                if remain <= 0:
+                    self.receiving = False
+                    log.debug("Timeout here!")
+                    break
+
+            if not self.running or not self.receiving:
+                break
+
+            if reader:
+                reader, outfile_size, position = reader
+
+        report_idx = 0
+        reported_packets = 0
+
+        while self.running and self.receiving:
+            if self.timeout is not None:
+                remain = stoptime - time.time()
+
+                if remain <= 0:
+                    self.receiving = False
+                    log.debug("Timeout here!")
+                    break
+
+            while report_idx < reported_packets:
+                report_idx = get_n_packets(self.process)
+
+            r = reader.read_packet()
+
+            try:
+                # The helper capture packets at L2 so we need to drop the
+                # first protocol to make the match against the packets.
+
+                r = r[1]
+            except:
+                continue
+
+            if not r:
+                break
+
+            is_reply = True
+            my_node = None
+            requested_process = None
+
+            if self.strict:
+                is_reply = False
+                hashret = r.hashret()
+
+                if hashret in self.recv_list:
+                    for (idx, process, node) in self.recv_list[hashret]:
+                        packet = node.get_data().packet.root
+
+                        if r.answers(packet):
+                            requested_process = process
+                            my_node = node
+                            is_reply = True
+
+                            break
+
+            elif not self.strict and my_node is None:
+                # Get the first packet
+
+                list = [(v, k) for k, v in self.recv_list.items()]
+                list.sort()
+
+                requested_process = list[0][0][0][1]
+                my_node = list[0][0][0][2]
+            else:
+                continue
+
+            # Now cleanup the sockets
+            for key in self.procs:
+                if self.procs[key][0] == requested_process:
+                    self.procs[key][2] -= 1
+
+                    if self.procs[key][2] == 0:
+                        process, outfile, refcount = self.procs[key]
+
+                        log.debug("Killing helper %s cause refcount == 0" % \
+                                  process)
+
+                        kill_helper(process)
+                        del self.procs[key]
+
+                    break
+
+            if is_reply:
+                self.__notify_recv(my_node, MetaPacket(r), is_reply)
+
+                # Queue another send thread
+                for node in my_node.get_children():
+                    self.pool.queue_work(None, self.__notify_exc,
+                                         self.__send_worker, node)
+            else:
+                self.__notify_recv(None, MetaPacket(r), is_reply)
+
+        # Here we've to check if this current thread is also the last
+        # thread used to receive packets from the helper process.
+
+        self.active_helpers_lock.acquire()
+
+        if self.active_helpers is not None:
+            self.active_helpers -= 1
+
+            if self.active_helpers == 0:
+                log.debug("Trying to exit")
+
+                self.running.acquire()
+                self.running.notify()
+                self.running.release()
+
+                self.receiving = False
+                self.active_helpers = None
+
+                self.active_helpers_lock.release()
+
+                self.__notify_recv(None, None, False)
+
+                return
+
+        self.active_helpers_lock.release()
 
     def __recv_worker(self):
         # Here we should receive the packet and check against
@@ -932,17 +1218,45 @@ class SequenceConsumer(Interruptable):
             # and continue the sequence with the next
             # depth.
 
-            try:
-                idx = self.sockets.index(sock)
-                self.sockets[idx][1] += 1
-            except:
-                self.sockets.append([sock, 1])
+            if self.capmethod == 0:
 
-            key = obj.packet.root.hashret()
-            self.recv_list[key].append((len(self.recv_list), sock, node))
+                try:
+                    idx = self.sockets.index(sock)
+                    self.sockets[idx][1] += 1
+                except:
+                    self.sockets.append([sock, 1])
 
-            log.debug("Adding socket to the list for receiving my packet %s" % \
-                      sock)
+                key = obj.packet.root.hashret()
+                self.recv_list[key].append((len(self.recv_list), sock, node))
+
+                log.debug("Adding socket to the list for receiving my packet %s"
+                          % sock)
+            else:
+                # TODO: here we could create another thread that spawns tcpdump
+                # process. We have to resize also the pool directly leaving n
+                # available threads by having n sniff process and only 1 to send
+                # packets. All controls should be in __check()
+
+                iface = get_iface_from_ip(obj.packet)
+
+                if not iface in self.procs:
+                    process, outfile = run_helper(self.capmethod - 1, iface)
+                    self.procs[iface] = [process, outfile, 1]
+
+                    # Just increase the size of our pool to avoid starvation
+                    self.pool.resize(maxthreads=self.pool.max + 1)
+
+                    # And now start a new worker
+                    self.pool.queue_work(None, self.__notify_exc,
+                                         self.__recv_helper_worker,
+                                         (process, outfile))
+                else:
+                    self.procs[iface][2] += 1
+                    process, outfile = self.procs[iface][0:2]
+                    log.debug("A process sniffing on %s exists." % iface)
+
+                key = obj.packet.root.hashret()
+                self.recv_list[key].append((len(self.recv_list), process, node))
 
         sock.send(obj.packet.root)
 
@@ -1016,11 +1330,12 @@ class SequenceConsumer(Interruptable):
             log.debug("recv_callback want to exit")
             self.internal = False
 
-def execute_sequence(sequence, count, inter, iface, strict, \
+def execute_sequence(sequence, count, inter, iface, strict, capmethod, \
                      scallback, rcallback, sudata, rudata, excback):
 
     consumer = SequenceConsumer(sequence, count, inter, iface, strict, \
-                                scallback, rcallback, sudata, rudata, excback)
+                                capmethod, scallback, rcallback, sudata, \
+                                rudata, excback)
     consumer.start()
 
     return consumer

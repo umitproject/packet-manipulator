@@ -185,7 +185,6 @@ class FileOperation(Operation):
             tab = PMApp().main_window.get_tab("MainTab")
 
             if ctx is Backend.SequenceContext:
-
                 from PM.Gui.Sessions.SequenceSession import SequenceSession
                 tab.session_notebook.bind_session(SequenceSession, rctx)
 
@@ -227,15 +226,21 @@ class FileOperation(Operation):
 
             if rctx is not None:
                 # Let's update our operation directly from load
-                rctx.load(operation=self)
-
-                # Now let's add a callback to when
-                gobject.idle_add(self.__on_idle, (ctx, rctx))
+                if rctx.load(operation=self) == True:
+                    # Now let's add a callback to when
+                    gobject.idle_add(self.__on_idle, (ctx, rctx))
+                else:
+                    log.error('Error while loading context on %s.' % self.file)
+                    self.state = self.NOT_RUNNING
         else:
             log.debug('Saving %s to %s' % (self.ctx, self.ctx.cap_file))
 
-            self.ctx.save(operation=self)
-            gobject.idle_add(self.__on_idle, ())
+            if self.ctx.save(operation=self) == True:
+                gobject.idle_add(self.__on_idle, ())
+            else:
+                log.error('Error while saving context on %s.' % \
+                          self.ctx.cap_file)
+                self.state = self.NOT_RUNNING
 
         self.thread = None
 
@@ -271,9 +276,18 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
         @param background if the operation should have a session when starts
         """
 
+        capmethod = Prefs()['backend.system.sendreceive.capmethod'].value
+
+        if capmethod < 0 or capmethod > 2:
+            Prefs()['backend.system.sendreceive.capmethod'] = 0
+            capmethod = 0
+
+        log.debug('Using %d as capmethod for SendReceiveContext' % capmethod)
+
         Operation.__init__(self)
         Backend.SendReceiveContext.__init__(self, packet, count, inter, iface,
                                             strict, report_recv, report_sent,
+                                            capmethod,
                                             self.__send_callback,
                                             self.__receive_callback,
                                             None, None)
@@ -362,9 +376,18 @@ class SequenceOperation(Backend.SequenceContext, Operation):
     def __init__(self, seq, count, inter, iface=None, strict=True, \
                  report_recv=False, report_sent=True):
 
+        capmethod = Prefs()['backend.system.sequence.capmethod'].value
+
+        if capmethod < 0 or capmethod > 2:
+            Prefs()['backend.system.sendreceive.capmethod'] = 0
+            capmethod = 0
+
+        log.debug('Using %d as capmethod for SendReceiveContext' % capmethod)
+
         Operation.__init__(self)
         Backend.SequenceContext.__init__(self, seq, count, inter, iface,   \
                                          strict, report_recv, report_sent, \
+                                         capmethod,                        \
                                          self.__send_callback,             \
                                          self.__receive_callback)
 
