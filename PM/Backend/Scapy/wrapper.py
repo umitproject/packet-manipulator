@@ -46,6 +46,7 @@ except ImportError:
     raise PMErrorException("Cannot use this backend without scapy installed")
 
 from PM.Core.I18N import _
+from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
 
 if not 'WINDOWS' in globals():
@@ -80,7 +81,7 @@ def load_scapy_protocols():
 # We use this global variable to track protocols
 gprotos = load_scapy_protocols()
 
-print ">>> %d protocols registered." % len(gprotos)
+log.debug("%d protocols registered." % len(gprotos))
 
 ###############################################################################
 # Protocols functions

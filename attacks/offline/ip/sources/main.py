@@ -19,46 +19,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 """
-IP protocol decoder
+IP protocol decoder.
+
+These are only doctest strings:
+
+>>> from PM.Core.AttackUtils import attack_unittest
+>>> attack_unittest('-f ethernet,ip', 'wrong-checksum.pcap')
+decoder.ip.notice Invalid IP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0xdead instead of 0x7bce
 """
-
-import array
-import struct
-
-from PM.Backend import checksum, hexdump
-from PM.Core.Logger import log
 from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AttackManager import *
-from PM.Core.NetConst import *
+from PM.Manager.AttackManager import AttackManager, OfflineAttack
+from PM.Core.NetConst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP
+from PM.Core.AttackUtils import checksum
 
-# Code ripped from scapy
-BIG_ENDIAN= struct.pack("H",1) == "\x00\x01"
-
-if BIG_ENDIAN:
-    def checksum(pkt):
-        if len(pkt) % 2 == 1:
-            pkt += "\0"
-        s = sum(array.array("H", pkt))
-        s = (s >> 16) + (s & 0xffff)
-        s += s >> 16
-        s = ~s
-        return s & 0xffff
-else:
-    def checksum(pkt):
-        if len(pkt) % 2 == 1:
-            pkt += "\0"
-        s = sum(array.array("H", pkt))
-        s = (s >> 16) + (s & 0xffff)
-        s += s >> 16
-        s = ~s
-        return (((s>>8)&0xff)|s<<8) & 0xffff
-
-@coroutine
 def ip_decoder():
-    try:
-        while True:
-            mpkt = (yield)
+    manager = AttackManager()
+    checksum_check = manager.get_configuration('decoder.ip')['checksum_check']
 
+    def internal(mpkt):
+        if checksum_check:
             ipraw = mpkt.get_field('ip')
             iplen = min(20, len(ipraw))
 
@@ -67,22 +46,25 @@ def ip_decoder():
             chksum = checksum(pkt)
 
             if mpkt.get_field('ip.chksum') != chksum:
-                print "Wrong checksum"
+                manager.user_msg("Invalid IP packet from %s to %s : " \
+                                 "wrong checksum %s instead of %s" %  \
+                                 (mpkt.get_field('ip.src'),          \
+                                  mpkt.get_field('ip.dst'),          \
+                                  hex(mpkt.get_field('ip.chksum')),  \
+                                  hex(chksum)),
+                                 5, 'decoder.ip')
 
-            AttackManager().run_decoder(PROTO_LAYER,
-                                        mpkt.get_field('ip.proto'),
-                                        mpkt)
-    except GeneratorExit:
-        pass
+        return PROTO_LAYER, mpkt.get_field('ip.proto')
+
+    return internal
 
 class IPDecoder(Plugin, OfflineAttack):
-    def start(self, reader):
-        self._decoder = ip_decoder()
-
-    def stop(self):
-        pass
+    def register_options(self):
+        conf = AttackManager().register_configuration('decoder.ip')
+        conf.register_option('checksum_check', True, bool)
 
     def register_decoders(self):
-        AttackManager().add_decoder(NET_LAYER, LL_TYPE_IP, self._decoder)
+        AttackManager().add_decoder(NET_LAYER, LL_TYPE_IP, ip_decoder())
 
 __plugins__ = [IPDecoder]
+__plugins_deps__ = [('IPDecoder', [], [], [])]

@@ -396,8 +396,8 @@ class PluginReader(ManifestLoader):
                 if maxdepth > 0 and \
                    i.count('/') - sep_len - maxdepth + 1 != 0:
 
-                   log.debug("Skipping %s for maxdepth %d" % (i, maxdepth))
-                   continue
+                    log.debug("Skipping %s for maxdepth %d" % (i, maxdepth))
+                    continue
 
                 p = self.extract_file(i, keep_path=True)
 
@@ -407,7 +407,8 @@ class PluginReader(ManifestLoader):
 
     def extract_file(self, zip_path, keep_path=False):
         if zip_path not in self.file.namelist():
-            log.debug("The file %s seems to not exists in the zip file" % zip_path)
+            log.debug("The file %s seems to not exists in the zip file" % \
+                      zip_path)
             return None
 
         plug_subdir = os.path.join(Path.config_dir, 'plugins-temp', self.name)

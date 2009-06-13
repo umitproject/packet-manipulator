@@ -39,16 +39,16 @@ class Core(Singleton, gobject.GObject):
         'ScanResultNotebook-created' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, )),
         'ScanNotebookPage-created' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, (gobject.TYPE_OBJECT, ))
     }
-    
+
     def __init__(self):
         gobject.GObject.__init__(self)
-        
+
         self.mainwindow = None
         gtk.about_dialog_set_url_hook(self.__about_dialog_url, None)
 
     #
     # MainWindow related functions
-    
+
     def get_main_toolbar(self):
         "@return the toolbar of the MainWindow"
         return self.mainwindow.toolbar
@@ -56,7 +56,7 @@ class Core(Singleton, gobject.GObject):
     def get_main_menu(self):
         "@return the menubar of the MainWindow"
         return self.mainwindow.menubar
-    
+
     def get_main_scan_notebook(self):
         "@return the scan_notebook of the MainWindow"
         return self.mainwindow.scan_notebook
@@ -69,15 +69,18 @@ class Core(Singleton, gobject.GObject):
     def get_need(self, reader, needstr, classname=None, need_module=False):
         """
         Usefull function to return an instance of needstr:classname
+
+        @param reader a PluginReader object or None
         """
         lst = []
 
-        # We create a list of needs for the same package
-        for need in reader.needs:
-            name, op, ver = Version.extract_version(need)
+        if reader:
+            # We create a list of needs for the same package
+            for need in reader.needs:
+                name, op, ver = Version.extract_version(need)
 
-            if name == needstr:
-                lst.append((op, ver, name))
+                if name == needstr:
+                    lst.append((op, ver, name))
 
         from PM.Gui.Plugins.Engine import PluginEngine
         ret = PluginEngine().tree.get_provide(needstr, lst, need_module)
@@ -153,7 +156,7 @@ class Core(Singleton, gobject.GObject):
         set_field(pkg, d.set_authors, 'author', True)
         set_field(pkg, d.set_documenters, 'documenter', True)
         set_field(pkg, d.set_artists, 'artist', True)
-        
+
         d.set_logo(pkg.get_logo())
 
         return d

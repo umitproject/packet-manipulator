@@ -27,24 +27,13 @@ from PM.Gui.Plugins.Engine import Plugin
 from PM.Manager.AttackManager import *
 from PM.Core.NetConst import *
 
-@coroutine
-def eth_decoder():
-    try:
-        while True:
-            mpkt = (yield)
-            AttackManager().run_decoder(NET_LAYER, mpkt.get_field('eth.type'),
-                                        mpkt)
-    except GeneratorExit:
-        pass
+def eth_decoder(mpkt):
+    return NET_LAYER, mpkt.get_field('eth.type')
 
 class EthDecoder(Plugin, OfflineAttack):
-    def start(self, reader):
-        self._decoder = eth_decoder()
-
-    def stop(self):
-        pass
-
+    def start(self, reader): pass
+    def stop(self): pass
     def register_decoders(self):
-        AttackManager().add_decoder(LINK_LAYER, IL_TYPE_ETH, self._decoder)
+        AttackManager().add_decoder(LINK_LAYER, IL_TYPE_ETH, eth_decoder)
 
 __plugins__ = [EthDecoder]

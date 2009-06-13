@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from Static import StaticContext
+
+from PM.Core.Logger import log
 from PM.Backend.Abstract.Context import register_timed_context
 
 class BaseTimedContext(StaticContext):
@@ -78,48 +80,48 @@ class BaseTimedContext(StaticContext):
         return self._state != self.NOT_RUNNING
 
     def start(self):
-        print "Start():",
+        log.debug('Starting %s TimedContext ...' % self)
         if self.state != self.RUNNING:
             if self._start():
-                print "True"
+                log.debug('%s TimedContext correctly started.' % self)
                 return True
-        print "False"
+        log.debug('Failed to start %s TimedContext.' % self)
         return False
 
     def pause(self):
-        print "Pause():",
+        log.debug('Pausing %s TimedContext ...' % self)
         if self.state == self.RUNNING:
             if self._pause():
-                print "True"
+                log.debug('%s TimedContext correctly paused.' % self)
                 return True
-        print "False"
+        log.debug('Failed to pause %s TimedContext.' % self)
         return False
 
     def stop(self):
-        print "Stop():",
+        log.debug('Stopping %s TimedContext ...' % self)
         if self.state == self.RUNNING:
             if self._stop():
-                print "True"
+                log.debug('%s TimedContext correctly stopped.' % self)
                 return True
-        print "False"
+        log.debug('Failed to stop %s TimedContext.' % self)
         return False
 
     def restart(self):
-        print "Restart()",
+        log.debug('Restarting %s TimedContext ...' % self)
         if self.state != self.RUNNING:
             if self._restart():
-                print "True"
+                log.debug('%s TimedContext correctly restarted.' % self)
                 return True
-        print "False"
+        log.debug('Failed to restart %s TimedContext.' % self)
         return False
 
     def resume(self):
-        print "Resume()",
+        log.debug('Resuming %s TimedContext ...' % self)
         if self.state != self.RUNNING:
             if self._resume():
-                print "True"
+                log.debug('%s TimedContext correctly resumed.' % self)
                 return True
-        print "False"
+        log.debug('Failed to resume %s TimedContext.' % self)
         return False
 
     def get_state(self):

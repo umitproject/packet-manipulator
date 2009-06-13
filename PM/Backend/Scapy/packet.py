@@ -26,9 +26,10 @@ from PM.Core.NetConst import IL_TYPE_ETH, IL_TYPE_TR, IL_TYPE_FDDI, \
                              IL_TYPE_RAWIP, IL_TYPE_WIFI, IL_TYPE_COOK, \
                              IL_TYPE_PRISM
 
-class MetaPacket:
-    def __init__(self, proto=None):
+class MetaPacket(object):
+    def __init__(self, proto=None, cfields=None):
         self.root = proto
+        self.cfields = cfields or {}
 
     def insert(self, proto, layer):
         if layer == -1:
@@ -266,4 +267,17 @@ class MetaPacket:
 
     def copy(self):
         if self.root:
-            return MetaPacket(self.root.copy())
+            return MetaPacket(self.root.copy(),
+                               self.cfields.copy())
+
+
+    # Custom fields
+
+    def get_cfield(self, name):
+        return self.cfields[name]
+
+    def set_cfield(self, name, val):
+        self.cfields[name] = val
+
+    def unset_cfield(self, name):
+        del self.cfields[name]

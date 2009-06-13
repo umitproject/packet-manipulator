@@ -40,18 +40,39 @@ def coroutine(func):
     return start
 
 ###############################################################################
-# Implementation
+# Configurations
 ###############################################################################
 
-class Decoder(object):
-    """
-    Decoder objects should respect this scheme and use this as a model.
-    If you prefer more speed up you could use directly a coroutine with yield.
+class Configuration(object):
+    def __init__(self, name):
+        self._name = name
+        self._dict = {}
 
-    @see
-    """
-    def send(self, metapkt):
-        raise Exception("Not implemented")
+    def register_option(self, opt_name, def_value, opt_type):
+        assert isinstance(opt_type, type), "opt_type should be a type"
+        assert isinstance(opt_name, basestring), "opt_name should be a string"
+        assert isinstance(def_value, opt_type), "def_value and should be of " \
+                                                 "the same type"
+
+        self._dict[opt_name] = (def_value, def_value, opt_type)
+
+    def __getitem__(self, x):
+        return self._dict[x][0]
+
+    def __setitem__(self, x, value):
+        tup = self._dict[x]
+
+        if isinstance(value, tup[2]):
+            self._dict[x] = (value, tup[1], tup[2])
+        else:
+            raise Exception('value has different type')
+
+    def get_name(self): return self._name
+
+    name = property(get_name)
+###############################################################################
+# Implementation
+###############################################################################
 
 class AttackManager(Singleton):
     """
@@ -61,6 +82,56 @@ class AttackManager(Singleton):
     def __init__(self):
         self._decoders = ({}, ) * 5
 
+        self._configurations = {}
+
+        self._global_conf = self.register_configuration('global')
+        self._global_conf.register_option('debug', False, bool)
+
+    # Configurations stuff
+
+    def register_configuration(self, conf_name):
+        """
+        Register a configuration
+        @param conf_name a str for configuration root element
+        """
+        if conf_name in self._configurations:
+            raise Exception('Configuration named %s already exists' % conf_name)
+
+        conf = Configuration(conf_name)
+        self._configurations[conf_name] = conf
+
+        log.debug('Configuration %s registered.' % conf_name)
+
+        return conf
+
+    def get_configuration(self, conf_name):
+        return self._configurations[conf_name]
+
+    def user_msg(self, msg, severity=5, facility=None):
+        """
+        @param msg the message to show to the user
+        @param severity 0 for emerg
+                        1 for alert
+                        2 for crit
+                        3 for err
+                        4 for warning
+                        5 for notice
+                        6 for info
+                        7 for debug
+                        8 for none
+        @param facility a str representing a facility
+        """
+        trans = ('emerg', 'alert', 'crit', 'err', 'warn', 'notice', 'info',
+                 'debug', 'none')
+
+        if facility:
+            out = '%s.%s %s' % (facility, trans[severity], msg)
+        else:
+            out = '%s %s' % (trans[severity], msg)
+
+        if self._global_conf['debug']:
+            print out
+
     # Decoders stuff
 
     def add_decoder(self, level, type, decoder):
@@ -68,11 +139,14 @@ class AttackManager(Singleton):
         Add a decoder for the given level
         @param level the level where the decoder works on
         @param type the type of decoder
-        @param decoder a Decoder object
+        @param decoder a callable object
         """
         log.debug("Registering dissector %s for level %s with type %s" % \
                   (decoder, level, type))
-        self._decoders[level][type] = decoder
+        self._decoders[level][type] = (decoder, [], [])
+
+    def add_decoder_hook(self, level, type, decoder_hook, post=0):
+        self._decoders[level][type][post + 1].append(decoder_hook)
 
     def get_decoder(self, level, type):
         try:
@@ -80,14 +154,30 @@ class AttackManager(Singleton):
         except:
             log.debug("No decoder registered for level %s type %s" % (level,
                                                                       type))
-            return None
+            return None, None, None
 
     def run_decoder(self, level, type, metapkt):
-        decoder = self.get_decoder(level, type)
+        while level and type:
+            decoder, pre, post = self.get_decoder(level, type)
 
-        if decoder:
+            if not decoder:
+                return
+
             log.debug("Running decoder %s" % decoder)
-            decoder.send(metapkt)
+
+            for pre_hook in pre:
+                pre_hook(metapkt)
+
+            ret = decoder(metapkt)
+
+            for post_hook in post:
+                post_hook(metapkt)
+
+            if ret:
+                # Infinite loop over there :)
+                level, type = ret
+            else:
+                return
 
     def add_dissector(self):
         pass
@@ -97,6 +187,12 @@ class AttackManager(Singleton):
 
     def add_injector(self):
         pass
+
+    # Properties
+
+    def get_global_conf(self): return self._global_conf
+
+    global_conf = property(get_global_conf)
 
 class AttackDispatcher(object):
     def __init__(self, datalink=IL_TYPE_ETH):
@@ -139,6 +235,8 @@ class AttackDispatcher(object):
 ###############################################################################
 
 class AttackPlugin(object):
+    def register_options(self): pass
+    def register_hooks(self): pass
     def register_decoders(self): pass
     def register_dissectors(self): pass
     def register_filters(self): pass

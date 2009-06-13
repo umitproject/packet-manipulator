@@ -1,3 +1,62 @@
+2009-06-13 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/run-tester.sh:
+       - Simple attacktester.py runner to avoid setting PYTHONPATH at every
+         run.
+    * attacks/nose-tests.sh:
+       - Simple launcher of nosetests to test the attacks by testing the
+         doctest strings in main.py files.
+    * attacks/attacktester.py:
+       - Add interaction with PluginEngine().tree to let the plugin tested
+         with the attacktester.py to have Core().get_need() fully working
+         without having the mess to define a setup.py. Really usefull while
+         developing and testing.
+       - Add the possibility to change the configuration by passing set
+         expressions separated with ',' on the command line prefixed with -s.
+       - Add a --quiet options to avoid printing useless messages.
+       - Add a --profile option that uses hotshot module to profile the code.
+    * PM/Core/AttackUtils.py:
+      - Add a module to holds utilities functions used in various attacks.
+      - Add attack_unittest() function used by doctest of various attacks.
+    * attacks/offline/ethernet/sources/main.py
+      attacks/offline/ip/sources/main.py:
+       - Switching from coroutine to classic approach.
+    * attacks/offline/tcp/sources/main.py:
+       - Switching from coroutine to classic approach.
+       - Add checksum checking.
+    * attacks/offline/fingerprint/sources/main.py:
+       - Add passive fingerprint attack that uses the same approach and db of
+         ettercap.
+    * attacks/pcap-tests/wrong-checksum.pcap:
+       - Create a pcap-test/ file to holds pcap files used for testing
+         purposes.
+       - Add a wrong-checksum.pcap file used by tcp, ip and fingerprint
+         attacks.
+    * PM/Manager/AttackManager.py:
+       - Dropped coroutine approach for evident limitation on threaded context
+         and poor performance. Now we use tradition callable.
+       - Add Configuration object to centralize and made easier task to manage
+         configurations from a plugin and his relative methods to the manager.
+       - Add user_msg() function for communicating message to the user with
+         the same approach of syslog (severity and facility).
+       - Add add_decoder_hook() method to the manager to provide a pre/post
+         hook set mechanism for decoders functions. This is used for example
+         in the fingerprint offline attack.
+       - Now AttackPlugin class has 2 additional methods register_options()
+         and register_hooks().
+    * PM/Core/Atoms.py:
+       - Add ordered dict (odict) implementation to the Atoms module.
+    * PM/Backend/Abstract/BaseContext/Timed.py:
+       - print replaced with log.debug()
+    * PM/Backend/Scapy/packet.py:
+       - Add a cfields attribute to metapacket for managing custom fields
+         created by attacks.
+       - Add get_field(), set_cfield(), unset_cfield() functions.
+
+    - General bug fixing.
+    - Implemented custom fields by using a private dictionary.
+    - Added nosetest architecture to test attacks by using doctest strings to
+      speed up the development phase.
+
 2009-06-07 Francesco Piccinno <stack.box@gmail.com>
     * PM/Gui/Pages/SniffPage.py:
        - Fixing a bug due to check_finished() called on context that doesn't
