@@ -42,9 +42,9 @@
     * PM/Gui/Tabs/MainTab.py:
        - Sexy stuff like IntroPage introduced.
 
-    Bug fixing.
-    UI improvements.
-    Helper methods for SendReceiveContext and SequenceContext.
+    - Bug fixing.
+    - UI improvements.
+    - Helper methods for SendReceiveContext and SequenceContext.
 
 2009-06-02 Francesco Piccinno <stack.box@gmail.com>
     * attacks/offline/wifi/sources/main.py:
@@ -84,8 +84,8 @@
          OnlineAttack.
        - Add AttackTester class used for testing purpose.
 
-     Scapy bugfixing.
-     First approach of AttackFramework idea.
+     - Scapy bugfixing.
+     - First approach of AttackFramework idea.
 
 2009-05-24  Francesco Piccinno  <stack.box@gmail.com>
     * PM/Gui/Widgets/Plotter.py
@@ -115,8 +115,8 @@
       plugins/traceroute/setup.py:
         - Fix the setup.py to fit schema change.
 
-    Insert mode for HexView implemented.
-    80 columns line wrap fixed in various files and general bug fixing.
+    - Insert mode for HexView implemented.
+    - 80 columns line wrap fixed in various files and general bug fixing.
 
 2009-05-19 Francesco Piccinno <stack.box@gmail.com>
     * PM/Backend/Scapy/Context/Sniff.py
@@ -133,7 +133,7 @@
         - Reverting to pygtk >= 2.10 requirement. 2.14 seems to be not
           available yet on windows.
 
-    Win32 fixes.
+    - Win32 fixes.
 
 2009-05-18 Francesco Piccinno <stack.box@gmail.com>
     * PM/Backend/Scapy/Context/Sniff.py
@@ -169,8 +169,8 @@
           that can't be converted to utf-8 string. This should close all bugs
           related to the missing read/write hexview implementation.
 
-    Fixed various bug and regression.
-    80 columns line wrap fixed in various files.
+    - Fixed various bug and regression.
+    - 80 columns line wrap fixed in various files.
 
 2009-05-16 Francesco Piccinno <stack.box@gmail.com>
 
@@ -208,8 +208,8 @@
         - Avoid a cumulative call to PacketList constructor to reduce memory
           usage.
 
-    Various bugfix.
+    - Various bugfix.
 
 2009-05-11 Francesco Piccinno <stack.box@gmail.com>
 
-    Init ChangeLog.
+    - Init ChangeLog.
