@@ -23,7 +23,7 @@ Passive OS fingerprint module
 
 >>> from PM.Core.AttackUtils import attack_unittest
 >>> attack_unittest('-f ethernet,ip,tcp,fingerprint -sdecoder.ip.checksum_check=0,decoder.tcp.checksum_check=0', 'wrong-checksum.pcap')
-fingerprint.notice 127.0.0.1 is running Mac OS X (nearest)
+fingerprint.notice 127.0.0.1 is running Novell NetWare 3.12 - 5.00 (nearest)
 """
 
 import os.path
@@ -108,6 +108,7 @@ def tcp_fp(finger):
                                                       finger.report(mpkt)),
                                  5, 'fingerprint')
         except Exception, err:
+            raise err
             log.debug('Ignoring exception while setting fingerprint.')
             log.debug(generate_traceback())
 
@@ -221,27 +222,46 @@ class OSFP(object):
     def report(self, mpkt):
         try:
             cfield = ':'.join(mpkt.get_cfield('passive_fingerprint'))
+
+            log.debug('Looking up for %s' % cfield)
+
             first, second = cfield.split(':', 1)
 
             return self._osdb[first][second]
         except KeyError:
-            last_min_k = None
 
-            for k in self._osdb:
-                last_min_k = k
+            if first in self._osdb:
+                # WINDOW match
+                last_min_k = first
 
-                if k > first:
-                    break
+                for k2 in self._osdb[first]:
+                    last_min_k2 = k2
 
-            last_min_k2 = None
+                    if k2 >= second:
+                        break
+            else:
+                last_min_k = None
 
-            for k2 in self._osdb[last_min_k]:
-                last_min_k2 = k2
+                for k in self._osdb:
+                    last_min_k = k
 
-                if k2 > second:
-                    break
+                    if k > first:
+                        break
 
-            return self._osdb[last_min_k][last_min_k2] + " (nearest)"
+                last_min_k2 = self._osdb[last_min_k].keys()[0]
+
+                for k2 in self._osdb[last_min_k]:
+                    if k2 >= second:
+                        break
+
+                    last_min_k2 = k2
+
+            log.debug('Nearest mid values: %s %s' % (last_min_k, last_min_k2))
+
+            if last_min_k and last_min_k2:
+                return self._osdb[last_min_k][last_min_k2] + " (nearest)"
+            else:
+                return 'Unknown fingerprint (%s)' % cfield
 
 class OSFP_Plugin(Plugin, OfflineAttack):
     def register_hooks(self):
