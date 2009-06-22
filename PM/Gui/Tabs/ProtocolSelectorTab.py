@@ -24,8 +24,11 @@ from PM import Backend
 from PM.Core.I18N import _
 from PM.Core.Atoms import defaultdict
 
+from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Views import UmitView
 from PM.Gui.Core.Icons import get_pixbuf
+
+from PM.Gui.Sessions.SequenceSession import SequenceSession
 
 class ProtocolTree(gtk.VBox):
     COL_PIX = 0
@@ -88,6 +91,7 @@ class ProtocolTree(gtk.VBox):
 
         self.tree.connect_after('drag-begin', self.__on_drag_begin)
         self.tree.connect('drag-data-get', self.__on_drag_data_get)
+        self.tree.connect('button-press-event', self.__on_button_press)
 
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -101,6 +105,48 @@ class ProtocolTree(gtk.VBox):
         self.proto_icon = get_pixbuf('protocol_small')
         self.layer_icon = get_pixbuf('layer_small')
 
+        # Now create the context menu
+        self.context_menu = gtk.Menu()
+
+        self.accel_group = gtk.AccelGroup()
+        self.action_group = gtk.ActionGroup('ProtocolSelectorAction')
+
+        labels = (_('Add to a new sequence'), None,
+                  _('Append to the sequence'),
+                  _('Append to the sequence selection'), None,
+                  _('Append to the hierarchy'),
+                  _('Append to the hierarchy selection'))
+
+        accels = ('<Shift>N', None,
+                  '<Shift>S',
+                  '<Shift><Alt>S', None,
+                  '<Ctrl>H',
+                  '<Ctrl><Alt>H')
+
+        stocks = (gtk.STOCK_NEW, None,
+                  gtk.STOCK_GOTO_BOTTOM,
+                  gtk.STOCK_GO_DOWN, None,
+                  gtk.STOCK_GOTO_BOTTOM,
+                  gtk.STOCK_GO_DOWN)
+
+        cbs = (self.__add_to_new_sequence, None,
+               self.__append_cur_sequence,
+               self.__append_cur_sequence_sel, None,
+               self.__append_cur_hier,
+               self.__append_cur_hier_sel)
+
+        for lbl, stock, accel, cb in zip(labels, stocks, accels, cbs):
+            if not lbl:
+                self.context_menu.append(gtk.SeparatorMenuItem())
+                continue
+
+            action = gtk.Action(lbl, lbl, None, stock)
+            action.connect('activate', cb)
+            self.action_group.add_action_with_accel(action, accel)
+            action.set_accel_group(self.accel_group)
+            self.context_menu.append(action.create_menu_item())
+
+        self.context_menu.show_all()
         self.__on_sort_ascending(None)
 
     def populate(self, fill=True):
@@ -112,6 +158,13 @@ class ProtocolTree(gtk.VBox):
                     [self.proto_icon, Backend.get_proto_class_name(i), i])
         else:
             return Backend.get_protocols()
+
+    def __on_button_press(self, widget, evt):
+        if evt.button != 3:
+            return False
+
+        self.context_menu.popup(None, None, None, evt.button, evt.time)
+        return True
 
     def __on_sort_descending(self, item):
         self.populate()
@@ -198,10 +251,52 @@ class ProtocolTree(gtk.VBox):
         return False
 
     def __on_drag_data_get(self, btn, ctx, sel, info, time):
-        model, iter = self.tree.get_selection().get_selected()
-        sel.set_text(model.get_value(iter, ProtocolTree.COL_STR))
-
+        sel.set_text(self.__get_selected())
         return True
+
+    def __get_selected(self):
+        model, iter = self.tree.get_selection().get_selected()
+        if iter:
+            return model.get_value(iter, ProtocolTree.COL_STR)
+        return None
+
+    # Callbacks for context menu
+    def __add_to_new_sequence(self, action):
+        sel = self.__get_selected()
+
+        if sel:
+            tab = PMApp().main_window.get_tab('MainTab')
+            tab.session_notebook.create_edit_session(sel)
+            return True
+
+    def __do_append_cur_sequence(self, selection=None, hier=False):
+        sel = self.__get_selected()
+
+        if sel:
+            tab = PMApp().main_window.get_tab('MainTab')
+            sess = tab.session_notebook.get_current_session()
+
+            if not isinstance(sess, SequenceSession):
+                return False
+
+            if not hier:
+                sess.sequence_page.append_packet(sel, selection)
+            else:
+                sess.packet_page.proto_hierarchy.append_packet(sel, selection)
+
+            return True
+
+        return False
+
+    def __append_cur_sequence(self, action):
+        return self.__do_append_cur_sequence()
+    def __append_cur_sequence_sel(self, action):
+        return self.__do_append_cur_sequence(True)
+
+    def __append_cur_hier(self, action):
+        return self.__do_append_cur_sequence(hier=True)
+    def __append_cur_hier_sel(self, action):
+        return self.__do_append_cur_sequence(True, True)
 
 class ProtocolSelectorTab(UmitView):
     "The protocol selector tab"
@@ -215,3 +310,6 @@ class ProtocolSelectorTab(UmitView):
         self.tree = ProtocolTree()
         self._main_widget.add(self.tree)
         self._main_widget.show_all()
+
+    def connect_tab_signals(self):
+        PMApp().main_window.add_accel_group(self.tree.accel_group)

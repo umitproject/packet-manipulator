@@ -70,7 +70,8 @@ class PluginPath(object):
     def scan_path(self):
         """
         Walk the path passed in the constructor for .ump files,
-        then save the found plugins on a dict that could be accesed with get_plugins()
+        then save the found plugins on a dict that could be accesed with
+        get_plugins()
 
         No recursive scan, only top-level directory is considerated.
         """
@@ -151,7 +152,8 @@ class PluginEngine(Singleton):
         Initialize the engine with the paths were plugins are located
 
         @type paths tuple
-        @param paths a tuple containing various directory where the plugins are located
+        @param paths a tuple containing various directory where the plugins are
+                     located
         """
 
         log.debug(">>> Initializing Plugin Engine")

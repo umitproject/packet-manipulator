@@ -29,7 +29,9 @@ from PM.Backend.Scapy.utils import execute_sequence
 def register_sequence_context(BaseSequenceContext):
 
     class SequenceContext(BaseSequenceContext):
-        file_types = [(_('Scapy sequence'), '*.pms')]
+        file_types = [(_('Scapy sequence'), '*.pms'),
+                      (_('Flat sequence (pcap)'), '*.pcap'),
+                      (_('Flat sequence (pcap + gz)'), '*.pcap.gz')]
 
         def __init__(self, seq, count=1, inter=0, iface=None, strict=True, \
                      report_recv=False, report_sent=True, capmethod=0, \
@@ -114,6 +116,24 @@ def register_sequence_context(BaseSequenceContext):
             return False
 
         def save(self, operation=None):
+            if self.cap_file.lower().endswith('.pcap') or \
+               self.cap_file.lower().endswith('.pcap.gz'):
+
+                log.debug("Saving sequence as pcap file to %s" % self.cap_file)
+
+                old = []
+                old, self.data = self.data, old
+
+                for node in self.seq.get_children():
+                    self.data.append(node.data.packet)
+
+                import PM.Backend
+                ret = PM.Backend.StaticContext.save(self, operation)
+
+                old, self.data = self.data, old
+
+                return ret
+
             log.debug("Saving sequence to %s" % self.cap_file)
 
             if self.cap_file and self.seq is not None:

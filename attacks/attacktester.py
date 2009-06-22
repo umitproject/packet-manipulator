@@ -22,8 +22,11 @@
 This module is responsable for attack testing purpose
 """
 
-import psyco
-psyco.full()
+# Psyco importing result in the impossibility to debug threads.
+# So commented for the moment
+
+#import psyco
+#psyco.full()
 
 import os
 import sys
@@ -133,7 +136,8 @@ class Tester(object):
                 print generate_traceback()
 
         AttackManager().global_conf['debug'] = True
-        tester.dispatcher.main_decoder = AttackManager().get_decoder(LINK_LAYER, IL_TYPE_ETH)
+        tester.dispatcher.main_decoder = \
+              AttackManager().get_decoder(LINK_LAYER, IL_TYPE_ETH)
 
         tester.start()
         tester.join()

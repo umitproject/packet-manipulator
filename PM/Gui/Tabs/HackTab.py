@@ -1,21 +1,21 @@
-#!/usr/bin/env python                               
-# -*- coding: utf-8 -*-                             
-# Copyright (C) 2008 Adriano Monteiro Marques       
-#                                                   
-# Author: Francesco Piccinno <stack.box@gmail.com>  
-#                                                   
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import re
@@ -73,7 +73,8 @@ class HackBar(gtk.VBox):
     def __create_trans(self):
         root = gtk.Menu()
 
-        action = gtk.Action(None, _('Transformation'), None, gtk.STOCK_JUSTIFY_FILL)
+        action = gtk.Action(None, _('Transformation'), None,
+                            gtk.STOCK_JUSTIFY_FILL)
 
         item = action.create_menu_item()
         item.set_submenu(root)
@@ -94,7 +95,8 @@ class HackBar(gtk.VBox):
     def __create_crypt(self):
         root = gtk.Menu()
 
-        action = gtk.Action(None, _('Encryption'), None, gtk.STOCK_DIALOG_AUTHENTICATION)
+        action = gtk.Action(None, _('Encryption'), None,
+                            gtk.STOCK_DIALOG_AUTHENTICATION)
 
         item = action.create_menu_item()
         item.set_submenu(root)
@@ -106,7 +108,8 @@ class HackBar(gtk.VBox):
                self.__crypt_sha256, self.__crypt_rot13)
 
         for lbl, cb in zip(lbls, cbs):
-            action = gtk.Action(None, lbl, None, gtk.STOCK_DIALOG_AUTHENTICATION)
+            action = gtk.Action(None, lbl, None,
+                                gtk.STOCK_DIALOG_AUTHENTICATION)
 
             item = action.create_menu_item()
             action.connect('activate', cb)
@@ -126,8 +129,10 @@ class HackBar(gtk.VBox):
 
         self.menubar.append(item)
 
-        lbls = (_('Base64 Encode'), _('Base64 Decode'), _('URL Encode'), _('URL Decode'))
-        cbs = (self.__enc_base64, self.__dec_base64, self.__enc_url, self.__dec_url)
+        lbls = (_('Base64 Encode'), _('Base64 Decode'), _('URL Encode'),
+                _('URL Decode'))
+        cbs = (self.__enc_base64, self.__dec_base64, self.__enc_url,
+               self.__dec_url)
 
         for lbl, cb in zip(lbls, cbs):
             action = gtk.Action(None, lbl, None, gtk.STOCK_CONVERT)
@@ -147,7 +152,8 @@ class HackBar(gtk.VBox):
 
         self.menubar.append(item)
 
-        lbls = (_('MySQL Encode'), _('MySQL Decode'), _('MsSQL Encode'), _('MsSQL Decode'))
+        lbls = (_('MySQL Encode'), _('MySQL Decode'), _('MsSQL Encode'),
+                _('MsSQL Decode'))
         cbs = (self.__enc_my, self.__dec_my, self.__enc_ms, self.__dec_ms)
 
         for lbl, cb in zip(lbls, cbs):
@@ -164,7 +170,7 @@ class HackBar(gtk.VBox):
 
         s, e = self.text.get_buffer().get_selection_bounds()
         return self.text.get_buffer().get_text(s, e, True)
-    
+
     def set_selection(self, txt):
         buffer = self.text.get_buffer()
         s, e = buffer.get_selection_bounds()
@@ -195,7 +201,7 @@ class HackBar(gtk.VBox):
                 if txt:
                     args[0].set_selection(txt)
                     return True
-                
+
                 return False
             except Exception:
                 return False
@@ -239,12 +245,14 @@ class HackBar(gtk.VBox):
 
     @text_getter
     def __enc_url(self, txt):
-        return re.sub(HackBar._url_encre, lambda m: "%%%02X" % ord(m.group(0)), txt)
+        return re.sub(HackBar._url_encre,
+                      lambda m: "%%%02X" % ord(m.group(0)), txt)
 
     @text_getter
     def __dec_url(self, txt):
         txt = txt.replace("+", " ")
-        return re.sub(HackBar._url_decre, lambda m: chr(int(m.group(1), 16)), txt)
+        return re.sub(HackBar._url_decre,
+                      lambda m: chr(int(m.group(1), 16)), txt)
 
     @text_getter
     def __enc_my(self, txt):
@@ -252,7 +260,8 @@ class HackBar(gtk.VBox):
 
     @text_getter
     def __dec_my(self, txt):
-        return "".join(map(chr, map(int, txt.replace(" ", "")[txt.index("(") + 1:-1].split(","))))
+        return "".join(map(chr, map(int, txt.replace(" ", "")\
+                                    [txt.index("(") + 1:-1].split(","))))
 
     @text_getter
     def __enc_ms(self, txt):
@@ -260,7 +269,8 @@ class HackBar(gtk.VBox):
 
     @text_getter
     def __dec_ms(self, txt):
-        return "".join(map(chr, map(int, txt.replace(" ", "").replace("CHAR(", "").replace(")", "").split("+"))))
+        return "".join(map(chr, map(int, txt.replace(" ", "").\
+                        replace("CHAR(", "").replace(")", "").split("+"))))
 
 
 class HackTab(UmitView):

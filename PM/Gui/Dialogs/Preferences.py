@@ -98,6 +98,9 @@ class Page(gtk.Table):
         self.create_ui()
         self.show_all()
 
+    def save(self):
+        pass
+
     def create_widgets(self):
         pass
 
@@ -331,6 +334,94 @@ class SystemPage(Page):
 
         ]
 
+class SniffPage(gtk.VBox):
+    title = _('Sniff perspective')
+    icon = gtk.STOCK_INDEX
+
+    def __init__(self):
+        gtk.VBox.__init__(self, False, 2)
+
+        self.set_border_width(4)
+
+        self.store = gtk.ListStore(str, int, str)
+        self.view = gtk.TreeView(self.store)
+        self.view.set_rules_hint(True)
+        self.view.set_reorderable(True)
+
+        idx = 0
+        lbls = (_('Column title'), _('Column size'), _('Function/cfield'))
+
+        for lbl in lbls:
+            rend = gtk.CellRendererText()
+            rend.set_property('editable', True)
+            rend.connect('edited', self.__on_rend_edited, idx)
+
+            col = gtk.TreeViewColumn(lbl, rend, text=idx)
+            self.view.append_column(col)
+            idx += 1
+
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+
+        sw.add(self.view)
+
+        bb = gtk.HButtonBox()
+        bb.set_layout(gtk.BUTTONBOX_END)
+
+        btn = gtk.Button(stock=gtk.STOCK_ADD)
+        btn.connect('clicked', self.__on_add_row)
+        bb.pack_start(btn)
+
+        btn = gtk.Button(stock=gtk.STOCK_REMOVE)
+        btn.connect('clicked', self.__on_remove_row)
+        bb.pack_start(btn)
+
+        self.pack_start(sw)
+        self.pack_end(bb, False, False)
+
+        # Let's populate
+        columns_str = Prefs()['gui.maintab.sniffview.columns'].value
+
+        for column_str in columns_str.split(','):
+            try:
+                label, pixel_size, eval_str = column_str.split('|', 2)
+                pixel_size = int(pixel_size)
+
+                self.store.append([label, pixel_size, eval_str])
+            except:
+                pass
+
+        self.widgets = []
+
+    def __on_rend_edited(self, cell, path, new_text, idx):
+        if idx == 1:
+            # We have to check that new_text is a int()
+            try:
+                new_text = int(new_text)
+            except ValueError:
+                return
+
+        iter = self.store.get_iter(path)
+        self.store.set_value(iter, idx, new_text)
+
+
+    def __on_add_row(self, widget):
+        self.store.append(['Time', 150, '%time%'])
+
+    def __on_remove_row(self, widget):
+        model, iter = self.view.get_selection().get_selected()
+
+        if iter:
+            self.store.remove(iter)
+
+    def save(self):
+        s = ''
+
+        for lbl, size, eval_str in self.store:
+            s += "%s|%d|%s," % (lbl, size, eval_str)
+
+        Prefs()['gui.maintab.sniffview.columns'].value = s[:-1]
 
 class PreferenceDialog(gtk.Dialog):
     def __init__(self, parent):
@@ -381,7 +472,8 @@ class PreferenceDialog(gtk.Dialog):
         self.connect('response', self.__on_response)
 
     def __populate(self):
-        for page in (GUIPage(), ViewsPage(), BackendPage(), SystemPage()):
+        for page in (GUIPage(), ViewsPage(), SniffPage(), BackendPage(), \
+                     SystemPage()):
             self.store.append([page.icon, page.title])
             self.notebook.append_page(page)
 
@@ -406,6 +498,8 @@ class PreferenceDialog(gtk.Dialog):
                         self.__apply(widget, option)
                 else:
                     self.__apply(options[2], options[0])
+            else:
+                page.save()
 
     def __apply(self, widget, option):
         for typo, func in TYPES:

@@ -47,7 +47,9 @@ class SequenceSession(Session):
         self.sequence_page.reload(packet)
 
     def save_session(self, fname):
-        if not fname.lower().endswith(".pms"):
+        if not fname.lower().endswith(".pms") and \
+           not fname.lower().endswith(".pcap") and \
+           not fname.lower().endswith(".pcap.gz"):
             fname += ".pms"
 
         # Reinsert the values into the sequence

@@ -29,6 +29,8 @@ from PM.Core.Logger import log
 from PM.Gui.Plugins.Atoms import Version, DepDict
 from PM.Gui.Plugins.Core import Core
 
+from PM.Manager.AttackManager import OfflineAttack, OnlineAttack
+
 from distutils.sysconfig import get_config_vars
 
 import __builtin__
@@ -46,14 +48,15 @@ def hook_import(lib, globals=None, locals=None, fromlist=None, level=-1):
         # that is cleaned on UMIT exit/start
 
         for reader in sys.plugins_path:
-            path = os.path.join(PM_PLUGINS_TEMP_DIR, \
+            path = os.path.join(PM_PLUGINS_TEMP_DIR,
                                 lib.split('.')[-1] + get_config_vars("SO")[0])
 
             try:
                 out = open(path, 'wb')
 
-                out.write(reader.file.read( \
-                    'lib/%s%s' % (lib.replace(".", "/"), get_config_vars("SO")[0])) \
+                out.write(reader.file.read(
+                    'lib/%s%s' % (lib.replace(".", "/"),
+                                  get_config_vars("SO")[0]))
                 )
                 out.close()
             except Exception, exc:
@@ -185,7 +188,7 @@ class PluginsTree(object):
                     continue
 
                 # Only '=' operator presents:
-                # providers['woot'] = [('=', '2.0', pkg1), ('=', '2.1', pkg2), ..]
+                # providers['woot'] = [('=', '2.0', pkg1), ('=', '2.1', pkg2)]
 
                 for p_op, p_ver, p_pkg in self.who_provides[name]:
                     # for example we could have
@@ -338,7 +341,8 @@ class PluginsTree(object):
         Check the needs from list against pkg
 
         @param pkg the plugin to check
-        @return [] if everything is OK or a list of not used needs (name, op, version)
+        @return [] if everything is OK or a list of not used needs
+                (name, op, version)
         """
 
         # Clone the list and drops out pkg
@@ -452,7 +456,8 @@ class PluginsTree(object):
 
         start_file = 'main'
 
-        log.warning("You are loading a plugin without checking for needs,provides,conflitcts")
+        log.warning("You are loading a plugin without checking for needs, " \
+                    "provides or conflitcts")
         log.warning("* You have been warned! *")
 
         log.warning("Assuming `%s' as start file!" % start_file)
@@ -540,11 +545,27 @@ class PluginsTree(object):
             for plug in lst:
                 try:
                     inst = plug()
+
+                    if isinstance(inst, OfflineAttack):
+                        is_attack = 1
+                    elif isinstance(inst, OnlineAttack):
+                        is_attack = 2
+                    else:
+                        is_attack = 0
+
+                    if is_attack:
+                        inst.register_options()
+
                     inst.start(pkg)
+
+                    if is_attack:
+                        inst.register_decoders()
+                        inst.register_hooks()
 
                     ret.append(inst)
                 except Exception, err:
-                    log.critical("Error while starting %s from %s:" % (plug, pkg))
+                    log.critical("Error while starting %s from %s:" % (plug,
+                                                                       pkg))
                     log.critical(generate_traceback())
                     log.critical("Ignoring instance.")
 

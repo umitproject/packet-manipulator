@@ -270,7 +270,6 @@ class MetaPacket(object):
             return MetaPacket(self.root.copy(),
                                self.cfields.copy())
 
-
     # Custom fields
 
     def get_cfield(self, name):

@@ -40,7 +40,7 @@ from PM.Gui.Widgets.CellRenderer import GridRenderer
 from PM.higwidgets.higanimates import HIGAnimatedBar
 
 from PM.Gui.Pages.Base import Perspective
-from PM.Backend import SniffContext
+from PM.Backend import SniffContext, MetaPacket
 
 class SniffPage(Perspective):
     COL_NO     = 0
@@ -158,23 +158,40 @@ class SniffPage(Perspective):
         rend = GridRenderer()
         rend.set_property('ellipsize', pango.ELLIPSIZE_END)
 
-        titles = (_('No.'), _('Time'), _('Source'), _('Destination'),
-                  _('Protocol'), _('Info'))
-        width = (50, 150, 120, 120, 80, 200)
+        columns_str = Prefs()['gui.maintab.sniffview.columns'].value
 
-        for txt, wid in zip(titles, width):
-            col = gtk.TreeViewColumn(txt, rend)
+        for column_str in columns_str.split(','):
+            try:
+                label, pixel_size, eval_str = column_str.split('|', 2)
+                pixel_size = int(pixel_size)
 
-            col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+                if eval_str[-1] != '%' or eval_str[0] != '%':
+                    continue
 
-            col.set_min_width(wid)
-            col.set_fixed_width(wid)
-            col.set_resizable(True)
+                eval_str = eval_str[1:-1]
 
-            col.set_cell_data_func(rend, self.__cell_data_func, idx)
+                col = gtk.TreeViewColumn(label, rend)
+                col.set_min_width(pixel_size)
+                col.set_fixed_width(pixel_size)
+                col.set_resizable(True)
 
-            self.tree.insert_column(col, idx)
-            idx += 1
+                if eval_str == 'number':
+                    col.set_cell_data_func(rend, self.__cell_data_number)
+                else:
+                    func = getattr(MetaPacket, eval_str, None) or \
+                           getattr(MetaPacket, 'get_' + eval_str, None)
+
+                    if not func:
+                        col.set_cell_data_func(rend, self.__cell_data_cfield,
+                                               eval_str)
+                    else:
+                        col.set_cell_data_func(rend, self.__cell_data_func,
+                                               func)
+
+                self.tree.insert_column(col, idx)
+                idx += 1
+            except Exception:
+                pass
 
         # Set the fixed height mode property to True to speeds up
         self.tree.set_fixed_height_mode(True)
@@ -182,25 +199,33 @@ class SniffPage(Perspective):
         sw.add(self.tree)
         self.pack_start(sw)
 
-    def __cell_data_func(self, col, cell, model, iter, idx):
+    def __cell_data_number(self, col, cell, model, iter):
         packet = model.get_value(iter, 0)
+        cell.set_property('text', "%s)" % ".".join(
+            [str(i + 1) \
+                for i in model.get_path(iter)]
+        ))
+        cell.set_property('cell-background-gdk', self.__get_color(packet))
 
-        if idx == self.COL_NO:
-            cell.set_property('text', "%s)" % ".".join(
-                [str(i + 1) \
-                    for i in model.get_path(iter)]
-            ))
+    def __cell_data_cfield(self, col, cell, model, iter, cfield):
+        packet = model.get_value(iter, 0)
+        data = packet.cfields.get(cfield, '')
 
-        elif idx == self.COL_TIME:
-            cell.set_property('text', packet.get_time())
-        elif idx == self.COL_SRC:
-            cell.set_property('text', packet.get_source())
-        elif idx == self.COL_DST:
-            cell.set_property('text', packet.get_dest())
-        elif idx == self.COL_PROTO:
-            cell.set_property('text', packet.get_protocol_str())
-        elif idx == self.COL_INFO:
-            cell.set_property('text', packet.summary())
+        if isinstance(data, basestring):
+            cell.set_property('text', data)
+        else:
+            cell.set_property('text', None)
+
+        cell.set_property('cell-background-gdk', self.__get_color(packet))
+
+    def __cell_data_func(self, col, cell, model, iter, func):
+        packet = model.get_value(iter, 0)
+        data = func(packet)
+
+        if isinstance(data, basestring):
+            cell.set_property('text', data)
+        else:
+            cell.set_property('text', None)
 
         cell.set_property('cell-background-gdk', self.__get_color(packet))
 

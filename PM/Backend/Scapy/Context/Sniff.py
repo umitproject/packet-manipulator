@@ -27,6 +27,7 @@ from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import with_decorator
 from PM.Manager.PreferenceManager import Prefs
+from PM.Manager.AttackManager import AttackDispatcher
 
 from PM.Backend.Scapy import *
 
@@ -52,6 +53,8 @@ def register_sniff_context(BaseSniffContext):
             self.summary = _('Sniffing on %s') % self.iface
             self.thread = None
             self.priv = []
+
+            self.attack_dispatcher = None
 
         @with_decorator
         def get_all_data(self):
@@ -85,6 +88,10 @@ def register_sniff_context(BaseSniffContext):
                     self.socket = conf.L2listen(type=ETH_P_ALL,
                                                 iface=self.iface,
                                                 filter=self.filter)
+
+                    if self.attacks:
+                        self.attack_dispatcher = AttackDispatcher(IL_TYPE_ETH)
+
                 except socket.error, (errno, err):
                     self.summary = str(err)
                     return False
@@ -224,6 +231,9 @@ def register_sniff_context(BaseSniffContext):
 
                     self.data.append(pkt)
                     reported_packets += 1
+
+                    if self.attack_dispatcher:
+                        self.attack_dispatcher.feed(pkt)
 
                     if self.callback:
                         self.callback(pkt, self.udata)
@@ -376,9 +386,12 @@ def register_sniff_context(BaseSniffContext):
 
                 self.data.append(packet)
 
+                if self.attack_dispatcher:
+                    self.attack_dispatcher.feed(packet)
+
                 # FIXME: This probably should be moved inside the run() function
                 if self.callback:
-                    self.callback(MetaPacket(packet), self.udata)
+                    self.callback(packet, self.udata)
 
                 lst = []
 

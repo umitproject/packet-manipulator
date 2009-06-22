@@ -22,8 +22,6 @@
 Attack manager module
 """
 
-import PM.Backend as Backend
-
 from PM.Core.Logger import log
 from PM.Core.Atoms import Singleton, defaultdict
 from PM.Core.NetConst import *
@@ -80,7 +78,11 @@ class AttackManager(Singleton):
     It's a singleton class that is used to dispatch packets.
     """
     def __init__(self):
-        self._decoders = ({}, ) * 5
+        self._output = None
+        # It seems that specifying {} * n doesn't create a new object
+        # but instead only create a new pointer to the same object.
+        # Here we need separated dict so we should declare them all
+        self._decoders = ({}, {}, {}, {}, {})
 
         self._configurations = {}
 
@@ -131,6 +133,13 @@ class AttackManager(Singleton):
 
         if self._global_conf['debug']:
             print out
+        else:
+            if not self._output:
+                import PM.Gui.Core.App
+                tab = PM.Gui.Core.App.PMApp().main_window.get_tab('StatusTab')
+                self._output = tab.status
+            else:
+                self._output.info(out)
 
     # Decoders stuff
 
@@ -219,7 +228,7 @@ class AttackDispatcher(object):
         if not metapkt or not self._main_decoder:
             return
 
-        assert isinstance(metapkt, Backend.MetaPacket)
+        #assert isinstance(metapkt, Backend.MetaPacket)
         AttackManager().run_decoder(LINK_LAYER, metapkt.get_datalink(), metapkt)
 
     def get_main_decoder(self): return self._main_decoder
@@ -266,9 +275,12 @@ class AttackTester(object):
         """
         Launch an attack manager against a pcap file using the selected backend
         """
+        import PM.Backend
+
         self.dispatcher = AttackDispatcher()
-        self.ctx = Backend.SniffContext(None, capfile=pcapfile, capmethod=1,
-                                        callback=self.dispatcher.feed)
+        self.ctx = PM.Backend.SniffContext(None, capfile=pcapfile, capmethod=1,
+                                           callback=self.dispatcher.feed,
+                                           attacks=False)
 
     def start(self):
         log.debug('Starting context for test')

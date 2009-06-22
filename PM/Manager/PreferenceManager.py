@@ -178,6 +178,16 @@ class Prefs(Singleton):
         'gui.expander.standard' : False,
         'gui.maintab.sniffview.font' : 'Monospace 10',
         'gui.maintab.sniffview.usecolors' : True,
+
+        # Here we have a list of strings separated by a comma. Each string
+        # is label|pixel_size|eval_str
+
+        'gui.maintab.sniffview.columns' : 'No.|50|%number%,'            \
+                                          'Time|150|%time%,'            \
+                                          'Source|120|%source%,'        \
+                                          'Destination|120|%dest%,'     \
+                                          'Protocol|80|%protocol_str%,' \
+                                          'Info|200|%summary%',
         'gui.maintab.hexview.font' : 'Monospace 10',
         'gui.maintab.hexview.bpl' : 16,
         'gui.maintab.sequenceview.font' : 'Monospace 10',

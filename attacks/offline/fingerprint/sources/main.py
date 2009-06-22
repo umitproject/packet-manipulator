@@ -104,11 +104,13 @@ def tcp_fp(finger):
                         if opt_start < len(tcpraw):# and ord(tcpraw[opt_start]):
                             opt_start += val - 1
 
+                remote_os = finger.report(mpkt)
+
+                mpkt.set_cfield('remote_os', remote_os)
                 manager.user_msg('%s is running %s' % (mpkt.get_field('ip.src'),
-                                                      finger.report(mpkt)),
+                                                       remote_os),
                                  5, 'fingerprint')
         except Exception, err:
-            raise err
             log.debug('Ignoring exception while setting fingerprint.')
             log.debug(generate_traceback())
 
@@ -136,7 +138,7 @@ def ttl_predict(x):
     else:
         return j and j or 0xff
 
-class OSFP(object):
+class OSFPModule(object):
     WINDOW,    \
     MSS,       \
     TTL,       \
@@ -263,7 +265,7 @@ class OSFP(object):
             else:
                 return 'Unknown fingerprint (%s)' % cfield
 
-class OSFP_Plugin(Plugin, OfflineAttack):
+class OSFP(Plugin, OfflineAttack):
     def register_hooks(self):
         AttackManager().add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
                                          self._tcp_hook, 1)
@@ -275,7 +277,7 @@ class OSFP_Plugin(Plugin, OfflineAttack):
             contents = open(os.path.join('offline', 'fingerprint', 'data',
                                          'finger.os.db'), 'r').read()
 
-        self._tcp_hook = tcp_fp(OSFP(contents))
+        self._tcp_hook = tcp_fp(OSFPModule(contents))
 
     def stop(self):
         obj = self.fingerprint
@@ -284,5 +286,5 @@ class OSFP_Plugin(Plugin, OfflineAttack):
         log.debug('Destroying OSFP object %s' % obj)
         del obj
 
-__plugins__ = [OSFP_Plugin]
+__plugins__ = [OSFP]
 __plugins_deps__ = [('OSFP', ['IPDecoder', 'TCPDecoder'], ['=OSFP-1.0'], [])]

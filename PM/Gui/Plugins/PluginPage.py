@@ -134,8 +134,8 @@ class PluginPage(gtk.VBox):
         if warn_reboot:
             # Warn the user
             self.p_window.animated_bar.label = \
-                _('Remember that you have to restart PacketManipulator to make new version' \
-                  ' of plugins to be loaded correctly.')
+                _('Remember that you have to restart PacketManipulator to make '
+                  'new version of plugins to be loaded correctly.')
             self.p_window.animated_bar.start_animation(True)
 
     def __on_restart(self, widget):
@@ -157,7 +157,8 @@ class PluginPage(gtk.VBox):
 
             self.restart_btn.hide()
             self.p_window.animated_bar.label = \
-                _('Rembember to restart PacketManipulator to use new version of plugins.')
+                _('Rembember to restart PacketManipulator to use new version '
+                  'of plugins.')
 
         else:
             self.p_window.animated_bar.label = \
@@ -193,7 +194,8 @@ class PluginPage(gtk.VBox):
 
             # Reset indexes
             obj.last_update_idx = 0
-            obj.selected_update_idx = obj.object.versions_button.get_active()-1
+            obj.selected_update_idx = \
+                obj.object.versions_button.get_active() - 1
 
         self.install_updates_btn.set_sensitive(False)
         self.skip_install_btn.set_sensitive(False)
@@ -290,7 +292,7 @@ class PluginPage(gtk.VBox):
             self.p_window.toolbar.unset_status()
 
             self.p_window.animated_bar.label = \
-                _("No plugins provides update url. Cannot procede.")
+                _("No plugins provide an update URL. Cannot proceed.")
             self.p_window.animated_bar.image = gtk.STOCK_DIALOG_ERROR
             self.p_window.animated_bar.start_animation(True)
 

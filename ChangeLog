@@ -1,3 +1,59 @@
+2009-06-22 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/offline/fingerprint/sources/main.py:
+       - Now we use a remote_os cfield to set the fingerprint on a packet.
+       - Renamed various classes.
+    * attacks/offline/ip/sources/main.py:
+       - Now fragmented IP packets could be reassembled.
+       - The results of payload reassemble phase it's available as
+         reassemble_payload cfield.
+       - Added various tests for fragmentation as doctest strings.
+       - Introduced reassemble_max_fraglist and reassemble_max_fragments to
+         control the behaviour and limits of reassemble phase.
+       - No further checks if we have truncated packets due to low snaplen.
+    * attacks/setup-autogen.py:
+       - Add a simple setup.py autogenerator for attacks. This script could
+         also build automatically attacks. I've used to build attacks as
+         plugin and then test them directly into PM.
+    * PM/Gui/Pages/SniffPage.py
+      PM/Manager/PreferenceManager.py:
+       - Now sniff page could have custom columns. Columns are defined in
+         gui.maintab.sniffview.columns variable as list of strings separated
+         by a comma. The structure is pretty simple:
+                             <name>|<size>|<getter>
+         Where `name` is the name of the column, `size` the pixel size as
+         integer and getter is a string representing a cfield or a method
+         of MetaPacket (that could have `get_` as prefix or not).
+    * PM/Gui/Dialogs/Preferences.py:
+       - Add a page to customize columns trough a comfortable treeview like
+         wireshark does.
+    * PM/Gui/Pages/PacketPage.py
+      PM/Gui/Pages/SequencePage.py:
+       - Introduced append_packet() method used by callbacks of the context
+         menu of ProtocolSelector tab.
+    * PM/Gui/Tabs/ProtocolSelectorTab.py:
+       - Add a context menu with classical actions to avoid using the drag
+         and drop if the user doesn't like it. Everything is implemented
+         with AccelGroup giving to the users the possibility to use also
+         keyboard shourtcuts to speed up the things.
+    * PM/Gui/Plugins/PluginPage.py:
+       - Backport from UmitPlugins (fixed a typo)
+       - 80 columns line wrap fixed.
+    * PM/Gui/Plugins/Tree.py
+      PM/Gui/Plugins/Engine.py
+      PM/Gui/Core/Views.py
+      PM/Gui/Tabs/HackTab.py:
+       - 80 columns line wrap fixed.
+    * PM/Gui/Dialogs/Interface.py:
+       - Add `Enable attacks` check button to the dialog.
+    * PM/Backend/Scapy/Context/Sniff.py:
+       - Now we could run attacks with AttackDispatcher inside a SniffContext.
+    * PM/Gui/Sessions/SequenceSession.py
+      PM/Backend/Scapy/Context/Sequence.py:
+       - Add the possibility to save the sequence as flatten one (pcap dump)
+
+    - GUI improvements.
+    - General bug fixing.
+
 2009-06-13 Francesco Piccinno <stack.box@gmail.com>
     * attacks/run-tester.sh:
        - Simple attacktester.py runner to avoid setting PYTHONPATH at every

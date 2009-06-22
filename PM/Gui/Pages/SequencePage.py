@@ -511,44 +511,74 @@ class SequencePage(Perspective):
 
         self.store.foreach(add_to_store, self.filter_store)
 
+    def append_packet(self, packet, coords=None):
+        """
+        Append a packet to the sequence
+        @param packet a MetaPacket or a str
+        @param coords a tuple (x, y) or
+                      True for appending after selection or None
+        @return True if the packet is appended
+        """
+
+        if self.merging:
+            return False
+
+        assert isinstance(packet, (basestring, Backend.MetaPacket)), \
+            "A string or MetaPacket instance is required"
+
+        if isinstance(packet, basestring):
+            protoklass = Backend.get_proto(packet)
+
+            if not protoklass:
+                return False
+
+            packet = Backend.MetaPacket(protoklass())
+
+        ret = None
+
+        if isinstance(coords, tuple) and len(coords) == 2:
+            ret = self.tree.get_dest_row_at_pos(*coords)
+
+        if ret:
+            path, pos = ret
+            iter = self.store.get_iter(path)
+
+            if pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE or \
+               pos == gtk.TREE_VIEW_DROP_INTO_OR_AFTER:
+                self.store.prepend(iter, [packet])
+            elif pos == gtk.TREE_VIEW_DROP_BEFORE:
+                self.store.insert_before(None, iter, [packet])
+            elif pos == gtk.TREE_VIEW_DROP_AFTER:
+                self.store.insert_after(None, iter, [packet])
+        elif not ret and coords == True:
+            model, iter = self.tree.get_selection().get_selected()
+
+            if iter:
+                self.store.insert_after(None, iter, [packet])
+            else:
+                self.store.append(None, [packet])
+        else:
+            self.store.append(None, [packet])
+
+        return True
+
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
         if self.merging:
             ctx.finish(False, False, time)
 
+        ret = False
+
         if data:
-            packet = None
-
             if data.format == 8:
-                proto = data.data
-                protoklass = Backend.get_proto(proto)
-
-                if protoklass:
-                    packet = Backend.MetaPacket(protoklass())
+                ret = self.append_packet(data.data, (x, y))
             elif str(data.target) == 'PMPacket':
                 ret = self.tree.get_selection().get_selected()
 
                 if ret:
                     packet = ret[0].get_value(ret[1], 0)
+                    ret = self.append_packet(packet, (x, y))
 
-            if packet:
-                ret = self.tree.get_dest_row_at_pos(x, y)
-
-                # We have to place packet to a correct location
-
-                if ret:
-                    path, pos = ret
-                    iter = self.store.get_iter(path)
-
-                    if pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE or \
-                       pos == gtk.TREE_VIEW_DROP_INTO_OR_AFTER:
-                        self.store.prepend(iter, [packet])
-                    elif pos == gtk.TREE_VIEW_DROP_BEFORE:
-                        self.store.insert_before(None, iter, [packet])
-                    elif pos == gtk.TREE_VIEW_DROP_AFTER:
-                        self.store.insert_after(None, iter, [packet])
-                else:
-                    self.store.append(None, [packet])
-
+            if ret:
                 if data.format == 8:
                     ctx.finish(True, False, time)
                 else:

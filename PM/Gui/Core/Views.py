@@ -1,21 +1,21 @@
-#!/usr/bin/env python            
-# -*- coding: utf-8 -*-          
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2008 Adriano Monteiro Marques
-#                                            
+#
 # Author: Francesco Piccinno <stack.box@gmail.com>
-#                                                 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or   
-# (at your option) any later version.                                 
-#                                                                     
-# This program is distributed in the hope that it will be useful,     
-# but WITHOUT ANY WARRANTY; without even the implied warranty of      
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       
-# GNU General Public License for more details.                        
-#                                                                     
-# You should have received a copy of the GNU General Public License   
-# along with this program; if not, write to the Free Software         
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 """
@@ -52,9 +52,11 @@ class UmitViewWidget(gtk.VBox):
         self._top_bar.pack_start(self._title_label)
         self._top_buttons = gtk.HBox()
         self._top_bar.pack_start(self._top_buttons, expand=False)
-        self._detach_button = gtk.ToolButton(icon_widget=self._create_detach_button())
+        self._detach_button = gtk.ToolButton(
+            icon_widget=self._create_detach_button())
         self._top_buttons.pack_start(self._detach_button)
-        self._close_button = gtk.ToolButton(icon_widget=self._create_close_button())
+        self._close_button = gtk.ToolButton(
+            icon_widget=self._create_close_button())
         self._top_buttons.pack_start(self._close_button)
 
     def _create_widget_holder(self):

@@ -31,7 +31,8 @@ class BaseSniffContext(TimedContext):
     def __init__(self, iface, filter=None, minsize=0, maxsize=0, capfile=None, \
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
                  resmac=True, resname=False, restransport=True, promisc=True, \
-                 background=False, capmethod=0, callback=None, udata=None):
+                 background=False, capmethod=0, attacks=True, \
+                 callback=None, udata=None):
 
         """
         Create a BaseSniffContext object
@@ -54,6 +55,8 @@ class BaseSniffContext(TimedContext):
         @param capmethod the method to use (0 for standard, 1 for virtual
                          interface trough file, 2 for tcpdump helper, 3 for
                          dumpcap helper)
+        @param attacks a bool to indicate if attackdispatcher should be feeded
+                       with captured packets.
         @param callback a function to call at every packet sniffed
         @param udata the user data to pass to callback
         """
@@ -78,6 +81,7 @@ class BaseSniffContext(TimedContext):
         self.name_resolution = resname
         self.transport_resoltioin = restransport
         self.capmethod = capmethod
+        self.attacks = attacks
 
         self.background = background
         self.callback = callback

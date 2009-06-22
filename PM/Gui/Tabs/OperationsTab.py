@@ -334,13 +334,13 @@ class SniffOperation(Backend.SniffContext, Operation):
     def __init__(self, iface, filter=None, minsize=0, maxsize=0, capfile=None, \
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
                  resmac=True, resname=False, restransport=True, promisc=True, \
-                 background=False, capmethod=0):
+                 background=False, capmethod=0, attacks=True):
 
         Operation.__init__(self)
         Backend.SniffContext.__init__(self, iface, filter, minsize, maxsize,
                                       capfile, scount, stime, ssize, real,
                                       scroll, resmac, resname, restransport,
-                                      promisc, background, capmethod,
+                                      promisc, background, capmethod, attacks,
                                       self.__recv_callback, None)
 
         if not self.background:

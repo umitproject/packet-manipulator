@@ -114,45 +114,64 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
         self.tree.connect('drag-data-received', self.__on_drag_data)
 
+    def append_packet(self, packet, coords=None):
+        """
+        Append a packet (or better a protocol) to the current packet
+        @param packet a MetaPacket or a str
+        @param coords a tuple (x, y) or
+                      True for appending after selection or None
+        @return True if the packet is appended
+        """
+
+        assert isinstance(packet, (basestring, Backend.MetaPacket)), \
+            "A string or MetaPacket instance is required"
+
+        if isinstance(packet, basestring):
+            packet = Backend.get_proto(packet)
+
+            if not packet:
+                return False
+
+            packet = Backend.MetaPacket(packet())
+
+        ret = None
+        where = -1 # append as default
+
+        if isinstance(coords, tuple) and len(coords) == 2:
+            ret = self.tree.get_dest_row_at_pos(*coords)
+
+        if ret:
+            path, pos = ret
+
+            # because it's a treeview with only one child for row
+            where = len(path)
+
+            if pos == gtk.TREE_VIEW_DROP_BEFORE or \
+               pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE:
+                where -= 1
+
+        elif not ret and coords == True:
+            model, iter = self.tree.get_selection().get_selected()
+            path = self.store.get_path(iter)
+
+            where = len(path)
+
+        # Now try to insert this stuff into the packet
+
+        if self.session.packet.insert(packet, where):
+            self.session.reload_container(self.session.packet)
+            self.session.reload_editor()
+
+            return True
+
+        return False
+
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
-        if not self.session.packet:
+        if not self.session.packet or not data:
             ctx.finish(False, False, time)
 
-        if data and data.format == 8:
-            ret = self.tree.get_dest_row_at_pos(x, y)
-
-            try:
-                # Try to construct an empty packet
-                packet = Backend.get_proto(data.data)()
-                packet = Backend.MetaPacket(packet)
-            except Exception:
-                ctx.finish(False, False, time)
-                return
-
-            # We append as default
-            where = -1
-
-            if ret:
-                path, pos = ret
-
-                # because it's a treeview with only one child for row
-                where = len(path)
-
-                if pos == gtk.TREE_VIEW_DROP_BEFORE or \
-                   pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE:
-                    where -= 1
-
-            # Now try to insert this stuff into the packet
-
-            if self.session.packet.insert(packet, where):
-                ctx.finish(True, False, time)
-
-                self.session.reload_container(self.session.packet)
-                self.session.reload_editor()
-
-            else:
-                ctx.finish(False, False, time)
-
+        if self.append_packet(data.data, (x, y)):
+            ctx.finish(True, False, time)
         else:
             ctx.finish(False, False, time)
 
