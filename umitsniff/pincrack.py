@@ -41,13 +41,15 @@ def do_pin(state, op, data):
     
     try: 
         
-        {
+        { # dispatch table
          LMP_IN_RAND: lmp_in_rand,
          LMP_COMB_KEY: lmp_com_key,
          LMP_AU_RAND: lmp_au_rand,
-         LMP_SRES: lmp_sres }[op](state, unpack_data_for_pin)
+         LMP_SRES: lmp_sres \
+         
+         }[op](state, unpack_data_for_pin)
         
-        if not state.hasPin == 0xFF:
+        if not state.pin == 0xFF:
             return
         print 'btpincrack Go ',
         if state.pin_master:
@@ -61,7 +63,7 @@ def do_pin(state, op, data):
                 print "%.2X" % state.pin_data[i][j],
             print " ",
         print 
-        state.hasPin = 1
+        state.pin = 1
              
     except UmitBTError:
         pass
@@ -71,7 +73,7 @@ def pindata_memcpy(state, lenindex, pin_data):
     map(lambda x: state.pin_data[lenindex].append(x), pin_data)
 
 def lmp_in_rand(state, data):
-    state.hasPin = 1 | GOT_IN_RAND
+    state.pin = 1 | GOT_IN_RAND
     state.pin_master = state.master
     state.pin_data[0] = []
     #map(lambda x: state.pin_data[0].append(x), pin_data)
@@ -79,7 +81,7 @@ def lmp_in_rand(state, data):
 
 def lmp_comb_key(state, data):
     
-    if(not (state.hasPin & GOT_IN_RAND)):
+    if(not (state.pin & GOT_IN_RAND)):
         return
     
     if state.master == state.pin_master:
@@ -87,39 +89,39 @@ def lmp_comb_key(state, data):
 #        map(lambda x: state.pin_data[1].append(x), 
 #            struct.unpack(`len(data)` + 'B', data))
         pindata_memcpy(state, 1, data)
-        state.hasPin |= GOT_COMB1
+        state.pin |= GOT_COMB1
     else:
         state.pin_data[2] = []
         pindata_memcpy(state, 2, data)
-        state.hasPin |= GOT_COMB2 
+        state.pin |= GOT_COMB2 
 
 def lmp_au_rand(state, data):
-    if ((not (state.hasPin & GOT_COMB1))
-        or not(state.hasPin & GOT_COMB2)):
+    if ((not (state.pin & GOT_COMB1))
+        or not(state.pin & GOT_COMB2)):
         return
     
     if state.master == state.pin_master:
         state.pin_data[3] = []
         pindata_memcpy(state, 3, data)
-        state.hasPin |= GOT_AU_RAND1
+        state.pin |= GOT_AU_RAND1
     else:
         state.pin_data[4] = []
         pindata_memcpy(state, 4, data)
-        state.hasPin |= GOT_AU_RAND2
+        state.pin |= GOT_AU_RAND2
 
 def lmp_sres(state, data):
     if not state.master == state.pin_master:
-        if not state.hasPin & GOT_AU_RAND1:
+        if not state.pin & GOT_AU_RAND1:
             return
         state.pin_data[6] = []
         pindata_memcpy(state, 6, data)
-        state.hasPin |= GOT_SRES1
+        state.pin |= GOT_SRES1
     else:
-        if not state.hasPin & GOT_AU_RAND2:
+        if not state.pin & GOT_AU_RAND2:
             return
         state.pin_data[5] = []
         pindata_memcpy(state, 5, data)
-        state.hasPin |= GOT_SRES2
+        state.pin |= GOT_SRES2
 
     
     

@@ -9,21 +9,30 @@ from bluetooth import _bluetooth as pybt
 class State(object):
     """
         Port of struct state in the original tool
-        But in this case we need to add one more attribute... a btsocket
-        
-        dump - file to be written to
+        Added an additional attribute - btsocket - which is the socket representation
+        of a Bluetooth connection.
+       
     """
     
     def __init__(self, sock):
         _members = ['device', 'data', 'slen', 'llid', 'master', 'ignore_types', 'dump',\
-                    'ignore_zero', 'type', 'hasPin', 'pin_data', 'pin_master']
-        # device = sniffing device
+                    'ignore_zero', 'type', 'pin', 'pin_data', 'pin_master']
+        # List of attributes. Lazy way to initialize attributes.
+        # 
+        # device: sniffing device
+        # llid: llid for l2cap
+        # dump: file object storing an opened dump file (if -w option is selected) 
+        #
+        
         
         for attr in _members: 
             exec 'self.%s = None' % attr
             
         self.ignore_types = MAX_TYPES_DATA * [-1]
         self._socket = sock
+        """
+        Bluetooth socket.
+        """
     
     def getsocket(self):
         return self._socket
@@ -36,58 +45,49 @@ class State(object):
 
 class HCIDumpHdr(object):
     """
-        Port of struct hcidump_hdr in the original tool
+        Port of struct hcidump_hdr in the original tool. 
     """
     def __init__(self):
-        _members = ['_len', '_in', '_pad', '_ts_sec', '_ts_usec']
+        _members = ['length', 'input', 'pad', 'ts_sec', 'ts_usec']
+        # Lazy initialization once again.
+         
         for attr in _members:
             exec 'self.%s = None' % attr
         self._pad = 0
 
     def pack(self):
+        """
+            Returns Python string representation of the HCIDumpHdr attributes, prepared
+            using struct.pack.
+        
+        """
         try:
-            return struct.pack('HBBII', self._len, self._in, self._pad,
-                           self._ts_sec, self._ts_usec)
+            return struct.pack('HBBII', self.length, self.input, self.pad,
+                           self.ts_sec, self.ts_usec)
         except struct.error:
             print "None passed to struct.pack"
     
-        
-
-# Start of functions
-
-
-#PyDoc_STRVAR(bt_hci_send_req_doc,
-#"hci_send_req(sock, ogf, ocf, event, rlen, params=None, timeout=0)\n\
-#\n\
-#Transmits a HCI cmomand to the socket and waits for the specified event.\n\
-#   sock      - the btsocket object\n\
-#   ogf, ocf  - see bluetooth specification\n\
-#   event     - the event to wait for.  Probably one of EVT_*\n\
-#   rlen      - the size of the returned packet to expect.  This must be\n\
-#               specified since bt won't know how much data to expect\n\
-#               otherwise\n\
-#    params   - the command parameters\n\
-#    timeout  - timeout, in milliseconds");
-
-#class ReturnParam(object):
-#
-#    def __init__(self, fmt_pack_str, retlen):
-#        self.data = None
-#        self.retlen = retlen
-#        self.fmtstr = fmt_pack_str
   
 
 def send_debug(state, dbg_packet, retlen):
     """
-        addr - address of the remote device
-        retlen - length of data to be returned
+        Sends a command to the USB dongle using hci_send_req.
+        
+        Parameters:
+        -`state`: contains a btsocket object that is associated with the USB dongle.
+        -`dbg_packet`: DbgPacket instance.
+        -`retlen`: Length of data to be returned
+        
         Returns a Python string which the calling function should know how to interpret with struct.unpack 
     """
     preamble = FRAG_FIRST | FRAG_LAST | CHAN_DEBUG
-    hci_sock = pybt.hci_open_dev()
-    #handle = _get_acl_conn_handle(hci_sock, addr)
+    hci_sock = state.socket
+   
     # pkt is passed as argument params to hci_send_req
-    #pkt = struct.pack("H", handle)
+    # pkt must contain the preamble as well as the contents of the DbgPacket in a Python
+    # string before it can be passed to hci_send_req.
+    # Refer to PyBluez implementation of hci_send_req to further understand why pkt
+    # is packed as such.
     pkt = struct.pack("BBHH19B", preamble, dbg_packet.command,
                        0, 0, *dbg_packet.data )
     response = pybt.hci_send_req(hci_sock, OGF_VENDOR_CMD, 0x00, 
@@ -110,10 +110,12 @@ def get_timer(state):
 
 def set_filter(state, val):
     """
-        val - Must be a tuple or list
+        Parameters:
+        -`state`: State object.
+        -`val`: Python integer. To be converted into unsigned char when transmitted.
     """
     dbg_pkt = DbgPacket(CMD_FILTER)
-    dbg_pkt.data = val
+    dbg_pkt.data[0] = val
     send_debug_no_rp(state, dbg_pkt)
 
 def sniff_stop(state):
@@ -131,7 +133,9 @@ def sniff_start(state, master_add, slave_add):
 
 def hexdump(data):
     """
-        data - Python string to be written to dump file. String needs to first be
+        Parameters: 
+        
+        - `data`: Python string to be written to dump file. String needs to first be
         prepared using struct.pack
     """
     # print using %.2X
@@ -140,80 +144,102 @@ def hexdump(data):
     print
     
 
-def prep_hexdump(data):
-    """
-        data - list/tuple representation of data 
-    """
-    return struct.pack(`len(data)` + 'B', *data)
-
 def process_l2cap(state, data):
     """
+        Called by process_payload. Processes L2CAP payload.
         data - Python string to be written to dump file. String can be prepared using struct.pack
     """
     
     hdh = HCIDumpHdr()
     type = HCI_ACLDATA_PKT
     
-    print "L2CAP:"
+    print "L2CAP:", 
     # do a hexdump of the data
-    hexdump(prep_hexdump(data))
+    hexdump(data)
     
     # an acl_header is 2 shorts in length
     # first member is the handle and the next member is the dlen
-    
+    # 'BHH' = sizeof(type = 8 bits) + 2 * sizeof(short)
     if( not state.dump): return
-    hdh._len = struct.calcsize('BHH') + len(data) 
-    hdh._in, hdh._ts_sec, hdh._ts_usec = 1, 0, 0
     
-    dumpfile = open(state.dump, 'w')
-    dumpfile.write(hdh.pack())
-    dumpfile.write(struct.pack('B',type))
+    # hdh.length = sizeof(type) + sizeof(acl_header) + length of data in bytes
+    # since data is a string we assume that each character in the string can be represented by one byte
+    # hence len(data) is good enough for length of data in bytes
+    hdh.length = struct.calcsize('BHH') + len(data) 
+    hdh.input, hdh.ts_sec, hdh.ts_usec = 1, 0, 0
+    dumpfile = state.dump
     
-    acl_dlen = len(data)
-    acl_handle = ( 0 & 0x0fff ) | (state.llid << 12)     
-    dumpfile.write(struct.pack('H', acl_handle))
-    dumpfile.write(struct.pack('H', acl_dlen))
+    try:
     
-    dumpfile.write(data)
-    dumpfile.close()
+        dumpfile.write(hdh.pack())
+        dumpfile.write(struct.pack('B',type))
+        
+        acl_dlen = len(data)
+        acl_handle = ( 0 & 0x0fff ) | (state.llid << 12)     
+        dumpfile.write(struct.pack('HH', acl_handle, acl_dlen))
+        dumpfile.write(data)
+        
+    except IOError: 
+        dumpfile.close()
+        raise UmitBTError("File error: process_l2cap")
+    
 
 def dump_lmp(state, data):
-    
+    """
+        Writes LMP data from Bluetooth packet into dump file.
+        
+        Parameters:
+        
+        -`state`: Contains a dump attribute which is a file object representing the dump file.
+        
+    """
     hdh = HCIDumpHdr()
     type = HCI_EVENT_PKT
-    csr_lmp = [0] * (1 + 1 + 17 + 1)
+    csr_lmp = [0] * (1 + 1 + 17 + 1) # initializing the csr_lmp data structure
     assert len(data) <= 17
-    hdh._len = struct.calcsize('BBB') + len(csr_lmp)
-    hdh._in, hdh._ts_sec, hdh._ts_usec = 1, 0, 0
+    hdh.length = struct.calcsize('BBB') + len(csr_lmp)
+    hdh.input, hdh.ts_sec, hdh.ts_usec = 1, 0, 0
+    dumpfile = state.dump
     
-    dumpfile = open(state.dump, 'w')
-    dumpfile.write(hdh.pack())
-    dumpfile.write(struct.pack('B', type))
+    try:
+        
+        dumpfile.write(hdh.pack())
+        dumpfile.write(struct.pack('B', type))
+        
+        evt_evt = EVT_VENDOR 
+        # Note: some constants like EVT_VENDOR are also defined in PyBluez. However,
+        # we continue to use those defined in sniffcommon for consistency with the original
+        # tool.
+        evt_plen = len(csr_lmp)
+        dumpfile.write(struct.pack('BB', evt_evt, evt_plen))
+        
+        index = 0
+        # Channel ID = 20
+        csr_lmp[index], index = 20, index + 1
+        csr_lmp[index], index = 0x10 if state.master else 0x0f, index + 1
+        buf = struct.unpack(`(len(data) / struct.calcsize('B'))` + 'B', data )
+        for d in range(len(buf)):
+            csr_lmp[index + d] = buf[d]
+        else:
+            index += d
+        csr_lmp[index] = 0 # connection handle
+        dumpfile.write(struct.pack(`len(csr_lmp)`+'B', *csr_lmp))
+        
+    except IOError:
+        
+        dumpfile.close()
+        raise UmitBTError("File error: dump_lmp")
+        
     
-    evt_evt = EVT_VENDOR
-    evt_plen = len(csr_lmp)
-    dumpfile.write(struct.pack('BB', evt_evt, evt_plen))
     
-    index = 0
-    # Channel ID = 20
-    csr_lmp[index], index = 20, index + 1
-    csr_lmp[index], index = 0x10 if state.master else 0x0f, index + 1
-    for d in range(len(data)):
-        csr_lmp[index + d] = data[d]
-    else:
-        index += d
-    csr_lmp[index] = 0 # connection handle
-    
-    dumpfile.write(struct.pack(`index`+'B', *csr_lmp))
-    dumpfile.close()
 
 def process_lmp(state, data):
     
     if(state.dump):
         dump_lmp(state, data)
     
-    index = 0
-    op1, index = data[index], index + 1
+    index, op2  = 0, -1
+    op1, index = struct.unpack('B', data[0:struct.calcsize('B')])[0], index + 1
     assert len - 1 >= 0
     tid = op1 & LMP_TID_MASK
     op1 >>= LMP_OP1_SHIFT
@@ -226,17 +252,15 @@ def process_lmp(state, data):
     if not op2 == -1:
         print " Op2 %d" % op2,
     print ": ",
-    hexdump(prep_hexdump(data))
+    hexdump(data)
     
-    if(state.hasPin):
-        pass #add doPin here
+    if(state.pin):
+        import pincrack
+        pincrack.do_pin(state, op1, data)
 
 def process_dv(state, data):
-    """
-        
-    """
     print "DV: ",
-    hexdump(prep_hexdump(data))
+    hexdump(data)
 
 def process_payload(state, data):
     
@@ -250,7 +274,10 @@ def process_payload(state, data):
 
 def process_frontline(state, data):
     """
-       data - string created using struct.pack 
+       Parameters:
+        
+       `data`: Python string created using struct.pack. It is the ACL data returned from a 
+               btsocket.recv() call.
     """
     fp = UmitBTPacket()
     fp.attach(data[:fp.getlen()])
@@ -262,7 +289,7 @@ def process_frontline(state, data):
     if(fp.hlen == HLEN_BC2 or fp.hlen == HLEN_BC4):
         pass
     else:
-        print "Unknown header: %d" % fp.hlen
+        print "Unknown header len: %d" % fp.hlen
     
     if type in state.ignore_types or (state.ignore_zero and not plen):
         return #first condition checks for appended packets
@@ -298,7 +325,15 @@ def process_frontline(state, data):
         process_frontline(state, data[plen:])
 
 def process(state, data):
-    
+    """
+        Bluetooth packet captured. Processing begins.
+        
+        Parameters:
+        
+        - `state`: State object.
+        - `data` : Bluetooth packet. Python string representation. Needs unpacking.
+        
+    """
     buf_index = 0
     type, buf_index = struct.unpack("B", data[buf_index: struct.calcsize("B")])[0],\
         buf_index + 1
@@ -307,28 +342,36 @@ def process(state, data):
         print "Uknown type: %d", type
         return
     
-    acl_handle, acl_dlen= struct.unpack("HH", data[buf_index :struct.calcsize("HH")])
+    fmt_str = "HH" # 2 consecutive unsigned shorts
+    acl_handle, acl_dlen= struct.unpack(fmt_str, data[buf_index:struct.calcsize(fmt_str)])
     buf_index += 1
-    assert acl_dlen == (len(data) - struct.calcsize("HH") - 1)
+    assert acl_dlen == (len(data) - struct.calcsize(fmt_str) - 1)
     process_frontline(state, data[buf_index:])
 
 def sniff(state):
-    
+    """
+        Called to start sniffing. Loops infinitely.
+    """
     flt = pybt.hci_filter_new()
     pybt.hci_filter_all_ptypes(flt)
     pybt.hci_filter_all_events(flt)
     state.socket.setsockopt(pybt.SOL_HCI, pybt.HCI_ACLDATA_PKT, flt)
     
     while True:
-        state.data = state.socket.recv(1024) #as declared in original state struct
+        # In original code, buffer has len 1024
+        # This API call needs to be tested. As seen in bluez.py in PyBluez.
+        # Returns a string, assumed to be packed using struct.pack
+        state.data = state.socket.recv(1024) 
         if state.data == None:
-            pass #raise an error here
+            raise UmitBTError('BTSocket recv call error')         
         process(state, state.data)
 
 def parse_macs(mac_add):
     """
-        mac_add - string representation of a Bluetooth MAC address
         Returns a list of integers representing that MAC address (len = 6)
+        Parameters:
+        
+        - `mac_add`: string representation of a Bluetooth MAC address
     """
     import re
     p = re.compile(r'([0-9a-fA-F]{2}):'
@@ -343,45 +386,52 @@ def parse_macs(mac_add):
         for i in range(1, 6 + 1):
             maclist.append(int(m.group(i), 16)) #base 16 representation
     else:
-        pass #raise an error here. invalid mac address
+        raise UmitBTError("Invalid mac address: " + mac_add) #raise an error here. invalid mac address
+    return maclist
     
 
 def main():
+    """
+        Main method. Program entry point.
+    """
     
+    # Process command line arguments.
     from optparse import OptionParser
-    parser = OptionParser()
+    parser = OptionParser() 
     
     parser.add_option("-z", action="store_true", dest="ignore_zero", default=False,
-                      help="")
+                      help='Ignore zero length packets')
     parser.add_option('-d', action='store', type='int', dest='device',
-                      help='')
+                      help='<dev> e.g. hci0')
     parser.add_option('-t', action='store_true', dest='timer', default=False,
-                      help ='')
+                      help ='timer')
     parser.add_option('-f', action='store', dest='filter', type='int', 
-                      help='')
+                      help='<filter>')
     parser.add_option('-s', action='store_true', dest='stop', default=False,
-                      help='')
+                      help='stop')
     parser.add_option('-S', action='store', dest='start', default=False,
-                      help='')
+                      help='<master@slave>')
     parser.add_option('-i', action='store', dest='ignore_type',
-                      help='')
+                      help='<ignore type>')
     parser.add_option('-e', action='store_true', dest='snif', default=False,
-                      help='')
+                      help='sniff')
     parser.add_option('-w', action='store', dest='dump', type='string',
-                      help='')
-    parser.add_option('-p', action='store_true', dest='hasPin', default=False,
-                      help='')
+                      help='<dump_to_file>')
+    parser.add_option('-p', action='store', dest='pin', 
+                      help='own pin')
     (options, args) = parser.parse_args()
-    print options
-    print args
+    # print options
+    # print args
     
     if options.dump: #dump file not mandatory
-        state.dump = options.dump
+        state.dump = open(options.dump, 'w')
         
     if not options.device:
-        raise UmitBTError("Specify device")    
+        raise UmitBTError("Specify device")
+    else:
+        state.device = options.device    
     
-    devadd = pybt.hci_devid(options.device)
+    devadd = pybt.hci_devid(state.device)
     state.socket = pybt.hci_open_dev(devadd)
     
     if options.timer:
@@ -405,7 +455,7 @@ def main():
     
     pybt.hci_close_dev(devadd)    
     if(state.dump):
-        pass # we can elect to pass in the file object as part of the state and close here
+        state.dump.close()
     
     
 if __name__ == '__main__':

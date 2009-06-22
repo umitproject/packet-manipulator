@@ -10,6 +10,8 @@ This implementation is to be a port of the original darkircop Bluetooth sniffing
 
 """
 
+import struct
+
 #These constants are from the Bluez library. These are especially used in the tool.
 
 # From hci.h
@@ -131,28 +133,33 @@ class DbgPacket(object):
     """
     MAX_DATA_LEN = 19
     def __init__(self, command=None, data=None):
+        """
+            Parameters:
+            -`command`: Integer command (from sniffcommon) to USB dongle.
+            -`data`: list of integers (unsigned chars).
+        
+        """
         self._cmd = command
-        self._data = data #allows data to be anything
+        """
+            HCI command to the USB dongle.
+        """
+        if not data:
+            self._data = DbgPacket.MAX_DATA_LEN * [0] # allows data to be anything
+            """
+                List of integers (actually, unsigned chars).
+            """
+        else:
+            self._data = data
+            while len(self._data)  < DbgPacket.MAX_DATA_LEN:
+                self._data.append(0)
+        
     
     def getdata(self):
         """
             Return a list, consisting of 19 elements
         """
         return self._data            
-    
-    def setdata(self, val):
-        '''
-            val - sequence containing all data. Length must be less than
-            or equal to MAX_DATA_LEN
-        '''
-        if not (len(val) <= self.MAX_DATA_LEN):
-            #should raise an error here
-            pass
-        if not self._data:
-            self._data = DbgPacket.MAX_DATA_LEN * [0]
-        for index in range(len(val)):
-            self._data[index] = val[index]
-        
+
     def getcommand(self):
         return self._cmd
     
@@ -160,25 +167,27 @@ class DbgPacket(object):
         self._cmd = val
     
     def attach_start_pkt(self, startpkt):
+        """
+            Parameter:
+            - `startpkt`: StartPacket instance to be attached.
+        
+        """
         #test that startpkt.master and startpkt.slave are correctly formatted
         if len(startpkt.master) == 6 and len(startpkt.slave) == len(startpkt.master):
             for i in reverse(range(0, len(startpkt.master))):
-                self._data[i] = startpkt.master[i]
-                self._data[len(self._data) - i] = startpkt.slave[i]
-            
-                
-                
+                self._data[i] = startpkt.master[len(startpkt.master) - i - 1]
+                self._data[len(startpkt.master) + i] = startpkt.slave[len(startpkt.slave) - i - 1]
             
 
-    data = property(getdata, setdata)
+    data = property(getdata, None)
     command = property(getcommand, setcommand)
     
 
 class StartPacket(object):
     """
-        start_packet is port of struct start_packet.
+        StartPacket is port of struct start_packet.
         Used when initializing sniffing.
-        Is encapsulated within a dbg_packet when used.
+        Is encapsulated within a DbgPacket when used.
         Attributes: 
             master - list of len = 6 (number of bytes to represent mac address)
             slave  - list of len = 6
@@ -191,11 +200,22 @@ class StartPacket(object):
         elif name == 'slave': return self._slave
 
 
-import struct
 
 class UmitBTPacket(object):
     """
-        Python equivalent of frontline_packet (sizeof(frontline) == 14) 
+        Python equivalent of frontline_packet (sizeof(frontline) == 14 bytes) 
+        
+        Below is the original declaration of the struct frontline_packet.
+        struct frontline_packet {
+            uint8_t        fp_hlen;
+            uint32_t    fp_clock;
+            uint8_t        fp_hdr0;
+            uint16_t    fp_len;
+            uint32_t    fp_timer;
+            uint8_t        fp_chan;
+            uint8_t        fp_seq;
+        } __packed; 
+        
     """
     _PACK_FMT_STR = 'BIBHIBB'
     def __init__(self):
@@ -207,12 +227,14 @@ class UmitBTPacket(object):
             data - Python string. Used to unpack into UmitBTPacket attributes.
         """
         
-        assert len(data) >= 14
+        assert len(data) >= self.getlen()
         struct.unpack(UmitBTPacket._PACK_FMT_STR, self.hlen, self.clock, self.hdr0, self.len,
                       self.timer, self.chan, self.seq)
     def packed(self):
         """
-            Returns string containing packed attributes.
+            Returns string representation of the UmitBTPacket. Prepared using
+            struct.pack()
+            
         """
         return struct.pack(_PACK_FMT_STR, self.hlen, self.clock, self.hdr0,
                            self.len, self.timer, self.chan, self.seq)
@@ -220,16 +242,7 @@ class UmitBTPacket(object):
         return struct.calcsize(_PACK_FMT_STR)
     
     length = property(getlen, None)
-#
-#struct frontline_packet {
-#    uint8_t        fp_hlen;
-#    uint32_t    fp_clock;
-#    uint8_t        fp_hdr0;
-#    uint16_t    fp_len;
-#    uint32_t    fp_timer;
-#    uint8_t        fp_chan;
-#    uint8_t        fp_seq;
-#} __packed;  
+ 
 
 class UmitBTPacket_BC4(object):
     """
