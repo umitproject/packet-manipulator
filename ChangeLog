@@ -1,112 +1,112 @@
 2009-06-22 Francesco Piccinno <stack.box@gmail.com>
     * attacks/offline/fingerprint/sources/main.py:
-       - Now we use a remote_os cfield to set the fingerprint on a packet.
-       - Renamed various classes.
+        - Now we use a remote_os cfield to set the fingerprint on a packet.
+        - Renamed various classes.
     * attacks/offline/ip/sources/main.py:
-       - Now fragmented IP packets could be reassembled.
-       - The results of payload reassemble phase it's available as
-         reassemble_payload cfield.
-       - Added various tests for fragmentation as doctest strings.
-       - Introduced reassemble_max_fraglist and reassemble_max_fragments to
-         control the behaviour and limits of reassemble phase.
-       - No further checks if we have truncated packets due to low snaplen.
+        - Now fragmented IP packets could be reassembled.
+        - The results of payload reassemble phase it's available as
+          reassemble_payload cfield.
+        - Added various tests for fragmentation as doctest strings.
+        - Introduced reassemble_max_fraglist and reassemble_max_fragments to
+          control the behaviour and limits of reassemble phase.
+        - No further checks if we have truncated packets due to low snaplen.
     * attacks/setup-autogen.py:
-       - Add a simple setup.py autogenerator for attacks. This script could
-         also build automatically attacks. I've used to build attacks as
-         plugin and then test them directly into PM.
+        - Add a simple setup.py autogenerator for attacks. This script could
+          also build automatically attacks. I've used to build attacks as
+          plugin and then test them directly into PM.
     * PM/Gui/Pages/SniffPage.py
       PM/Manager/PreferenceManager.py:
-       - Now sniff page could have custom columns. Columns are defined in
-         gui.maintab.sniffview.columns variable as list of strings separated
-         by a comma. The structure is pretty simple:
-                             <name>|<size>|<getter>
-         Where `name` is the name of the column, `size` the pixel size as
-         integer and getter is a string representing a cfield or a method
-         of MetaPacket (that could have `get_` as prefix or not).
+        - Now sniff page could have custom columns. Columns are defined in
+          gui.maintab.sniffview.columns variable as list of strings separated
+          by a comma. The structure is pretty simple:
+                              <name>|<size>|<getter>
+          Where `name` is the name of the column, `size` the pixel size as
+          integer and getter is a string representing a cfield or a method
+          of MetaPacket (that could have `get_` as prefix or not).
     * PM/Gui/Dialogs/Preferences.py:
-       - Add a page to customize columns trough a comfortable treeview like
-         wireshark does.
+        - Add a page to customize columns trough a comfortable treeview like
+          wireshark does.
     * PM/Gui/Pages/PacketPage.py
       PM/Gui/Pages/SequencePage.py:
-       - Introduced append_packet() method used by callbacks of the context
-         menu of ProtocolSelector tab.
+        - Introduced append_packet() method used by callbacks of the context
+          menu of ProtocolSelector tab.
     * PM/Gui/Tabs/ProtocolSelectorTab.py:
-       - Add a context menu with classical actions to avoid using the drag
-         and drop if the user doesn't like it. Everything is implemented
-         with AccelGroup giving to the users the possibility to use also
-         keyboard shourtcuts to speed up the things.
+        - Add a context menu with classical actions to avoid using the drag
+          and drop if the user doesn't like it. Everything is implemented
+          with AccelGroup giving to the users the possibility to use also
+          keyboard shourtcuts to speed up the things.
     * PM/Gui/Plugins/PluginPage.py:
-       - Backport from UmitPlugins (fixed a typo)
-       - 80 columns line wrap fixed.
+        - Backport from UmitPlugins (fixed a typo)
+        - 80 columns line wrap fixed.
     * PM/Gui/Plugins/Tree.py
       PM/Gui/Plugins/Engine.py
       PM/Gui/Core/Views.py
       PM/Gui/Tabs/HackTab.py:
-       - 80 columns line wrap fixed.
+        - 80 columns line wrap fixed.
     * PM/Gui/Dialogs/Interface.py:
-       - Add `Enable attacks` check button to the dialog.
+        - Add `Enable attacks` check button to the dialog.
     * PM/Backend/Scapy/Context/Sniff.py:
-       - Now we could run attacks with AttackDispatcher inside a SniffContext.
+        - Now we could run attacks with AttackDispatcher inside a SniffContext.
     * PM/Gui/Sessions/SequenceSession.py
       PM/Backend/Scapy/Context/Sequence.py:
-       - Add the possibility to save the sequence as flatten one (pcap dump)
+        - Add the possibility to save the sequence as flatten one (pcap dump)
 
     - GUI improvements.
     - General bug fixing.
 
 2009-06-13 Francesco Piccinno <stack.box@gmail.com>
     * attacks/run-tester.sh:
-       - Simple attacktester.py runner to avoid setting PYTHONPATH at every
-         run.
+        - Simple attacktester.py runner to avoid setting PYTHONPATH at every
+          run.
     * attacks/nose-tests.sh:
-       - Simple launcher of nosetests to test the attacks by testing the
-         doctest strings in main.py files.
+        - Simple launcher of nosetests to test the attacks by testing the
+          doctest strings in main.py files.
     * attacks/attacktester.py:
-       - Add interaction with PluginEngine().tree to let the plugin tested
-         with the attacktester.py to have Core().get_need() fully working
-         without having the mess to define a setup.py. Really usefull while
-         developing and testing.
-       - Add the possibility to change the configuration by passing set
-         expressions separated with ',' on the command line prefixed with -s.
-       - Add a --quiet options to avoid printing useless messages.
-       - Add a --profile option that uses hotshot module to profile the code.
+        - Add interaction with PluginEngine().tree to let the plugin tested
+          with the attacktester.py to have Core().get_need() fully working
+          without having the mess to define a setup.py. Really usefull while
+          developing and testing.
+        - Add the possibility to change the configuration by passing set
+          expressions separated with ',' on the command line prefixed with -s.
+        - Add a --quiet options to avoid printing useless messages.
+        - Add a --profile option that uses hotshot module to profile the code.
     * PM/Core/AttackUtils.py:
-      - Add a module to holds utilities functions used in various attacks.
-      - Add attack_unittest() function used by doctest of various attacks.
+        - Add a module to holds utilities functions used in various attacks.
+        - Add attack_unittest() function used by doctest of various attacks.
     * attacks/offline/ethernet/sources/main.py
       attacks/offline/ip/sources/main.py:
-       - Switching from coroutine to classic approach.
+        - Switching from coroutine to classic approach.
     * attacks/offline/tcp/sources/main.py:
-       - Switching from coroutine to classic approach.
-       - Add checksum checking.
+        - Switching from coroutine to classic approach.
+        - Add checksum checking.
     * attacks/offline/fingerprint/sources/main.py:
-       - Add passive fingerprint attack that uses the same approach and db of
-         ettercap.
+        - Add passive fingerprint attack that uses the same approach and db of
+          ettercap.
     * attacks/pcap-tests/wrong-checksum.pcap:
-       - Create a pcap-test/ file to holds pcap files used for testing
-         purposes.
-       - Add a wrong-checksum.pcap file used by tcp, ip and fingerprint
-         attacks.
+        - Create a pcap-test/ file to holds pcap files used for testing
+          purposes.
+        - Add a wrong-checksum.pcap file used by tcp, ip and fingerprint
+          attacks.
     * PM/Manager/AttackManager.py:
-       - Dropped coroutine approach for evident limitation on threaded context
-         and poor performance. Now we use tradition callable.
-       - Add Configuration object to centralize and made easier task to manage
-         configurations from a plugin and his relative methods to the manager.
-       - Add user_msg() function for communicating message to the user with
-         the same approach of syslog (severity and facility).
-       - Add add_decoder_hook() method to the manager to provide a pre/post
-         hook set mechanism for decoders functions. This is used for example
-         in the fingerprint offline attack.
-       - Now AttackPlugin class has 2 additional methods register_options()
-         and register_hooks().
+        - Dropped coroutine approach for evident limitation on threaded context
+          and poor performance. Now we use tradition callable.
+        - Add Configuration object to centralize and made easier task to manage
+          configurations from a plugin and his relative methods to the manager.
+        - Add user_msg() function for communicating message to the user with
+          the same approach of syslog (severity and facility).
+        - Add add_decoder_hook() method to the manager to provide a pre/post
+          hook set mechanism for decoders functions. This is used for example
+          in the fingerprint offline attack.
+        - Now AttackPlugin class has 2 additional methods register_options()
+          and register_hooks().
     * PM/Core/Atoms.py:
-       - Add ordered dict (odict) implementation to the Atoms module.
+        - Add ordered dict (odict) implementation to the Atoms module.
     * PM/Backend/Abstract/BaseContext/Timed.py:
-       - print replaced with log.debug()
+        - print replaced with log.debug()
     * PM/Backend/Scapy/packet.py:
-       - Add a cfields attribute to metapacket for managing custom fields
-         created by attacks.
-       - Add get_field(), set_cfield(), unset_cfield() functions.
+        - Add a cfields attribute to metapacket for managing custom fields
+          created by attacks.
+        - Add get_field(), set_cfield(), unset_cfield() functions.
 
     - General bug fixing.
     - Implemented custom fields by using a private dictionary.
@@ -115,47 +115,47 @@
 
 2009-06-07 Francesco Piccinno <stack.box@gmail.com>
     * PM/Gui/Pages/SniffPage.py:
-       - Fixing a bug due to check_finished() called on context that doesn't
-         provide, like Sequence.
+        - Fixing a bug due to check_finished() called on context that doesn't
+          provide, like Sequence.
     * PM/Gui/Pages/PacketPage.py:
-       - Using get_raw() method instead of get_packet_raw()
+        - Using get_raw() method instead of get_packet_raw()
     * PM/Gui/Pages/SequencePage.py:
-       - 80 columns line wrap fix.
-       - Switching to standard tooltip scheme instead of HIGTooltip.
-       - Implemented a context menu to copy, delete and paste selected packet.
-       - Fixed text label.
+        - 80 columns line wrap fix.
+        - Switching to standard tooltip scheme instead of HIGTooltip.
+        - Implemented a context menu to copy, delete and paste selected packet.
+        - Fixed text label.
     * PM/Gui/Tabs/OperationsTab.py:
-       - Fixing a bug due to not checking for the load()/save() correctness.
+        - Fixing a bug due to not checking for the load()/save() correctness.
     * PM/Backend/Scapy/Context/Sequence.py:
-       - Various bug fix. Fixing a regression that doesn't set the title
-         after the file is saved.
+        - Various bug fix. Fixing a regression that doesn't set the title
+          after the file is saved.
     * PM/Backend/Scapy/Context/Sniff.py:
-       - Fixing "9, Bad file descriptor" bug showed when the sniff session
-         is stopped.
+        - Fixing "9, Bad file descriptor" bug showed when the sniff session
+          is stopped.
     * PM/Backend/Scapy/wrapper.py
       PM/Backend/Scapy/serialize.py:
-       - Various fix.
-       - Avoid to save not edited properties.
-       - Using base64 to serialize field values.
+        - Various fix.
+        - Avoid to save not edited properties.
+        - Using base64 to serialize field values.
     * PM/Core/Logger.py:
-       - Adding a PM_NOCOLORTERM environment variable to avoid the use of
-         colors on terminal.
+        - Adding a PM_NOCOLORTERM environment variable to avoid the use of
+          colors on terminal.
     * PM/Backend/Scapy/utils.py:
-       - Now the SendReceiveConsumer and SequenceConsumer could use the
-         helpers.
+        - Now the SendReceiveConsumer and SequenceConsumer could use the
+          helpers.
     * PM/Manager/PreferenceManager.py
       PM/Gui/Dialogs/Preferences.py:
-       - Introducing enumerator variables.
-       - Add variables to manage the various capmethods.
+        - Introducing enumerator variables.
+        - Add variables to manage the various capmethods.
     * PM/Backend/Scapy/packet.py:
-       - Added a copy() function to MetaPacket.
+        - Added a copy() function to MetaPacket.
     * PM/Gui/Tabs/ProtocolSelectorTab.py:
-       - Fix wrong colorized rows when the packets are organized per layer.
+        - Fix wrong colorized rows when the packets are organized per layer.
     * PM/Gui/Core/MainWindow.py:
-       - Fixing the size of the application by suggesting a default_size
-       - Various fix to avoid exceptions if page remove are not a Session.
+        - Fixing the size of the application by suggesting a default_size
+        - Various fix to avoid exceptions if page remove are not a Session.
     * PM/Gui/Tabs/MainTab.py:
-       - Sexy stuff like IntroPage introduced.
+        - Sexy stuff like IntroPage introduced.
 
     - Bug fixing.
     - UI improvements.
@@ -163,41 +163,41 @@
 
 2009-06-02 Francesco Piccinno <stack.box@gmail.com>
     * attacks/offline/wifi/sources/main.py:
-       - First (dummy) implementation of Wifi decoder module.
+        - First (dummy) implementation of Wifi decoder module.
     * attacks/offline/ethernet/sources/main.py:
-       - First implementation of Ethernet decoder module.
+        - First implementation of Ethernet decoder module.
     * attacks/offline/ip/sources/main.py:
-       - First implementation of IP decoder module.
+        - First implementation of IP decoder module.
     * attacks/offline/tcp/sources/main.py:
-       - First implementation of TCP decoder module.
+        - First implementation of TCP decoder module.
     * attacks/attacktester.py:
-       - Simple script to test the decoders/dissectors/attacks from command
-         line.
+        - Simple script to test the decoders/dissectors/attacks from command
+          line.
     * PM/Backend/Scapy/translator.py:
-       - Global translator script for fields that does not respect wireshark
-         visible filters nomenclature. (Used in get_field of MetaPacket)
+        - Global translator script for fields that does not respect wireshark
+          visible filters nomenclature. (Used in get_field of MetaPacket)
     * PM/Backend/Scapy/wrapper.py:
-       - Fixing a bug related to the wrong implementation of get_field_size.
+        - Fixing a bug related to the wrong implementation of get_field_size.
     * PM/Backend/Scapy/packet.py:
-       - Add get_raw_layer function.
-       - Add get_field function that should respect wireshark filters.
-       - Add get_datalink function to return the correct datalink for the
-         selected packet.
+        - Add get_raw_layer function.
+        - Add get_field function that should respect wireshark filters.
+        - Add get_datalink function to return the correct datalink for the
+          selected packet.
     * PM/Core/NetConst.py:
-       - Module that contains constants used in AttackFramework implementation.
+        - Module that contains constants used in AttackFramework implementation.
     * PM/Manager/AttackManager.py:
-       - Real code for AttackFramework idea.
-       - Add coroutine decorator to create more performant filters, decoders
-         or dissectors.
-       - Add Decoder class if the OOP design is preferred.
-       - Add AttackManager singleton class that contains all the references
-         to decoders and filters used in PM.
-       - Add AttackDispatcher class to separate the feed behaviour from the
-         Singleton class. This lets you call various dispatcher without
-         having the mess to create a single AttackManager for every invocation.
-       - Add AttackPlugin as base class and the derived one OfflineAttack, 
-         OnlineAttack.
-       - Add AttackTester class used for testing purpose.
+        - Real code for AttackFramework idea.
+        - Add coroutine decorator to create more performant filters, decoders
+          or dissectors.
+        - Add Decoder class if the OOP design is preferred.
+        - Add AttackManager singleton class that contains all the references
+          to decoders and filters used in PM.
+        - Add AttackDispatcher class to separate the feed behaviour from the
+          Singleton class. This lets you call various dispatcher without
+          having the mess to create a single AttackManager for every invocation.
+        - Add AttackPlugin as base class and the derived one OfflineAttack, 
+          OnlineAttack.
+        - Add AttackTester class used for testing purpose.
 
      - Scapy bugfixing.
      - First approach of AttackFramework idea.
@@ -205,16 +205,16 @@
 2009-05-24  Francesco Piccinno  <stack.box@gmail.com>
     * PM/Gui/Widgets/Plotter.py
       PM/Gui/Widgets/PropertyGrid.py:
-       - Fixing various bugs due to ConditionalField used by Scapy.
+        - Fixing various bugs due to ConditionalField used by Scapy.
     * PM/Backend/Scapy/wrapper.py:
-       - Added a new function is_showable_field() to manage this situation.
-       - Various fix for ConditionalField.
+        - Added a new function is_showable_field() to manage this situation.
+        - Various fix for ConditionalField.
     * PM/Backend/Scapy/packet.py:
-       - Added rebuild_from_raw_payload() to MetaPacket.
+        - Added rebuild_from_raw_payload() to MetaPacket.
     * PM/Gui/Pages/PacketPage.py:
-       - Add the possibility to edit the packet directly from the HexView.
+        - Add the possibility to edit the packet directly from the HexView.
     * PM/Gui/Widgets/PyGtkHexView.py:
-       - Added a popup menu for common actions like cut/copy/paste.
+        - Added a popup menu for common actions like cut/copy/paste.
     * PM/Gui/Plugins/Network.py
       PM/Gui/Plugins/PathPage.py
       PM/Gui/Plugins/PluginPage.py
