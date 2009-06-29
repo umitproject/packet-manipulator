@@ -29,8 +29,8 @@ PROTO_LAYER   = 4
 
 # Here goes dissectors
 APP_LAYER     = 5
-APP_LAYER_TCP = 51
-APP_LAYER_UDP = 52
+APP_LAYER_TCP = 6
+APP_LAYER_UDP = 7
 
 ###############################################################################
 # Layer types
@@ -74,3 +74,22 @@ TH_RST = 0x04
 TH_PSH = 0x08
 TH_ACK = 0x10
 TH_URG = 0x20
+
+###############################################################################
+# ICMP types & codes
+###############################################################################
+
+ICMP_TYPE_ECHOREPLY     = 0
+ICMP_TYPE_DEST_UNREACH  = 3
+ICMP_TYPE_REDIRECT      = 5
+ICMP_TYPE_ECHO          = 8
+ICMP_TYPE_TIME_EXCEEDED = 11
+
+ICMP_CODE_NET_UNREACH   = 0
+ICMP_CODE_HOST_UNREACH  = 1
+
+###############################################################################
+# Reassemly of fragments
+###############################################################################
+
+NEED_FRAGMENT = 1

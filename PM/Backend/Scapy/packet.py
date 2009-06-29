@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from PM.Core.Logger import log
+from PM.Core.Atoms import generate_traceback
 from PM.Backend.Scapy.translator import global_trans
 from PM.Backend.Scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
                                        Raw, IP, get_proto_size
@@ -258,12 +259,17 @@ class MetaPacket(object):
             ret = fieldname.split('.')
             layer = self.root.getlayer(global_trans[ret[0]][0])
 
+            if not layer:
+                return None
+
             if len(ret) > 1:
                 return getattr(layer, ret[1])
             else:
                 return str(layer)
         except Exception, err:
-            raise err
+            log.error('Error in get_field. Traceback:')
+            log.error(generate_traceback())
+            return None
 
     def copy(self):
         if self.root:

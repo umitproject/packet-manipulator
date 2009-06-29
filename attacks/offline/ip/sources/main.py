@@ -64,7 +64,7 @@ def ip_decoder():
 
     reas_dict = {}
 
-    def internal(mpkt):
+    def ip(mpkt):
         ipraw = mpkt.get_field('ip')
         iplen = min(20, len(ipraw))
 
@@ -173,7 +173,7 @@ def ip_decoder():
                             p_len = frag_off + mpkt.get_field('ip.len') - ihl
 
                             if len(reas_payload) != p_len:
-                                mpkt.set_cfield('reassemble_payload', None)
+                                mpkt.set_cfield('reassembled_payload', None)
                                 manager.user_msg(_('Reassemble of IP packet ' \
                                                    'from %s to %sfailed') % \
                                                  (mpkt.get_field('ip.src'),
@@ -183,7 +183,7 @@ def ip_decoder():
                             # Nice drop out everythin!
                             del reas_dict[ipid]
 
-                            mpkt.set_cfield('reassemble_payload', reas_payload)
+                            mpkt.set_cfield('reassembled_payload', reas_payload)
                 else:
                     if len(reas_dict) >= max_len:
                         # Ok just drop the list with the minor ts (the oldest)
@@ -200,7 +200,7 @@ def ip_decoder():
 
         return PROTO_LAYER, mpkt.get_field('ip.proto')
 
-    return internal
+    return ip
 
 class IPDecoder(Plugin, OfflineAttack):
     def register_options(self):

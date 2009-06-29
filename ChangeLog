@@ -1,3 +1,41 @@
+2009-06-29 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/offline/http/sources/main.py:
+        - First implementation of HTTP decoder/dissector.
+    * attacks/offline/profiler/sources/main.py:
+        - This is a traffic profiler and collector offline attack. This
+          includes:
+            - MAC fingerprint with the help of a db file.
+            - Service banner collector.
+            - Account collector.
+            - Hop collector.
+            - Host type identification (router / local / remote).
+    * attacks/offline/profiler/data/finger.mac.db:
+        - MAC database file derived from manuf of wireshark.
+    * attacks/offline/tcp/sources/main.py:
+        - Fixed a bug showing wrong checksum message on truncated packets.
+        - Add a reassembler class. Only a skeleton the implementation is
+          missing and should be add soon.
+        - Enabled dissectors running from this stage trought a configuration
+          variable.
+    * attacks/offline/icmp/sources/main.py:
+        - Add ICMP decoder that uses IP reassembling exposed in IP decoder
+          trough cfields.
+    * attacks/offline/ftp/sources/main.py:
+        - Finished FTP dissector implementation (but we don't use reassembly
+          so bogus or fragmented packets can not be handled).
+    * attacks/pcap-tests/ftp-login.pcap
+      attacks/pcap-tests/wrong-checksum-icmp.pcap
+      attacks/pcap-tests/fragmented-ping.pcap:
+        - Add pcap test files used by various plugins for testing.
+    * PM/Manager/SessionManager.py:
+        - Implement a simple SessionManager used by FTP plugin.
+
+    - Bug fixing.
+    - FTP dissector.
+    - ICMP decoder.
+    - Profiler attack.
+    - Initial work on HTTP dissector and TCP stream reassembling.
+
 2009-06-22 Francesco Piccinno <stack.box@gmail.com>
     * attacks/offline/fingerprint/sources/main.py:
         - Now we use a remote_os cfield to set the fingerprint on a packet.

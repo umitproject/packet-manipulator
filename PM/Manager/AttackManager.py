@@ -82,8 +82,7 @@ class AttackManager(Singleton):
         # It seems that specifying {} * n doesn't create a new object
         # but instead only create a new pointer to the same object.
         # Here we need separated dict so we should declare them all
-        self._decoders = ({}, {}, {}, {}, {})
-
+        self._decoders = ({}, {}, {}, {}, {}, {}, {})
         self._configurations = {}
 
         self._global_conf = self.register_configuration('global')
@@ -155,6 +154,9 @@ class AttackManager(Singleton):
         self._decoders[level][type] = (decoder, [], [])
 
     def add_decoder_hook(self, level, type, decoder_hook, post=0):
+        if type not in self._decoders[level]:
+            self._decoders[level][type] = (None, [], [])
+
         self._decoders[level][type][post + 1].append(decoder_hook)
 
     def get_decoder(self, level, type):
@@ -169,15 +171,18 @@ class AttackManager(Singleton):
         while level and type:
             decoder, pre, post = self.get_decoder(level, type)
 
-            if not decoder:
+            if not decoder and not pre and not post:
                 return
 
-            log.debug("Running decoder %s" % decoder)
+            #log.debug("Running decoder %s" % decoder)
 
             for pre_hook in pre:
                 pre_hook(metapkt)
 
-            ret = decoder(metapkt)
+            if decoder:
+                ret = decoder(metapkt)
+            else:
+                ret = None
 
             for post_hook in post:
                 post_hook(metapkt)
@@ -188,8 +193,15 @@ class AttackManager(Singleton):
             else:
                 return
 
-    def add_dissector(self):
-        pass
+    def add_dissector(self, layer, port, dissector):
+        """
+        Add a dissector to the chain
+        @param layer APP_LAYER_TCP or APP_LAYER_UDP
+        @param port the remote port
+        @param dissector a callable
+        """
+        # The dissector is only a special case of a decoder.
+        self.add_decoder(APP_LAYER_TCP, port, dissector)
 
     def add_filter(self):
         pass
