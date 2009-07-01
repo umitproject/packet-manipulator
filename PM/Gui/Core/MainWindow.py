@@ -292,7 +292,7 @@ class MainWindow(gtk.Window):
         new_item.show()
         menu.append(new_item)
 
-    def create_session(self, menu, tuple):
+    def create_session(self, menu, tup):
         """
         Create a new session using ctxklass and sessklass
 
