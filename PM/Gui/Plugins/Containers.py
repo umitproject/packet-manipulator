@@ -411,7 +411,7 @@ class PluginReader(ManifestLoader):
                       zip_path)
             return None
 
-        plug_subdir = os.path.join(Path.config_dir, 'plugins-temp', self.name)
+        plug_subdir = os.path.join(PM_PLUGINS_TEMP_DIR, self.name)
 
         if not os.path.exists(plug_subdir):
             os.mkdir(plug_subdir)

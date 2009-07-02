@@ -33,7 +33,7 @@ from xml.dom.minidom import parseString
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
-from PM.Core.Const import PM_PLUGINS_TEMP_DIR
+from PM.Core.Const import PM_PLUGINS_TEMP_DIR, PM_PLUGINS_DIR, PM_HOME
 
 from PM.Gui.Plugins.Network import *
 from PM.Gui.Plugins.Atoms import Version
@@ -198,7 +198,7 @@ class UpdateEngine(object):
         obj = self.update_lst.pop(0)
 
         try:
-            user_dir = os.path.join(Path.config_dir)
+            user_dir = PM_HOME
             filename = os.path.basename(obj.object.reader.get_path())
 
             obj.fd = open(mkstemp(".part", filename, \
@@ -424,10 +424,9 @@ class UpdateEngine(object):
 
                     # We check if the path is the plugins in config_dir
 
-                    plug_dir = os.path.join(Path.config_dir, 'plugins')
 
-                    if os.path.dirname(obj.object.reader.get_path()) != plug_dir and \
-                       os.access(plug_dir, os.O_RDWR):
+                    if os.path.dirname(obj.object.reader.get_path()) != PM_PLUGINS_DIR and \
+                       os.access(PM_PLUGINS_DIR, os.O_RDWR):
 
                         obj.status = LATEST_ERROR
 
