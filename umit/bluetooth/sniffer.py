@@ -1,4 +1,4 @@
-from basesniff import *
+from sniff import *
 
 def parse_macs(mac_add):
     """
