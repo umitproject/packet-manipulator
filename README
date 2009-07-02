@@ -1,3 +1,11 @@
 Umit Bluetooth Sniffer - A Google Summer of Code 2009 project
 ==========================
 
+To run development build:
+1. Extract tarball in dist/ to <dir> directory where <dir> is user specified.
+2. In <dir>, run "python setup.py build"
+3. Change directory to <dir>/build/lib.<platform>/
+4. Run with "python umit/bluetooth/sniffer.py [args]"
+
+
+
