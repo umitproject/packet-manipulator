@@ -45,6 +45,8 @@ from PM.Gui.Pages.Base import Perspective
 from PM.Core.Errors import PMErrorException
 from PM.Manager.PreferenceManager import Prefs
 
+from PM.Backend.Scapy.Context import Sniff
+
 from math import pi
 
 if Prefs()['backend.system'].value.lower() != 'scapy':
@@ -58,41 +60,42 @@ class MSC(Perspective):
     title = _('MSC')
 
     def create_ui(self):
+        
+        self.chart = Chart()
+        
+        
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
         
 
-        pcap_button = gtk.Action(None, None, _('Open Pcap'), gtk.STOCK_OPEN)
-        jpg_button = gtk.Action(None, None, _('Save as svg'), gtk.STOCK_SAVE)
-        svg_button= gtk.Action(None, None, _('Save as png'), gtk.STOCK_SAVE_AS)
-        reload_button= gtk.Action(None, None, _('Reload'), gtk.STOCK_REFRESH)
-        stop_button= gtk.Action(None, None, _('Stop'), gtk.STOCK_MEDIA_STOP)
-        sniff_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_MEDIA_PLAY)
+        self.pcap_button = gtk.Action(None, None, _('Open Pcap'), gtk.STOCK_OPEN)
+        self.jpg_button = gtk.Action(None, None, _('Save as svg'), gtk.STOCK_SAVE)
+        self.svg_button= gtk.Action(None, None, _('Save as png'), gtk.STOCK_SAVE_AS)
+        self.reload_button= gtk.Action(None, None, _('Reload'), gtk.STOCK_REFRESH)
+        self.stop_button= gtk.Action(None, None, _('Stop'), gtk.STOCK_MEDIA_STOP)
+        self.sniff_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_MEDIA_PLAY)
         self.filter_pack = gtk.Entry()
         
         self.intf_combo = InterfacesCombo()
-        item = gtk.ToolItem()
-        item.add(self.intf_combo)
+        self.item = gtk.ToolItem()
+        self.item.add(self.intf_combo)
 
 
-        self.toolbar.insert(pcap_button.create_tool_item(), -1)
-        self.toolbar.insert(jpg_button.create_tool_item(), -1)
-        self.toolbar.insert(svg_button.create_tool_item(), -1)
-        self.toolbar.insert(reload_button.create_tool_item(), -1)
-        self.toolbar.insert(stop_button.create_tool_item(), -1)
-        self.toolbar.insert(item, -1)
-        self.toolbar.insert(sniff_button.create_tool_item(), -1)
+        self.toolbar.insert(self.pcap_button.create_tool_item(), -1)
+        self.toolbar.insert(self.jpg_button.create_tool_item(), -1)
+        self.toolbar.insert(self.svg_button.create_tool_item(), -1)
+        self.toolbar.insert(self.reload_button.create_tool_item(), -1)
+        self.toolbar.insert(self.stop_button.create_tool_item(), -1)
+        self.toolbar.insert(self.item, -1)
+        self.toolbar.insert(self.sniff_button.create_tool_item(), -1)
 
-        sniff_button.connect('activate', self.__on_run)
+        self.sniff_button.connect('activate', self.__on_run)
+        self.reload_button.connect('activate', self.__on_reload)
         
         self.pack_start(self.toolbar, False, False)
+        self.pack_start(self.chart)  
 
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        
-        self.chart = Chart()
-        self.pack_start(self.chart)        
+     
         self.show_all()
 
         # Register the lock/unlock callback
@@ -102,7 +105,10 @@ class MSC(Perspective):
             lambda: self.toolbar.set_sensitive(True)
     
     def __on_run(self, action):
-        self.chart.update_draw(self.intf_combo.get_interface())
+        self.chart.redraw(self.intf_combo.get_interface())
+        
+    def __on_reload(self, action):
+        self.chart.update_drawing_clbk(None, None)
         
 
 class MSCContext(StaticContext):
@@ -173,7 +179,6 @@ class Chart(gtk.DrawingArea):
     __gtype_name__ = "Chart"
 
     def __init__(self):
-
         super(Chart, self).__init__()
         
         
@@ -189,7 +194,23 @@ class Chart(gtk.DrawingArea):
         cr.fill()
         cr.restore()
         
-    def update_draw(self, iface):
-        print iface
+    def redraw(self, iface):
+        self.sniff_context = Backend.SniffContext(iface, None, 0, 0, None, 0, 0, 0, \
+                                      True, True, True, False, True, True, \
+                                      False, 0, True, self.__update_drawing_clbk, None)
+        self.timeout = gobject.timeout_add(300, self.__check_for_packets)
+        self.sniff_context._start()
+        
+    def __update_drawing_clbk(self, packet, udata):
+        
+        print packet
+        # packet is the MetaPacket or may be a list of it 
+        
+    
+        
+    def __check_for_packets(self):
+        self.sniff_context.check_finished()
+        return True
+
         
 
