@@ -1,5 +1,7 @@
 from sniff import *
 
+MAX_TYPES = 16
+
 def parse_macs(mac_add):
     """
         Returns a list of integers representing that MAC address (len = 6)
@@ -41,7 +43,7 @@ def main():
                           help='stop')
     parser.add_option('-S', action='store', dest='start', default=False,
                           help='<master@slave>')
-    parser.add_option('-i', action='store', dest='ignore_type',
+    parser.add_option('-i', action='store', dest='ignore_type', type='int', default=0,
                           help='<ignore type>')
     parser.add_option('-e', action='store_true', dest='snif', default=False,
                           help='sniff')
@@ -52,6 +54,12 @@ def main():
     (options, args) = parser.parse_args()
     
     state = State()
+    state.ignore_zero = 1 if options.ignore_zero else 0
+    global MAX_TYPES
+    for i in range(MAX_TYPES):
+        state.ignore_types.append(-1)
+    # Note for ignore_types as of now we only allow ignoring of one type
+    state.ignore_types[0] = options.ignore_type if options.ignore_type else -1
     
     if not options.device:
         exit("Did not specify device")
@@ -74,7 +82,7 @@ def main():
             start_sniff(state, options.device, master_add, slave_add)
     
     if options.snif:
-        sniff(state, options.device)
+        sniff(state, options.device, options.dump)
   
   
 if __name__=='__main__':

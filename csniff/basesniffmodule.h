@@ -86,13 +86,13 @@ typedef struct {
 	int	s_len;
 	int	s_llid;
 	int	s_master;
-	int	s_ignore[MAX_TYPES];
 	int	s_dump;
 	int	s_ignore_zero;
 	int	s_type;
 	uint8_t	s_pin;
 	uint8_t	s_pin_data[7][16];
 	int	s_pin_master;
+	PyObject *s_ignore_list;
 
 } __packed PyState;
 

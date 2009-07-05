@@ -1,12 +1,14 @@
 
 #include "basesniffmodule.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <err.h>
-
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
+#include <stdio.h>
+#include <err.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <assert.h>
 
 #include "structmember.h"
 
@@ -17,6 +19,7 @@ static void send_debug(PyState *s, struct dbg_packet *dp, void *rp,
 	unsigned char cp[254];
 	struct hci_request rq;
 	unsigned char *p = cp;
+	int errnum;
 
 	memset(&rq, 0, sizeof(rq));
 	memset(cp, 0, sizeof(cp));
@@ -34,8 +37,11 @@ static void send_debug(PyState *s, struct dbg_packet *dp, void *rp,
         rq.rparam = rp;
         rq.rlen   = rplen;
 
-	if (hci_send_req(s->s_fd, &rq, 2000) < 0)
-		err(1, "hci_send_req()");
+    Py_BEGIN_ALLOW_THREADS
+	errnum = hci_send_req(s->s_fd, &rq, 2000);
+    Py_END_ALLOW_THREADS
+
+    if (errnum < 0) err(1, "hci_send_req()");
 }
 
 static void send_debug_no_rp(PyState *s, struct dbg_packet *dp)
@@ -51,12 +57,23 @@ static void send_debug_no_rp(PyState *s, struct dbg_packet *dp)
 static int get_dev_fd(char *devname)
 {
 	int dev, devfd;
-	if((dev = hci_devid(devname)) < 0 )
-		errx(1, "hci_devid()");
-	if((devfd = hci_open_dev(dev)) < 0)
-		errx(1, "hci_devid()2");
+	Py_BEGIN_ALLOW_THREADS
+	dev = hci_devid(devname);
+	if(dev < 0) errx(1, "hci_devid()");
 
+	devfd = hci_open_dev(dev);
+	if(devfd  < 0) errx(1, "hci_devid()2");
+	Py_END_ALLOW_THREADS
+
+	printf("dev fd = %d\n", devfd);
 	return devfd;
+}
+
+static void close_dev(int fd)
+{
+	Py_BEGIN_ALLOW_THREADS
+	hci_close_dev(fd);
+	Py_END_ALLOW_THREADS
 }
 
 /* External functions
@@ -82,9 +99,8 @@ basesniff_get_timer(PyObject *self, PyObject *args)
 	//get the device fd
 	state->s_fd = get_dev_fd(devname);
 
-
 	send_debug(state, &pkt, rp, sizeof(rp));
-
+	close_dev(state->s_fd);
 	//return a Python integer object
 	return Py_BuildValue("i", *((unsigned int *)&rp[2]));
 }
@@ -104,12 +120,12 @@ basesniff_set_filter(PyObject *dummy, PyObject *args)
 	if(!PyArg_ParseTuple(args, "OsI", &state, &devname, &val))
 		return NULL;
 
-	printf("Filter packets: %d\n", val);
+	printf("Filter packets: %d\n", (unsigned char)val);
 	state->s_fd = get_dev_fd(devname);
 
 	pkt.dp_data[0] = (unsigned char) val;
-
 	send_debug_no_rp(state, &pkt);
+	close_dev(state->s_fd);
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -131,6 +147,7 @@ basesniff_sniff_stop(PyObject *dummy, PyObject *args)
 	state->s_fd = get_dev_fd(devname);
 
 	send_debug_no_rp(state, &pkt);
+	close_dev(state->s_fd);
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -143,7 +160,7 @@ basesniff_sniff_start(PyObject *dummy, PyObject *args)
 {
 	struct dbg_packet pkt;
 	PyState *state;
-	PyObject *master_list, *slave_list;
+	PyObject *master_list, *slave_list, *item;
 	char *devname;
 	int i;
 	unsigned char peek;
@@ -163,21 +180,22 @@ basesniff_sniff_start(PyObject *dummy, PyObject *args)
 
 		assert(PyList_Size(master_list) == 6 && PyList_Size(slave_list) == 6);
 		printf("master: ");
-		for (i = 0; i < 6; i++)
+		for (i = 5; i >= 0; i--)
 		{
-
-			if(PyInt_Check(PyList_GetItem(master_list, i)))
-				peek = (unsigned char) PyInt_AsLong(PyList_GetItem(master_list, i));
+			item = PyList_GetItem(master_list, 5 - i);
+			if(PyInt_Check(item))
+				peek = (unsigned char) PyInt_AsLong(item);
 			else
 				return NULL;
 			sp->sp_master_rev[i] = peek;
 			printf("%d ", peek);
 		}
 		printf("\nslave: ");
-		for (i = 0 ; i < 6 ; i++ )
+		for (i = 5; i >= 0; i--)
 		{
-			if(PyInt_Check(PyList_GetItem(slave_list, i)))
-				peek = (unsigned char) PyInt_AsLong(PyList_GetItem(slave_list, i));
+			item = PyList_GetItem(slave_list, 5 - i);
+			if(PyInt_Check(item))
+				peek = (unsigned char) PyInt_AsLong(item);
 			else
 				return NULL;
 			printf("%d ", peek);
@@ -189,42 +207,14 @@ basesniff_sniff_start(PyObject *dummy, PyObject *args)
 	else
 		return NULL;
 
-
+	send_debug_no_rp(state, &pkt);
+	close_dev(state->s_fd);
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
 /* End External Functions */
 
-static void str2mac(unsigned char* dst, char* mac)
-{
-        unsigned int macf[6];
-        int i;
-
-        if( sscanf(mac, "%x:%x:%x:%x:%x:%x",
-                   &macf[0], &macf[1], &macf[2],
-                   &macf[3], &macf[4], &macf[5]) != 6) {
-
-                   printf("can't parse mac %s\n", mac);
-                   exit(1);
-        }
-
-        for (i = 0; i < 6; i++)
-                *dst++ = (unsigned char) macf[i];
-}
-
-static void parse_macs(char *str, unsigned char *master, unsigned char *slave)
-{
-	char *div;
-
-	div = strchr(str, '@');
-	if (!div)
-		errx(1, "bad macs");
-	*div++ = 0;
-
-	str2mac(master, str);
-	str2mac(slave, div);
-}
 
 static void hexdump(void *buf, int len)
 {
@@ -253,6 +243,8 @@ static void process_l2cap(PyState *s, void *buf, int len)
 	dh.in		= 1;
 	dh.ts_sec	= 0;
 	dh.ts_usec	= 0;
+
+	Py_BEGIN_ALLOW_THREADS
 	if (write(s->s_dump, &dh, sizeof(dh)) != sizeof(dh))
 		err(1, "write()");
 
@@ -266,6 +258,7 @@ static void process_l2cap(PyState *s, void *buf, int len)
 
 	if (write(s->s_dump, buf, len) != len)
 		err(1, "write()");
+	Py_END_ALLOW_THREADS
 }
 
 
@@ -286,19 +279,23 @@ static void dump_lmp(PyState *s, void *buf, int len)
 	dh.in		= 1;
 	dh.ts_sec	= 0;
 	dh.ts_usec	= 0;
+
+	Py_BEGIN_ALLOW_THREADS
 	if (write(s->s_dump, &dh, sizeof(dh)) != sizeof(dh))
 		err(1, "write()");
 
 	if (write(s->s_dump, &type, sizeof(type)) != sizeof(type))
 		err(1, "write()");
+	Py_END_ALLOW_THREADS
 
 	/* event header */
 	memset(&evt, 0, sizeof(evt));
 	evt.evt		= EVT_VENDOR;
 	evt.plen	= sizeof(csr_lmp);
+	Py_BEGIN_ALLOW_THREADS
 	if (write(s->s_dump, &evt, sizeof(evt)) != sizeof(evt))
 		err(1, "write()");
-
+	Py_END_ALLOW_THREADS
 	/* CSRized LMP packet */
 	memset(csr_lmp, 0, sizeof(csr_lmp));
 	*p++ = 20; /* channel ID */
@@ -307,9 +304,10 @@ static void dump_lmp(PyState *s, void *buf, int len)
 	p += 17;
 	*p = 0; /* connection handle */
 	assert(((unsigned long) p - (unsigned long) csr_lmp)< sizeof(csr_lmp));
-
+	Py_BEGIN_ALLOW_THREADS
 	if (write(s->s_dump, csr_lmp, sizeof(csr_lmp)) != sizeof(csr_lmp))
 		err(1, "write()");
+	Py_END_ALLOW_THREADS
 }
 
 
@@ -479,10 +477,21 @@ process_frontline(PyState *s, void *buf, int len)
 	}
 	start += hlen;
 
-	for (i = 0; i < MAX_TYPES; i++) {
-		if (s->s_ignore[i] == type)
-			return; /* XXX check for appended packets */
+//	for (i = 0; i < MAX_TYPES; i++) {
+//		if (s->s_ignore[i] == type)
+//			return; /* XXX check for appended packets */
+//	}
+
+	if(PyList_Check(s->s_ignore_list))
+	{
+		for ( i = 0; i < PyList_Size(s->s_ignore_list); i++)
+		{
+			int chtype = (int) PyInt_AsLong(PyList_GetItem(s->s_ignore_list, i));
+			if(chtype == type)
+				return; /* XXX check for appended packets */
+		}
 	}
+
 	if (s->s_ignore_zero && plen == 0)
 		return;
 
@@ -518,7 +527,6 @@ process(PyState *state, void *buf, int len)
 {
 	uint8_t *type = buf;
 	hci_acl_hdr *acl;
-
 	if (*type != HCI_ACLDATA_PKT) {
 		printf("Unknown type: %d\n", *type);
 		return;
@@ -538,58 +546,115 @@ static PyObject *
 basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyState *state = NULL;
-	char *hcidev;
+	char *hcidev, *dump;
 	struct hci_filter flt;
+	int errnum;
 
 	char *kwlist[]= {
 			"state",
 			"device",
+			"dump",
 			NULL
 	};
 
-	if (! PyArg_ParseTupleAndKeywords(args, kwds, "Os", kwlist,
-			&state, &hcidev))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss", kwlist,
+			&state, &hcidev, &dump))
 		return NULL;
-
+	printf("sniff called! dump =  %s, hcidev = %s\n", dump, hcidev);
 	//Open device, find out more about exceptions here
+
+	state->s_dump = open(dump, O_APPEND | O_WRONLY | O_CREAT, 0644);
 	state->s_fd = get_dev_fd(hcidev);
 
 	hci_filter_clear(&flt);
 	hci_filter_all_ptypes(&flt);
 	hci_filter_all_events(&flt);
 
-	if(setsockopt(state->s_fd, SOL_HCI, HCI_FILTER, &flt, sizeof(flt)) < 0){
+	Py_BEGIN_ALLOW_THREADS
+	errnum = setsockopt(state->s_fd, SOL_HCI, HCI_FILTER, &flt, sizeof(flt));
+	Py_END_ALLOW_THREADS
+
+	if (errnum < 0){
 		errx(1, "Can't set filter - setsockopt()");
 	}
 
 	while(1){
 
+		//blocking calls need to be sandwiched with this. If I remember correctly.
+		printf("read\n");
+		Py_BEGIN_ALLOW_THREADS
 		state->s_len = read(state->s_fd, state->s_buf, sizeof(state->s_buf));
+		Py_END_ALLOW_THREADS
 		if (state->s_len == -1)
 			err(1, "read()");
 		process(state, state->s_buf, state->s_len);
 	}
 
+	close_dev(state->s_fd);
+	if(state->s_dump != -1){
+		Py_BEGIN_ALLOW_THREADS
+		close(state->s_dump);
+		Py_END_ALLOW_THREADS
+	}
 	// C Idiom for returning type void
 	Py_INCREF(Py_None);
 	return Py_None;
 }
 
-/* PyState object definition */
+/* PyState type definition */
 
 static PyMemberDef PyState_members[] = {
+		{"ignore_types", T_OBJECT_EX, offsetof(PyState, s_ignore_list), 0, "List of types to ignore"},
+		{"ignore_zero", T_INT, offsetof(PyState, s_ignore_zero), 0, "Ignore zero"},
 		{NULL}
 };
 
+/*
+ * This destructor does not take into account garbage collection.
+ * TODO: implement garbage collection.
+ */
+static void
+PyState_dealloc(PyState *self)
+{
+	Py_XDECREF(self->s_ignore_list);
+	self->ob_type->tp_free((PyObject *) self);
+
+}
+
+static PyObject *
+PyState_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+	PyState *self;
+	unsigned char *p;
+
+	self = (PyState *) type->tp_alloc(type, 0);
+	p = (unsigned char *) &(self->s_fd);
+
+	if (self != NULL)
+	{
+		//do the equivalent of a memset 0
+		while( p < (unsigned char *)self + sizeof(PyState))
+			*p++ = 0;
+	}
+	return (PyObject *) self;
+}
+
+static int
+PyState_init(PyState *self, PyObject  *args, PyObject *kwds)
+{
+	self->s_ignore_list = PyList_New(0);
+	if(!self->s_ignore_list)
+		return -1;
+	return 0;
+}
 
 static PyTypeObject PyStateType =  {
 	   PyObject_HEAD_INIT(NULL)
 		0,                         /*ob_size*/
-		"basesniff.PyState",             /*tp_name*/
+		"sniff.State",             /*tp_name*/
 		sizeof(PyState),             /*tp_basicsize*/
 		0,                         /*tp_itemsize*/
-		0,
-		//(destructor)Noddy_dealloc, /*tp_dealloc*/
+		(destructor)PyState_dealloc, /*tp_dealloc*/
 		0,                         /*tp_print*/
 		0,                         /*tp_getattr*/
 		0,                         /*tp_setattr*/
@@ -612,8 +677,7 @@ static PyTypeObject PyStateType =  {
 		0,                          /* tp_weaklistoffset */
 		0,                          /* tp_iter */
 		0,                          /* tp_iternext */
-		0, /* replacement tp_methods */
-	//    Noddy_methods,             /* tp_methods */
+		0,             /* tp_methods */
 		PyState_members,             /* tp_members */
 		0,                         /* tp_getset */
 		0,                         /* tp_base */
@@ -621,11 +685,9 @@ static PyTypeObject PyStateType =  {
 		0,                         /* tp_descr_get */
 		0,                         /* tp_descr_set */
 		0,                         /* tp_dictoffset */
-		0, 	/* replacement tp_init */
-	//    (initproc)Noddy_init,      /* tp_init */
+	   (initproc)PyState_init,      /* tp_init */
 		0,                         /* tp_alloc */
-		0, /* replacement tp_new */
-	//    Noddy_new,                 /* tp_new */
+		PyState_new,                 /* tp_new */
 };
 
 
@@ -646,7 +708,6 @@ PyMODINIT_FUNC
 initsniff(void)
 {
 	PyObject *m;
-	PyStateType.tp_new = PyType_GenericNew;
 	if(PyType_Ready(&PyStateType) < 0)
 		return;
 	m = Py_InitModule("sniff", BaseSniffMethods);
