@@ -47,6 +47,8 @@ class Session(gtk.VBox):
             self.paned = VMultiPaned()
 
         self.perspectives = []
+        self.container_cbs = []
+        self.editor_cbs = []
 
         self.packet = None
         self.context = ctx
@@ -106,8 +108,8 @@ class Session(gtk.VBox):
         return pers
 
     def reload(self):
-        self.reload_container()
-        self.reload_editor()
+        self.reload_containers()
+        self.reload_editors()
 
     def save(self):
         "@return True if the content is saved or False"
@@ -191,23 +193,20 @@ class Session(gtk.VBox):
 
         return dialog
 
-    def reload_container(self, packet=None):
-        """
-        Reload the container of the all packets list
-        @param packet the instance of the packet edited to save cpu or None
-        """
-        pass
+    def reload_containers(self, packet=None):
+        for cont in self.container_cbs:
+            cont(packet)
 
-    def reload_editor(self):
-        "Reload the editor of the single active packet"
-        pass
+    def reload_editors(self):
+        for edit in self.editor_cbs:
+            edit()
 
     def set_active_packet(self, packet):
         if packet is self.packet:
             log.debug("Packets are the same ignoring updates")
         else:
             self.packet = packet
-            self.reload_editor()
+            self.reload_editors()
 
     def get_label(self):
         return self._label

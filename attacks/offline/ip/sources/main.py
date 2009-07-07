@@ -175,7 +175,7 @@ def ip_decoder():
                             if len(reas_payload) != p_len:
                                 mpkt.set_cfield('reassembled_payload', None)
                                 manager.user_msg(_('Reassemble of IP packet ' \
-                                                   'from %s to %sfailed') % \
+                                                   'from %s to %s failed') % \
                                                  (mpkt.get_field('ip.src'),
                                                   mpkt.get_field('ip.dst')),
                                                  4, 'decoder.ip')

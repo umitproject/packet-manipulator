@@ -187,11 +187,11 @@ class AttackManager(Singleton):
             for post_hook in post:
                 post_hook(metapkt)
 
-            if ret:
+            if isinstance(ret, tuple) and ret[0] != NEED_FRAGMENT:
                 # Infinite loop over there :)
                 level, type = ret
             else:
-                return
+                return ret
 
     def add_dissector(self, layer, port, dissector):
         """

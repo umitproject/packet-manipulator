@@ -354,7 +354,11 @@ class SniffPage(Perspective):
 
         return True
 
-    def __get_packets_selected(self, tree=False):
+    def get_selected_packets(self, tree=False):
+        """
+        @return a list or a Tree contanining the selected packets
+        """
+
         if tree:
             node = Node()
 
@@ -391,7 +395,7 @@ class SniffPage(Perspective):
     def __on_create_seq(self, action):
         tab = PMApp().main_window.get_tab("MainTab")
         tab.session_notebook.create_sequence_session(
-            self.__get_packets_selected(True)
+            self.get_selected_packets(True)
         )
 
     def __on_save_selection(self, action):
@@ -399,7 +403,7 @@ class SniffPage(Perspective):
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             ctx = Backend.StaticContext('', dialog.get_filename())
-            ctx.data = self.__get_packets_selected()
+            ctx.data = self.get_selected_packets()
 
             if ctx.save():
                 self.statusbar.image = gtk.STOCK_HARDDISK

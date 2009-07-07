@@ -123,12 +123,12 @@ class Autogen(object):
         out = out.replace('%authors%', str(self.authors))
         out = out.replace('%url%', self.url)
 
-        out = out.replace('%start_file%', os.path.basename(mod.__file__)[:-4])
+        out = out.replace('%start_file%', os.path.basename(mod.__file__).rsplit('.', 1)[0])
         out = out.replace('%start_file_path%', os.path.basename(mod.__file__).replace('.pyc', '.py'))
 
         replaced = False
 
-        if getattr(mod, '__plugins_deps___', None):
+        if getattr(mod, '__plugins_deps__', None):
             for dep_name, needs, provides, conflicts in mod.__plugins_deps__:
                 if plugin_name != dep_name:
                     continue

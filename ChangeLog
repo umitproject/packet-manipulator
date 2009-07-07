@@ -1,3 +1,54 @@
+2009-07-07 Francesco Piccinno <stack.box@gmail.com>
+    * plugins/http-analyzer/sources/main.py:
+        - Add HTTP analyzer plugin that exploits cfields setted from
+          http dissector attack. Cookie analyzer is not implemented yet.
+        - It could show HTTP pages in transit like also images and flash
+          videos, etc.
+    * attacks/offline/http/sources/main.py:
+        - HTTP dissector is finished. It lacks only of passport sniffing.
+        - It uses the new shiny TCP flow reassembler.
+        - Fully support to the HTTP request/responses and chunked transfers.
+        - NTLM / Basic / Digest sniffing is implemented.
+        - Form extraction of username/password is implemented and uses
+          username_fields and password_fields variable to have the maximum
+          flexibility.
+        - UserAgent, language and others information captured are exposed
+          in cfields.
+    * attacks/offline/profiler/sources/main.py
+      attacks/offline/fingerprint/sources/main.py
+      attacks/offline/ip/sources/main.py
+      attacks/setup-autogen.py
+      PM/Gui/Pages/SniffPage.py
+      PM/Gui/Plugins/Core.py
+      PM/Gui/Core/MainWindow.py:
+        - Minor bugfix.
+    * attacks/offline/tcp/sources/main.py:
+        - Fully working TCP reassembler. It's a pure userland TCP/IP stack
+          implementation written entirely in python. It performs better and
+          can handle TCP fragmentation. It's a libnids port with minor
+          improvements.
+        - We support also ICMP messages parsing.
+    * PM/Backend/Scapy/packet.py:
+        - Add another method get_datetime() to the MetaPacket object used by
+          TCP reassembler module.
+    * PM/Gui/Dialogs/Interface.py
+      PM/Gui/Tabs/OperationsTab.py
+      PM/Gui/Dialogs/Preferences.py
+      PM/Manager/PreferenceManager.py
+      PM/Backend/Scapy/Context/Static.py:
+        - Added the possibility to use offline attacks also on pcap files.
+    * PM/Gui/Sessions/Base.py
+      PM/Gui/Sessions/SniffSession.py
+      PM/Gui/Sessions/SequenceSession.py
+      PM/Backend/Abstract/BaseContext/Static.py:
+        - Now we could have several editors and containers. This is really
+          usefull while developing plugins.
+
+    - Bug fixes.
+    - HTTP dissector complete.
+    - TCP reassembler complete.
+    - HTTP analyzer plugin started.
+
 2009-06-29 Francesco Piccinno <stack.box@gmail.com>
     * attacks/offline/http/sources/main.py:
         - First implementation of HTTP decoder/dissector.

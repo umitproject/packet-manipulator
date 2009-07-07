@@ -35,6 +35,9 @@ class SequenceSession(Session):
         self.packet_page = self.add_perspective(PacketPage, True,
                                                 True, False)
 
+        self.editor_cbs.insert(0, self.reload_editor)
+        self.container_cbs.insert(0, self.reload_container)
+
         self.reload()
 
         self.pack_start(self.paned)

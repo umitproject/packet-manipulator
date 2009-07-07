@@ -171,7 +171,9 @@ class CaptureOptions(gtk.Expander):
         self.gui_real.set_active(True)
         self.gui_scroll.set_active(True)
         self.net_promisc.set_active(True)
-        self.attacks.set_active(True)
+
+        if Prefs()['backend.system.sniff.attacks'].value == True:
+            self.attacks.set_active(True)
 
         self.add(tbl)
 

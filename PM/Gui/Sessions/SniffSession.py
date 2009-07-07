@@ -36,13 +36,13 @@ class SniffSession(Session):
         self.packet_page = self.add_perspective(PacketPage, False,
                                                 True, False)
 
+        self.editor_cbs.insert(0, self.packet_page.reload)
+        self.container_cbs.insert(0, self.reload_container)
+
         self.packet_page.reload()
 
         self.pack_start(self.paned)
         self.show_all()
-
-    def reload_editor(self):
-        self.packet_page.reload()
 
     def reload_container(self, packet=None):
         # FIXME: check packet and emit a row-changed

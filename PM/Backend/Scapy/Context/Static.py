@@ -23,6 +23,7 @@ import os.path
 
 from PM.Backend.Scapy.packet import MetaPacket
 from PM.Backend.Scapy.wrapper import PcapWriter, PcapReader, wrpcap, PacketList
+from PM.Manager.AttackManager import AttackDispatcher, IL_TYPE_ETH
 
 from PM.Core.I18N import _
 
@@ -63,6 +64,14 @@ class CustomPcapWriter(PcapWriter):
 def register_static_context(BaseStaticContext):
 
     class StaticContext(BaseStaticContext):
+        def __init__(self, title, fname=None, attacks=False):
+            BaseStaticContext.__init__(self, title, fname, attacks)
+
+            if self.attacks:
+                self.attack_dispatcher = AttackDispatcher(IL_TYPE_ETH)
+            else:
+                self.attack_dispatcher = None
+
         def load(self, operation=None):
             if not self.cap_file:
                 return False
@@ -108,8 +117,12 @@ def register_static_context(BaseStaticContext):
                                 (pos / float(size)) * 100.0
 
                         lst = PacketList([p], os.path.basename(self.cap_file))
-                        self.data.append(MetaPacket(lst[0]))
+                        mpkt = MetaPacket(lst[0])
+                        self.data.append(mpkt)
 
+                        # TODO: overhead
+                        if self.attack_dispatcher:
+                            self.attack_dispatcher.feed(mpkt)
 
                 if operation:
                     operation.summary = _('Loaded %s - %d packets (%s)') % \

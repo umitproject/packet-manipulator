@@ -67,7 +67,7 @@ def tcp_fp(finger):
             tcpraw = mpkt.get_field('tcp')
             flags = mpkt.get_field('tcp.flags')
 
-            if finger and flags & TH_SYN:
+            if flags and finger and flags & TH_SYN:
                 opt_start = 20
                 opt_end = mpkt.get_field('tcp.dataofs') * 4
 

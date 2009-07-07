@@ -18,6 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+from datetime import datetime
 from PM.Core.Logger import log
 from PM.Core.Atoms import generate_traceback
 from PM.Backend.Scapy.translator import global_trans
@@ -98,6 +99,9 @@ class MetaPacket(object):
 
     def summary(self):
         return self.root.summary()
+
+    def get_datetime(self):
+        return datetime.fromtimestamp(self.root.time)
 
     def get_time(self):
         #self.root.time

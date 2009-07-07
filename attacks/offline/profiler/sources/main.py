@@ -52,7 +52,7 @@ ROUTER_TYPE        = 4
 class Account(object):
     def __init__(self):
         self.username = None
-        self.passwrod = None
+        self.password = None
         self.info = None
         self.failed = None
         self.ip_addr = None
@@ -95,7 +95,7 @@ class Profile(object):
         self.ports.append(p)
         return p
 
-    def __repr__(self):
+    def __str__(self):
         s = ''
 
         if self.l2_addr:
@@ -215,8 +215,9 @@ class Profiler(Plugin, OfflineAttack):
             account.username = username
             account.passwrod = password
 
+        #TODO: remove me
         if prof:
-            print prof
+            print prof, repr(prof)
 
     def _parse_arp(self, mpkt):
         prof = self.get_or_create(mpkt)
@@ -261,6 +262,8 @@ class Profiler(Plugin, OfflineAttack):
             prof = Profile()
             prof.l2_addr = mac
             prof.l3_addr = ip
+
+            self.profiles[ip].append(prof)
 
             if self.macdb:
                 prof.vendor = self.macdb.get(mac[:8].replace(':', '').upper(),

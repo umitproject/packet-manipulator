@@ -92,7 +92,8 @@ class Core(Singleton, gobject.GObject):
 
         if not need_module:
             if not classname:
-                log.debug(">>> Core.get_need(): No classname specified. Returning first instance")
+                log.debug(">>> Core.get_need(): No classname specified. " \
+                          "Returning first instance")
                 return ret[0]
 
             for instance in ret:

@@ -222,7 +222,8 @@ class FileOperation(Operation):
             elif ctx is Backend.SniffContext or \
                  ctx is Backend.StaticContext:
 
-                rctx = Backend.StaticContext(self.file, self.file)
+                rctx = Backend.StaticContext(self.file, self.file,
+                                 Prefs()['backend.system.static.attacks'].value)
 
             if rctx is not None:
                 # Let's update our operation directly from load

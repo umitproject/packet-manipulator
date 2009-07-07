@@ -421,6 +421,9 @@ class MainWindow(gtk.Window):
         maintab = self.get_tab("MainTab")
 
         for page in maintab.session_notebook:
+            if not isinstance(page, Session):
+                continue
+
             for perspective in page.perspectives:
                 idx = PerspectiveType.types[type(perspective)]
 
@@ -441,6 +444,9 @@ class MainWindow(gtk.Window):
             maintab = self.get_tab("MainTab")
 
             for page in maintab.session_notebook:
+                if not isinstance(page, Session):
+                    continue
+
                 for perspective in page.perspectives:
                     idx = PerspectiveType.types[type(perspective)]
 
@@ -518,6 +524,9 @@ class MainWindow(gtk.Window):
             tab.connect_tab_signals()
 
     def __on_maintab_page_added(self, notebook, page, pagenum):
+        if not isinstance(page, Session):
+            return
+
         for perspective in page.perspectives:
             try:
                 idx = PerspectiveType.types[type(perspective)]

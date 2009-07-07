@@ -308,6 +308,15 @@ class BackendPage(Page):
           )
         ),
 
+        (_('Attacks'),
+          (
+           ('backend.system.sniff.attacks', None,
+            gtk.CheckButton(_('Enable offline attacks on sniff'))),
+           ('backend.system.static.attacks', None,
+            gtk.CheckButton(_('Enable offline attacks on loaded files'))),
+          )
+        ),
+
         (_('Helpers'),
           (
            ('backend.tcpdump', _('tcpdump path:'), gtk.Entry()),
