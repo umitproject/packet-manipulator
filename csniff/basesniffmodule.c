@@ -1,5 +1,6 @@
 
 #include "basesniffmodule.h"
+#include "bthandler.h"
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
 #include <bluetooth/hci_lib.h>
@@ -11,6 +12,10 @@
 #include <assert.h>
 
 #include "structmember.h"
+
+static PyTypeObject PySniffPacketType;
+
+#define RETURN_VOID Py_INCREF(Py_None); return Py_None;
 
 /* Actual port of the methods */
 static void send_debug(PyState *s, struct dbg_packet *dp, void *rp,
@@ -65,7 +70,6 @@ static int get_dev_fd(char *devname)
 	if(devfd  < 0) errx(1, "hci_devid()2");
 	Py_END_ALLOW_THREADS
 
-	printf("dev fd = %d\n", devfd);
 	return devfd;
 }
 
@@ -75,6 +79,7 @@ static void close_dev(int fd)
 	hci_close_dev(fd);
 	Py_END_ALLOW_THREADS
 }
+
 
 /* External functions
  * All external functions should call a
@@ -120,7 +125,7 @@ basesniff_set_filter(PyObject *dummy, PyObject *args)
 	if(!PyArg_ParseTuple(args, "OsI", &state, &devname, &val))
 		return NULL;
 
-	printf("Filter packets: %d\n", (unsigned char)val);
+	//printf("Filter packets: %d\n", (unsigned char)val);
 	state->s_fd = get_dev_fd(devname);
 
 	pkt.dp_data[0] = (unsigned char) val;
@@ -401,16 +406,61 @@ static void do_pin(PyState *s, int op, void *buf, int len)
 
 
 
-static void process_lmp(PyState *s, void *buf, int len)
+static PyObject *
+process_lmp(PyState *s, void *buf, int len,
+		PySniffPacket *sniffpkt, PyObject *handler)
 {
+	PyLMPPacket *lmppkt;
 	uint8_t *data = buf;
-	int op1, op2 = -1;
-	int tid;
+	int tmplen;
+//	int op1, op2 = -1;
+//	int tid;
 
+	//Build LMPPacket
+	assert(sniffpkt != NULL);
+	lmppkt = (PyLMPPacket *) PyLMPPacketType.tp_new(&PyLMPPacketType, NULL, NULL);
+	if(PyLMPPacketType.tp_init((PyObject *) lmppkt, NULL, NULL))
+		err(1, "Error creating PyLMPPacket.");
+	assert(len <= 17); //LMP PDU should be less than or equal to 17 bytes long
+	assert(lmppkt != NULL);
+	sniffpkt->_payloadpkt = (PyObject *) lmppkt;
+
+	//Populate LMPPacket
+	tmplen = len;
+	lmppkt->op1 = *data++;
+	tmplen--;
+	lmppkt->tid = lmppkt->op1 & LMP_TID_MASK;
+	lmppkt->op1 >>= LMP_OP1_SHIFT;
+	if(lmppkt->op1 >= 124 && lmppkt->op1 <= 127)
+	{
+		lmppkt->op2 = *data++;
+		tmplen--;
+		assert(tmplen >= 0);
+	}
+
+	while(tmplen--)
+	{
+		if (PyList_Append(lmppkt->payload_list, PyInt_FromLong((long) *data++)))
+		{
+			//TODO set exception here
+		}
+	}
+
+	// Python code for callback.
+	assert(handler != NULL);
+	if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvpacket"), sniffpkt, NULL))
+	{
+		err(1, "Callback unsuccessful! In process_lmp");
+		return NULL;
+	}
 
 	if (s->s_dump != -1)
 		dump_lmp(s, buf, len);
 
+/*
+ *
+ * Duplicated this functionality in Python sniffer.LMPPacket class.
+	data = buf;
 	op1 = *data++;
 	len--;
 	assert(len >= 0);
@@ -428,10 +478,15 @@ static void process_lmp(PyState *s, void *buf, int len)
 		printf(" Op2 %d", op2);
 
 	printf(": ");
-	hexdump(data, len);
+	hexdump(data, len); */
 
+	/*
+	 * Do not run! This is no longer consistent!
 	if (s->s_pin)
 		do_pin(s, op1, data, len);
+	*/
+
+	RETURN_VOID
 }
 
 
@@ -441,7 +496,8 @@ static void process_dv(PyState *s, void *buf, int len)
 	hexdump(buf, len);
 }
 
-static void process_payload(PyState *s, void *buf, int len)
+static void process_payload(PyState *s, void *buf, int len,
+		PySniffPacket *sniffpkt, PyObject *handler)
 {
 	switch (s->s_type) {
 	case TYPE_DV:
@@ -450,21 +506,24 @@ static void process_payload(PyState *s, void *buf, int len)
 	}
 
 	if (s->s_llid == LLID_LMP)
-		process_lmp(s, buf, len);
+		process_lmp(s, buf, len, sniffpkt, handler);
 	else
 		process_l2cap(s, buf, len);
 }
 
-static void
-process_frontline(PyState *s, void *buf, int len)
+
+static PyObject *
+process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 {
+	PySniffPacket *sniffpkt;
 	struct frontline_packet *fp = buf;
 	int type = (fp->fp_hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK;
 	int plen = fp->fp_len >> FP_LEN_SHIFT;
 	uint8_t *start = (uint8_t*) fp;
-	int status = fp->fp_hdr0 & FP_ADDR_MASK;
+	//int status = fp->fp_hdr0 & FP_ADDR_MASK;
 	int i;
 	int hlen = fp->fp_hlen;
+
 
 	switch (hlen) {
 	case HLEN_BC2:
@@ -477,65 +536,90 @@ process_frontline(PyState *s, void *buf, int len)
 	}
 	start += hlen;
 
-//	for (i = 0; i < MAX_TYPES; i++) {
-//		if (s->s_ignore[i] == type)
-//			return; /* XXX check for appended packets */
-//	}
 
 	if(PyList_Check(s->s_ignore_list))
 	{
 		for ( i = 0; i < PyList_Size(s->s_ignore_list); i++)
 		{
 			int chtype = (int) PyInt_AsLong(PyList_GetItem(s->s_ignore_list, i));
-			if(chtype == type)
-				return; /* XXX check for appended packets */
+			if(chtype == type){
+				 /* XXX check for appended packets */
+				Py_INCREF(Py_None);
+				return Py_None;
+			}
+
 		}
 	}
 
-	if (s->s_ignore_zero && plen == 0)
-		return;
+	if (s->s_ignore_zero && plen == 0){
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+
+	//Create a new PySniffPacket and assign the relevant
+	sniffpkt = (PySniffPacket *) PySniffPacketType.tp_new(&PySniffPacketType, NULL, NULL);
+	sniffpkt->_csrpkt = fp;
 
 	s->s_llid	= (fp->fp_len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
 	s->s_master	= !(fp->fp_clock & FP_SLAVE_MASK);
 	s->s_type	= type;
+	/* this can be handled in the handler
 	printf("HL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X"
 	       " [type: %d addr: %d] LLID %d Len %d",
 	       fp->fp_hlen, fp->fp_chan, s->s_master ? 'M' : 'S',
 	       fp->fp_clock & FP_CLOCK_MASK,
 	       fp->fp_clock >> FP_STATUS_SHIFT, fp->fp_hdr0,
 	       type, status, s->s_llid, plen);
-
+	*/
 	len -= hlen;
 	assert(len >= 0);
 	assert(len >= plen);
 
 	if (plen) {
 		printf(" ");
-		process_payload(s, start, plen);
-	} else
+		process_payload(s, start, plen, sniffpkt, handler);
+	} else {
+
+		//Do a callback
+		assert(handler != NULL);
+		if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvpacket"), sniffpkt, NULL)){
+			//errx(1, "Callback unsuccessful at process_frontline!");
+			return NULL;
+		}
+
 		printf("\n");
+	}
+
 
 	/* firmware seems to append fragments */
 	len -= plen;
 	assert(len >= 0);
-	if (len)
-		process_frontline(s, start+plen, len);
+	if (len){
+
+		if(!process_frontline(s, start+plen, len, handler))
+		{
+			return NULL;
+		}
+	}
+
+	Py_INCREF(Py_None);
+	return Py_None;
 }
 
-static void
-process(PyState *state, void *buf, int len)
+static PyObject *
+process(PyState *state, void *buf, int len, PyObject *handler)
 {
 	uint8_t *type = buf;
 	hci_acl_hdr *acl;
 	if (*type != HCI_ACLDATA_PKT) {
 		printf("Unknown type: %d\n", *type);
-		return;
+		Py_INCREF(Py_None);
+		return Py_None;
 	}
 
 	acl = (hci_acl_hdr*) (type+1);
 	assert(acl->dlen == (len - sizeof(*acl) - 1));
-	process_frontline(state, acl+1, acl->dlen);
-
+	return process_frontline(state, acl+1, acl->dlen, handler);
 }
 
 
@@ -546,6 +630,7 @@ static PyObject *
 basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyState *state = NULL;
+	PyObject *handler = NULL;
 	char *hcidev, *dump;
 	struct hci_filter flt;
 	int errnum;
@@ -554,14 +639,13 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 			"state",
 			"device",
 			"dump",
+			"handler",
 			NULL
 	};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "Oss", kwlist,
-			&state, &hcidev, &dump))
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO", kwlist,
+			&state, &hcidev, &dump, &handler))
 		return NULL;
-	printf("sniff called! dump =  %s, hcidev = %s\n", dump, hcidev);
-	//Open device, find out more about exceptions here
 
 	state->s_dump = open(dump, O_APPEND | O_WRONLY | O_CREAT, 0644);
 	state->s_fd = get_dev_fd(hcidev);
@@ -581,13 +665,15 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 	while(1){
 
 		//blocking calls need to be sandwiched with this. If I remember correctly.
-		printf("read\n");
 		Py_BEGIN_ALLOW_THREADS
 		state->s_len = read(state->s_fd, state->s_buf, sizeof(state->s_buf));
 		Py_END_ALLOW_THREADS
 		if (state->s_len == -1)
 			err(1, "read()");
-		process(state, state->s_buf, state->s_len);
+		if(!process(state, state->s_buf, state->s_len, handler))
+		{
+			return NULL;
+		}
 	}
 
 	close_dev(state->s_fd);
@@ -691,6 +777,125 @@ static PyTypeObject PyStateType =  {
 };
 
 
+
+/*
+ * Definiton for PySniffPacket. Garbage collection is important for this object,
+ * since so many are going to be created.
+ */
+static PyObject *
+PySniffPacket_new(PyTypeObject *type, PyObject *args, PyObject *kwlist)
+{
+	PySniffPacket *self;
+	self = (PySniffPacket *) type->tp_alloc(type, 0);
+	if(self != NULL)
+	{
+		self->_csrpkt = NULL;
+		Py_INCREF(Py_None);
+		self->_payloadpkt = Py_None;
+	}
+	else
+		return NULL;
+
+	return (PyObject *)self;
+}
+
+static void
+PySniffPacket_dealloc(PySniffPacket *self)
+{
+	PyObject *ppkt;
+	if(self->_csrpkt)
+		free(self->_csrpkt);
+	//release the PyObject safely
+	ppkt  = self->_payloadpkt;
+	self->_payloadpkt = NULL;
+	Py_XDECREF(ppkt);
+
+	self->ob_type->tp_free((PyObject *) self);
+}
+
+#define PSP_GETTER_DEFINE(name) \
+	static PyObject * PySniffPacket_get ## name (PySniffPacket *self, void *closure) \
+	{\
+		if (self->_csrpkt == NULL) return NULL;\
+		return Py_BuildValue("I", (unsigned int)((PySniffPacket *) self)->_csrpkt->fp_ ## name);\
+	}
+/*
+ * TODO:
+ * Add docstrings
+ */
+
+PSP_GETTER_DEFINE(hlen)
+PSP_GETTER_DEFINE(clock)
+PSP_GETTER_DEFINE(hdr0)
+PSP_GETTER_DEFINE(len)
+PSP_GETTER_DEFINE(timer)
+PSP_GETTER_DEFINE(chan)
+PSP_GETTER_DEFINE(seq)
+
+static PyObject * PySniffPacket_getpayload(PySniffPacket *self, void *closure)
+{
+	Py_INCREF(self->_payloadpkt);
+	return self->_payloadpkt;
+}
+
+#define PSP_GETSET_DEF(name, docstring) { #name, (getter) PySniffPacket_get ## name,  NULL, docstring, NULL }
+
+static PyGetSetDef PySniffPacket_getsets[] = {
+		PSP_GETSET_DEF(hlen, "hlen"),
+		PSP_GETSET_DEF(clock, "clock"),
+		PSP_GETSET_DEF(hdr0, "hdr0"),
+		PSP_GETSET_DEF(len, "len"),
+		PSP_GETSET_DEF(timer, "timer"),
+		PSP_GETSET_DEF(chan, "chan"),
+		PSP_GETSET_DEF(seq, "seq"),
+		PSP_GETSET_DEF(payload, "payload"),
+		{NULL}
+};
+
+
+static PyTypeObject PySniffPacketType =  {
+	   PyObject_HEAD_INIT(NULL)
+		0,                         /*ob_size*/
+		"sniff.SniffPacket",        /*tp_name*/
+		sizeof(PySniffPacket),      /*tp_basicsize*/
+		0,                         /*tp_itemsize*/
+		(destructor)PySniffPacket_dealloc, /*tp_dealloc*/
+		0,                         /*tp_print*/
+		0,                         /*tp_getattr*/
+		0,                         /*tp_setattr*/
+		0,                         /*tp_compare*/
+		0,                         /*tp_repr*/
+		0,                         /*tp_as_number*/
+		0,                         /*tp_as_sequence*/
+		0,                         /*tp_as_mapping*/
+		0,                         /*tp_hash */
+		0,                         /*tp_call*/
+		0,                         /*tp_str*/
+		0,                         /*tp_getattro*/
+		0,                         /*tp_setattro*/
+		0,                         /*tp_as_buffer*/
+		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+		"PyState object will ultimately be converted into a SniffSession. This is struct state from the original code",           /* tp_doc */
+		0,                          /* tp_traverse */
+		0,                          /* tp_clear */
+		0,                          /* tp_richcompare */
+		0,                          /* tp_weaklistoffset */
+		0,                          /* tp_iter */
+		0,                          /* tp_iternext */
+		0,             				/* tp_methods */
+		0,					      /* tp_members */
+		PySniffPacket_getsets ,     /* tp_getset */
+		0,                         /* tp_base */
+		0,                         /* tp_dict */
+		0,                         /* tp_descr_get */
+		0,                         /* tp_descr_set */
+		0,                         /* tp_dictoffset */
+	    0,				      		/* tp_init */
+		0,                         /* tp_alloc */
+		PySniffPacket_new,                 	/* tp_new use GenericNew*/
+};
+
+
 /* Initialize the method map */
 static PyMethodDef BaseSniffMethods[] =
 {
@@ -708,10 +913,27 @@ PyMODINIT_FUNC
 initsniff(void)
 {
 	PyObject *m;
-	if(PyType_Ready(&PyStateType) < 0)
+	//PySniffPacketType.tp_new = PyType_GenericNew;
+	PySniffHandlerType.tp_new = PyType_GenericNew;
+
+	if(PyType_Ready(&PyStateType) < 0 ||
+			PyType_Ready(&PyLMPPacketType) < 0 ||
+			PyType_Ready(&PySniffPacketType) < 0 ||
+			PyType_Ready(&PySniffHandlerType) < 0)
 		return;
-	m = Py_InitModule("sniff", BaseSniffMethods);
+	m = Py_InitModule3("sniff", BaseSniffMethods, "Main sniffing module");
+
+	if( m == NULL)
+		return;
+
 	Py_INCREF(&PyStateType);
+	Py_INCREF(&PyLMPPacketType);
+	Py_INCREF(&PySniffPacketType);
+	Py_INCREF(&PySniffHandlerType);
+
 	PyModule_AddObject(m, "State", (PyObject *)&PyStateType);
+	PyModule_AddObject(m, "_LMPPacket", (PyObject *) &PyLMPPacketType);
+	PyModule_AddObject(m, "SniffPacket", (PyObject *)&PySniffPacketType);
+	PyModule_AddObject(m, "SniffHandler", (PyObject *) &PySniffHandlerType);
 
 }

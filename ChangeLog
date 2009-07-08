@@ -1,0 +1,22 @@
+2009-07-07 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Added data structures to represent a packet received on HCI from the hardware
+        - SniffPacket
+        - _LMPPacket
+        - LMPPacket (wraps _LMPPacket in Python)
+    * Added callback mechanism when packet is received in sniffer
+        - SniffHandler base class to be subclassed 
+        - SniffHandler contains recvpacket method to be overriden. Callback method.
+    * Duplicated printout functionality in sniffer.py as example of usage of callback mechanism
+    * Added runner btsniffer to BTSniff/
+    * Added scripts/devrun for easier building and running of development version
+
+2009-07-05 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Working port of the C-based "frontline" Bluetooth sniffing tool
+
+2009-06-30 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Init ChangeLog
+    * To reduce the dependence on PyBluez, we use Python to wrap the original C code
+    * Changed the structure of the package to umit.bluetooth.sniff

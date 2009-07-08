@@ -1,6 +1,95 @@
-from sniff import *
+import sniff
+from sniffcommon import *
+import struct
 
-MAX_TYPES = 16
+
+class UmitBTSniffError(Exception):
+    """
+        General exception for BTSniffer
+    """
+    pass
+
+class LMPPacket(object):
+    """Wrapper for _LMPPacket. Allows processing to be done on the data payload. 
+        Read-only attributes."""
+    def __init__(self, packet = None):
+        if(not packet):
+            packet = sniff._LMPPacket()
+        self._packet = packet
+        if not self._packet:
+            raise UmitBTSniffError("Wrong packet holding type. Should be _LMPPacket") 
+    
+    def getop1(self):
+        return self._packet.op1
+    
+    def getop2(self):
+        if(self.getop1() >= 124 and self.getop1() <= 127):
+            return self._packet.op2
+        return None
+    
+    def gettid(self):
+        return self._packet.tid
+    
+    def getdata(self):
+        return self._packet.data
+        
+    def __str__(self):
+        pstr = 'LMP Tid %d Op1 %d' % (self.gettid(), self.getop1())
+        if self.getop2() >= 0:
+            pstr = ' '.join([pstr, 'Op2 %d' % self.getop2(), ':'])
+        else:
+            pstr = ''.join([pstr, ':'])
+        
+        payloadstr = (len(self.getdata()) * '%.2X ' % tuple(self.getdata())) if len(self.getdata()) else None
+        return ' '.join([pstr, payloadstr if payloadstr else ''])
+    
+    def __repr__(self):
+        return str(self)
+        
+    op1 = property(getop1, None)
+    op2 = property(getop2, None)
+    tid = property(gettid, None)
+    data = property(getdata, None)
+
+class BTSniffHandler(sniff.SniffHandler):
+    """
+        Subclassed SniffHandler can be wired to handle recvpacket events
+    """
+    def __init__(self):
+        super(sniff.SniffHandler, self).__init__()
+    def recvpacket(self, packet):
+        """
+            Do duplicate printing as to the original frontline tool. Used to manually diff the 2 outputs
+            This can be modified to do anything we wish with the received packet.
+        """
+        master = not (packet.clock & FP_SLAVE_MASK)
+        header_len = packet.hlen
+        channel = packet.chan
+        clock = packet.clock & FP_CLOCK_MASK
+        status = packet.clock >> FP_STATUS_SHIFT
+        hdr0 = packet.hdr0
+        type = (hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK
+        address = hdr0 & FP_ADDR_MASK
+        llid = (packet.len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK
+        length = packet.len >> FP_LEN_SHIFT
+        
+        print 'PL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X [type: %d addr: %d] LLID %d Len %d' \
+                        % (header_len, 
+                            channel,
+                            'M' if master else 'S',
+                            clock, 
+                            status,
+                            hdr0,
+                            type,
+                            address,
+                            llid,
+                            length),
+        # Process payload. We watch for LMPs
+        if packet.payload:
+            paypkt = LMPPacket(packet.payload)
+            print str(paypkt)
+        else: print 
+        
 
 def parse_macs(mac_add):
     """
@@ -25,7 +114,7 @@ def parse_macs(mac_add):
         raise UmitBTError("Invalid mac address: " + mac_add) #raise an error here. invalid mac address
     return maclist
 
-def main():
+def run():
 
     # Process command line arguments.
     from optparse import OptionParser
@@ -53,10 +142,9 @@ def main():
                           help='own pin')
     (options, args) = parser.parse_args()
     
-    state = State()
+    state = sniff.State()
     state.ignore_zero = 1 if options.ignore_zero else 0
-    global MAX_TYPES
-    for i in range(MAX_TYPES):
+    for i in range(MAX_SNIFF_TYPES):
         state.ignore_types.append(-1)
     # Note for ignore_types as of now we only allow ignoring of one type
     state.ignore_types[0] = options.ignore_type if options.ignore_type else -1
@@ -68,23 +156,24 @@ def main():
         print "Timer: %x" % get_timer(state, options.device)
     
     if options.filter and options.filter >  -1:
-        set_filter(state, options.device, options.filter)
+        sniff.set_filter(state, options.device, options.filter)
     
     if options.stop:
-        stop_sniff(state, options.device)
+        sniff.stop_sniff(state, options.device)
     
     if options.start:
         at_ind = options.start.find('@')
         if(not at_ind == -1):
             master_add = parse_macs(options.start[0:at_ind])
             slave_add = parse_macs(options.start[at_ind + 1:])
-            print 'master = ', master_add, " slave = ", slave_add
-            start_sniff(state, options.device, master_add, slave_add)
+            #print 'master = ', master_add, " slave = ", slave_add
+            sniff.start_sniff(state, options.device, master_add, slave_add)
     
     if options.snif:
-        sniff(state, options.device, options.dump)
+        handler = BTSniffHandler()
+        sniff.sniff(state, options.device, options.dump, handler)
   
   
 if __name__=='__main__':
-    main()
+    run()
    

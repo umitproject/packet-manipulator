@@ -6,8 +6,6 @@ This version(0.1) is not ready for install as of yet.
 To run development build:
 1. Extract tarball in dist/ to <dir> directory where <dir> is user specified.
 2. In <dir>, run "python setup.py build"
-3. Change directory to <dir>/build/lib.<platform>/
-4. Run with "python umit/bluetooth/sniffer.py [args]"
-
+3. Run 'scripts/devrun -h' for usage details. Arguments should be the same as the original frontline tool.
 
 

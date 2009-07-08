@@ -4,6 +4,11 @@
 #include <Python.h>
 #define	__packed __attribute__((__packed__))
 
+/**
+ * Define firmware version
+ */
+#define FIRMWARE_47
+
 /* Constants from frontline.c */
 #define STATUS_OK		0
 #define STATUS_ERROR_HDR	(1 << 2)
@@ -14,12 +19,26 @@
 #define HLEN_BC2	0xE
 #define HLEN_BC4	0xF
 
+#ifndef FIRMWARE_47 //if firmware v 4.6
+
 #define TYPE_DV		8
 
 #define LMP_IN_RAND	8
 #define LMP_COMB_KEY	9
 #define LMP_AU_RAND	11
 #define LMP_SRES	12
+
+#else
+
+#define TYPE_DV		16
+
+#define LMP_IN_RAND	16
+#define LMP_COMB_KEY	18
+#define LMP_AU_RAND	22
+#define LMP_SRES	24
+
+#endif //FIRMWARE_47
+
 
 #define FRAG_FIRST      (1 << 6)
 #define FRAG_LAST       (1 << 7)
@@ -116,6 +135,17 @@ struct frontline_packet {
 	uint8_t		fp_seq;
 } __packed;
 
+
+typedef struct {
+
+	PyObject_HEAD
+	int llid;
+	int master;
+	int type;
+	struct frontline_packet *_csrpkt;
+	PyObject *_payloadpkt;
+
+} __packed PySniffPacket;
 
 #ifdef __cplusplus
 }

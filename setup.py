@@ -1,3 +1,8 @@
+"""
+Taken from PythonInfo Wiki Distutils Tutorial, with thanks to DonnIngle
+
+"""
+
 from distutils.core import setup, Extension
 import sys
 
@@ -7,7 +12,7 @@ if sys.platform == 'linux2':
 	mod = Extension('umit.bluetooth.sniff',
 			libraries = ['bluetooth'],
 			include_dirs = ['csniff'],
-		sources = ['csniff/basesniffmodule.c'])
+		sources = ['csniff/basesniffmodule.c', 'csniff/bthandler.c'])
 	mods = [mod]
 
 setup( name = 'UmitBluetoothSniffer',
