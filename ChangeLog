@@ -1,3 +1,12 @@
+2009-07-08 Francesco Piccinno <stack.box@gmail.com>
+    * plugins/http-analyzer/sources/main.py:
+        - Now HTTP analyzer can plot numeric cookies for further analysis.
+          This is useful when the user needs to check if the next cookie is
+          predictable.
+        - All the plotting is done in webkit webview using protovis library
+          that generates an SVG image starting from javascript code. The
+          library could be found at http://vis.stanford.edu/protovis/
+
 2009-07-07 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:
         - Add HTTP analyzer plugin that exploits cfields setted from

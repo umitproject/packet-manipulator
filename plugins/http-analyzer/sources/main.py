@@ -42,6 +42,88 @@ try:
 except ImportError:
     raise PMErrorException("I need python binding for webkit")
 
+g_js_graph = """<html>
+  <head>
+    <title>$name$ analysis</title>
+    <script type="text/javascript">$script$</script>
+    <style type="text/css">
+      body {
+        background: #222;
+        margin: 0px;
+        height: 100%;
+        width: 100%;
+        display: table;
+      }
+      center {
+        display: table-cell;
+        vertical-align: middle;
+      }
+      #label {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        font: 10px sans-serif;
+        color: #999;
+      }
+      #label a {
+        color: #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <center>
+      <script type="text/javascript+protovis">
+        var arr = $data$;
+        var maxel = Math.max.apply(Math, arr);
+        var fact = 260 / maxel;
+        var vis = new pv.Panel().width(arr.length * 70 + 150).height(300).bottom(25);
+        vis.add(pv.Rule)
+            .data(function() pv.range(7))
+            .bottom(function(d) d * 80 / 2 + 20).left(70).right(6)
+            .strokeStyle("grey").lineWidth(.1)
+            .add(pv.Label)
+                .textAlign("right").textBaseline("middle")
+                .text(function(d) (d * (maxel / 7)).toFixed(1)).textStyle("grey");
+        vis.add(pv.Label).right(10).top(20).textAlign("right")
+            .textStyle("grey").font("20px sans-serif").text("$name$ analysis");
+        var dot = vis.add(pv.Line)
+            .data(arr)
+            .bottom(function(d) d * fact + 20)
+            .left(function() this.index * 70 + 90).add(pv.Dot);
+        var bar = dot.add(pv.Bar)
+            .bottom(20)
+            .width(1)
+            .left(function() dot.left() - .5)
+            .height(function(d) dot.bottom() - 25);
+        bar.add(pv.Label).bottom(10)
+            .textAlign("center").textBaseline("middle")
+            .text(function(d) d.toFixed(1)).textStyle("grey");
+        vis.render();
+      </script>
+    <div id="label">
+      Created by <a href="http://manipulator.umitproject.org">PacketManipulator</a>
+    </div>
+    </center>
+  </body>
+</html>"""
+
+g_js_text = """<html>
+<head>
+<script>
+function show() {
+    document.title = 'null';
+    document.title = 'yes';
+}
+</script>
+</head>
+<body>
+<pre>The HTTP payload doesn't contain text but %s.
+<form name="content_eval" action="">
+    <input type="button" value="Show payload" onClick="show()">
+</form>
+</body>
+</html>"""
+
 class CookieChooserDialog(gtk.Dialog):
     def __init__(self, cookies):
         gtk.Dialog.__init__(self, 'Cookie selector', PMApp().main_window,
@@ -49,26 +131,47 @@ class CookieChooserDialog(gtk.Dialog):
                             (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
                              gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
 
-        self.store = gtk.ListStore(str, int)
+        self.store = gtk.ListStore(str, int, str)
         self.tree = gtk.TreeView(self.store)
 
         rend = gtk.CellRendererText()
-        self.tree.append_column(gtk.TreeViewColumn('Cookie', rend, text=0))
-        self.tree.append_column(gtk.TreeViewColumn('Count', rend, text=1))
+
+        col = gtk.TreeViewColumn('Cookie', rend, text=0, cell_background=2)
+        col.set_expand(True)
+        self.tree.append_column(col)
+
+        col = gtk.TreeViewColumn('Count', rend, text=1, cell_background=2)
+        self.tree.append_column(col)
 
         self.store.set_sort_column_id(1, gtk.SORT_DESCENDING)
 
+        self.tree.set_headers_clickable(True)
+
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         sw.add(self.tree)
 
         for k, v in cookies.items():
-            self.store.append([k, len(v)])
+            found = False
+
+            for i in v:
+                if i.isdigit():
+                    found = True
+                    break
+
+            if found:
+                self.store.append([k, len(v), '#8DFF7F'])
+            else:
+                self.store.append([k, len(v), '#FFE3E5'])
 
         self.tree.get_selection().select_path((0,))
 
         self.vbox.pack_start(sw)
         sw.show_all()
+
+        self.vbox.set_border_width(4)
+        self.set_size_request(350, 200)
 
 class HTTPage(Perspective):
     icon = gtk.STOCK_INFO
@@ -77,25 +180,6 @@ class HTTPage(Perspective):
     def create_ui(self):
         self.webview = webkit.WebView()
         self.webview.connect('title-changed', self.__on_title_changed)
-
-        self.js_text = """
-        <html>
-        <head>
-        <script>
-        function show() {
-            document.title = 'null';
-            document.title = 'yes';
-        }
-        </script>
-        </head>
-        <body>
-        <pre>The HTTP payload doesn't contain text but %s.
-        <form name="content_eval" action="">
-            <input type="button" value="Show payload" onClick="show()">
-        </form>
-        </body>
-        </html>
-        """
 
         self.tempfile = None
         self.lastpacket = None
@@ -158,6 +242,11 @@ class HTTPage(Perspective):
             model, iter = d.tree.get_selection().get_selected()
             key = model.get_value(iter, 0)
 
+            lst = map(int, filter(lambda x: x.isdigit(), cookies[key]))
+            self.webview.load_html_string(
+                g_js_graph.replace('$name$', key) \
+                          .replace('$data$', str(lst)), 'file:///')
+
         d.hide()
         d.destroy()
 
@@ -207,7 +296,7 @@ class HTTPage(Perspective):
             conttype = headers['content-type'][0]
 
             if not conttype.startswith('text/'):
-                self.webview.load_html_string(self.js_text % conttype,
+                self.webview.load_html_string(g_js_text % conttype,
                                               'file:///')
                 return
         try:
@@ -220,6 +309,14 @@ class HTTPAnalyzer(Plugin):
     def start(self, reader):
         log.info('HTTP Analyzer plugin started')
         PMApp().main_window.bind_session(SessionType.SNIFF_SESSION, HTTPage)
+
+        if reader:
+            contents = reader.file.read('data/protovis.js')
+        else:
+            contents = "alert('Protovis not loaded!');"
+
+        global g_js_graph
+        g_js_graph = g_js_graph.replace('$script$', contents)
 
     def stop(self):
         pass

@@ -30,7 +30,7 @@ setup(
     url='http://blog.archpwn.org',
     scripts=['sources/main.py'],
     start_file="main",
-    data_files=[('data', ['dist/protovis-r2.5.js'])],
+    data_files=[('data', ['dist/protovis.js', 'dist/logo.png'])],
     provide=['=HTTP-Analyzer-1.0'],
     description='HTTP response/request inspector. Cookie analyzer.',
     output='http-analyzer.ump'
