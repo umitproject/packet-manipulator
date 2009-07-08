@@ -573,10 +573,6 @@ class Reassembler(object):
 
         hash_idx = ':'.join(ctup[0:2])
 
-        print ('New converation %s:%d <-> %s:%d') % \
-              (mpkt.get_field('ip.src'), mpkt.get_field('tcp.sport'),
-              mpkt.get_field('ip.dst'), mpkt.get_field('tcp.dport'))
-
         if self.n_streams > self.max_streams:
             orig_client_state = self.oldest_stream.client.state
             self.oldest_stream.state = stream.CONN_TIMED_OUT

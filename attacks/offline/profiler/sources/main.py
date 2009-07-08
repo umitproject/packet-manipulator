@@ -33,7 +33,7 @@ MAC: 01:02:03:04:05:06 (UNKNW) IP: 127.0.0.1 OS: Novell NetWare 3.12 - 5.00 (nea
 fingerprint.notice 127.0.0.1 is running Novell NetWare 3.12 - 5.00 (nearest)
 MAC: 06:05:04:03:02:01 (UNKNW) IP: 127.0.0.1 OS: Novell NetWare 3.12 - 5.00 (nearest) 1 service(s) (0 accounts for port 21)
 dissector.ftp.info FTP : 127.0.0.1:21 -> USER: anonymous PASS: guest@example.com
-MAC: 06:05:04:03:02:01 (UNKNW) IP: 127.0.0.1 1 service(s) (1 accounts for port 21)
+MAC: 06:05:04:03:02:01 (UNKNW) IP: 127.0.0.1 OS: Novell NetWare 3.12 - 5.00 (nearest) 1 service(s) (1 accounts for port 21)
 """
 
 import os.path
@@ -217,7 +217,7 @@ class Profiler(Plugin, OfflineAttack):
 
         #TODO: remove me
         if prof:
-            print prof, repr(prof)
+            print prof
 
     def _parse_arp(self, mpkt):
         prof = self.get_or_create(mpkt)
