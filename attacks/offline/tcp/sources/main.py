@@ -573,9 +573,9 @@ class Reassembler(object):
 
         hash_idx = ':'.join(ctup[0:2])
 
-        if self.n_streams > self.max_streams:
+        if self.n_streams >= self.max_streams:
             orig_client_state = self.oldest_stream.client.state
-            self.oldest_stream.state = stream.CONN_TIMED_OUT
+            self.oldest_stream.state = self.oldest_stream.CONN_TIMED_OUT
 
             for listener in self.oldest_stream.listeners:
                 listener(self.oldest_stream, mpkt)
