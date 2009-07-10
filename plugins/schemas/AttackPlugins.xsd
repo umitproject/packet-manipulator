@@ -46,20 +46,32 @@
 		<xs:attribute name="description" type="xs:string"/>
 		<xs:attribute name="id" type="xs:string" use="required"/>
 	</xs:complexType>
-	
-	<!-- Offline attack -->
-	<xs:complexType name="offlineAttackType">
+	<!-- This is for attribute -->
+	<xs:simpleType name="attributeAttackType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="offline"/>
+			<xs:enumeration value="online"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<!-- This is our attack type both for offline and online attacks -->
+	<xs:complexType name="attackType">
 		<xs:sequence>
-			<xs:element maxOccurs="unbounded" minOccurs="0" name="options">
+			<xs:element minOccurs="0" name="configurations">
 				<xs:complexType>
 					<xs:sequence>
-						<xs:element minOccurs="0" maxOccurs="unbounded" name="bool" type="boolOption"/>
-						<xs:element minOccurs="0" maxOccurs="unbounded" name="int" type="intOption"/>
-						<xs:element minOccurs="0" maxOccurs="unbounded" name="float" type="floatOption"/>
-						<xs:element minOccurs="0" maxOccurs="unbounded" name="str" type="strOption"/>
-						<xs:element minOccurs="0" maxOccurs="unbounded" name="list" type="listOption"/>
+						<xs:element maxOccurs="unbounded" name="configuration">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="bool" type="boolOption"/>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="int" type="intOption"/>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="float" type="floatOption"/>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="str" type="strOption"/>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="list" type="listOption"/>
+								</xs:sequence>
+								<xs:attribute name="name" type="xs:string"/>
+							</xs:complexType>
+						</xs:element>
 					</xs:sequence>
-					<xs:attribute name="configuration" type="xs:string"/>
 				</xs:complexType>
 			</xs:element>
 			<!--
@@ -82,10 +94,10 @@
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>
-			<xs:element minOccurs="0" name="vulns">
+			<xs:element minOccurs="0" name="vulnerabilities">
 				<xs:complexType>
 					<xs:sequence>
-						<xs:element maxOccurs="unbounded" name="vuln">
+						<xs:element maxOccurs="unbounded" name="vulnerability">
 							<xs:complexType>
 								<xs:all>
 									<!-- General description of the vulnerability -->
@@ -94,7 +106,7 @@
 										This is to collect information regarding the class of the vulnerabilty.
 										We could have several class like Design Error, Buffer Overflow, etc...
 									-->
-									<xs:element name="classes">
+									<xs:element minOccurs="0" name="classes">
 										<xs:complexType>
 											<xs:sequence>
 												<xs:element maxOccurs="unbounded" name="class" type="xs:string"/>
@@ -123,15 +135,21 @@
 									<xs:element minOccurs="0" name="versions">
 										<xs:complexType>
 											<xs:sequence>
-												<xs:element maxOccurs="unbounded" minOccurs="1" name="affected" type="xs:string"/>
+												<xs:element maxOccurs="unbounded" name="affected" type="xs:string"/>
 												<xs:element maxOccurs="unbounded" minOccurs="0" name="notaffected" type="xs:string"/>
 											</xs:sequence>
 										</xs:complexType>
 									</xs:element>
-									<!-- The date indicating when the vulnerability was pubblished -->
-									<xs:element minOccurs="0" name="pubblished" type="xs:date"/>
-									<!-- The name of the author who discovered this vulnerability -->
-									<xs:element minOccurs="0" name="discovered" type="xs:string"/>
+									<xs:element minOccurs="0" name="credits">
+										<xs:complexType>
+											<xs:sequence>
+												<!-- The date indicating when the vulnerability was pubblished -->
+												<xs:element name="pubblished" type="xs:date"/>
+												<!-- The name of the author who discovered this vulnerability -->
+												<xs:element maxOccurs="unbounded" name="discovered" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
 									<!--
 										References could contain generic URI to solutions, CVEs, etc..
 										We could have something like <url type="CVE-2004-0803" href=".../> or
@@ -149,26 +167,30 @@
 											</xs:sequence>
 										</xs:complexType>
 									</xs:element>
-									<!-- Platforms includes 'linux', 'macos', 'freebsd', etc.. -->
-									<xs:element minOccurs="0" name="platform" type="xs:string"/>
-									<!-- Obviously the architecture that's afflicted 'x86' 'x86_64' 'ppc'-->
-									<xs:element minOccurs="0" name="arch" type="xs:string"/>
+									<xs:element minOccurs="0" name="platforms">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="platform">
+													<xs:complexType>
+														<!-- Platforms includes 'linux', 'macos', 'freebsd', etc.. -->
+														<xs:attribute name="name" type="xs:string" use="required"/>
+														<!-- Obviously the architecture that's afflicted 'x86' 'x86_64' 'ppc'-->
+														<xs:attribute name="arch" type="xs:string" use="required"/>
+													</xs:complexType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
 								</xs:all>
-								<!-- An optional attribute to have a name for every vuln -->
-								<xs:attribute name="name" type="xs:string" use="optional"/>
+								<!-- A vuln must have a name -->
+								<xs:attribute name="name" type="xs:string" use="required"/>
 							</xs:complexType>
 						</xs:element>
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>
 		</xs:sequence>
-	</xs:complexType>
-	<xs:complexType name="onlineAttackType"/>
-	<xs:complexType name="attackType">
-		<xs:choice>
-			<xs:element name="offline" type="offlineAttackType"/>
-			<xs:element name="online" type="onlineAttackType"/>
-		</xs:choice>
+		<xs:attribute name="type" type="attributeAttackType" use="required"/>
 	</xs:complexType>
 	<xs:element name="attack" type="attackType"/>
 </xs:schema>
