@@ -32,6 +32,9 @@
           schema.
     * PM/Gui/Plugins/Containers.py:
         - Implemented the capability to save and load Manifest.xml for attacks.
+    * PM/Gui/Plugins/AttackPage.py:
+        - First implementation of attack plugins GUI.
+
 2009-07-07 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:
         - Add HTTP analyzer plugin that exploits cfields setted from
