@@ -169,7 +169,7 @@ class PluginEngine(Singleton):
         self.tree = PluginsTree()
         self.core = Core()
 
-        self.avaiable_plugins = None
+        self.available_plugins = None
         self.paths = None
 
         self.apply_updates()
@@ -214,10 +214,10 @@ class PluginEngine(Singleton):
 
     def recache(self):
         """
-        Reinit the avaiable_plugins and paths fields
+        Reinit the available_plugins and paths fields
         """
 
-        self.avaiable_plugins = []
+        self.available_plugins = []
         self.paths = {}
 
         idx = 0
@@ -225,7 +225,7 @@ class PluginEngine(Singleton):
             plug_path = PluginPath(path)
             self.paths[path] = (idx, plug_path)
 
-            self.avaiable_plugins.extend(
+            self.available_plugins.extend(
                 [v for k, v in plug_path.plugins.items()]
             )
 

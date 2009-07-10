@@ -93,7 +93,7 @@ class PluginPage(gtk.VBox):
         return self.richlist.get_rows()
 
     def populate(self):
-        "Populate the richlist using avaiable_plugins field"
+        "Populate the richlist using available_plugins field"
 
         # We need a list of present plugin row to check for dup
         presents = []
@@ -105,8 +105,8 @@ class PluginPage(gtk.VBox):
 
         warn_reboot = False
 
-        # We have to load avaiable_plugins from engine
-        for reader in self.p_window.engine.avaiable_plugins:
+        # We have to load available_plugins from engine
+        for reader in self.p_window.engine.available_plugins:
 
             # Check if it's already present then remove the original
             # and add the new in case something is getting update.
