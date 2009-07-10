@@ -147,10 +147,6 @@ class Profiler(Plugin, OfflineAttack):
         else:
             self.macdb = None
 
-    def register_options(self):
-        conf = AttackManager().register_configuration('offline.profiler')
-        conf.register_option('mac_fingerprint', True, bool)
-
     def register_hooks(self):
         manager = AttackManager()
 
@@ -275,3 +271,10 @@ class Profiler(Plugin, OfflineAttack):
 
 __plugins__ = [Profiler]
 __plugins_deps__ = [('Profiler', [], ['=Profiler-1.0'], [])]
+
+__attack_type__ = 0
+__protocols__ = (('icmp', None), ('eth', None))
+__configurations__ = (('offline.profiler',
+                       {'mac_fingerprint' : [True, 'Enable MAC lookup into DB '
+                                             'to report NIC vendor']}),
+)

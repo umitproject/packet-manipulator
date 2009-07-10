@@ -59,7 +59,7 @@ def icmp_decoder():
         icmpraw = payload[0:2] + '\x00\x00' + payload[4:]
         com_chksum = hex(checksum(icmpraw))
 
-        if com_chksum  != cur_chksum:
+        if com_chksum != cur_chksum:
             mpkt.set_cfield('good_checksum', com_chksum)
             manager.user_msg(_("Invalid ICMP packet from %s to %s : " \
                                "wrong checksum %s instead of %s") %  \
@@ -73,11 +73,12 @@ def icmp_decoder():
     return icmp
 
 class ICMPDecoder(Plugin, OfflineAttack):
-    def register_options(self):
-        conf = AttackManager().register_configuration('decoder.icmp')
-        conf.register_option('checksum_check', True, bool)
-
     def register_decoders(self):
         AttackManager().add_decoder(PROTO_LAYER, NL_TYPE_ICMP, icmp_decoder())
 
 __plugins__ = [ICMPDecoder]
+__attack_type__ = 0
+__protocols__ = (('icmp', None), )
+__configurations__ = (('decoder.icmp', {
+    'checksum_check' : ['True', 'Check for correct checksum of ICMP packets'],}),
+)

@@ -203,15 +203,17 @@ def ip_decoder():
     return ip
 
 class IPDecoder(Plugin, OfflineAttack):
-    def register_options(self):
-        conf = AttackManager().register_configuration('decoder.ip')
-        conf.register_option('checksum_check', True, bool)
-        conf.register_option('reassemble', True, bool)
-        conf.register_option('reassemble_max_fraglist', 30, int)
-        conf.register_option('reassemble_max_fragments', 10, int)
-
     def register_decoders(self):
         AttackManager().add_decoder(NET_LAYER, LL_TYPE_IP, ip_decoder())
 
 __plugins__ = [IPDecoder]
-__plugins_deps__ = [('IPDecoder', [], [], [])]
+__plugins_deps__ = [('IPDecoder', ['EthDecoder'], ['=IPDecoder-1.0'], [])]
+
+__attack_type__ = 0
+__protocols__ = (('ip', None), )
+__configurations__ = (('decoder.ip', {
+    'checksum_check' : [True, 'Enable checksum check for IP packets'],
+    'reassemble' : [True, 'Enable IP fragments reassembling'],
+    'reassemble_max_fraglist' : [30, 'Max number of IP flows to follow'],
+    'reassemble_max_fragments' : [10, 'Max number of fragments in a flow']}),
+)

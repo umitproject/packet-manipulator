@@ -78,10 +78,12 @@ class Tester(object):
                 ret = []
 
                 for kplug in getattr(mod, '__plugins__', []):
-                    plug_inst = kplug()
+                    confs = getattr(mod, '__configurations__', [])
 
-                    if getattr(plug_inst, 'register_options', None):
-                        plug_inst.register_options()
+                    for conf_name, conf_dict in confs:
+                        AttackManager().register_configuration(conf_name, conf_dict)
+
+                    plug_inst = kplug()
 
                     ret.append(plug_inst)
 

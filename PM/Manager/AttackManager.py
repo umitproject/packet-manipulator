@@ -42,17 +42,13 @@ def coroutine(func):
 ###############################################################################
 
 class Configuration(object):
-    def __init__(self, name):
+    def __init__(self, name, odict = {}):
+        """
+        @param name a string representing the Configuration
+        @param odict options dictionary {'key' : [value, 'description' or None]}
+        """
         self._name = name
-        self._dict = {}
-
-    def register_option(self, opt_name, def_value, opt_type):
-        assert isinstance(opt_type, type), "opt_type should be a type"
-        assert isinstance(opt_name, basestring), "opt_name should be a string"
-        assert isinstance(def_value, opt_type), "def_value and should be of " \
-                                                 "the same type"
-
-        self._dict[opt_name] = (def_value, def_value, opt_type)
+        self._dict = odict
 
     def __getitem__(self, x):
         return self._dict[x][0]
@@ -60,12 +56,17 @@ class Configuration(object):
     def __setitem__(self, x, value):
         tup = self._dict[x]
 
-        if isinstance(value, tup[2]):
-            self._dict[x] = (value, tup[1], tup[2])
+        if isinstance(value, type(tup[0])):
+            self._dict[x] = (value, tup[1])
         else:
             raise Exception('value has different type')
 
     def get_name(self): return self._name
+    def get_option(self, x):
+        """
+        @return a tuple (opt_value, opt_desc)
+        """
+        return self._dict[x]
 
     name = property(get_name)
 ###############################################################################
@@ -85,20 +86,23 @@ class AttackManager(Singleton):
         self._decoders = ({}, {}, {}, {}, {}, {}, {})
         self._configurations = {}
 
-        self._global_conf = self.register_configuration('global')
-        self._global_conf.register_option('debug', False, bool)
+        self._global_conf = self.register_configuration('global', {
+            'debug' : [False, 'Turn out debugging']
+        })
 
     # Configurations stuff
 
-    def register_configuration(self, conf_name):
+    def register_configuration(self, conf_name, conf_dict):
         """
         Register a configuration
         @param conf_name a str for configuration root element
+        @param conf_dict a dictionary
+        @see Configuration()
         """
         if conf_name in self._configurations:
             raise Exception('Configuration named %s already exists' % conf_name)
 
-        conf = Configuration(conf_name)
+        conf = Configuration(conf_name, conf_dict)
         self._configurations[conf_name] = conf
 
         log.debug('Configuration %s registered.' % conf_name)
@@ -152,6 +156,24 @@ class AttackManager(Singleton):
         log.debug("Registering dissector %s for level %s with type %s" % \
                   (decoder, level, type))
         self._decoders[level][type] = (decoder, [], [])
+
+    def remove_decoder(self, level, type, decoder, force=False):
+        """
+        Remove a decoder for the given level
+        @param level the level where the decoder works on
+        @param type the type of decoder
+        @param decoder a callable object
+        @param force if force is True and post or pre hooks are set
+               remove anyway
+        """
+
+        tup = self._decoders[level][type]
+
+        if any(tup[1:]) and not force:
+                return False
+
+        del self._decoders[level][type]
+        return True
 
     def add_decoder_hook(self, level, type, decoder_hook, post=0):
         if type not in self._decoders[level]:
@@ -256,7 +278,6 @@ class AttackDispatcher(object):
 ###############################################################################
 
 class AttackPlugin(object):
-    def register_options(self): pass
     def register_hooks(self): pass
     def register_decoders(self): pass
     def register_dissectors(self): pass

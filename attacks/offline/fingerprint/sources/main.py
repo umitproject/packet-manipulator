@@ -288,3 +288,19 @@ class OSFP(Plugin, OfflineAttack):
 
 __plugins__ = [OSFP]
 __plugins_deps__ = [('OSFP', ['IPDecoder', 'TCPDecoder'], ['=OSFP-1.0'], [])]
+
+__attack_type__ = 0
+__protocols__ = (('tcp', None), ('icmp', None))
+__vulnerabilities__ = (
+    ('Passive OS fingerprinting',
+     {'description' : 'TCP/IP stack fingerprinting is the passive collection '
+      'of configuration attributes from a remote device during standard layer '
+      '4 network communications. The combination of parameters may then be '
+      'used to infer the remote machine\'s operating system (aka, OS '
+      'fingerprinting), or incorporated into a device fingerprint.',
+      'classes' : ('design error', ),
+      'references' : (
+          (None, 'http://en.wikipedia.org/wiki/TCP/IP_stack_fingerprinting'),
+      )
+     }),
+)

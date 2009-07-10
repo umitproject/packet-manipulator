@@ -50,7 +50,8 @@ from distutils.command.install import install as installcmd
 from distutils.command.install_lib import install_lib as install_libcmd
 
 try:
-    from distutils.command.install_egg_info import install_egg_info as install_egginfocmd
+    from distutils.command.install_egg_info import install_egg_info as \
+         install_egginfocmd
 
     class PlugEggInstaller(install_egginfocmd):
         def run(self):
@@ -64,6 +65,9 @@ import shutil
 
 SIGNATURE = "UmitPlugin"
 
+OFFLINE_ATTACK_TYPE = 0
+ONLINE_ATTACK_TYPE  = 1
+
 class ManifestObject(object):
     def __init__(self):
 
@@ -75,10 +79,17 @@ class ManifestObject(object):
             ['start_file', 'update'],
             ['provide', 'need', 'conflict'],
             ['license', 'copyright', 'author',
-             'contributor', 'translator', 'artist']
+             'contributor', 'translator', 'artist'],
+            [], # From here fields are for offline/online attacks
+            ['configuration', 'bool', 'int', 'float', 'str'],
+            ['protocol'],
+            ['vulnerability', 'description', 'classes', 'class', 'systems',
+             'versions', 'affected', 'notaffected', 'credits', 'pubblished',
+             'discovered', 'references', 'url', 'platforms', 'platform'],
         ]
 
-        self.containers = [SIGNATURE, 'runtime', 'deptree', 'credits']
+        self.containers = [SIGNATURE, 'runtime', 'deptree', 'credits', 'attack',
+                           'configurations', 'protocols', 'vulnerabilities']
 
         self.name = ''
         self.version = ''
@@ -98,6 +109,25 @@ class ManifestObject(object):
         self.contributor = []
         self.translator = []
         self.artist = []
+
+        # -1 for standard plugin
+        self.attack_type = -1
+
+        # (('configuration_name', {'option_id' : (value, 'description') })
+        self.configurations = []
+
+        # (('tcp', 22), ('http', 80))
+        self.protocols = []
+
+        # (('vuln_name',
+        #  {'description' : 'desc',
+        #   'classes'     : ('bof', 'design error'),
+        #   'systems'     : (('affected', 'system'), ('not', 'affected')),
+        #   'versions'    : (('affected', 'system'), ('not', 'affected')),
+        #   'credits'     : (date, ('author1', 'author2')
+        #   'references'  : (('solution', 'href'), ('CVE-234', 'href')),
+        #   'platforms'   : (('macos', 'ppc'), )), )
+        self.vulnerabilities = []
 
         self.attr_type = ''
 
@@ -142,13 +172,106 @@ class ManifestLoader(handler.ContentHandler, ManifestObject):
         self.current_element = None
         self.data = None
 
+        self.opt_trans = {
+            1 : lambda x: x == '1',
+            2 : int,
+            3 : float,
+            4 : str,
+        }
+
+        # id / description / transformer
+        self.current_option = [None, None, None]
+
+        # conf_id / conf_dict
+        self.current_configuration = ['', {}]
+
+        self.current_vuln = ['', {}]
+
     def startElement(self, name, attrs):
         try:
             self.element_idx = self.elements[self.parsing_pass].index(name)
             self.current_element = \
                 self.elements[self.parsing_pass][self.element_idx]
 
+            # <configurations>
+            if self.parsing_pass == 5:
+                if self.element_idx == 0:
+                    self.current_configuration[0] = attrs.get('name')
+
+                elif self.element_idx in range(1, 5, 1):
+
+                    desc = attrs.get('description')
+                    opid = attrs.get('id')
+
+                    if not id:
+                        log.error('Option without an id')
+
+                    self.current_option[0] = opid
+
+                    if desc:
+                        self.current_option[1] = desc
+
+                    self.current_option[2] = self.opt_trans[self.element_idx]
+
+                    log.debug('Allocating new option \'%s\' (type: %s)' % \
+                              (opid, name))
+
+                    self.data = None
+
+            # <protocols>
+            elif self.parsing_pass == 6 and self.element_idx == 0:
+                proto_name = attrs.get('name')
+                proto_port = attrs.get('port') or None
+
+                if proto_port and proto_port.isdigit():
+                    try:
+                        proto_port = int(proto_port)
+                    except:
+                        proto_port = None
+
+                if proto_name:
+                    log.debug('Adding new protocol %s:%s' % (proto_name,
+                                                             proto_port))
+
+                    self.protocols.append((proto_name, proto_port))
+
+            elif self.parsing_pass == 7:
+                if self.element_idx == 0:
+                    self.current_vuln[0] = attrs.get('name')
+                elif self.element_idx == 4: # systems
+                    self.in_systems = 1
+                elif self.element_idx == 5: # versions
+                    self.in_systems = 0
+                elif self.element_idx in (1, 3, 6, 7, 9, 10):
+                    # If we have description, class, affected or notaffected we
+                    # need to get the text element
+                    self.data = None
+                elif self.element_idx == 12:
+                    rtype = attrs.get('type')
+                    rhref = attrs.get('href')
+
+                    if not rhref:
+                        raise Exception('href attribute of url element cannot '
+                                        'be null')
+
+                    if 'references' not in self.current_vuln[1]:
+                        self.current_vuln[1]['references'] = []
+
+                    self.current_vuln[1]['references'].append((rtype, rhref))
+                elif self.element_idx == 14:
+                    name, arch = attrs.get('name'), attrs.get('arch')
+
+                    if not name or not arch:
+                        raise Exception('name and arch attribute are required '
+                                        'inside platform element')
+
+                    if 'platforms' not in self.current_vuln[1]:
+                        self.current_vuln[1]['platforms'] = []
+
+                    self.current_vuln[1]['platforms'].append((name, arch))
+
         except IndexError:
+
             log.debug('Element named `%s` is not in %s' % \
                       (name, self.elements[self.parsing_pass]))
 
@@ -158,19 +281,24 @@ class ManifestLoader(handler.ContentHandler, ManifestObject):
 
                 if self.parsing_pass < idx:
                     self.parsing_pass = idx
+                    self.element_idx = 0
                 else:
                     log.warning('Element `%s` is not valid at this point. ' \
                                 'Should compare before %s' % (name,
                                             self.containers[self.parsing_pass]))
 
-                if self.parsing_pass == 0:
+                if self.parsing_pass == 0: # SIGNATURE
                     if type in attrs.keys():
                         self.attr_type = attrs.get('type')
                     else:
                         self.attr_type = 'ui'
 
+                elif self.parsing_pass == 4: # <attack>
+                    self.attack_type = attrs.get('type') == 'online' and 1 or 0
+                    log.debug("Attack type is %d" % self.attack_type)
+
             except ValueError:
-                log.debug('Element named `%s` not excepted.' % name)
+                log.warning('Element named `%s` not excepted.' % name)
 
     def characters(self, ch):
         if not self.current_element:
@@ -182,17 +310,104 @@ class ManifestLoader(handler.ContentHandler, ManifestObject):
             self.data += ch
 
     def endElement(self, name):
-        if self.current_element == name:
-            try:
-                attr = getattr(self, name)
+        if self.parsing_pass == 5:
+            if name == 'configuration' and self.current_configuration[0] and \
+               self.current_configuration[1]:
 
-                if isinstance(attr, basestring):
-                    setattr(self, name, self.data)
-                elif isinstance(attr, list):
-                    attr.append(self.data)
-            finally:
-                self.current_element = None
-                self.data = None
+                log.debug('Adding configuration named %s with %d options' \
+                          % (self.current_configuration[0],
+                             len(self.current_configuration[1])))
+
+                self.configurations.append(self.current_configuration)
+                self.current_configuration = ('', {})
+
+            elif any(self.current_option) and self.element_idx in (1, 2, 3, 4):
+
+                id, val, desc = self.current_option[0], \
+                                self.current_option[2](self.data), \
+                                self.current_option[1]
+
+                self.current_configuration[1][id] = [val, desc]
+                self.current_option = [None, None, None]
+
+                log.debug('Adding new option with id \'%s\' to \'%s\'.' \
+                          % (id, self.current_configuration[0]))
+
+        elif self.parsing_pass == 7:
+            if name == 'vulnerability':
+
+                if not self.current_vuln[0]:
+                    raise Exception('vulnerability element must have name '
+                                    'attribute set')
+
+                log.debug('Adding new vulnerability %s' % self.current_vuln[0])
+
+                self.vulnerabilities.append(self.current_vuln)
+                self.current_vuln = ['', {}]
+
+            elif name == 'description':
+                self.current_vuln[1]['description'] = self.data
+                log.debug('Vuln description for %s is %s...' % \
+                          (self.current_vuln[0],
+                           self.data[:min(20, len(self.data))]))
+
+            elif name == 'class':
+                if 'classes' not in self.current_vuln:
+                    self.current_vuln[1]['classes'] = []
+
+                self.current_vuln[1]['classes'].append(self.data)
+
+                log.debug('Adding new class \'%s\' (%d total)' \
+                          % (self.data, len(self.current_vuln[1]['classes'])))
+
+            elif name == 'affected' or name == 'notaffected':
+                if self.in_systems:
+                    if 'systems' not in self.current_vuln[1]:
+                        dct = self.current_vuln[1]['systems'] = [[], []]
+                    else:
+                        dct = self.current_vuln[1]['systems']
+                elif self.in_systems == 0:
+                    if 'versions' not in self.current_vuln[1]:
+                        dct = self.current_vuln[1]['versions'] = [[], []]
+                    else:
+                        dct = self.current_vuln[1]['versions']
+                else:
+                    raise Exception('Not valid manifest')
+
+                dct[name[0] == 'a' and 0 or 1].append(self.data)
+
+                log.debug('Adding %s as %s (system: %d)' % (self.data, name,
+                                                            self.in_systems))
+
+            elif name == 'pubblished':
+                if 'credits' not in self.current_vuln[1]:
+                    self.current_vuln[1]['credits'] = ['', []]
+
+                self.current_vuln[1]['credits'][0] = self.data
+
+            elif name == 'discovered':
+                if 'credits' not in self.current_vuln[1]:
+                    raise Exception('pubblished element must be present '
+                                    'inside credits element')
+
+                log.debug('Adding new discovered %s' % self.data)
+                self.current_vuln[1]['credits'][1].append(self.data)
+
+        if self.current_element == name:
+
+            if self.parsing_pass < 5:
+                try:
+                    attr = getattr(self, name)
+
+                    if isinstance(attr, basestring):
+                        setattr(self, name, self.data)
+                    elif isinstance(attr, list):
+                        attr.append(self.data)
+                except:
+                    pass
+
+            self.current_element = None
+            self.data = None
 
 class ManifestWriter(object):
     def startElement(self, names, attrs):
@@ -260,6 +475,11 @@ class ManifestWriter(object):
         self.writer.characters('  ' * self.depth_idx)
         self.endElement('credits')
 
+        if self.manifest.attack_type == OFFLINE_ATTACK_TYPE:
+            self.dump_offline_attack()
+        elif self.manifest.attack_type == ONLINE_ATTACK_TYPE:
+            self.dump_online_attack()
+
         self.endElement('UmitPlugin')
         self.writer.endDocument()
 
@@ -278,6 +498,205 @@ class ManifestWriter(object):
                 self.startElement(name, {})
                 self.writer.characters(item)
                 self.endElement(name)
+
+    def dump_online_attack(self):
+        raise Exception('Not implemented yet')
+
+    def dump_offline_attack(self):
+        trans = {
+            bool : 'bool',
+            float : 'float',
+            int : 'int',
+            str : 'str',
+        }
+
+        self.startElement('attack', AttributesImpl({'type' : 'offline'}))
+        self.writer.characters('\n')
+
+        if self.manifest.configurations:
+            self.startElement('configurations', {})
+            self.writer.characters('\n')
+
+            # Let's dump configurations
+            for conf_name, options_dict in self.manifest.configurations:
+                self.startElement('configuration',
+                                  AttributesImpl({'name' : conf_name}))
+                self.writer.characters('\n')
+
+                for k, (val, desc) in options_dict.items():
+                    attrs = {'id' : str(k)}
+
+                    if isinstance(val, bool):
+                        value = val and '1' or '0'
+                    else:
+                        value = str(val)
+
+                    if desc:
+                        attrs['description'] = desc
+
+                    self.startElement(trans[type(val)],
+                                      AttributesImpl(attrs))
+                    self.writer.characters(value)
+                    self.endElement(trans[type(val)])
+
+                self.writer.characters('  ' * self.depth_idx)
+                self.endElement('configuration')
+
+            self.writer.characters('  ' * self.depth_idx)
+            self.endElement('configurations')
+
+        if not self.manifest.protocols:
+            raise Exception('protocols element cannot be null')
+
+        self.startElement('protocols', {})
+        self.writer.characters('\n')
+
+        # Protocols
+        for name, port in self.manifest.protocols:
+            attrs = {'name' : name}
+
+            if port:
+                attrs['port'] = str(port)
+
+            self.startElement('protocol', AttributesImpl(attrs))
+            self.endElement('protocol')
+
+        self.writer.characters('  ' * self.depth_idx)
+        self.endElement('protocols')
+
+        if not self.manifest.vulnerabilities:
+            self.writer.characters('  ' * self.depth_idx)
+            self.endElement('attack')
+            return
+
+        self.startElement('vulnerabilities', {})
+        self.writer.characters('\n')
+
+        for vuln_name, vuln_dict in self.manifest.vulnerabilities:
+            self.startElement('vulnerability',
+                              AttributesImpl({'name' : vuln_name}))
+            self.writer.characters('\n')
+
+            elem = vuln_dict.get('description', None)
+
+            if elem:
+                self.startElement('description', {})
+                self.writer.characters(elem)
+                self.endElement('description')
+
+            elem = vuln_dict.get('classes', None)
+
+            if elem:
+                self.startElement('classes', {})
+                self.writer.characters('\n')
+
+                for vuln_class in elem:
+                    self.startElement('class', {})
+                    self.writer.characters(vuln_class)
+                    self.endElement('class')
+
+                self.writer.characters('  ' * self.depth_idx)
+                self.endElement('classes')
+
+            elem = vuln_dict.get('systems', None)
+
+            if elem:
+                self.startElement('systems', {})
+                self.writer.characters('\n')
+
+                for affected in elem[0]:
+                    self.startElement('affected', {})
+                    self.writer.characters(affected)
+                    self.endElement('affected')
+
+                for notaffected in elem[1]:
+                    self.startElement('notaffected', {})
+                    self.writer.characters(notaffected)
+                    self.endElement('notaffected')
+
+                self.writer.characters('  ' * self.depth_idx)
+                self.endElement('systems')
+
+            elem = vuln_dict.get('versions', None)
+
+            if elem:
+                self.startElement('versions', {})
+                self.writer.characters('\n')
+
+                for affected in elem[0]:
+                    self.startElement('affected', {})
+                    self.writer.characters(affected)
+                    self.endElement('affected')
+
+                for notaffected in elem[1]:
+                    self.startElement('notaffected', {})
+                    self.writer.characters(notaffected)
+                    self.endElement('notaffected')
+
+                self.writer.characters('  ' * self.depth_idx)
+                self.endElement('versions')
+
+            elem = vuln_dict.get('credits', None)
+
+            if elem:
+                self.startElement('credits', {})
+                self.writer.characters(elem)
+
+                for pdate, authors in elem:
+                    self.startElement('pubblished', {})
+                    self.writer.characters(pdate)
+                    self.endElement('pubblished')
+
+                    for author in authors:
+                        self.startElement('discovered', {})
+                        self.writer.characters(author)
+                        self.endElement('discovered')
+
+                self.writer.characters('  ' * self.depth_idx)
+                self.endElement('credits')
+
+            elem = vuln_dict.get('references', None)
+
+            if elem:
+                self.startElement('references', {})
+                self.writer.characters('\n')
+
+                for rtype, rhref in elem:
+
+                    attrs = {'href' : rhref}
+
+                    if rtype:
+                        attrs['type'] = rtype
+
+                    self.startElement('url', AttributesImpl(attrs))
+                    self.endElement('url')
+
+                self.writer.characters('  ' * self.depth_idx)
+                self.endElement('references')
+
+            elem = vuln_dict.get('platforms', None)
+
+            if elem:
+                self.startElement('platforms', {})
+                self.writer.characters('\n')
+
+                for name, arch in elem:
+                    self.startElement('platform',
+                                      AttributesImpl({'name' : name,
+                                                      'arch': arch}))
+                    self.endElement('platform')
+
+                self.writer.characters('  ' * self.depth_idx)
+                self.endElement('platforms')
+
+            self.writer.characters('  ' * self.depth_idx)
+            self.endElement('vulnerability')
+
+        self.writer.characters('  ' * self.depth_idx)
+        self.endElement('vulnerabilities')
+
+        self.writer.characters('  ' * self.depth_idx)
+        self.endElement('attack')
 
     def get_output(self):
         return self.output.getvalue()
@@ -533,7 +952,8 @@ class PluginWriter(ManifestObject):
 
         FIELDS = ('name', 'version', 'description', 'url', 'start_file',
                   'update', 'provide', 'need', 'conflict', 'license',
-                  'copyright', 'author', 'contributor', 'translator', 'artist')
+                  'copyright', 'author', 'contributor', 'translator', 'artist',
+                  'attack_type', 'configurations', 'protocols', 'vulnerabilities')
 
         # Filter out fields that are not related to the schema
 

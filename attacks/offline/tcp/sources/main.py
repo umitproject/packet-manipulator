@@ -175,9 +175,9 @@ class Reassembler(object):
     The code is released as GPLv2 so no problem about integration.
     """
 
-    def __init__(self):
-        self.tcp_workarounds = True
-        self.n_streams, self.max_streams = 0, 30
+    def __init__(self, workarounds=True, maxstreams=30):
+        self.tcp_workarounds = workarounds
+        self.n_streams, self.max_streams = 0, maxstreams
         self.oldest_stream, self.latest_stream = None, None
 
         self.tcp_streams = {}
@@ -770,12 +770,6 @@ class TCPDecoder(Plugin, OfflineAttack):
         self.reassembler = None
         self.manager = None
 
-    def register_options(self):
-        conf = AttackManager().register_configuration('decoder.tcp')
-        conf.register_option('checksum_check', True, bool)
-        conf.register_option('enable_dissectors', True, bool)
-        conf.register_option('enable_reassemble', True, bool)
-
     def register_decoders(self):
         self.manager = AttackManager()
         conf = self.manager.get_configuration('decoder.tcp')
@@ -786,7 +780,8 @@ class TCPDecoder(Plugin, OfflineAttack):
         self.manager.add_decoder(PROTO_LAYER, NL_TYPE_TCP, self._process_tcp)
 
         if conf['enable_reassemble']:
-            self.reassembler = Reassembler()
+            self.reassembler = Reassembler(conf['reassemble_workarounds'],
+                                           conf['reassemble_maxstreams'])
             self.manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_ICMP,
                                           self.reassembler.process_icmp, 1)
 
@@ -866,3 +861,22 @@ class TCPDecoder(Plugin, OfflineAttack):
 
 __plugins__ = [TCPDecoder]
 __plugins_deps__ = [('TCPDecoder', ['IPDecoder'], ['=TCPDecoder-1.0'], [])]
+
+# Offline attacks fields
+__attack_type__ = 0
+__protocols__   = (('tcp', None), )
+__references__  = (
+    (None, 'http://en.wikipedia.org/wiki/Transmission_Control_Protocol'),
+)
+__configurations__ = (
+    ('decoder.tcp', {
+        'checksum_check' : [True, 'Cheksum check for TCP segments'],
+        'enable_dissectors' : [True, 'Enable TCP protocol dissectors'],
+        'enable_reassemble' : [True, 'Enable userland python implementation of '
+                               'TCP/IP stack to tracks TCP streams connection'],
+        'reassemble_workarounds' : [True, 'Close a TCP connection after a ' \
+                                    'timeout. Not RFC compliant but used in ' \
+                                    'many implementations'],
+        'reassemble_maxstreams' : [30, 'Max number of streams to follow']
+    }),
+)

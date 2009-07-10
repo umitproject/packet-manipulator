@@ -544,18 +544,15 @@ class PluginsTree(object):
 
             for plug in lst:
                 try:
-                    inst = plug()
 
-                    if isinstance(inst, OfflineAttack):
+                    if issubclass(plug, OfflineAttack):
                         is_attack = 1
-                    elif isinstance(inst, OnlineAttack):
+                    elif issubclass(plug, OnlineAttack):
                         is_attack = 2
                     else:
                         is_attack = 0
 
-                    if is_attack:
-                        inst.register_options()
-
+                    inst = plug()
                     inst.start(pkg)
 
                     if is_attack:

@@ -433,22 +433,6 @@ class HTTPDissector(Plugin, OfflineAttack):
         gflieds = dict(map(lambda x: (x, 0), ufields.split(',')) +  \
                        map(lambda x: (x, 1), pfields.split(',')))
 
-    def register_options(self):
-        conf = AttackManager().register_configuration(HTTP_NAME)
-        conf.register_option('extract_files', True, bool)
-        conf.register_option('form_extract', True, bool)
-
-        username_fields = "login,user,email,username,userid,form_loginname," \
-                        "loginname,pop_login,uid,id,user_id,screenname,uname," \
-                        "ulogin,acctname,account,member,mailaddress," \
-                        "membername,login_username,login_email,uin,sign-in"
-
-        password_fields = "pass,password,passwd,form_pw,pw,userpassword,pwd," \
-                        "upassword,login_password,passwort,passwrd"
-
-        conf.register_option('username_fields', username_fields, str)
-        conf.register_option('password_fields', password_fields, str)
-
     def _tcp_callback(self, stream, mpkt):
         if stream.dport in HTTP_PORTS:
             stream.listeners.append(self._process_http)
@@ -471,3 +455,21 @@ class HTTPDissector(Plugin, OfflineAttack):
 
 __plugins__ = [HTTPDissector]
 __plugins_deps__ = [('HTTPDissector', ['TCPDecoder'], [], [])]
+
+__attack_type__ = 0
+__protocols__ = (('tcp', 80), ('tcp', 8080), ('http', None))
+__configurations__ = ((HTTP_NAME, {
+    'form_extract' : [True, 'Try to extract username/password also from forms'],
+    'username_fields' : ["login,user,email,username,userid,form_loginname,"
+                         "loginname,pop_login,uid,id,user_id,screenname,uname,"
+                         "ulogin,acctname,account,member,mailaddress,"
+                         "membername,login_username,login_email,uin,sign-in",
+
+                         'A coma separated string of possible username fields'],
+
+    'password_fields' : ["pass,password,passwd,form_pw,pw,userpassword,pwd,"
+                         "upassword,login_password,passwort,passwrd",
+
+                         'A coma separated string of possible password fields'],
+    }),
+)

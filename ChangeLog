@@ -6,7 +6,32 @@
         - All the plotting is done in webkit webview using protovis library
           that generates an SVG image starting from javascript code. The
           library could be found at http://vis.stanford.edu/protovis/
-
+    * plugins/schemas/AttackPlugins.xsd:
+        - Better reorganization of the various elements.
+        - Merge offline and online attacks into a single one.
+        - Added configurations element so we can easilly expose attack options.
+        - Dropped out list element to simplify the schema structure.
+    * attacks/offline/tcp/sources/main.py:
+        - Fixed 'No mem' bug reported by luis.
+    * attacks/offline/http/sources/main.py
+      attacks/offline/ip/sources/main.py
+      attacks/offline/ftp/sources/main.py
+      attacks/offline/tcp/sources/main.py
+      attacks/offline/icmp/sources/main.py
+      attacks/offline/ethernet/sources/main.py
+      attacks/offline/profiler/sources/main.py
+      attacks/offline/fingerprint/sources/main.py:
+        - Removed register_options methods. Now options are exposed at module
+          level. This makes possible to autogenerate the setup.py in a simple
+          way and expose options also to the GUI without having to load the
+          plugins.
+    * attacks/setup-autogen.py:
+        - Autogeneration process now takes care of attacks attribute to generate
+          a setup.py that could be used to create in a simple way a
+          understandable attack's Manifest.xml file as we have defined in the
+          schema.
+    * PM/Gui/Plugins/Containers.py:
+        - Implemented the capability to save and load Manifest.xml for attacks.
 2009-07-07 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:
         - Add HTTP analyzer plugin that exploits cfields setted from

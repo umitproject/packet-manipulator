@@ -111,3 +111,7 @@ class FTPDissector(Plugin, OfflineAttack):
         AttackManager().add_dissector(APP_LAYER_TCP, 21, ftp_dissector())
 
 __plugins__ = [FTPDissector]
+__plugins_deps__ = [('FTPDissector', ['TCPDecoder'], ['FTPDecoder-1.0'], []),]
+
+__attack_type__ = 0
+__protocols__ = (('tcp', 21), ('ftp', None))

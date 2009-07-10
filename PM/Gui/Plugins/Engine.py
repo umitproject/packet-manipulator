@@ -34,6 +34,8 @@ from PM.Gui.Plugins.Core import Core
 from PM.Gui.Plugins.Tree import PluginsTree, PluginException
 from PM.Gui.Plugins.Containers import PluginReader, BadPlugin
 
+from PM.Manager.AttackManager import AttackManager
+
 from PM.Manager.PreferenceManager import Prefs
 
 class Plugin(object):
@@ -87,6 +89,10 @@ class PluginPath(object):
 
                 try:
                     reader = PluginReader(path)
+
+                    for conf_name, conf_dict in reader.configurations:
+                        AttackManager().register_configuration(conf_name,
+                                                               conf_dict)
                 except BadPlugin, exp:
                     log.info("%s" % exp)
                     continue

@@ -31,9 +31,11 @@ def eth_decoder(mpkt):
     return NET_LAYER, mpkt.get_field('eth.type')
 
 class EthDecoder(Plugin, OfflineAttack):
-    def start(self, reader): pass
-    def stop(self): pass
+    def stop(self):
+        AttackManager().remove_decoder(LINK_LAYER, IL_TYPE_ETH, eth_decoder,
+                                       True)
     def register_decoders(self):
         AttackManager().add_decoder(LINK_LAYER, IL_TYPE_ETH, eth_decoder)
 
 __plugins__ = [EthDecoder]
+__plugins_deps__ = [('EthDecoder', [], ['=EthDecoder-1.0'], [])]
