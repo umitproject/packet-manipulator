@@ -31,6 +31,7 @@ COLUMN_PIXBUF, \
 COLUMN_STRING, \
 COLUMN_OBJECT = range(4)
 
+FILTER_NAME         = -1
 FILTER_PROTO_NAME   = 0
 FILTER_PORT_EQUAL   = 2
 FILTER_PORT_LESSER  = 3
@@ -62,7 +63,7 @@ class CalendarButton(gtk.Button):
         self.year, self.month, self.day = now.year, now.month, now.day
 
         gtk.Button.__init__(self,
-                            '%d/%d/%d' % (self.year, self.month, self.day))
+                            '%4d-%2d-%2d' % (self.year, self.month, self.day))
 
         self.connect('clicked', self.__on_clicked)
 
@@ -80,13 +81,13 @@ class CalendarButton(gtk.Button):
         if d.run() == gtk.RESPONSE_ACCEPT:
             self.year, self.month, self.day = calendar.get_date()
 
-            self.set_label('%d/%d/%d' % (self.year, self.month, self.day))
+            self.set_label('%4d-%2d-%2d' % (self.year, self.month, self.day))
 
         d.hide()
         d.destroy()
 
     def get_date(self):
-        return self.year, self.month, self.date
+        return self.year, self.month, self.day
 
 class FiltersPage(gtk.VBox):
     def __init__(self):
@@ -124,6 +125,7 @@ class FiltersPage(gtk.VBox):
         ]
 
         self.n_rows = 1
+        self.killer = {}
         self.active_filters = {}
 
         self.group_labels = gtk.SizeGroup(gtk.SIZE_GROUP_BOTH)
@@ -183,6 +185,7 @@ class FiltersPage(gtk.VBox):
         self.vbox.pack_start(hbox)
 
         self.pack_start(self.expander, False, False)
+        self.select_first_available()
 
         self.show_all()
 
@@ -291,6 +294,132 @@ class FiltersPage(gtk.VBox):
 
         self.n_rows -= 1
         self.select_first_available()
+
+    def rehash(self):
+        self.killer = {}
+
+        txt = self.entry.get_text()
+
+        if txt:
+            self.killer[FILTER_NAME] = txt.lower()
+
+        for id in self.active_filters:
+            for hbox, lbl, widget, btn in self.active_filters[id]:
+                if id not in self.killer:
+                    self.killer[id] = []
+
+                if isinstance(widget, gtk.SpinButton):
+                    txt = widget.get_value_as_int()
+                elif isinstance(widget, gtk.Entry):
+                    txt = widget.get_text()
+                elif isinstance(widget, CalendarButton):
+                    txt = widget.get_date()
+
+                if txt is not None:
+                    self.killer[id].append(txt.lower())
+
+        print self.killer
+
+    def filter_func(self, model, iter):
+        plugin = model.get_value(iter, COLUMN_OBJECT)
+
+        if not plugin:
+            return True
+
+        if not self.killer:
+            return True
+
+        for id in self.killer:
+            if id == FILTER_NAME and self.killer[id] in plugin.name.lower():
+                return True
+            elif id in (FILTER_PROTO_NAME, FILTER_PORT_EQUAL, \
+                        FILTER_PORT_GREATER, FILTER_PORT_LESSER):
+
+                if id == FILTER_PROTO_NAME:
+                    sname = self.killer[id][0]
+                else:
+                    sport = self.killer[id][0]
+
+                for name, port in plugin.protocols:
+                    if id == FILTER_PROTO_NAME and sname == name.lower():
+                        return True
+                    elif id == FILTER_PORT_EQUAL and sport == port:
+                        return True
+                    elif id == FILTER_PORT_GREATER and port and sport > port:
+                        return True
+                    elif id == FILTER_PORT_LESSER and port and sport < port:
+                        return True
+
+            else:
+                for vuln_name, vuln_dict in plugin.vulnerabilities:
+                    if id == FILTER_VULN_NAME and \
+                       self.killer[id][0] in vuln_name.lower():
+                        return True
+
+                    elif id == FILTER_VULN_DESC and \
+                         'description' in vuln_dict and \
+                         self.killer[id][0] in vuln_dict['description'].lower():
+                        return True
+
+                    elif id == FILTER_VULN_CLASS and 'classes' in vuln_dict:
+                        for mclass in self.killer[id]:
+                            for vclass in vuln_dict['classes']:
+                                if mclass in vclass.lower():
+                                    return True
+
+                    elif id in (FILTER_SYS_AFF, FILTER_SYS_NOTAFF) and \
+                         'systems' in vuln_dict:
+
+                        for sys in self.killer[id]:
+                            if id == FILTER_SYS_AFF:
+                                for vsys in vuln_dict['systems'][0]:
+                                    if sys in vsys.lower():
+                                        return True
+                            elif id == FILTER_SYS_NOTAFF:
+                                for vsys in vuln_dict['systems'][1]:
+                                    if sys in vsys.lower():
+                                        return True
+
+                    elif id in (FILTER_VER_AFF, FILTER_VER_NOTAFF) and \
+                         'versions' in vuln_dict:
+
+                        for sys in self.killer[id]:
+                            if id == FILTER_VER_AFF:
+                                for vsys in vuln_dict['versions'][0]:
+                                    if sys in vsys.lower():
+                                        return True
+                            elif id == FILTER_VER_NOTAFF:
+                                for vsys in vuln_dict['versions'][1]:
+                                    if sys in vsys.lower():
+                                        return True
+
+                    elif id in (FILTER_PUBB_ON, FILTER_PUBB_AFTER, \
+                                FILTER_PUBB_BEFORE, FILTER_DISCOVERED) and \
+                         'credits' in vuln_dict:
+
+                        time = datetime.datetime(*self.killer[id][0])
+
+                        for date, authors in vuln_dict['credits']:
+                            if id == FILTER_PUBB_ON and time == date:
+                                return True
+                            elif id == FILTER_PUBB_AFTER and time > date:
+                                return True
+                            elif id == FILTER_PUBB_BEFORE and time < date:
+                                return True
+
+                    elif id in (FILTER_PLATFORM, FILTER_ARCHITECTURE) and \
+                         'platforms' in vuln_dict:
+
+                        for skey in self.killer[id]:
+                            for plat, arch in vuln_dict['platforms']:
+                                if id == FILTER_PLATFORM and \
+                                   skey in plat.lower():
+                                    return True
+                                elif id == FILTER_ARCHITECTURE and \
+                                     skey in arch.lowe():
+                                    return True
+
+        return False
 
 class OptionsPage(gtk.Table):
     def __init__(self):
@@ -531,6 +660,9 @@ class AttackPage(gtk.HBox):
         self.options_page = OptionsPage()
         self.filters_page = FiltersPage()
 
+        self.filter_model = self.store.filter_new()
+        self.filter_model.set_visible_func(self.filters_page.filter_func)
+
         self.notebook.append_page(self.options_page, None)
         self.notebook.append_page(self.filters_page, None)
 
@@ -566,13 +698,17 @@ class AttackPage(gtk.HBox):
 
     def __on_find_clicked(self, widget):
         if self.notebook.get_current_page():
-            #self.filters_page.apply_filters()
-            pass
+            self.filters_page.rehash()
+            self.filter_model.refilter()
         else:
+            self.tree.set_model(self.filter_model)
+
             self.pref_btn.show()
             self.notebook.set_current_page(1)
 
     def __on_pref_clicked(self, widget):
+        self.tree.set_model(self.store)
+
         self.pref_btn.hide()
         self.notebook.set_current_page(0)
 
@@ -581,6 +717,10 @@ class AttackPage(gtk.HBox):
 
     def __on_selection_changed(self, selection):
         model, iter = selection.get_selected()
+
+        if not iter:
+            return
+
         obj = model.get_value(iter, COLUMN_OBJECT)
 
         if not obj:
@@ -612,6 +752,3 @@ class AttackPage(gtk.HBox):
             elif plugin.attack_type == 1:
                 self.store.append(online_it,
                     [False, plugin.get_logo(24, 24), plugin.name, plugin])
-
-    def create_find_page(self):
-        return gtk.Label('Implement me')

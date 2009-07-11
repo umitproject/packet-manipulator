@@ -22,6 +22,8 @@ import os
 import os.path
 import sys
 
+import datetime
+
 from fnmatch import fnmatch
 from zipfile import ZipFile, BadZipfile, ZIP_DEFLATED
 
@@ -383,7 +385,23 @@ class ManifestLoader(handler.ContentHandler, ManifestObject):
                 if 'credits' not in self.current_vuln[1]:
                     self.current_vuln[1]['credits'] = ['', []]
 
-                self.current_vuln[1]['credits'][0] = self.data
+                date_tup = self.data.split('-', 2)
+
+                if len(date_tup) != 3:
+                    raise Exception('Not a valid date format')
+
+                try:
+                    date_tup = map(int, date_tup)
+                except:
+                    raise Exception('Not a valid date format')
+
+                try:
+                    self.current_vuln[1]['credits'][0] = \
+                        datetime.datetime(year=date_tup[0],
+                                          month=date_tup[1],
+                                          day=date_tup[2])
+                except:
+                    raise Exception('Not a valid date')
 
             elif name == 'discovered':
                 if 'credits' not in self.current_vuln[1]:
