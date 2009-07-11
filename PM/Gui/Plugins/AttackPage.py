@@ -34,23 +34,26 @@ COLUMN_OBJECT = range(4)
 FILTER_NAME         = -1
 FILTER_PROTO_NAME   = 0
 FILTER_PORT_EQUAL   = 2
-FILTER_PORT_LESSER  = 3
-FILTER_PORT_GREATER = 4
-FILTER_VULN_NAME    = 6
-FILTER_VULN_DESC    = 7
-FILTER_VULN_CLASS   = 8
-FILTER_SYS_AFF      = 10
-FILTER_SYS_NOTAFF   = 11
-FILTER_VER_AFF      = 13
-FILTER_VER_NOTAFF   = 14
-FILTER_PUBB_ON      = 16
-FILTER_PUBB_AFTER   = 17
-FILTER_PUBB_BEFORE  = 18
-FILTER_DISCOVERED   = 20
-FILTER_PLATFORM     = 21
-FILTER_ARCHITECTURE = 22
+FILTER_PORT_NOT     = 3
+FILTER_PORT_LESSER  = 4
+FILTER_PORT_GREATER = 5
+FILTER_VULN_NAME    = 7
+FILTER_VULN_DESC    = 8
+FILTER_VULN_CLASS   = 9
+FILTER_SYS_AFF      = 11
+FILTER_SYS_NOTAFF   = 12
+FILTER_VER_AFF      = 14
+FILTER_VER_NOTAFF   = 15
+FILTER_PUBB_ON      = 17
+FILTER_PUBB_AFTER   = 18
+FILTER_PUBB_BEFORE  = 19
+FILTER_DISCOVERED   = 21
+FILTER_PLATFORM     = 22
+FILTER_ARCHITECTURE = 23
 
-EXTRA_FILTERS = (FILTER_VULN_CLASS,
+EXTRA_FILTERS = (FILTER_VULN_CLASS, FILTER_PROTO_NAME,
+                 FILTER_PORT_EQUAL, FILTER_PORT_NOT,
+                 FILTER_PORT_LESSER, FILTER_PORT_GREATER,
                  FILTER_SYS_AFF, FILTER_SYS_NOTAFF,
                  FILTER_VER_AFF, FILTER_VER_NOTAFF,
                  FILTER_DISCOVERED, FILTER_PLATFORM,
@@ -99,6 +102,7 @@ class FiltersPage(gtk.VBox):
             _('Protocol name contains'),
             None,
             _('Protocol port equal to'),
+            _('Protocol port is not'),
             _('Protocol port lesser than'),
             _('Protocol port greater than'),
             None,
@@ -244,8 +248,8 @@ class FiltersPage(gtk.VBox):
         lbl.set_alignment(.0, .5)
         lbl.show()
 
-        if sel_id in (FILTER_PORT_EQUAL, FILTER_PORT_GREATER, \
-                      FILTER_PORT_LESSER):
+        if sel_id in (FILTER_PORT_EQUAL, FILTER_PORT_NOT, \
+                      FILTER_PORT_GREATER, FILTER_PORT_LESSER):
 
             widget = gtk.SpinButton(gtk.Adjustment(1, 1, 65535, 1, 10))
 
@@ -311,12 +315,12 @@ class FiltersPage(gtk.VBox):
                 if isinstance(widget, gtk.SpinButton):
                     txt = widget.get_value_as_int()
                 elif isinstance(widget, gtk.Entry):
-                    txt = widget.get_text()
+                    txt = widget.get_text().lower()
                 elif isinstance(widget, CalendarButton):
                     txt = widget.get_date()
 
                 if txt is not None:
-                    self.killer[id].append(txt.lower())
+                    self.killer[id].append(txt)
 
         print self.killer
 
@@ -332,23 +336,21 @@ class FiltersPage(gtk.VBox):
         for id in self.killer:
             if id == FILTER_NAME and self.killer[id] in plugin.name.lower():
                 return True
-            elif id in (FILTER_PROTO_NAME, FILTER_PORT_EQUAL, \
+            elif id in (FILTER_PROTO_NAME, FILTER_PORT_EQUAL, FILTER_PORT_NOT, \
                         FILTER_PORT_GREATER, FILTER_PORT_LESSER):
 
-                if id == FILTER_PROTO_NAME:
-                    sname = self.killer[id][0]
-                else:
-                    sport = self.killer[id][0]
-
-                for name, port in plugin.protocols:
-                    if id == FILTER_PROTO_NAME and sname == name.lower():
-                        return True
-                    elif id == FILTER_PORT_EQUAL and sport == port:
-                        return True
-                    elif id == FILTER_PORT_GREATER and port and sport > port:
-                        return True
-                    elif id == FILTER_PORT_LESSER and port and sport < port:
-                        return True
+                for key in self.killer[id]:
+                    for name, port in plugin.protocols:
+                        if id == FILTER_PROTO_NAME and key == name.lower():
+                            return True
+                        elif id == FILTER_PORT_EQUAL and port and key == port:
+                            return True
+                        elif id == FILTER_PORT_NOT and port and key != port:
+                            return True
+                        elif id == FILTER_PORT_GREATER and port and key > port:
+                            return True
+                        elif id == FILTER_PORT_LESSER and port and key < port:
+                            return True
 
             else:
                 for vuln_name, vuln_dict in plugin.vulnerabilities:
@@ -594,6 +596,8 @@ class OptionsPage(gtk.Table):
                 opt_lbl = gtk.Label()
                 opt_lbl.set_markup('<tt>%s</tt>' % opt_id)
                 opt_lbl.set_alignment(.0, .5)
+                opt_lbl.set_ellipsize(pango.ELLIPSIZE_END)
+                opt_lbl.set_width_chars(20)
                 opt_wid = self.create_widget(conf_name, opt_id,
                                              opt_val, opt_desc)
 
@@ -650,9 +654,9 @@ class AttackPage(gtk.HBox):
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         sw.add(self.tree)
-        sw.set_size_request(200, -1)
+        sw.set_size_request(230, -1)
 
-        self.pack_start(sw, False, False)
+        self.pack_start(sw, False, True)
 
         vbox = gtk.VBox(False, 2)
 
@@ -689,6 +693,7 @@ class AttackPage(gtk.HBox):
         self.pack_end(vbox)
 
         self.populate()
+        self.tree.expand_all()
 
         self.tree.get_selection().connect('changed',
                                           self.__on_selection_changed)
@@ -700,14 +705,17 @@ class AttackPage(gtk.HBox):
         if self.notebook.get_current_page():
             self.filters_page.rehash()
             self.filter_model.refilter()
+            self.tree.expand_all()
         else:
             self.tree.set_model(self.filter_model)
+            self.tree.expand_all()
 
             self.pref_btn.show()
             self.notebook.set_current_page(1)
 
     def __on_pref_clicked(self, widget):
         self.tree.set_model(self.store)
+        self.tree.expand_all()
 
         self.pref_btn.hide()
         self.notebook.set_current_page(0)
