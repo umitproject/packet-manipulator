@@ -34,6 +34,8 @@ from PM.Gui.Plugins.Update import FILE_GETTING, FILE_CHECKING, \
                                   FILE_ERROR, LATEST_GETTED, \
                                   LATEST_ERROR, LATEST_GETTING
 
+from PM.Core.Const import PIXMAPS_DIR
+
 
 class PluginPage(gtk.VBox):
     def __init__(self, parent):
@@ -107,6 +109,9 @@ class PluginPage(gtk.VBox):
 
         # We have to load available_plugins from engine
         for reader in self.p_window.engine.available_plugins:
+
+            if reader.attack_type != -1:
+                continue
 
             # Check if it's already present then remove the original
             # and add the new in case something is getting update.
@@ -205,7 +210,7 @@ class PluginPage(gtk.VBox):
 
         self.p_window.toolbar.show_message( \
             _("<b>Downloading updates ...</b>"), \
-            file=os.path.join(Path.pixmaps_dir, "Throbber.gif") \
+            file=os.path.join(PIXMAPS_DIR, "Throbber.gif") \
         )
         gobject.timeout_add(300, self.__refresh_row_download)
 
@@ -272,6 +277,47 @@ class PluginPage(gtk.VBox):
         update the gui at interval of 300 milliseconds.
         """
 
+        # First add attacks to the list
+        presents = []
+
+        def add_to_list(row, list):
+            list.append(row)
+
+        self.richlist.foreach(add_to_list, presents)
+
+        warn_reboot = False
+
+        # We have to load available_plugins from engine
+        for reader in self.p_window.engine.available_plugins:
+
+            if reader.attack_type == -1:
+                continue
+
+            # Check if it's already present then remove the original
+            # and add the new in case something is getting update.
+            row = PluginRow(self.richlist, reader)
+
+            for old in presents:
+                # FIXME? we need to check also for version equality
+                # and if are different just ignore the addition and
+                # continue with the loop
+                if old.reader.get_path() == row.reader.get_path():
+                    self.richlist.remove_row(old)
+                    row.enabled = True
+                    warn_reboot = True
+
+            # Connect the various buttons
+            row.action_btn.connect('clicked', self.__on_row_action, row)
+            row.uninstall_btn.connect('clicked', self.__on_row_uninstall, row)
+            row.preference_btn.connect('clicked', self.__on_row_preference, row)
+
+            row.connect('clicked', self.__on_row_preference, row)
+            row.connect('popup', self.__on_row_popup)
+
+            self.richlist.append_row(row)
+
+        # Then goes with the update
+
         self.find_updates_btn.set_sensitive(False)
         self.menu_enabled = False
 
@@ -300,6 +346,7 @@ class PluginPage(gtk.VBox):
             self.find_updates_btn.set_sensitive(True)
             self.menu_enabled = True
 
+            self.richlist.clear()
             self.populate()
             return
 
@@ -307,7 +354,7 @@ class PluginPage(gtk.VBox):
 
         self.p_window.toolbar.show_message( \
             _("<b>Looking for %d updates ...</b>") % len(lst), \
-            file=os.path.join(Path.pixmaps_dir, "Throbber.gif") \
+            file=os.path.join(PIXMAPS_DIR, "Throbber.gif") \
         )
 
         self.p_window.update_eng.list = lst

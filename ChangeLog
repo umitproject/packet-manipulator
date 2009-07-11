@@ -34,6 +34,14 @@
         - Implemented the capability to save and load Manifest.xml for attacks.
     * PM/Gui/Plugins/AttackPage.py:
         - First implementation of attack plugins GUI.
+    * PM/Gui/Plugins/Engine.py:
+        - Fixed a stupid bug.
+    * PM/Gui/Plugins/AttackPage.py:
+        - Now we have an attack tab where the user could load, find and 
+          configures various attacks with a friendly UI.
+    * PM/Gui/Plugins/PluginPage.py:
+        - Plugin are now hidden in the plugin page and only showed in update
+          process.
 
 2009-07-07 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:

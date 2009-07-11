@@ -39,3 +39,6 @@ class EthDecoder(Plugin, OfflineAttack):
 
 __plugins__ = [EthDecoder]
 __plugins_deps__ = [('EthDecoder', [], ['=EthDecoder-1.0'], [])]
+
+__attack_type__ = 0
+__protocols__ = (('eth', None), )

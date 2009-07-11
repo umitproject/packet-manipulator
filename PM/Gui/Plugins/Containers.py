@@ -971,7 +971,8 @@ class PluginWriter(ManifestObject):
         FIELDS = ('name', 'version', 'description', 'url', 'start_file',
                   'update', 'provide', 'need', 'conflict', 'license',
                   'copyright', 'author', 'contributor', 'translator', 'artist',
-                  'attack_type', 'configurations', 'protocols', 'vulnerabilities')
+                  'attack_type', 'configurations', 'protocols',
+                  'vulnerabilities')
 
         # Filter out fields that are not related to the schema
 

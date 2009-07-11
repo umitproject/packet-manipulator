@@ -348,6 +348,8 @@ class PluginEngine(Singleton):
 
                 self.plugins.plugins = lst
 
+            reader.enabled = False
+
             return (True, None)
         except PluginException, err:
             return (False, err)

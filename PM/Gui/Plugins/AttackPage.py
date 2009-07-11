@@ -24,12 +24,14 @@ import sys
 import datetime
 
 from PM.Core.I18N import _
-from PM.Manager.AttackManager import AttackManager
+from PM.Gui.Core.App import PMApp
 
-COLUMN_BOOL, \
+from PM.Manager.AttackManager import AttackManager
+from PM.higwidgets.higdialogs import HIGAlertDialog
+
 COLUMN_PIXBUF, \
 COLUMN_STRING, \
-COLUMN_OBJECT = range(4)
+COLUMN_OBJECT = range(3)
 
 FILTER_NAME         = -1
 FILTER_PROTO_NAME   = 0
@@ -189,9 +191,24 @@ class FiltersPage(gtk.VBox):
         self.vbox.pack_start(hbox)
 
         self.pack_start(self.expander, False, False)
-        self.select_first_available()
 
+        bb = gtk.HButtonBox()
+        bb.set_layout(gtk.BUTTONBOX_END)
+
+        btn = gtk.Button(stock=gtk.STOCK_FIND)
+        btn.set_relief(gtk.RELIEF_NONE)
+        btn.connect('clicked', self.__on_find)
+        bb.pack_start(btn)
+
+        self.pack_end(bb, False, False)
+
+        self.select_first_available()
         self.show_all()
+
+    def __on_find(self, btn):
+        if callable(self.find_cb):
+            self.rehash()
+            self.find_cb()
 
     def __separator_func(self, model, iter):
         if not model.get_value(iter, 0):
@@ -279,6 +296,8 @@ class FiltersPage(gtk.VBox):
 
         hbox, lbl, widget, cbtn = self.active_filters[sel_id][idx]
 
+        self.vbox.remove(hbox)
+
         hbox.hide()
 
         lbl.hide()
@@ -321,8 +340,6 @@ class FiltersPage(gtk.VBox):
 
                 if txt is not None:
                     self.killer[id].append(txt)
-
-        print self.killer
 
     def filter_func(self, model, iter):
         plugin = model.get_value(iter, COLUMN_OBJECT)
@@ -616,18 +633,21 @@ class OptionsPage(gtk.Table):
             self.widgets.append((conf_frame, conf_widgets))
             row += 1
 
-class AttackPage(gtk.HBox):
+class AttackPage(gtk.VBox):
     def __init__(self, parent):
-        gtk.HBox.__init__(self, False, 4)
+        gtk.VBox.__init__(self, False, 4)
 
         self.p_window = parent
 
-        self.store = gtk.TreeStore(bool, gtk.gdk.Pixbuf, str, object)
+        self.store = gtk.TreeStore(gtk.gdk.Pixbuf, str, object)
         self.tree = gtk.TreeView(self.store)
 
         rend = gtk.CellRendererToggle()
-        col = gtk.TreeViewColumn('', rend, active=COLUMN_BOOL)
+        rend.connect('toggled', self.__on_activate_plugin)
+
+        col = gtk.TreeViewColumn('', rend)
         col.set_expand(False)
+        col.set_cell_data_func(rend, self.__act_cell_data_func)
 
         self.tree.append_column(col)
 
@@ -649,20 +669,17 @@ class AttackPage(gtk.HBox):
         self.tree.set_rules_hint(True)
         self.tree.set_enable_search(True)
 
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        self.sw = gtk.ScrolledWindow()
+        self.sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-        sw.add(self.tree)
-        sw.set_size_request(230, -1)
-
-        self.pack_start(sw, False, True)
-
-        vbox = gtk.VBox(False, 2)
+        self.sw.add(self.tree)
+        self.sw.set_size_request(230, -1)
 
         self.notebook = gtk.Notebook()
         self.options_page = OptionsPage()
         self.filters_page = FiltersPage()
+        self.filters_page.find_cb = self.__on_find
 
         self.filter_model = self.store.filter_new()
         self.filter_model.set_visible_func(self.filters_page.filter_func)
@@ -673,57 +690,114 @@ class AttackPage(gtk.HBox):
         self.notebook.set_show_border(False)
         self.notebook.set_show_tabs(False)
 
-        bb = gtk.HButtonBox()
-        bb.set_layout(gtk.BUTTONBOX_END)
+        store = gtk.ListStore(str, str)
+        self.combo = gtk.ComboBox(store)
 
-        self.find_btn = gtk.Button(stock=gtk.STOCK_FIND)
-        self.find_btn.set_relief(gtk.RELIEF_NONE)
-        self.find_btn.connect('clicked', self.__on_find_clicked)
+        pix_rend = gtk.CellRendererPixbuf()
+        self.combo.pack_start(pix_rend, False)
 
-        self.pref_btn = gtk.Button(stock=gtk.STOCK_PREFERENCES)
-        self.pref_btn.set_relief(gtk.RELIEF_NONE)
-        self.pref_btn.connect('clicked', self.__on_pref_clicked)
+        txt_rend = gtk.CellRendererText()
+        self.combo.pack_end(txt_rend)
 
-        bb.pack_start(self.pref_btn)
-        bb.pack_end(self.find_btn)
+        self.combo.add_attribute(pix_rend, 'stock-id', 0)
+        self.combo.add_attribute(txt_rend, 'text', 1)
 
-        vbox.pack_start(self.notebook)
-        vbox.pack_end(bb, False, False)
+        store.append([gtk.STOCK_INDEX, _('Show plugins')])
+        store.append([gtk.STOCK_FIND, _('Find plugins')])
+        store.append([gtk.STOCK_PREFERENCES, _('Configure plugins')])
 
-        self.pack_end(vbox)
+        self.combo.set_active(0)
+        self.combo.connect('changed', self.__on_change_view)
+
+        self.hbox = gtk.HBox(False, 4)
+
+        self.hbox.pack_start(self.sw, False, False)
+        self.hbox.pack_end(self.notebook)
+
+        self.pack_start(self.hbox)
+
+        hbox = gtk.HBox(False, 4)
+        hbox.pack_end(self.combo, False, False)
+        self.pack_end(hbox, False, False)
 
         self.populate()
         self.tree.expand_all()
 
+        self.connect('realize', self.__on_realize)
         self.tree.get_selection().connect('changed',
                                           self.__on_selection_changed)
 
-        self.connect('realize', self.__on_realize)
         self.show_all()
 
-    def __on_find_clicked(self, widget):
-        if self.notebook.get_current_page():
-            self.filters_page.rehash()
-            self.filter_model.refilter()
+    def __on_realize(self, widget):
+        self.__on_change_view(self.combo)
+
+    def __on_change_view(self, combo):
+        id = self.combo.get_active()
+
+        if id != 1:
+            self.tree.set_model(self.store)
             self.tree.expand_all()
-        else:
+
+        if id == 0:
+            self.hbox.set_child_packing(self.sw, True, True, 0, gtk.PACK_START)
+            self.notebook.hide()
+
+        elif id == 1:
+            self.hbox.set_child_packing(self.sw, False, False, 0,
+                                        gtk.PACK_START)
+
             self.tree.set_model(self.filter_model)
             self.tree.expand_all()
 
-            self.pref_btn.show()
             self.notebook.set_current_page(1)
+            self.notebook.show()
 
-    def __on_pref_clicked(self, widget):
-        self.tree.set_model(self.store)
+        elif id == 2:
+            self.hbox.set_child_packing(self.sw, False, False, 0,
+                                        gtk.PACK_START)
+
+            self.tree.set_model(self.store)
+            self.tree.expand_all()
+
+            self.notebook.set_current_page(0)
+            self.notebook.show()
+
+    def __on_find(self):
+        self.filter_model.refilter()
         self.tree.expand_all()
 
-        self.pref_btn.hide()
-        self.notebook.set_current_page(0)
+    def __on_activate_plugin(self, cell, path):
+        model = self.tree.get_model()
+        iter = model.get_iter(path)
 
-    def __on_realize(self, widget):
-        self.pref_btn.hide()
+        plugin = model.get_value(iter, COLUMN_OBJECT)
+
+        if not plugin:
+            return
+
+        if not plugin.enabled:
+            func = self.p_window.engine.load_plugin
+        else:
+            func = self.p_window.engine.unload_plugin
+
+        ret, errmsg = func(plugin)
+
+        if not ret:
+            dialog = HIGAlertDialog(
+                PMApp().main_window,
+                gtk.DIALOG_MODAL,
+                gtk.MESSAGE_ERROR,
+                message_format=errmsg,
+                secondary_text=errmsg.summary
+            )
+            dialog.run()
+            dialog.destroy()
 
     def __on_selection_changed(self, selection):
+        if self.combo.get_active() != 2:
+            return
+
         model, iter = selection.get_selected()
 
         if not iter:
@@ -735,6 +809,14 @@ class AttackPage(gtk.HBox):
             return False
 
         self.options_page.reload(obj)
+
+    def __act_cell_data_func(self, col, cell, model, iter):
+        plugin = model.get_value(iter, COLUMN_OBJECT)
+
+        if plugin:
+            cell.set_property('active', plugin.enabled)
+        else:
+            cell.set_property('active', False)
 
     def __txt_cell_data_func(self, col, cell, model, iter):
         plugin = model.get_value(iter, COLUMN_OBJECT)
@@ -748,15 +830,15 @@ class AttackPage(gtk.HBox):
 
     def populate(self):
         offline_it = self.store.append(None,
-            [False, None, _('Offline attacks'), None])
+            [None, _('Offline attacks'), None])
 
         online_it = self.store.append(None,
-            [False, None, _('Online attacks'), None])
+            [None, _('Online attacks'), None])
 
         for plugin in self.p_window.engine.available_plugins:
             if plugin.attack_type == 0:
                 self.store.append(offline_it,
-                    [False, plugin.get_logo(24, 24), plugin.name, plugin])
+                    [plugin.get_logo(24, 24), plugin.name, plugin])
             elif plugin.attack_type == 1:
                 self.store.append(online_it,
-                    [False, plugin.get_logo(24, 24), plugin.name, plugin])
+                    [plugin.get_logo(24, 24), plugin.name, plugin])

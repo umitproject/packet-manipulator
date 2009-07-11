@@ -277,7 +277,8 @@ class OSFP(Plugin, OfflineAttack):
             contents = open(os.path.join('offline', 'fingerprint', 'data',
                                          'finger.os.db'), 'r').read()
 
-        self._tcp_hook = tcp_fp(OSFPModule(contents))
+        self.fingerprint = OSFPModule(contents)
+        self._tcp_hook = tcp_fp(self.fingerprint)
 
     def stop(self):
         obj = self.fingerprint

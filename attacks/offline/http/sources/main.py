@@ -32,6 +32,7 @@ from urllib import unquote
 
 from PM.Core.Atoms import defaultdict
 from PM.Core.Logger import log
+from PM.Core.Errors import PMErrorException
 from PM.Gui.Plugins.Core import Core
 from PM.Gui.Plugins.Engine import Plugin
 from PM.Manager.AttackManager import *
@@ -415,10 +416,11 @@ class HTTPDissector(Plugin, OfflineAttack):
         tcpdecoder = Core().get_need(reader, 'TCPDecoder')
 
         if not tcpdecoder:
-            raise Exception('TCPDecoder plugin not loaded.')
+            raise PMErrorException('TCPDecoder plugin not loaded.')
 
         if not tcpdecoder.reassembler:
-            raise Exception('TCP segments reassembling disabled in TCPDecoder.')
+            raise PMErrorException('TCP segments reassembling disabled '
+                                   'in TCPDecoder.')
 
         self.sessions = {}
         tcpdecoder.reassembler.add_analyzer(self._tcp_callback)
