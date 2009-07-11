@@ -18,8 +18,10 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import pango
 
 import sys
+import datetime
 
 from PM.Core.I18N import _
 from PM.Manager.AttackManager import AttackManager
@@ -28,6 +30,267 @@ COLUMN_BOOL, \
 COLUMN_PIXBUF, \
 COLUMN_STRING, \
 COLUMN_OBJECT = range(4)
+
+FILTER_PROTO_NAME   = 0
+FILTER_PORT_EQUAL   = 2
+FILTER_PORT_LESSER  = 3
+FILTER_PORT_GREATER = 4
+FILTER_VULN_NAME    = 6
+FILTER_VULN_DESC    = 7
+FILTER_VULN_CLASS   = 8
+FILTER_SYS_AFF      = 10
+FILTER_SYS_NOTAFF   = 11
+FILTER_VER_AFF      = 13
+FILTER_VER_NOTAFF   = 14
+FILTER_PUBB_ON      = 16
+FILTER_PUBB_AFTER   = 17
+FILTER_PUBB_BEFORE  = 18
+FILTER_DISCOVERED   = 20
+FILTER_PLATFORM     = 21
+FILTER_ARCHITECTURE = 22
+
+EXTRA_FILTERS = (FILTER_VULN_CLASS,
+                 FILTER_SYS_AFF, FILTER_SYS_NOTAFF,
+                 FILTER_VER_AFF, FILTER_VER_NOTAFF,
+                 FILTER_DISCOVERED, FILTER_PLATFORM,
+                 FILTER_ARCHITECTURE)
+
+class CalendarButton(gtk.Button):
+    def __init__(self):
+        now = datetime.datetime.now()
+
+        self.year, self.month, self.day = now.year, now.month, now.day
+
+        gtk.Button.__init__(self,
+                            '%d/%d/%d' % (self.year, self.month, self.day))
+
+        self.connect('clicked', self.__on_clicked)
+
+    def __on_clicked(self, btn):
+        d = gtk.Dialog(_('Select a date'), self.get_toplevel(),
+                       gtk.DIALOG_DESTROY_WITH_PARENT | gtk.DIALOG_MODAL,
+                       (gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
+                        gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
+
+        calendar = gtk.Calendar()
+        calendar.show()
+
+        d.vbox.pack_start(calendar)
+
+        if d.run() == gtk.RESPONSE_ACCEPT:
+            self.year, self.month, self.day = calendar.get_date()
+
+            self.set_label('%d/%d/%d' % (self.year, self.month, self.day))
+
+        d.hide()
+        d.destroy()
+
+    def get_date(self):
+        return self.year, self.month, self.date
+
+class FiltersPage(gtk.VBox):
+    def __init__(self):
+        gtk.VBox.__init__(self, False, 2)
+
+        self.set_border_width(4)
+
+        self.filters = [
+            _('Protocol name contains'),
+            None,
+            _('Protocol port equal to'),
+            _('Protocol port lesser than'),
+            _('Protocol port greater than'),
+            None,
+            _('Vulnerability name contains'),
+            _('Vulnerability description contains'),
+            _('Vulnerability class contains'),
+            None,
+            _('Systems affected includes'),
+            _('Systems not-affected includes'),
+            None,
+            _('Versions affected includes'),
+            _('Versions not-affected includes'),
+            None,
+            _('Pubblished on'),
+            _('Pubblished after'),
+            _('Pubblished before'),
+            _('Discovered by'),
+            None,
+            _('Vulnerability classification (CVE/OSVDB/etc)'),
+            _('URI\'s references contains'),
+            None,
+            _('Platform is'),
+            _('Architecture is'),
+        ]
+
+        self.n_rows = 1
+        self.active_filters = {}
+
+        self.group_labels = gtk.SizeGroup(gtk.SIZE_GROUP_BOTH)
+        self.group_widgets = gtk.SizeGroup(gtk.SIZE_GROUP_HORIZONTAL)
+        self.group_buttons = gtk.SizeGroup(gtk.SIZE_GROUP_BOTH)
+
+        lbl = gtk.Label(_('Name contains:'))
+        lbl.set_alignment(.0, .5)
+
+        self.entry = gtk.Entry()
+
+        self.store = gtk.ListStore(str, bool)
+        self.combo = gtk.ComboBox(self.store)
+
+        cell = gtk.CellRendererText()
+        cell.set_property('ellipsize', pango.ELLIPSIZE_END)
+
+        self.combo.pack_end(cell)
+        self.combo.add_attribute(cell, 'text', 0)
+        self.combo.add_attribute(cell, 'sensitive', 1)
+        self.combo.set_size_request(150, -1)
+
+        for filter in self.filters:
+            self.store.append([filter or '', filter and True or False])
+
+        self.combo.set_row_separator_func(self.__separator_func)
+
+        hbox = gtk.HBox(False, 10)
+
+        hbox.pack_start(lbl, False, False)
+        hbox.pack_start(self.entry)
+
+        self.pack_start(hbox, False, False)
+
+        self.vbox = gtk.VBox(False, 2)
+        self.vbox.set_border_width(4)
+
+        self.expander = gtk.Expander(_('More options'))
+        self.expander.add(self.vbox)
+
+        lbl = gtk.Label(_('Available options:'))
+        lbl.set_alignment(.0, .5)
+
+        btn = gtk.Button(stock=gtk.STOCK_ADD)
+        btn.connect('clicked', self.__on_add_filter)
+
+        hbox = gtk.HBox(False, 4)
+
+        hbox.pack_start(lbl, False, False, 10)
+        hbox.pack_start(self.combo)
+        hbox.pack_end(btn, False, False)
+
+        self.group_labels.add_widget(lbl)
+        self.group_widgets.add_widget(self.combo)
+        self.group_buttons.add_widget(btn)
+
+        self.vbox.pack_start(hbox)
+
+        self.pack_start(self.expander, False, False)
+
+        self.show_all()
+
+    def __separator_func(self, model, iter):
+        if not model.get_value(iter, 0):
+            return True
+
+    def __on_add_filter(self, btn):
+        sel_id = self.combo.get_active()
+        ret = self.create_widget(sel_id)
+
+        if not ret:
+            return
+
+        lbl, widget, btn = ret
+
+        hbox = gtk.HBox(False, 4)
+
+        hbox.pack_start(lbl, False, False, 10)
+        hbox.pack_start(widget)
+        hbox.pack_end(btn, False, False)
+
+        self.group_labels.add_widget(lbl)
+        self.group_widgets.add_widget(widget)
+        self.group_buttons.add_widget(btn)
+
+        if not sel_id in self.active_filters:
+            self.active_filters[sel_id] = [(hbox, lbl, widget, btn)]
+        else:
+            self.active_filters[sel_id].append((hbox, lbl, widget, btn))
+
+        self.vbox.pack_start(hbox, False, False)
+        hbox.show()
+
+        self.n_rows += 1
+        self.select_first_available()
+
+    def select_first_available(self):
+        # Now select the first sensitive iter
+        idx = 0
+        for i in self.store:
+            if i[1]:
+                break
+            idx += 1
+
+        self.combo.set_active(idx)
+
+    def create_widget(self, sel_id):
+        if sel_id not in EXTRA_FILTERS:
+            if sel_id in self.active_filters:
+                return
+
+            self.store.set_value(self.store.get_iter(sel_id), 1, False)
+
+        lbl = gtk.Label(self.filters[sel_id] + ':')
+        lbl.set_alignment(.0, .5)
+        lbl.show()
+
+        if sel_id in (FILTER_PORT_EQUAL, FILTER_PORT_GREATER, \
+                      FILTER_PORT_LESSER):
+
+            widget = gtk.SpinButton(gtk.Adjustment(1, 1, 65535, 1, 10))
+
+        elif sel_id in (FILTER_PUBB_ON, FILTER_PUBB_AFTER, FILTER_PUBB_BEFORE):
+            widget = CalendarButton()
+
+        else:
+            widget = gtk.Entry()
+
+        widget.show()
+
+        btn = gtk.Button(stock=gtk.STOCK_REMOVE)
+        btn.set_relief(gtk.RELIEF_NONE)
+        btn.connect('clicked', self.__on_remove, sel_id)
+        btn.show()
+
+        return lbl, widget, btn
+
+    def __on_remove(self, btn, sel_id):
+        idx = 0
+        self.store.set_value(self.store.get_iter(sel_id), 1, True)
+
+        for hbox, lbl, widget, cbtn in self.active_filters[sel_id]:
+            if btn is cbtn:
+                break
+            idx += 1
+
+        hbox, lbl, widget, cbtn = self.active_filters[sel_id][idx]
+
+        hbox.hide()
+
+        lbl.hide()
+        widget.hide()
+        cbtn.hide()
+
+        lbl.destroy()
+        widget.destroy()
+        cbtn.destroy()
+
+        hbox.destroy()
+
+        del self.active_filters[sel_id][idx]
+
+        if not self.active_filters[sel_id]:
+            del self.active_filters[sel_id]
+
+        self.n_rows -= 1
+        self.select_first_available()
 
 class OptionsPage(gtk.Table):
     def __init__(self):
@@ -262,25 +525,59 @@ class AttackPage(gtk.HBox):
 
         self.pack_start(sw, False, False)
 
+        vbox = gtk.VBox(False, 2)
+
         self.notebook = gtk.Notebook()
         self.options_page = OptionsPage()
+        self.filters_page = FiltersPage()
 
         self.notebook.append_page(self.options_page, None)
-        self.notebook.append_page(self.create_find_page(), None)
+        self.notebook.append_page(self.filters_page, None)
 
         self.notebook.set_show_border(False)
         self.notebook.set_show_tabs(False)
 
-        self.pack_end(self.notebook)
+        bb = gtk.HButtonBox()
+        bb.set_layout(gtk.BUTTONBOX_END)
+
+        self.find_btn = gtk.Button(stock=gtk.STOCK_FIND)
+        self.find_btn.set_relief(gtk.RELIEF_NONE)
+        self.find_btn.connect('clicked', self.__on_find_clicked)
+
+        self.pref_btn = gtk.Button(stock=gtk.STOCK_PREFERENCES)
+        self.pref_btn.set_relief(gtk.RELIEF_NONE)
+        self.pref_btn.connect('clicked', self.__on_pref_clicked)
+
+        bb.pack_start(self.pref_btn)
+        bb.pack_end(self.find_btn)
+
+        vbox.pack_start(self.notebook)
+        vbox.pack_end(bb, False, False)
+
+        self.pack_end(vbox)
 
         self.populate()
-
-        # Connect the signals
 
         self.tree.get_selection().connect('changed',
                                           self.__on_selection_changed)
 
+        self.connect('realize', self.__on_realize)
         self.show_all()
+
+    def __on_find_clicked(self, widget):
+        if self.notebook.get_current_page():
+            #self.filters_page.apply_filters()
+            pass
+        else:
+            self.pref_btn.show()
+            self.notebook.set_current_page(1)
+
+    def __on_pref_clicked(self, widget):
+        self.pref_btn.hide()
+        self.notebook.set_current_page(0)
+
+    def __on_realize(self, widget):
+        self.pref_btn.hide()
 
     def __on_selection_changed(self, selection):
         model, iter = selection.get_selected()
