@@ -42,6 +42,10 @@
     * PM/Gui/Plugins/PluginPage.py:
         - Plugin are now hidden in the plugin page and only showed in update
           process.
+    * scripts/windows/setup.py
+      PM/Core/Const.py
+      setup.py:
+        - Renamed pixmaps directory from 'umit' to 'pm'.
 
 2009-07-07 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:

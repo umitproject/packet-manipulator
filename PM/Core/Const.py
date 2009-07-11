@@ -58,7 +58,7 @@ elif hasattr(sys, "frozen"):
     main_dir = os.path.dirname(sys.executable)
 
 LOCALE_DIR = os.path.join(main_dir, "share", "locale")
-PIXMAPS_DIR = os.path.join(main_dir, "share", "pixmaps", "umit")
+PIXMAPS_DIR = os.path.join(main_dir, "share", "pixmaps", "pm")
 PLUGINS_DIR = os.path.join(main_dir, "share", "PacketManipulator", "plugins")
 
 def create_dir(path):

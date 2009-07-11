@@ -250,10 +250,10 @@ setup(name         = 'PacketManipulator',
                       'PM.Gui.Plugins',
                       'PM.higwidgets'
                      ],
-      data_files   = [('share/pixmaps/umit', glob.glob("PM/share/pixmaps/umit/*"))] + mo_files, 
+      data_files   = [('share/pixmaps/pm', glob.glob("PM/share/pixmaps/pm/*"))] + mo_files, 
       scripts      = ['PM/PacketManipulator'],
       windows      = [{'script' : 'PM/PacketManipulator',
-                       'icon_resources' : [(1, 'PM/share/pixmaps/umit/pm-icon48.ico')]}],
+                       'icon_resources' : [(1, 'PM/share/pixmaps/pm/pm-icon48.ico')]}],
       options      = {'py2exe' : {
                           'compressed' : 1,
                           'packages' : 'encodings, scapy',
