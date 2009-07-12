@@ -75,7 +75,7 @@ class HTTPRequest(object):
 
         self.session = sess
 
-    def feed(self, hlfstream, mpkt, data):
+    def feed(self, mpkt, data):
         """
         @return a tuple (bool, int) with bool = True if the response/request
                 parsing is complete. The int is the last data count.
@@ -90,7 +90,7 @@ class HTTPRequest(object):
                         ret = self._parse_body(data[end_ptr:], end_ptr)
 
                         if ret[0]:
-                            self._analyze_headers(mpkt)
+                            self.analyze_headers(mpkt)
                             self._parse_post(mpkt)
 
                             if self.http_type == HTTP_REQUEST:
@@ -104,7 +104,7 @@ class HTTPRequest(object):
 
                     return False, end_ptr
 
-                self._analyze_headers(mpkt)
+                self.analyze_headers(mpkt)
                 return True, end_ptr
 
             return False, end_ptr
@@ -112,7 +112,7 @@ class HTTPRequest(object):
             ret = self._parse_body(data)
 
             if ret[0]:
-                self._analyze_headers(mpkt)
+                self.analyze_headers(mpkt)
                 self._parse_post(mpkt)
 
                 if self.http_type == HTTP_REQUEST:
@@ -164,14 +164,14 @@ class HTTPRequest(object):
             elif key == 'transfer-encoding':
                 self.chunked = True
 
-            elif key.starswith('http/'):
+            elif key.startswith('http/'):
                 mpkt.set_cfield(HTTP_NAME + '.response_protocol', key[5:])
                 mpkt.set_cfield(HTTP_NAME + '.response_status', value)
 
             elif key == 'authorization':
                 if value[0:9].upper() == 'PASSPORT ':
                     self._parse_passport(mpkt, value[9:])
-                elif value[0:5].upper() == 'NTLM ':
+                elif value[0:5].upper() == 'NTLM ' and self.session:
                     self._parse_ntlm(mpkt, value[5:])
                 elif value[0:6].upper() == 'BASIC ':
                     self._parse_basic(mpkt, value[6:])
@@ -189,7 +189,7 @@ class HTTPRequest(object):
         else:
             return last
 
-    def _analyze_headers(self, mpkt):
+    def analyze_headers(self, mpkt):
         if self.http_type == HTTP_REQUEST:
             mpkt.set_cfield(HTTP_NAME + '.is_request', True)
             mpkt.set_cfield(HTTP_NAME + '.is_response', False)
@@ -398,7 +398,7 @@ class HTTPSession(object):
 
     def feed_request(self, hlfstream, mpkt):
         while hlfstream.count > self.req_last_len:
-            ret, idx = self.request.feed(hlfstream, mpkt,
+            ret, idx = self.request.feed(mpkt,
                                          hlfstream.data[self.req_last_len:])
 
             if idx == 0:
@@ -412,7 +412,7 @@ class HTTPSession(object):
 
     def feed_response(self, hlfstream, mpkt):
         while hlfstream.count > self.res_last_len:
-            ret, idx = self.response.feed(hlfstream, mpkt,
+            ret, idx = self.response.feed(mpkt,
                                           hlfstream.data[self.res_last_len:])
 
             if idx == 0:
@@ -426,19 +426,21 @@ class HTTPSession(object):
 
 class HTTPDissector(Plugin, OfflineAttack):
     def start(self, reader):
-        tcpdecoder = Core().get_need(reader, 'TCPDecoder')
-
-        if not tcpdecoder:
-            raise PMErrorException('TCPDecoder plugin not loaded.')
-
-        if not tcpdecoder.reassembler:
-            raise PMErrorException('TCP segments reassembling disabled '
-                                   'in TCPDecoder.')
-
         self.sessions = {}
-        tcpdecoder.reassembler.add_analyzer(self._tcp_callback)
 
         conf = AttackManager().get_configuration(HTTP_NAME)
+
+        if conf['reassemble']:
+            tcpdecoder = Core().get_need(reader, 'TCPDecoder')
+
+            if not tcpdecoder:
+                raise PMErrorException('TCPDecoder plugin not loaded.')
+
+            if not tcpdecoder.reassembler:
+                raise PMErrorException('TCP segments reassembling disabled '
+                                       'in TCPDecoder.')
+
+            tcpdecoder.reassembler.add_analyzer(self._tcp_callback)
 
         ufields = conf['username_fields']
         pfields = conf['password_fields']
@@ -447,6 +449,37 @@ class HTTPDissector(Plugin, OfflineAttack):
 
         gflieds = dict(map(lambda x: (x, 0), ufields.split(',')) +  \
                        map(lambda x: (x, 1), pfields.split(',')))
+
+    def register_decoders(self):
+        conf = AttackManager().get_configuration(HTTP_NAME)
+
+        if not conf['reassemble']:
+            for port in HTTP_PORTS:
+                AttackManager().add_dissector(APP_LAYER_TCP, port,
+                                              self._http_decoder)
+
+    def _http_decoder(self, mpkt):
+        payload = mpkt.get_field('raw.load')
+
+        if not payload:
+            return None
+
+        try:
+            obj = HTTPRequest(None)
+            obj.feed(mpkt, payload)
+
+            found = False
+
+            for type in ('get', 'post', 'head'):
+                if type in obj.headers:
+                    found = True
+                    break
+
+            if not found:
+                obj.http_type = HTTP_RESPONSE
+                obj.analyze_headers(mpkt)
+        except:
+            pass
 
     def _tcp_callback(self, stream, mpkt):
         if stream.dport in HTTP_PORTS:
@@ -495,6 +528,7 @@ __configurations__ = (('global.cfields', {
     }),
 
     (HTTP_NAME, {
+    'reassemble' : [True, 'Reassemble TCP flows. Enable it also in TCP.'],
     'form_extract' : [True, 'Try to extract username/password also from forms'],
     'username_fields' : ["login,user,email,username,userid,form_loginname,"
                          "loginname,pop_login,uid,id,user_id,screenname,uname,"

@@ -54,7 +54,14 @@
     * PM/Core/Const.py
       PM/Manager/AttackManager.py:
         - Exposing cfields type and description to the GUI of PM.
-    
+    * nose-tests.sh
+      run-tester.sh:
+        - Adding trap check to bash.
+    * offline/http/sources/main.py:
+        - Now HTTP dissector could work also without TCP reassembler.
+    * offline/fingerprint/sources/main.py:
+        - Fixing a regression.
+
     - Bug fixing.
     - GUI improvements.
     - CFields are now globally organized and exposed to the GUI.

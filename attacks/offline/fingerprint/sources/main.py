@@ -186,7 +186,7 @@ class OSFPModule(object):
         """
 
         try:
-            cfield = mpkt.get_cfield('passive_fingerprint')
+            cfield = mpkt.get_cfield('osfp.passive_fingerprint')
         except KeyError:
             cfield = ['0000', '_MSS', 'TT', 'WS', '0', '0', '0', '0', 'F', 'LT']
 
@@ -224,7 +224,7 @@ class OSFPModule(object):
 
     def report(self, mpkt):
         try:
-            cfield = ':'.join(mpkt.get_cfield('passive_fingerprint'))
+            cfield = ':'.join(mpkt.get_cfield('osfp.passive_fingerprint'))
 
             log.debug('Looking up for %s' % cfield)
 
