@@ -24,6 +24,7 @@ Attack manager module
 
 from PM.Core.Logger import log
 from PM.Core.Atoms import Singleton, defaultdict
+from PM.Core.Const import PM_TYPE_STR
 from PM.Core.NetConst import *
 
 ###############################################################################
@@ -68,6 +69,13 @@ class Configuration(object):
         """
         return self._dict[x]
 
+    def get_description(self, x):
+        return self._dict[x][1]
+
+    def keys(self): return self._dict.keys()
+    def items(self): return self._dict.items()
+    def update(self, new_dict): self._dict.update(new_dict)
+
     name = property(get_name)
 ###############################################################################
 # Implementation
@@ -90,6 +98,18 @@ class AttackManager(Singleton):
             'debug' : [False, 'Turn out debugging']
         })
 
+        self._global_cfields = self.register_configuration('global.cfields', {
+            'username' : (PM_TYPE_STR, 'Account username'),
+            'password' : (PM_TYPE_STR, 'Account password'),
+            'banner'   : (PM_TYPE_STR, 'Service banner'),
+
+            'good_checksum' : (PM_TYPE_STR, 'Hex string representation of the '
+                               'good checksum for the packet. Set if the packet'
+                               ' has a wrong checksum'),
+            'reassembled_payload' : (PM_TYPE_STR, 'Used by attacks that can '
+                                     'treassemble fragments of packets'),
+        })
+
     # Configurations stuff
 
     def register_configuration(self, conf_name, conf_dict):
@@ -99,7 +119,13 @@ class AttackManager(Singleton):
         @param conf_dict a dictionary
         @see Configuration()
         """
+
         if conf_name in self._configurations:
+
+            if conf_name == 'global.cfields':
+                self._global_cfields.update(conf_dict)
+                return self._global_cfields
+
             raise Exception('Configuration named %s already exists' % conf_name)
 
         conf = Configuration(conf_name, conf_dict)

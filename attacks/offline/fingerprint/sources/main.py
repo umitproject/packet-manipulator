@@ -37,6 +37,7 @@ from PM.Gui.Plugins.Core import Core
 from PM.Gui.Plugins.Engine import Plugin
 from PM.Manager.AttackManager import OfflineAttack, AttackManager, coroutine
 from PM.Core.NetConst import *
+from PM.Core.Const import PM_TYPE_STR, PM_TYPE_LIST
 
 from socket import ntohs
 from PM.Core.AttackUtils import BIG_ENDIAN
@@ -216,10 +217,10 @@ class OSFPModule(object):
 
             cfield[9] = ('%02X' % new_lt)[:2]
 
-        mpkt.set_cfield('passive_fingerprint', cfield)
+        mpkt.set_cfield('osfp.passive_fingerprint', cfield)
 
     def clear(self, mpkt):
-        mpkt.unset_cfield('passive_fingerprint')
+        mpkt.unset_cfield('osfp.passive_fingerprint')
 
     def report(self, mpkt):
         try:
@@ -292,6 +293,11 @@ __plugins_deps__ = [('OSFP', ['IPDecoder', 'TCPDecoder'], ['=OSFP-1.0'], [])]
 
 __attack_type__ = 0
 __protocols__ = (('tcp', None), ('icmp', None))
+__configurations__ = (('global.cfields', {
+    'osfp.passive_fingerprint' : (PM_TYPE_LIST, 'Internal cfield used by OSFP'),
+    'remote_os' : (PM_TYPE_STR, 'A string representing the remote OS'),}),
+)
+
 __vulnerabilities__ = (
     ('Passive OS fingerprinting',
      {'description' : 'TCP/IP stack fingerprinting is the passive collection '

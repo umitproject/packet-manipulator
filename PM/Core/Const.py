@@ -74,3 +74,21 @@ for new_dir in (PM_HOME,
                 PM_PLUGINS_DOWNLOAD_DIR):
 
     create_dir(new_dir)
+
+# Enumeration of types supported by attack plugins
+# Used as the value of <int id="configuration_id" description="desc">ENUM</int>
+# to expose cfields setted by various attacks to the GUI of PM.
+
+PM_TYPE_NULL,      \
+PM_TYPE_BOOLEAN,   \
+PM_TYPE_INT,       \
+PM_TYPE_FLOAT,     \
+PM_TYPE_STR,       \
+PM_TYPE_TUPLE,     \
+PM_TYPE_LIST,      \
+PM_TYPE_SET,       \
+PM_TYPE_FROZENSET, \
+PM_TYPE_DICT,      \
+PM_TYPE_CLASS,     \
+PM_TYPE_INSTANCE,  \
+PM_TYPE_CALLABLE = range(13)

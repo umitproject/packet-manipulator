@@ -37,6 +37,7 @@ from PM.Gui.Plugins.Core import Core
 from PM.Gui.Plugins.Engine import Plugin
 from PM.Manager.AttackManager import *
 from PM.Manager.SessionManager import SessionManager
+from PM.Core.Const import PM_TYPE_STR, PM_TYPE_DICT, PM_TYPE_BOOLEAN
 
 HTTP_NAME = 'dissector.http'
 HTTP_PORTS = (80, 8080)
@@ -91,7 +92,13 @@ class HTTPRequest(object):
                         if ret[0]:
                             self._analyze_headers(mpkt)
                             self._parse_post(mpkt)
-                            mpkt.set_cfield(HTTP_NAME + '.response', self.body)
+
+                            if self.http_type == HTTP_REQUEST:
+                                mpkt.set_cfield(HTTP_NAME + '.request',
+                                                self.body)
+                            else:
+                                mpkt.set_cfield(HTTP_NAME + '.response',
+                                                self.body)
 
                         return ret
 
@@ -107,7 +114,11 @@ class HTTPRequest(object):
             if ret[0]:
                 self._analyze_headers(mpkt)
                 self._parse_post(mpkt)
-                mpkt.set_cfield(HTTP_NAME + '.response', self.body)
+
+                if self.http_type == HTTP_REQUEST:
+                    mpkt.set_cfield(HTTP_NAME + '.request', self.body)
+                else:
+                    mpkt.set_cfield(HTTP_NAME + '.response', self.body)
 
             return ret
 
@@ -153,6 +164,10 @@ class HTTPRequest(object):
             elif key == 'transfer-encoding':
                 self.chunked = True
 
+            elif key.starswith('http/'):
+                mpkt.set_cfield(HTTP_NAME + '.response_protocol', key[5:])
+                mpkt.set_cfield(HTTP_NAME + '.response_status', value)
+
             elif key == 'authorization':
                 if value[0:9].upper() == 'PASSPORT ':
                     self._parse_passport(mpkt, value[9:])
@@ -178,30 +193,28 @@ class HTTPRequest(object):
         if self.http_type == HTTP_REQUEST:
             mpkt.set_cfield(HTTP_NAME + '.is_request', True)
             mpkt.set_cfield(HTTP_NAME + '.is_response', False)
+
+            for req in ('get', 'post', 'head'):
+                if req in self.headers:
+                    mpkt.set_cfield(HTTP_NAME + '.request_uri',
+                                    req.upper() + " " + self.headers[req][0][0])
+                    mpkt.set_cfield(HTTP_NAME + '.request_protocol',
+                                    self.headers[req][0][1])
+                    break
+
+            if 'user-agent' in self.headers:
+                mpkt.set_cfield(HTTP_NAME + '.browser',
+                                self.headers['user-agent'][0])
+
+            if 'accept-language' in self.headers:
+                mpkt.set_cfield(HTTP_NAME + '.language',
+                                self.headers['accept-language'][0])
         else:
             mpkt.set_cfield(HTTP_NAME + '.is_request', False)
             mpkt.set_cfield(HTTP_NAME + '.is_response', True)
 
-        mpkt.set_cfield(HTTP_NAME + '.headers', self.headers)
-
-        for req in ('get', 'post', 'head'):
-            if req in self.headers:
-                mpkt.set_cfield(HTTP_NAME + '.request',
-                                req.upper() + " " + self.headers[req][0][0])
-                mpkt.set_cfield(HTTP_NAME + '.protocol',
-                                self.headers[req][0][1])
-                break
-
-        if 'user-agent' in self.headers:
-            mpkt.set_cfield(HTTP_NAME + '.browser',
-                            self.headers['user-agent'][0])
-
-        if 'accept-language' in self.headers:
-            mpkt.set_cfield(HTTP_NAME + '.language',
-                            self.headers['accept-language'][0])
-
-        if 'server' in self.headers:
-            mpkt.set_cfield('banner', self.headers['server'][0])
+            if 'server' in self.headers:
+                mpkt.set_cfield('banner', self.headers['server'][0])
 
     def _parse_get(self, mpkt, val):
         idx = val.find('?')
@@ -367,8 +380,8 @@ class HTTPRequest(object):
             self.body += payload
             return True, len(payload) + end_ptr
 
-HTTPResponse = HTTPRequest
-HTTPResponse.http_type = HTTP_RESPONSE
+class HTTPResponse(HTTPRequest):
+    http_type = HTTP_RESPONSE
 
 class HTTPSession(object):
     def __init__(self):
@@ -460,7 +473,28 @@ __plugins_deps__ = [('HTTPDissector', ['TCPDecoder'], [], [])]
 
 __attack_type__ = 0
 __protocols__ = (('tcp', 80), ('tcp', 8080), ('http', None))
-__configurations__ = ((HTTP_NAME, {
+__configurations__ = (('global.cfields', {
+    HTTP_NAME + '.response' : (PM_TYPE_STR, 'HTTP response body'),
+    HTTP_NAME + '.request' : (PM_TYPE_STR, 'HTTP request body'),
+    HTTP_NAME + '.is_response' : (PM_TYPE_BOOLEAN,
+                                  'True if it\'s and HTTP response'),
+    HTTP_NAME + '.is_request' : (PM_TYPE_BOOLEAN,
+                                 'True if it\'s an HTTP request'),
+    HTTP_NAME + '.headers' : (PM_TYPE_DICT, 'A dict containing the headers'),
+    HTTP_NAME + '.browser' : (PM_TYPE_STR, 'A string indicating the UserAgent'),
+    HTTP_NAME + '.language' : (PM_TYPE_STR, 'A string indicating the language '
+                               'used by the client'),
+    HTTP_NAME + '.response_status' : (PM_TYPE_STR, 'The status string used by '
+                                      'the server to serve a request'),
+    HTTP_NAME + '.request_uri' : (PM_TYPE_STR,
+                                  'The URI requested by the client'),
+    HTTP_NAME + '.request_protocol' : (PM_TYPE_STR, 'The version of HTTP '
+                                       'protocol used by the client'),
+    HTTP_NAME + '.response_protocol' : (PM_TYPE_STR, 'The version of HTTP '
+                                       'protocol used by the server'),
+    }),
+
+    (HTTP_NAME, {
     'form_extract' : [True, 'Try to extract username/password also from forms'],
     'username_fields' : ["login,user,email,username,userid,form_loginname,"
                          "loginname,pop_login,uid,id,user_id,screenname,uname,"

@@ -26,6 +26,7 @@ import gtk
 
 from PM.Core.I18N import _
 from PM.Manager.PreferenceManager import Prefs
+from PM.Manager.AttackManager import AttackManager
 
 # Dummy class
 class EnumeratorBox(gtk.ComboBox):
@@ -360,7 +361,7 @@ class SniffPage(gtk.VBox):
         idx = 0
         lbls = (_('Column title'), _('Column size'), _('Function/cfield'))
 
-        for lbl in lbls:
+        for lbl in lbls[:-1]:
             rend = gtk.CellRendererText()
             rend.set_property('editable', True)
             rend.connect('edited', self.__on_rend_edited, idx)
@@ -368,6 +369,26 @@ class SniffPage(gtk.VBox):
             col = gtk.TreeViewColumn(lbl, rend, text=idx)
             self.view.append_column(col)
             idx += 1
+
+        # Last column
+        model = gtk.ListStore(str)
+        cfields = AttackManager().get_configuration('global.cfields').keys()
+        cfields.sort()
+
+        for field in cfields:
+            model.append(['%' + field + '%'])
+
+        rend = gtk.CellRendererCombo()
+        rend.set_property('model', model)
+        rend.set_property('text-column', 0)
+        rend.set_property('editable', True)
+        rend.connect('edited', self.__on_rend_edited, idx)
+
+        self.view.props.has_tooltip = True
+        self.view.connect('query-tooltip', self.__on_query_tooltip)
+
+        col = gtk.TreeViewColumn(lbls[-1], rend, text=idx)
+        self.view.append_column(col)
 
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -402,6 +423,25 @@ class SniffPage(gtk.VBox):
                 pass
 
         self.widgets = []
+
+    def __on_query_tooltip(self, widget, x, y, ktip, tooltip):
+        if not widget.get_tooltip_context(x, y, ktip):
+            return False
+
+        model, path, iter = widget.get_tooltip_context(x, y, ktip)
+
+        value = model.get_value(iter, 2)[1:-1]
+
+        try:
+            desc = AttackManager().get_configuration('global.cfields') \
+                 .get_description(value)
+
+            tooltip.set_markup('<b>%s:</b> %s' % (value, desc))
+            widget.set_tooltip_row(tooltip, path)
+
+            return True
+        except:
+            return False
 
     def __on_rend_edited(self, cell, path, new_text, idx):
         if idx == 1:

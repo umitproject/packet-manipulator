@@ -321,7 +321,7 @@ class ManifestLoader(handler.ContentHandler, ManifestObject):
                              len(self.current_configuration[1])))
 
                 self.configurations.append(self.current_configuration)
-                self.current_configuration = ('', {})
+                self.current_configuration = ['', {}]
 
             elif any(self.current_option) and self.element_idx in (1, 2, 3, 4):
 
