@@ -17,6 +17,25 @@
 #include "structmember.h"
 
 /* Object definition for PyLMPPacket */
+
+static int
+PyLMPPacket_traverse(PyLMPPacket *self, visitproc visit, void *arg)
+{
+	Py_VISIT(self->payload_list);
+	return 0;
+}
+
+static int
+PyLMPPacket_clear(PyLMPPacket *self)
+{
+	PyObject *tmp;
+	tmp = self->payload_list;
+	self->payload_list = NULL;
+	Py_XDECREF(tmp);
+	return 0;
+}
+
+
 static int
 PyLMPPacket_init(PyLMPPacket *self, PyObject *args, PyObject *kwds)
 {
@@ -32,7 +51,7 @@ PyLMPPacket_init(PyLMPPacket *self, PyObject *args, PyObject *kwds)
 static void
 PyLMPPacket_dealloc(PyLMPPacket *self)
 {
-	Py_XDECREF(self->payload_list);
+	PyLMPPacket_clear(self);
 	self->ob_type->tp_free((PyObject *) self );
 }
 
@@ -78,10 +97,10 @@ PyTypeObject PyLMPPacketType =  {
 		0,                         /*tp_getattro*/
 		0,                         /*tp_setattro*/
 		0,                         /*tp_as_buffer*/
-		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
 		"LMP PDU encapsulated.",      /* tp_doc */
-		0,                          /* tp_traverse */
-		0,                          /* tp_clear */
+		(traverseproc)PyLMPPacket_traverse,                          /* tp_traverse */
+		(inquiry)PyLMPPacket_clear,                          /* tp_clear */
 		0,                          /* tp_richcompare */
 		0,                          /* tp_weaklistoffset */
 		0,                          /* tp_iter */

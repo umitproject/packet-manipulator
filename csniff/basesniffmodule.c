@@ -689,6 +689,24 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 
 /* PyState type definition */
 
+//PyState garbage collection
+static int
+PyState_traverse(PyState *self, visitproc visit, void *arg)
+{
+	Py_VISIT(self->s_ignore_list);
+	return 0;
+}
+
+static int
+PyState_clear(PyState *self)
+{
+	PyObject *tmp;
+	tmp = self->s_ignore_list;
+	self->s_ignore_list = NULL;
+	Py_XDECREF(tmp);
+	return 0;
+}
+
 static PyMemberDef PyState_members[] = {
 		{"ignore_types", T_OBJECT_EX, offsetof(PyState, s_ignore_list), 0, "List of types to ignore"},
 		{"ignore_zero", T_INT, offsetof(PyState, s_ignore_zero), 0, "Ignore zero"},
@@ -702,7 +720,7 @@ static PyMemberDef PyState_members[] = {
 static void
 PyState_dealloc(PyState *self)
 {
-	Py_XDECREF(self->s_ignore_list);
+	PyState_clear(self);
 	self->ob_type->tp_free((PyObject *) self);
 
 }
@@ -755,10 +773,10 @@ static PyTypeObject PyStateType =  {
 		0,                         /*tp_getattro*/
 		0,                         /*tp_setattro*/
 		0,                         /*tp_as_buffer*/
-		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
 		"PyState object will ultimately be converted into a SniffSession. This is struct state from the original code",           /* tp_doc */
-		0,                          /* tp_traverse */
-		0,                          /* tp_clear */
+		(traverseproc)PyState_traverse,                          /* tp_traverse */
+		(inquiry) PyState_clear,                          /* tp_clear */
 		0,                          /* tp_richcompare */
 		0,                          /* tp_weaklistoffset */
 		0,                          /* tp_iter */
@@ -782,6 +800,24 @@ static PyTypeObject PyStateType =  {
  * Definiton for PySniffPacket. Garbage collection is important for this object,
  * since so many are going to be created.
  */
+
+static int
+PySniffPacket_traverse(PySniffPacket *self, visitproc visit, void *arg)
+{
+	Py_VISIT(self->_payloadpkt);
+	return 0;
+}
+
+static int
+PySniffPacket_clear(PySniffPacket *self)
+{
+	PyObject *tmp;
+	tmp = self->_payloadpkt;
+	self->_payloadpkt = NULL;
+	Py_XDECREF(tmp);
+	return 0;
+}
+
 static PyObject *
 PySniffPacket_new(PyTypeObject *type, PyObject *args, PyObject *kwlist)
 {
@@ -802,13 +838,10 @@ PySniffPacket_new(PyTypeObject *type, PyObject *args, PyObject *kwlist)
 static void
 PySniffPacket_dealloc(PySniffPacket *self)
 {
-	PyObject *ppkt;
+
+	PySniffPacket_clear(self);
 	if(self->_csrpkt)
 		free(self->_csrpkt);
-	//release the PyObject safely
-	ppkt  = self->_payloadpkt;
-	self->_payloadpkt = NULL;
-	Py_XDECREF(ppkt);
 
 	self->ob_type->tp_free((PyObject *) self);
 }
@@ -874,10 +907,10 @@ static PyTypeObject PySniffPacketType =  {
 		0,                         /*tp_getattro*/
 		0,                         /*tp_setattro*/
 		0,                         /*tp_as_buffer*/
-		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
 		"PyState object will ultimately be converted into a SniffSession. This is struct state from the original code",           /* tp_doc */
-		0,                          /* tp_traverse */
-		0,                          /* tp_clear */
+		(traverseproc) PySniffPacket_traverse,                          /* tp_traverse */
+		(inquiry) PySniffPacket_clear,                          /* tp_clear */
 		0,                          /* tp_richcompare */
 		0,                          /* tp_weaklistoffset */
 		0,                          /* tp_iter */
