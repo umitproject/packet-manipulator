@@ -17,8 +17,11 @@ static PyTypeObject PySniffPacketType;
 
 #define RETURN_VOID Py_INCREF(Py_None); return Py_None;
 
-/* Actual port of the methods */
-static void send_debug(PyState *s, struct dbg_packet *dp, void *rp,
+//General sniffing exception
+static PyObject *SniffError;
+
+static PyObject *
+send_debug(PyState *s, struct dbg_packet *dp, void *rp,
 		       int rplen)
 {
 	unsigned char cp[254];
@@ -46,14 +49,19 @@ static void send_debug(PyState *s, struct dbg_packet *dp, void *rp,
 	errnum = hci_send_req(s->s_fd, &rq, 2000);
     Py_END_ALLOW_THREADS
 
-    if (errnum < 0) err(1, "hci_send_req()");
+    if (errnum < 0){
+    	PyErr_SetString(SniffError, "hci_send_req() error");
+    	return NULL;
+    }
+
+    RETURN_VOID
 }
 
-static void send_debug_no_rp(PyState *s, struct dbg_packet *dp)
+static PyObject *
+send_debug_no_rp(PyState *s, struct dbg_packet *dp)
 {
 	unsigned char rp[254];
-
-	send_debug(s, dp, rp, sizeof(rp));
+	return send_debug(s, dp, rp, sizeof(rp));
 }
 
 /*
@@ -64,10 +72,12 @@ static int get_dev_fd(char *devname)
 	int dev, devfd;
 	Py_BEGIN_ALLOW_THREADS
 	dev = hci_devid(devname);
-	if(dev < 0) errx(1, "hci_devid()");
+	if(dev < 0)
+		errx(1, "hci_devid()");
 
 	devfd = hci_open_dev(dev);
-	if(devfd  < 0) errx(1, "hci_devid()2");
+	if(devfd  < 0)
+		errx(1, "hci_devid()2");
 	Py_END_ALLOW_THREADS
 
 	return devfd;
@@ -81,9 +91,8 @@ static void close_dev(int fd)
 }
 
 
-/* External functions
- * All external functions should call a
- *
+/*
+ * Module functions that are imported.
  * */
 static PyObject *
 basesniff_get_timer(PyObject *self, PyObject *args)
@@ -159,7 +168,8 @@ basesniff_sniff_stop(PyObject *dummy, PyObject *args)
 
 }
 
-//args should consist of a PyState object and 2 lists, each with 6 integers.
+//	args should consist of a PyState object, a string containing the device name
+//	and 2 lists, each with 6 integers.
 static PyObject *
 basesniff_sniff_start(PyObject *dummy, PyObject *args)
 {
@@ -218,9 +228,9 @@ basesniff_sniff_start(PyObject *dummy, PyObject *args)
 	return Py_None;
 }
 
-/* End External Functions */
+/* End Module Functions */
 
-
+//Mark for removal soon
 static void hexdump(void *buf, int len)
 {
 	unsigned char *p = buf;
@@ -440,9 +450,10 @@ process_lmp(PyState *s, void *buf, int len,
 
 	while(tmplen--)
 	{
-		if (PyList_Append(lmppkt->payload_list, PyInt_FromLong((long) *data++)))
+		if (PyList_Append(lmppkt->payload_list, PyInt_FromLong((long) *data++)) < 0)
 		{
-			//TODO set exception here
+			PyErr_SetString(SniffError, "process_lmp: Error reading payload");
+			return NULL;
 		}
 	}
 
@@ -450,7 +461,7 @@ process_lmp(PyState *s, void *buf, int len,
 	assert(handler != NULL);
 	if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvpacket"), sniffpkt, NULL))
 	{
-		err(1, "Callback unsuccessful! In process_lmp");
+		PyErr_SetString(SniffError, "process_lmp: Callback unsuccessful.");
 		return NULL;
 	}
 
@@ -583,7 +594,7 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 		//Do a callback
 		assert(handler != NULL);
 		if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvpacket"), sniffpkt, NULL)){
-			//errx(1, "Callback unsuccessful at process_frontline!");
+			PyErr_SetString(SniffError, "process_frontline: Callback unsuccessful.");
 			return NULL;
 		}
 
@@ -594,13 +605,8 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 	/* firmware seems to append fragments */
 	len -= plen;
 	assert(len >= 0);
-	if (len){
-
-		if(!process_frontline(s, start+plen, len, handler))
-		{
-			return NULL;
-		}
-	}
+	if (len)
+		return process_frontline(s, start+plen, len, handler);
 
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -659,7 +665,8 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 	Py_END_ALLOW_THREADS
 
 	if (errnum < 0){
-		errx(1, "Can't set filter - setsockopt()");
+		PyErr_SetString(SniffError, "sniff: can't set filter - setsockopt()");
+		return NULL;
 	}
 
 	while(1){
@@ -668,12 +675,16 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 		Py_BEGIN_ALLOW_THREADS
 		state->s_len = read(state->s_fd, state->s_buf, sizeof(state->s_buf));
 		Py_END_ALLOW_THREADS
+
 		if (state->s_len == -1)
-			err(1, "read()");
-		if(!process(state, state->s_buf, state->s_len, handler))
 		{
+			PyErr_SetString(SniffError, "sniff: read() error");
 			return NULL;
 		}
+
+		if(process(state, state->s_buf, state->s_len, handler) == NULL)
+			return NULL;
+
 	}
 
 	close_dev(state->s_fd);
@@ -946,8 +957,9 @@ PyMODINIT_FUNC
 initsniff(void)
 {
 	PyObject *m;
-	//PySniffPacketType.tp_new = PyType_GenericNew;
+
 	PySniffHandlerType.tp_new = PyType_GenericNew;
+	SniffError = PyErr_NewException("sniff.SniffError", NULL, NULL);
 
 	if(PyType_Ready(&PyStateType) < 0 ||
 			PyType_Ready(&PyLMPPacketType) < 0 ||
@@ -963,10 +975,12 @@ initsniff(void)
 	Py_INCREF(&PyLMPPacketType);
 	Py_INCREF(&PySniffPacketType);
 	Py_INCREF(&PySniffHandlerType);
+	Py_INCREF(SniffError);
 
 	PyModule_AddObject(m, "State", (PyObject *)&PyStateType);
 	PyModule_AddObject(m, "_LMPPacket", (PyObject *) &PyLMPPacketType);
 	PyModule_AddObject(m, "SniffPacket", (PyObject *)&PySniffPacketType);
 	PyModule_AddObject(m, "SniffHandler", (PyObject *) &PySniffHandlerType);
+	PyModule_AddObject(m, "SniffError", SniffError);
 
 }

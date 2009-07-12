@@ -1,8 +1,10 @@
-2009-07-07 Quek Shu Yang (quekshuy@gmail.com)
+2009-07-11 Quek Shu Yang (quekshuy@gmail.com)
 ==============================================
 	* Added garbage collection functionality to objects
 		- bthandler.c
 		- baseniffmodule.c
+	* Refined error handling in baseniffmodule.c
+	* Added SniffError in sniff module and removed from sniffer.py
 
 
 2009-07-07 Quek Shu Yang (quekshuy@gmail.com)

@@ -3,12 +3,6 @@ from sniffcommon import *
 import struct
 
 
-class UmitBTSniffError(Exception):
-    """
-        General exception for BTSniffer
-    """
-    pass
-
 class LMPPacket(object):
     """Wrapper for _LMPPacket. Allows processing to be done on the data payload. 
         Read-only attributes."""
@@ -17,7 +11,7 @@ class LMPPacket(object):
             packet = sniff._LMPPacket()
         self._packet = packet
         if not self._packet:
-            raise UmitBTSniffError("Wrong packet holding type. Should be _LMPPacket") 
+            raise sniff.SniffError("Wrong packet holding type. Should be _LMPPacket") 
     
     def getop1(self):
         return self._packet.op1
