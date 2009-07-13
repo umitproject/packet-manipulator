@@ -276,9 +276,7 @@ class AttackManager(Singleton):
             parser.setContentHandler(handler)
             parser.parse(os.path.join(PM_HOME, 'attacks-conf.xml'))
 
-            print self._configurations
             self._configurations.update(handler.opt_dict)
-            print self._configurations
         except Exception, err:
             log.warning('Error while loading attacks-conf.xml')
             log.warning(generate_traceback())
