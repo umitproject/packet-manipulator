@@ -1,4 +1,4 @@
-2009-07-12 Francesco Piccinno <stack.box@gmail.com>
+2009-07-13 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:
         - Now HTTP analyzer can plot numeric cookies for further analysis.
           This is useful when the user needs to check if the next cookie is
