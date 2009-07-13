@@ -28,6 +28,7 @@ import os
 from PM import Backend
 from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
+from PM.Manager.AttackManager import AttackManager
 
 from PM.Gui.Widgets.StatusBar import StatusBar
 from PM.higwidgets.higdialogs import HIGAlertDialog
@@ -759,7 +760,10 @@ class MainWindow(gtk.Window):
         #for ctx in lst:
         #    ctx.join()
 
-        log.debug("Saving options before exiting")
+        log.debug('Saving options before exiting')
         Prefs().write_options()
+
+        log.debug('Saving attack configurations')
+        AttackManager().write_configurations()
 
         gtk.main_quit()

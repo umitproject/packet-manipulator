@@ -22,9 +22,15 @@
 Attack manager module
 """
 
+import os.path
+
+from xml.sax import handler, make_parser
+from xml.sax.saxutils import XMLGenerator
+from xml.sax.xmlreader import AttributesImpl
+
 from PM.Core.Logger import log
-from PM.Core.Atoms import Singleton, defaultdict
-from PM.Core.Const import PM_TYPE_STR
+from PM.Core.Atoms import Singleton, defaultdict, generate_traceback
+from PM.Core.Const import PM_TYPE_STR, PM_HOME
 from PM.Core.NetConst import *
 
 ###############################################################################
@@ -42,14 +48,158 @@ def coroutine(func):
 # Configurations
 ###############################################################################
 
+class ConfigurationsLoader(handler.ContentHandler):
+    def __init__(self):
+        self.data = ''
+        self.parse_pass = -1
+
+        self.opt_id = None
+        self.opt_desc = None
+        self.configuration = None
+        self.opt_dict = {}
+
+        self.trans = {
+            'bool'  : lambda x: x == '1',
+            'int'   : int,
+            'float' : float,
+            'str'   : str,
+        }
+
+    def startElement(self, name, attrs):
+        if name == 'configurations' and self.parse_pass == -1:
+            self.parse_pass = 0
+        elif name == 'configuration' and self.parse_pass == 0:
+            self.parse_pass = 1
+            name = attrs.get('name')
+
+            if name:
+                self.configuration = Configuration(name)
+
+        elif name in ('bool', 'str', 'int', 'float') and self.parse_pass == 1:
+            self.opt_id = attrs.get('id')
+            self.opt_desc = attrs.get('description') or None
+
+            self.parse_pass = 2
+            self.data = ''
+
+    def characters(self, ch):
+        if self.parse_pass == 2:
+            self.data += ch
+
+    def endElement(self, name):
+        if name == 'configurations' and self.parse_pass == 0:
+            self.parse_pass = -1
+        elif name == 'configuration' and self.parse_pass == 1:
+            if self.configuration:
+                self.opt_dict[self.configuration.get_name()] = \
+                    self.configuration
+                self.configuration = None
+
+            self.parse_pass = 0
+        elif name in ('bool', 'str', 'int', 'float') and self.parse_pass == 2:
+            try:
+                if self.configuration:
+                    self.configuration.update({self.opt_id : [
+                        self.trans[name](self.data),
+                        self.opt_desc]}
+                    )
+            finally:
+                self.data = ''
+                self.opt_id = None
+                self.opt_desc = None
+                self.parse_pass = 1
+
+class ConfigurationsWriter(object):
+    def startElement(self, names, attrs):
+        self.depth_idx += 1
+        self.writer.characters('  ' * self.depth_idx)
+        self.writer.startElement(names, attrs)
+
+    def endElement(self, name):
+        self.writer.endElement(name)
+        self.writer.characters('\n')
+        self.depth_idx -= 1
+
+    def __init__(self, fname, options):
+        # The commented code here is to enable write to file options with
+        # value same as the default. IMHO it's useless so I've commented it
+
+        #from PM.Gui.Plugins.Engine import PluginEngine
+
+        #orig_dict = {}
+
+        #for plug in PluginEngine().available_plugins:
+        #    if plug.attack_type == -1:
+        #        continue
+
+        #    for conf_name, conf_dict in plug.configurations:
+        #        orig_dict[conf_name] = conf_dict
+
+        output = open(fname, 'w')
+        self.depth_idx = -1
+        self.writer = XMLGenerator(output, 'utf-8')
+        self.writer.startDocument()
+
+        self.startElement('configurations', {}),
+        self.writer.characters('\n')
+
+        items = options.keys()
+        items.sort()
+
+        trans = {
+            bool  : 'bool',
+            int   : 'int',
+            float : 'float',
+            str   : 'str'
+        }
+
+        for key in items:
+            self.startElement('configuration', AttributesImpl({'name' : key}))
+            self.writer.characters('\n')
+
+            opts = options[key].items()
+            opts.sort()
+
+            for opt_id, (opt_val, opt_desc) in opts:
+                #if key in orig_dict and opt_id in orig_dict[key] and \
+                #   orig_dict[key][opt_id][0] == opt_val:
+                #    continue
+
+                try:
+                    self.startElement(trans[type(opt_val)],
+                                      AttributesImpl({
+                                          'id' : opt_id,
+                                          'description' : opt_desc
+                                      }))
+
+                    if isinstance(opt_val, bool):
+                        self.writer.characters(opt_val and '1' or '0')
+                    else:
+                        self.writer.characters(str(opt_val))
+
+                    self.endElement(trans[type(opt_val)])
+                except:
+                    continue
+
+            self.writer.characters('  ' * self.depth_idx)
+            self.endElement('configuration')
+
+        self.endElement('configurations')
+        self.writer.endDocument()
+        output.close()
+
 class Configuration(object):
-    def __init__(self, name, odict = {}):
+    def __init__(self, name, odict=None):
         """
         @param name a string representing the Configuration
         @param odict options dictionary {'key' : [value, 'description' or None]}
         """
         self._name = name
-        self._dict = odict
+
+        if not odict:
+            self._dict = {}
+        else:
+            self._dict = odict
 
     def __getitem__(self, x):
         return self._dict[x][0]
@@ -76,6 +226,9 @@ class Configuration(object):
     def items(self): return self._dict.items()
     def update(self, new_dict): self._dict.update(new_dict)
 
+    def __repr__(self):
+        return 'Conf: %s -> %s' % (self._name, self._dict)
+
     name = property(get_name)
 ###############################################################################
 # Implementation
@@ -93,6 +246,8 @@ class AttackManager(Singleton):
         # Here we need separated dict so we should declare them all
         self._decoders = ({}, {}, {}, {}, {}, {}, {})
         self._configurations = {}
+
+        self.load_configurations()
 
         self._global_conf = self.register_configuration('global', {
             'debug' : [False, 'Turn out debugging']
@@ -112,6 +267,28 @@ class AttackManager(Singleton):
 
     # Configurations stuff
 
+    def load_configurations(self):
+        log.debug('Loading configurations from attacks-conf.xml')
+
+        try:
+            handler = ConfigurationsLoader()
+            parser = make_parser()
+            parser.setContentHandler(handler)
+            parser.parse(os.path.join(PM_HOME, 'attacks-conf.xml'))
+
+            print self._configurations
+            self._configurations.update(handler.opt_dict)
+            print self._configurations
+        except Exception, err:
+            log.warning('Error while loading attacks-conf.xml')
+            log.warning(generate_traceback())
+
+    def write_configurations(self):
+        log.debug('Writing configurations to attacks-conf.xml')
+
+        writer = ConfigurationsWriter(os.path.join(PM_HOME, 'attacks-conf.xml'),
+                                      self._configurations)
+
     def register_configuration(self, conf_name, conf_dict):
         """
         Register a configuration
@@ -120,18 +297,16 @@ class AttackManager(Singleton):
         @see Configuration()
         """
 
-        if conf_name in self._configurations:
+        if conf_name not in self._configurations:
+            conf = Configuration(conf_name, conf_dict)
+            self._configurations[conf_name] = conf
 
-            if conf_name == 'global.cfields':
-                self._global_cfields.update(conf_dict)
-                return self._global_cfields
+            log.debug('Configuration %s registered.' % conf_name)
+        else:
+            conf = self._configurations[conf_name]
+            conf.update(conf_dict)
 
-            raise Exception('Configuration named %s already exists' % conf_name)
-
-        conf = Configuration(conf_name, conf_dict)
-        self._configurations[conf_name] = conf
-
-        log.debug('Configuration %s registered.' % conf_name)
+            log.debug('Configuration %s updated.' % conf_name)
 
         return conf
 

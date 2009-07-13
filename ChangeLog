@@ -61,10 +61,16 @@
         - Now HTTP dissector could work also without TCP reassembler.
     * offline/fingerprint/sources/main.py:
         - Fixing a regression.
+    * PM/Gui/Core/MainWindow.py
+      PM/Manager/AttackManager.py:
+        - Now attack configurations are loaded and saved to attacks-conf.xml
+          file in PM_HOME. To do that I've implemented two classes that make
+          use of xml SAX parser: ConfigurationsLoader and ConfigurationsWriter.
 
     - Bug fixing.
     - GUI improvements.
     - CFields are now globally organized and exposed to the GUI.
+    - Attacks configurations are now stored to attacks-conf.xml file.
 
 2009-07-07 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:
