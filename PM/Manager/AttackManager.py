@@ -384,8 +384,8 @@ class AttackManager(Singleton):
         try:
             return self._decoders[level][type]
         except:
-            log.debug("No decoder registered for level %s type %s" % (level,
-                                                                      type))
+            #log.debug("No decoder registered for level %s type %s" % (level,
+            #                                                          type))
             return None, None, None
 
     def run_decoder(self, level, type, metapkt):

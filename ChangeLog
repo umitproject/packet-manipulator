@@ -66,6 +66,9 @@
         - Now attack configurations are loaded and saved to attacks-conf.xml
           file in PM_HOME. To do that I've implemented two classes that make
           use of xml SAX parser: ConfigurationsLoader and ConfigurationsWriter.
+    * PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/Context/Static.py:
+        - Now SniffContext and StaticContext understands linktype.
 
     - Bug fixing.
     - GUI improvements.

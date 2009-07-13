@@ -90,7 +90,19 @@ def register_sniff_context(BaseSniffContext):
                                                 filter=self.filter)
 
                     if self.attacks:
-                        self.attack_dispatcher = AttackDispatcher(IL_TYPE_ETH)
+                        try:
+                            if self.socket.LL in conf.l2types.layer2num:
+                                linktype = \
+                                         conf.l2types.layer2num[self.socket.LL]
+                            elif self.socket.LL in conf.l3types.layer2num:
+                                linktype = \
+                                         conf.l3types.layer2num[self.socket.LL]
+                            else:
+                                linktype = IL_TYPE_ETH
+                        except:
+                            linktype = self.socket.ins.datalink()
+
+                        self.attack_dispatcher = AttackDispatcher(linktype)
 
                 except socket.error, (errno, err):
                     self.summary = str(err)
@@ -185,6 +197,9 @@ def register_sniff_context(BaseSniffContext):
             reported_packets = 0
 
             log.debug("Entering in the main loop")
+
+            if self.attacks:
+                self.attack_dispatcher = AttackDispatcher(reader.linktype)
 
             while self.internal:
 

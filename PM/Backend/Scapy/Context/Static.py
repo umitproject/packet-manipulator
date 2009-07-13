@@ -67,10 +67,7 @@ def register_static_context(BaseStaticContext):
         def __init__(self, title, fname=None, attacks=False):
             BaseStaticContext.__init__(self, title, fname, attacks)
 
-            if self.attacks:
-                self.attack_dispatcher = AttackDispatcher(IL_TYPE_ETH)
-            else:
-                self.attack_dispatcher = None
+            self.attack_dispatcher = None
 
         def load(self, operation=None):
             if not self.cap_file:
@@ -82,6 +79,9 @@ def register_static_context(BaseStaticContext):
                 pktcount = 0
                 reader = PcapReader(self.cap_file)
                 size = os.stat(self.cap_file).st_size
+
+                if self.attacks:
+                    self.attack_dispatcher = AttackDispatcher(reader.linktype)
 
                 if size >= 1024 ** 3:
                     fsize = "%.1f GB" % (size / (1024.0 ** 3))
