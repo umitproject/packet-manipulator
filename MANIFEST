@@ -5,6 +5,8 @@ csniff/bthandler.h
 csniff/bthandler.c
 csniff/basesniffmodule.h
 csniff/basesniffmodule.c
+csniff/sniffio.c
+csniff/sniffio.h
 umit/__init__.py
 umit/bluetooth/__init__.py
 umit/bluetooth/sniffcommon.py

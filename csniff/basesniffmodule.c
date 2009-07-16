@@ -15,10 +15,10 @@
 
 static PyTypeObject PySniffPacketType;
 
-#define RETURN_VOID Py_INCREF(Py_None); return Py_None;
+
 
 //General sniffing exception
-static PyObject *SniffError;
+PyObject *SniffError;
 
 static PyObject *
 send_debug(PyState *s, struct dbg_packet *dp, void *rp,
@@ -95,7 +95,7 @@ static void close_dev(int fd)
  * Module functions that are imported.
  * */
 static PyObject *
-basesniff_get_timer(PyObject *self, PyObject *args)
+basesniff_get_timer(PyObject *dummy, PyObject *args)
 {
 	unsigned char rp[254];
 	char *devname ;
@@ -240,18 +240,42 @@ static void hexdump(void *buf, int len)
 	printf("\n");
 }
 
-static void process_l2cap(PyState *s, void *buf, int len)
+static PyObject *
+process_l2cap(PyState *s, void *buf, int len,
+		PySniffPacket *pkt, PyObject *handler )
 {
 	struct hcidump_hdr dh;
 	uint8_t type = HCI_ACLDATA_PKT;
 	hci_acl_hdr acl;
-	int totlen = sizeof(type) + sizeof(acl) + len;
+	PyGenericPacket *gp;
+	uint8_t *data = (uint8_t *) buf;
+	int totlen = sizeof(type) + sizeof(acl) + len, tmplen = len;
 
 	printf("L2CAP: ");
 	hexdump(buf, len);
 
 	if (s->s_dump == -1)
-		return;
+		RETURN_VOID
+
+	//Create L2CAP packet -- generic packet
+	gp = (PyGenericPacket *)PyGenericPacketType.tp_new(&PyGenericPacketType, NULL, NULL);
+	if(PyGenericPacketType.tp_init((PyObject *) gp, NULL, NULL) < 0)
+		PyErr_SetString(SniffError, "process_l2cap: error creating l2cap packet.");
+
+	while(tmplen--)
+		if(PyList_Append((PyObject *)gp->data, PyInt_FromLong((long) *data++)) < 0)
+			PyErr_SetString(SniffError, "process_l2cap: error append");
+
+	if(PyErr_Occurred())
+		return NULL;
+
+	pkt->_payloadpkt = (PyObject *)gp;
+
+	if (! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvl2cap"), pkt, NULL ))
+	{
+		PyErr_SetString(SniffError, "process_l2cap: recvl2cap failed");
+		return NULL;
+	}
 
 	memset(&dh, 0, sizeof(dh));
 	dh.len		= totlen;
@@ -262,7 +286,6 @@ static void process_l2cap(PyState *s, void *buf, int len)
 	Py_BEGIN_ALLOW_THREADS
 	if (write(s->s_dump, &dh, sizeof(dh)) != sizeof(dh))
 		err(1, "write()");
-
 	if (write(s->s_dump, &type, sizeof(type)) != sizeof(type))
 		err(1, "write()");
 	memset(&acl, 0, sizeof(acl));
@@ -274,6 +297,8 @@ static void process_l2cap(PyState *s, void *buf, int len)
 	if (write(s->s_dump, buf, len) != len)
 		err(1, "write()");
 	Py_END_ALLOW_THREADS
+
+	RETURN_VOID
 }
 
 
@@ -423,13 +448,11 @@ process_lmp(PyState *s, void *buf, int len,
 	PyLMPPacket *lmppkt;
 	uint8_t *data = buf;
 	int tmplen;
-//	int op1, op2 = -1;
-//	int tid;
 
 	//Build LMPPacket
 	assert(sniffpkt != NULL);
 	lmppkt = (PyLMPPacket *) PyLMPPacketType.tp_new(&PyLMPPacketType, NULL, NULL);
-	if(PyLMPPacketType.tp_init((PyObject *) lmppkt, NULL, NULL))
+	if(PyLMPPacketType.tp_init((PyObject *) lmppkt, NULL, NULL) < 0)
 		err(1, "Error creating PyLMPPacket.");
 	assert(len <= 17); //LMP PDU should be less than or equal to 17 bytes long
 	assert(lmppkt != NULL);
@@ -459,15 +482,17 @@ process_lmp(PyState *s, void *buf, int len,
 
 	// Python code for callback.
 	assert(handler != NULL);
-	if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvpacket"), sniffpkt, NULL))
+	if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvlmp"), sniffpkt, NULL))
 	{
-		PyErr_SetString(SniffError, "process_lmp: Callback unsuccessful.");
-		return NULL;
+		fprintf(stderr, "process_lmp: error with callback\n");
+		return PyErr_SetFromErrno(SniffError);
 	}
 
+	/* Do in callback handler as well*/
 	if (s->s_dump != -1)
+	{
 		dump_lmp(s, buf, len);
-
+	}
 /*
  *
  * Duplicated this functionality in Python sniffer.LMPPacket class.
@@ -501,25 +526,30 @@ process_lmp(PyState *s, void *buf, int len,
 }
 
 
-static void process_dv(PyState *s, void *buf, int len)
+static PyObject *
+process_dv(PyState *s, void *buf, int len)
 {
 	printf("DV: ");
 	hexdump(buf, len);
+	RETURN_VOID
 }
 
-static void process_payload(PyState *s, void *buf, int len,
+static PyObject *
+process_payload(PyState *s, void *buf, int len,
 		PySniffPacket *sniffpkt, PyObject *handler)
 {
+	PyObject *procresult;
 	switch (s->s_type) {
-	case TYPE_DV:
-		process_dv(s, buf, len);
-		return;
+		case TYPE_DV:
+			procresult = process_dv(s, buf, len);
+			return procresult;
 	}
 
 	if (s->s_llid == LLID_LMP)
-		process_lmp(s, buf, len, sniffpkt, handler);
+		procresult = process_lmp(s, buf, len, sniffpkt, handler);
 	else
-		process_l2cap(s, buf, len);
+		procresult = process_l2cap(s, buf, len, sniffpkt, handler);
+	return procresult;
 }
 
 
@@ -558,7 +588,6 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 				Py_INCREF(Py_None);
 				return Py_None;
 			}
-
 		}
 	}
 
@@ -572,7 +601,7 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 	sniffpkt->_csrpkt = fp;
 
 	s->s_llid	= (fp->fp_len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
-	s->s_master	= !(fp->fp_clock & FP_SLAVE_MASK);
+	s->s_master	= !(fp->fp_clock & FP_SLAVE_MASK); //this must be kept
 	s->s_type	= type;
 	/* this can be handled in the handler
 	printf("HL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X"
@@ -588,16 +617,16 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 
 	if (plen) {
 		printf(" ");
-		process_payload(s, start, plen, sniffpkt, handler);
+		if (!process_payload(s, start, plen, sniffpkt, handler))
+			return NULL;
 	} else {
 
 		//Do a callback
 		assert(handler != NULL);
-		if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvpacket"), sniffpkt, NULL)){
-			PyErr_SetString(SniffError, "process_frontline: Callback unsuccessful.");
-			return NULL;
+		if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvgenevt"), sniffpkt, NULL)){
+			fprintf(stderr, "process_frontline: error with callback\n");
+			return PyErr_SetFromErrno(SniffError);
 		}
-
 		printf("\n");
 	}
 
@@ -608,8 +637,7 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 	if (len)
 		return process_frontline(s, start+plen, len, handler);
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	RETURN_VOID
 }
 
 static PyObject *
@@ -654,6 +682,12 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 
 	state->s_dump = open(dump, O_APPEND | O_WRONLY | O_CREAT, 0644);
+	if(state->s_dump == -1)
+	{
+		PyErr_SetString(SniffError, "sniff: error opening file");
+		return NULL;
+	}
+
 	state->s_fd = get_dev_fd(hcidev);
 
 	hci_filter_clear(&flt);
@@ -681,7 +715,6 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 			PyErr_SetString(SniffError, "sniff: read() error");
 			return NULL;
 		}
-
 		if(process(state, state->s_buf, state->s_len, handler) == NULL)
 			return NULL;
 
@@ -719,6 +752,8 @@ PyState_clear(PyState *self)
 }
 
 static PyMemberDef PyState_members[] = {
+		{"llid", T_INT, offsetof(PyState, s_llid), 0, "LLID"},
+		{"master", T_INT, offsetof(PyState, s_master), 0, "Positive is is master"},
 		{"ignore_types", T_OBJECT_EX, offsetof(PyState, s_ignore_list), 0, "List of types to ignore"},
 		{"ignore_zero", T_INT, offsetof(PyState, s_ignore_zero), 0, "Ignore zero"},
 		{NULL}
@@ -951,7 +986,6 @@ static PyMethodDef BaseSniffMethods[] =
 		{NULL, NULL, 0, NULL}
 };
 
-
 /* Initialize the module */
 PyMODINIT_FUNC
 initsniff(void)
@@ -964,7 +998,8 @@ initsniff(void)
 	if(PyType_Ready(&PyStateType) < 0 ||
 			PyType_Ready(&PyLMPPacketType) < 0 ||
 			PyType_Ready(&PySniffPacketType) < 0 ||
-			PyType_Ready(&PySniffHandlerType) < 0)
+			PyType_Ready(&PySniffHandlerType) < 0 ||
+			PyType_Ready(&PyGenericPacketType))
 		return;
 	m = Py_InitModule3("sniff", BaseSniffMethods, "Main sniffing module");
 
@@ -973,14 +1008,22 @@ initsniff(void)
 
 	Py_INCREF(&PyStateType);
 	Py_INCREF(&PyLMPPacketType);
+	Py_INCREF(&PyGenericPacketType);
 	Py_INCREF(&PySniffPacketType);
 	Py_INCREF(&PySniffHandlerType);
 	Py_INCREF(SniffError);
 
 	PyModule_AddObject(m, "State", (PyObject *)&PyStateType);
 	PyModule_AddObject(m, "_LMPPacket", (PyObject *) &PyLMPPacketType);
+	PyModule_AddObject(m, "_GenericPacket", (PyObject *) &PyGenericPacketType);
 	PyModule_AddObject(m, "SniffPacket", (PyObject *)&PySniffPacketType);
 	PyModule_AddObject(m, "SniffHandler", (PyObject *) &PySniffHandlerType);
 	PyModule_AddObject(m, "SniffError", SniffError);
+
+	PyModule_AddIntMacro(m, HCI_EVENT_PKT);
+	PyModule_AddIntMacro(m, HCI_ACLDATA_PKT);
+	PyModule_AddIntMacro(m, HCI_COMMAND_PKT);
+	PyModule_AddIntMacro(m, HCI_SCODATA_PKT);
+	PyModule_AddIntMacro(m, HCI_VENDOR_PKT);
 
 }

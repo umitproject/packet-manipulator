@@ -30,6 +30,17 @@ typedef struct  {
 
 } __packed PyLMPPacket;
 
+
+/**
+ * Generic structure for an L2CAPPacket
+ */
+typedef struct  {
+
+	PyObject_HEAD
+	PyListObject *data;
+
+} __packed PyGenericPacket;
+
 /**
  * SniffHandler
  */
@@ -42,4 +53,5 @@ typedef struct  {
 
 extern PyTypeObject PyLMPPacketType;
 extern PyTypeObject PySniffHandlerType;
+extern PyTypeObject PyGenericPacketType;
 #endif /* BTHANDLER_H_ */

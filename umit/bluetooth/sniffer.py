@@ -3,6 +3,18 @@ from sniffcommon import *
 import struct
 
 
+class L2CAPPacket(object):
+    
+    def __init__(self, packet = None):
+        if (not packet):
+            packet = sniff._GenericPacket()
+        self._packet = packet
+    
+    def getdata(self):
+        return self._packet.data
+    
+    data = property(getdata, None)
+
 class LMPPacket(object):
     """Wrapper for _LMPPacket. Allows processing to be done on the data payload. 
         Read-only attributes."""
@@ -10,8 +22,6 @@ class LMPPacket(object):
         if(not packet):
             packet = sniff._LMPPacket()
         self._packet = packet
-        if not self._packet:
-            raise sniff.SniffError("Wrong packet holding type. Should be _LMPPacket") 
     
     def getop1(self):
         return self._packet.op1
@@ -51,10 +61,11 @@ class BTSniffHandler(sniff.SniffHandler):
     """
     def __init__(self):
         super(sniff.SniffHandler, self).__init__()
-    def recvpacket(self, packet):
+    
+    def recvgenevt(self, packet):
         """
-            Do duplicate printing as to the original frontline tool. Used to manually diff the 2 outputs
-            This can be modified to do anything we wish with the received packet.
+            Parameters:
+            packet    -    sniff.SniffPacket
         """
         master = not (packet.clock & FP_SLAVE_MASK)
         header_len = packet.hlen
@@ -78,6 +89,18 @@ class BTSniffHandler(sniff.SniffHandler):
                             address,
                             llid,
                             length),
+    
+    def recvdv(self, packet):
+        pass
+    def recvl2cap(self, packet):
+        self.recvdv(packet)
+        
+    def recvlmp(self, packet):
+        """
+            Do duplicate printing as to the original frontline tool. Used to manually diff the 2 outputs
+            This can be modified to do anything we wish with the received packet.
+        """
+        self.recvgenevt(packet)
         # Process payload. We watch for LMPs
         if packet.payload:
             paypkt = LMPPacket(packet.payload)
@@ -108,9 +131,9 @@ def parse_macs(mac_add):
         raise UmitBTError("Invalid mac address: " + mac_add) #raise an error here. invalid mac address
     return maclist
 
-def run():
 
-    # Process command line arguments.
+def getcmdoptions():
+        # Process command line arguments.
     from optparse import OptionParser
     parser = OptionParser() 
         
@@ -134,9 +157,18 @@ def run():
                           help='<dump_to_file>')
     parser.add_option('-p', action='store', dest='pin', 
                           help='own pin')
-    (options, args) = parser.parse_args()
+    return parser.parse_args()
     
-    state = sniff.State()
+    
+def run(handler = None, state = None):
+    
+    if not handler:
+        handler = BTSniffHandler()
+    if not state:
+        state = sniff.State()
+
+    (options, args) = getcmdoptions()
+
     state.ignore_zero = 1 if options.ignore_zero else 0
     for i in range(MAX_SNIFF_TYPES):
         state.ignore_types.append(-1)
@@ -147,7 +179,7 @@ def run():
         exit("Did not specify device")
     
     if options.timer:
-        print "Timer: %x" % get_timer(state, options.device)
+        print "Timer: %x" % sniff.get_timer(state, options.device)
     
     if options.filter and options.filter >  -1:
         sniff.set_filter(state, options.device, options.filter)
@@ -164,9 +196,9 @@ def run():
             sniff.start_sniff(state, options.device, master_add, slave_add)
     
     if options.snif:
-        handler = BTSniffHandler()
         sniff.sniff(state, options.device, options.dump, handler)
-  
+
+
   
 if __name__=='__main__':
     run()

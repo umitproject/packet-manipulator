@@ -76,6 +76,7 @@
 #define FP_LEN_SHIFT		5
 
 #define MAX_TYPES 16
+#define RETURN_VOID Py_INCREF(Py_None); return Py_None;
 
 #ifdef __cplusplus
 extern "C" {
@@ -146,6 +147,8 @@ typedef struct {
 	PyObject *_payloadpkt;
 
 } __packed PySniffPacket;
+
+extern PyObject *SniffError;
 
 #ifdef __cplusplus
 }

@@ -13,7 +13,13 @@ if sys.platform == 'linux2':
 			libraries = ['bluetooth'],
 			include_dirs = ['csniff'],
 		sources = ['csniff/basesniffmodule.c', 'csniff/bthandler.c'])
-	mods = [mod]
+	
+	mod2 = Extension('umit.bluetooth.sniff_fileio',
+			libraries = ['bluetooth'],
+			include_dirs = ['csniff'],
+		sources = ['csniff/sniffio.c'])
+	
+	mods = [mod, mod2]
 
 setup( name = 'UmitBluetoothSniffer',
 	version = '0.1',

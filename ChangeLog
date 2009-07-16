@@ -1,3 +1,12 @@
+
+2009-07-15 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added module for hcidump write functionality. Set up protocol for future write formats
+		- sniffio.c/h
+	* Added examples folder
+		- eg1hcidump.py makes use of hcidump functionality
+			- has class HCIDumpHandler sample of writing on receipt
+
 2009-07-11 Quek Shu Yang (quekshuy@gmail.com)
 ==============================================
 	* Added garbage collection functionality to objects
