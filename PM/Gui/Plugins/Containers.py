@@ -496,7 +496,7 @@ class ManifestWriter(object):
         if self.manifest.attack_type == OFFLINE_ATTACK_TYPE:
             self.dump_offline_attack()
         elif self.manifest.attack_type == ONLINE_ATTACK_TYPE:
-            self.dump_online_attack()
+            self.dump_offline_attack(True)
 
         self.endElement('UmitPlugin')
         self.writer.endDocument()
@@ -517,10 +517,7 @@ class ManifestWriter(object):
                 self.writer.characters(item)
                 self.endElement(name)
 
-    def dump_online_attack(self):
-        raise Exception('Not implemented yet')
-
-    def dump_offline_attack(self):
+    def dump_offline_attack(self, online=False):
         trans = {
             bool : 'bool',
             float : 'float',
@@ -528,7 +525,9 @@ class ManifestWriter(object):
             str : 'str',
         }
 
-        self.startElement('attack', AttributesImpl({'type' : 'offline'}))
+        self.startElement('attack', AttributesImpl(
+            {'type' : (online and 'online' or 'offline')}
+        ))
         self.writer.characters('\n')
 
         if self.manifest.configurations:

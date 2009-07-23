@@ -60,7 +60,11 @@ class Tester(object):
             if not options.quiet:
                 print 'Loading plugin: %s ...' % offline,
 
-            path = os.path.join(os.getcwd(), 'offline', offline, 'sources')
+            if os.path.exists(os.path.join(os.getcwd(), 'offline', offline)):
+                path = os.path.join(os.getcwd(), 'offline', offline, 'sources')
+            else:
+                path = os.path.join(os.getcwd(), 'online', offline, 'sources')
+
             sys.path.insert(0, os.path.abspath(path))
 
             try:

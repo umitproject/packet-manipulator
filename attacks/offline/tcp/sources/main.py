@@ -29,7 +29,7 @@ decoder.tcp.notice Invalid TCP packet from 127.0.0.1 to 127.0.0.1 : wrong checks
 
 from datetime import datetime
 from struct import pack, unpack
-from socket import inet_aton, ntohl
+from socket import inet_aton, ntohl, inet_ntoa
 
 from PM.Core.Logger import log
 from PM.Gui.Plugins.Core import Core
@@ -233,7 +233,7 @@ class Reassembler(object):
         stream.state = stream.CONN_RESET
 
         for listener in stream.listeners:
-            listener(stream, mpkt)
+            listener(stream, mpkt, None)
 
         self.free_tcp_stream(stream)
 
@@ -325,7 +325,7 @@ class Reassembler(object):
                 stream.state = stream.CONN_RESET
 
                 for listener in stream.listeners:
-                    listener(stream, mpkt)
+                    listener(stream, mpkt, None)
 
             self.free_tcp_stream(stream)
             return
@@ -363,7 +363,7 @@ class Reassembler(object):
                 stream.state = stream.CONN_CLOSE
 
                 for listener in stream.listeners:
-                    listener(stream, mpkt)
+                    listener(stream, mpkt, None)
 
                 self.free_tcp_stream(stream)
                 return
@@ -406,7 +406,27 @@ class Reassembler(object):
 
     def notify(self, mpkt, stream, rcv):
         for listener in stream.listeners:
-            listener(stream, mpkt)
+            ret = listener(stream, mpkt, rcv)
+
+            if ret == INJ_COLLECT_MORE:
+                print 'Collecting more packets'
+            else:
+                rcv.count_new = 0
+                rcv.data = ''
+
+            if ret == INJ_MODIFIED:
+                # If you want to force the send of dirty packets
+                # just modify it and return INJ_FORWARD that sends the packet
+                # on L3 without any modifications.
+                print 'Recompute checksum here.'
+
+                ret = INJ_FORWARD
+
+            if ret == INJ_FORWARD:
+                print 'Forwarding packet'
+
+            print inet_ntoa(stream.source), stream.sport, \
+                  inet_ntoa(stream.dest), stream.dport
 
     def add_from_skb(self, stream, mpkt, rcv, snd, payload, datalen, tcpseq, \
                      fin, urg, urg_ptr):
@@ -578,7 +598,7 @@ class Reassembler(object):
             self.oldest_stream.state = self.oldest_stream.CONN_TIMED_OUT
 
             for listener in self.oldest_stream.listeners:
-                listener(self.oldest_stream, mpkt)
+                listener(self.oldest_stream, mpkt, None)
 
             self.free_tcp_stream(self.oldest_stream)
 
@@ -786,18 +806,6 @@ class TCPDecoder(Plugin, OfflineAttack):
                                           self.reassembler.process_icmp, 1)
 
     def _process_tcp(self, mpkt):
-        if self.reassembler:
-            is_client, stream, hlfstream = None, None, None
-            stream = self.reassembler.process_tcp(mpkt)
-
-            if stream is not None:
-                is_client, stream = stream
-
-                if not is_client:
-                    hlfstream = stream.client
-                else:
-                    hlfstream = stream.server
-
         if self.checksum_check:
             # TODO: Handle IPv6 here
             tcpraw = mpkt.get_field('tcp')
@@ -827,6 +835,8 @@ class TCPDecoder(Plugin, OfflineAttack):
                                           hex(mpkt.get_field('tcp.chksum')),   \
                                           hex(chksum)),
                                          5, 'decoder.tcp')
+                    elif self.reassembler:
+                        self.reassembler.process_tcp(mpkt)
 
         if not self.dissectors:
             return None
@@ -834,24 +844,8 @@ class TCPDecoder(Plugin, OfflineAttack):
         ret = self.manager.run_decoder(APP_LAYER_TCP,
                                        mpkt.get_field('tcp.dport'), mpkt)
 
-        # If the dissector returns us a NEED_MORE_SEGMENT we have to append
-        # the dissector to a list of callbacks.
-
-        if ret:
-            pass
-
-        if stream and isinstance(ret, tuple) and len(ret) == 3 and \
-           ret[0] == NEED_FRAGMENT:
-
-            hlfstream.callbacks.append((ret[1], ret[2]))
-
         ret = self.manager.run_decoder(APP_LAYER_TCP,
                                        mpkt.get_field('tcp.sport'), mpkt)
-
-        if stream and isinstance(ret, tuple) and len(ret) == 3 and \
-           ret[0] == NEED_FRAGMENT:
-
-            hlfstream.callbacks.append((ret[1], ret[2]))
 
         # TODO: Here we've to handle injected buffer and split overflowed
         # data in various packets (check MTU).
@@ -873,7 +867,8 @@ __configurations__ = (
         'checksum_check' : [True, 'Cheksum check for TCP segments'],
         'enable_dissectors' : [True, 'Enable TCP protocol dissectors'],
         'enable_reassemble' : [True, 'Enable userland python implementation of '
-                               'TCP/IP stack to tracks TCP streams connection'],
+                               'TCP/IP stack to tracks TCP streams connection. '
+                               'You\'ve to enable checksum_check'],
         'reassemble_workarounds' : [True, 'Close a TCP connection after a ' \
                                     'timeout. Not RFC compliant but used in ' \
                                     'many implementations'],

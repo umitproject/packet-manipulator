@@ -207,6 +207,7 @@ class Prefs(Singleton):
         'gui.views.vte_tab' : False,
         'gui.views.hack_tab' : False,
         'gui.views.console_tab' : False,
+        'gui.views.hostlist_tab' : True,
 
         'backend.system' : 'scapy',
 

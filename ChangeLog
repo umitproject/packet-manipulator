@@ -1,3 +1,81 @@
+2009-07-23 Francesco Piccinno <stack.box@gmail.com>
+    * PM/Gui/Tabs/MainTab.py:
+        - Fixing the background color of gtk.EventBox to avoid wrong colors
+          on dark color gtk themes.
+    * attacks/offline/http/sources/main.py:
+        - Fixed a bug related to username cfield not correctly exposed.
+    * attacks/offline/profiler/sources/main.py:
+        - Moved out Account, Port, Profile interfaces to Providers.py file
+          to have a clear way to communicate with PM GUI.
+        - Implemented various functions like info_cb and populate_cb used
+          to communicate with the new HostListTab.
+        - Fixed various bugs.
+    * attacks/offline/tcp/sources/main.py:
+        - Preparing TCPDecoder plugin for injection purpose.
+        - Dropped out unused code.
+        - Added a new paramater to the listener callback (used to pass the
+          receiving HalfStream if there's data to add).
+        - Avoid to mantain unused data if it's not collected.
+    * PM/Core/NetConst.py:
+        - Add specific constants used to implement injection on decoders.
+    * attacks/attacktester.py:
+        - Now it works also with online directory.
+    * PM/Gui/Dialogs/Routes.py
+      PM/Backend/Scapy/Context/__init__.py:
+        - Indentation and column wraps fixes.
+    * PM/Gui/Core/MainWindow.py:
+        - Add a specific menu for the attacks.
+        - Add a menu entry to create an AttackContext.
+        - Add the HostListTab to the MainWindow interface.
+        - Tooltips of the various menuitem are now showed in the statusbar.
+        - Implemented register_attack_item and deregister_attack_item to add and
+          remove attack menu entries.
+    * PM/Manager/PreferenceManager.py:
+        - Add a new element to the preferences to manage the HostListTab
+          visibility.
+    * PM/Gui/Tabs/HostListTab.py:
+        - This is a tab to collect a list of active hosts in a sniffing session.
+          - The hosts are grouped by interfaces.
+          - There are 3 buttons: a scan button to send probe packets to a
+            specific interface and collect active hosts, a refresh button to
+            refresh the list, and a information button to see additional
+            information related to the selected hosts like active services,
+            account collected, remote OS, MAC vendor, distance in hop, etc.
+    * PM/Core/Providers.py:
+        - Simple module that holds interfaces used by attack plugins to
+          communicate with PM GUI and viceversa.
+    * PM/Manager/AttackManager.py:
+        - Add a simple Forwarder class to manage reinjection of frames on
+          a target interface (Not used now. It's only a draft).
+        - Now we use __inputs__ to deal with GUI inputs for online attacks. The
+          input dialog is created on demand by looking at __inputs__, in order
+          to simplify the development phase.
+        - The developer now has remove_menu_entry(), add_menu_entry() to place
+          menu entries in the PM GUI.
+        - The interaction with the GUI is documented in the docstring and the
+          start point to launch the attack is execute_attack().
+    * PM/Gui/Plugins/Containers.py:
+        - Now we produce also offline attacks Manifest.xml.
+    * PM/Gui/Dialogs/NewAttack.py:
+        - Add a new dialog to create a new AttackContext, letting the user chose
+          the interfaces where the attack will take place.
+    * PM/Gui/Widgets/StatusBar.py:
+        - Fixed a bug and implemented the missing pop() method.
+    * PM/Gui/Widgets/Interfaces.py:
+        - Now the 'Auto' entry could be inserted at discretion by using add_auto
+          bool parameter.
+    * PM/Backend/__init__.py
+      PM/Backend/Abstract/Context/__init__.py
+      PM/Backend/Abstract/BaseContext/Attack.py:
+        - Add a new AttackContext.
+    * PM/Core/AttackUtils.py:
+        - Add new string utilities functions like is_ip() and is_mac() that
+          could be used by various plugins.
+    
+    - Various bug fixes.
+    - Introducing HostListTab.
+    - Preparing the environment for the online attacks.
+
 2009-07-13 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py:
         - Now HTTP analyzer can plot numeric cookies for further analysis.

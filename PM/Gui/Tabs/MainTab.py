@@ -68,6 +68,10 @@ class IntroPage(gtk.HBox):
 
         ebox.connect('enter-notify-event', self.__on_enter)
         ebox.connect('leave-notify-event', self.__on_leave)
+        ebox.connect('realize', self.__on_realize)
+
+    def __on_realize(self, ebox):
+        ebox.modify_bg(gtk.STATE_NORMAL, self.style.bg[gtk.STATE_NORMAL])
 
     def __on_enter(self, widget, evt):
         self.image.set_from_pixbuf(self.pixbufs[1])

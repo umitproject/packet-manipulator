@@ -89,7 +89,9 @@ ICMP_CODE_NET_UNREACH   = 0
 ICMP_CODE_HOST_UNREACH  = 1
 
 ###############################################################################
-# Reassemly of fragments
+# Injection stuff
 ###############################################################################
 
-NEED_FRAGMENT = 1
+INJ_COLLECT_MORE = 0
+INJ_FORWARD      = 1
+INJ_MODIFIED     = 2

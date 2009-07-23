@@ -258,6 +258,9 @@ class MetaPacket(object):
             return IL_TYPE_WIFI
         return None
 
+    def set_field(self, fieldname, value):
+        print "IMPLEMENT ME"
+
     def get_field(self, fieldname):
         try:
             ret = fieldname.split('.')

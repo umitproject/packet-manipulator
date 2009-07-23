@@ -61,12 +61,14 @@ from PM.Gui.Tabs.HackTab import HackTab
 from PM.Gui.Tabs.StatusTab import StatusTab
 from PM.Gui.Tabs.ConsoleTab import ConsoleTab
 from PM.Gui.Tabs.PropertyTab import PropertyTab
+from PM.Gui.Tabs.HostListTab import HostListTab
 from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation
 from PM.Gui.Tabs.OperationsTab import FileOperation
 from PM.Gui.Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 
 from PM.Gui.Dialogs.Interface import InterfaceDialog
 from PM.Gui.Dialogs.Preferences import PreferenceDialog
+from PM.Gui.Dialogs.NewAttack import NewAttackDialog
 from PM.Gui.Dialogs.Routes import RoutesDialog
 from PM.Gui.Plugins.Window import PluginWindow
 
@@ -116,6 +118,9 @@ class MainWindow(gtk.Window):
         self.main_actions = [
             ('File', None, _('File'), None),
 
+            ('NewAttack', gtk.STOCK_NEW, _('New A_ttack'), '<Control>t',
+                _('Create a new attack'), self.__on_new_attack),
+
             ('NewSequence', gtk.STOCK_NEW, _('_New sequence'), '<Control>n',
                 _('Create a new sequence'), self.__on_new_sequence),
 
@@ -135,6 +140,8 @@ class MainWindow(gtk.Window):
 
             ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i',
                 _('Capture from interface'), self.__on_select_iface),
+
+            ('Attacks', None, _('Attacks'), None),
 
             ('Options', None, _('Options'), None),
 
@@ -157,6 +164,8 @@ class MainWindow(gtk.Window):
         self.default_ui = """<menubar>
             <menu action='File'>
                 <menuitem action='NewSequence'/>
+                <menuitem action='NewAttack'/>
+                <separator/>
                 <menuitem action='Open'/>
                 <menuitem action='Save'/>
                 <menuitem action='SaveAs'/>
@@ -166,6 +175,7 @@ class MainWindow(gtk.Window):
             <menu action='Capture'>
                 <menuitem action='Interface'/>
             </menu>
+            <menu action='Attacks'/>
             <menu action='Options'>
                 <menuitem action='Routes'/>
                 <separator/>
@@ -205,6 +215,13 @@ class MainWindow(gtk.Window):
         self.ui_manager.insert_action_group(self.main_action_group, 0)
         self.ui_manager.add_ui_from_string(self.default_ui)
 
+        self.ui_manager.connect('connect-proxy', self.__on_connect_proxy)
+        self.ui_manager.connect('disconnect-proxy', self.__on_disconnect_proxy)
+
+        # Set unsensitive the attack menu
+        item = self.ui_manager.get_widget('/menubar/Attacks')
+        item.set_sensitive(False)
+
         # Central widgets
         self.main_paned = UmitPaned()
 
@@ -212,6 +229,45 @@ class MainWindow(gtk.Window):
         self.statusbar = StatusBar()
 
         self.plugin_window = PluginWindow()
+
+    def register_attack_item(self, name, lbl, tooltip, stock, callback):
+        attackitem = self.ui_manager.get_widget('/menubar/Attacks')
+        menu = attackitem.get_submenu()
+
+        attackitem.set_sensitive(True)
+
+        if not menu:
+            menu = gtk.Menu()
+            attackitem.set_submenu(menu)
+
+        act = gtk.Action(name, lbl, tooltip, stock)
+        act.connect('activate', callback)
+
+        item = act.create_menu_item()
+        item.show()
+
+        menu.append(item)
+
+        return act, item
+
+    def deregister_attack_item(self, item):
+        attackitem = self.ui_manager.get_widget('/menubar/Attacks')
+        menu = attackitem.get_submenu()
+
+        if not menu:
+            return
+
+        for citem in menu:
+            if citem is item:
+                citem.hide()
+                menu.remove(citem)
+
+                if not menu.get_children():
+                    attackitem.set_sensitive(False)
+
+                return True
+
+        return False
 
     def get_tab(self, name):
         """
@@ -482,6 +538,9 @@ class MainWindow(gtk.Window):
         item = self.ui_manager.get_widget('/menubar/Views')
         item.remove_submenu()
 
+        item = self.ui_manager.get_widget('/menubar/Attacks')
+        item.remove_submenu()
+
         self.vbox.pack_start(self.main_paned)
         self.vbox.pack_start(self.statusbar, False, False)
 
@@ -502,8 +561,33 @@ class MainWindow(gtk.Window):
                           Prefs()['gui.views.hack_tab'].value)
         self.register_tab(ConsoleTab(),
                           Prefs()['gui.views.console_tab'].value)
+        self.register_tab(HostListTab(),
+                          Prefs()['gui.views.hostlist_tab'].value)
 
         self.add(self.vbox)
+
+    def __on_menuitem_selected(self, menuitem, tooltip):
+        self.statusbar.push(tooltip)
+
+    def __on_menuitem_deselected(self, menuitem):
+        self.statusbar.pop()
+
+    def __on_connect_proxy(self, uimgr, action, widget):
+        tooltip = action.get_property('tooltip')
+
+        if isinstance(widget, gtk.MenuItem) and tooltip:
+            cid = widget.connect('select', self.__on_menuitem_selected, tooltip)
+            cid2 = widget.connect('deselect', self.__on_menuitem_deselected)
+            widget.set_data('pm::cids', tuple(cid, cid2))
+
+    def __on_disconnect_proxy(self, uimgr, action, widget):
+        cids = widget.get_data('pm::cids')
+
+        if not isinstance(cids, tuple):
+            return
+
+        for name, cid in cids:
+            widget.disconnect(cid)
 
     def __connect_signals(self):
         "Connect signals"
@@ -616,6 +700,15 @@ class MainWindow(gtk.Window):
             if iface or args['capmethod'] == 1:
                 tab = self.get_tab("OperationsTab")
                 tab.tree.append_operation(SniffOperation(iface, **args))
+
+        dialog.hide()
+        dialog.destroy()
+
+    def __on_new_attack(self, action):
+        dialog = NewAttackDialog(self)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            print dialog.get_inputs()
 
         dialog.hide()
         dialog.destroy()

@@ -39,31 +39,22 @@ MAC: 06:05:04:03:02:01 (UNKNW) IP: 127.0.0.1 OS: Novell NetWare 3.12 - 5.00 (nea
 import os.path
 
 from PM.Core.I18N import _
+from PM.Gui.Core.App import PMApp
 from PM.Core.Atoms import defaultdict
 from PM.Gui.Plugins.Engine import Plugin
 from PM.Manager.AttackManager import *
 
-UNKNOWN_TYPE       = 0
-HOST_LOCAL_TYPE    = 1
-HOST_NONLOCAL_TYPE = 2
-GATEWAY_TYPE       = 3
-ROUTER_TYPE        = 4
+from PM.Core.Providers import AccountProvider, PortProvider, ProfileProvider, \
+     UNKNOWN_TYPE, HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
+     GATEWAY_TYPE, ROUTER_TYPE
 
-class Account(object):
-    def __init__(self):
-        self.username = None
-        self.password = None
-        self.info = None
-        self.failed = None
-        self.ip_addr = None
+################################################################################
+# Provider implementation
+################################################################################
 
-class Port(object):
-    def __init__(self):
-        self.proto = None
-        self.port = None
-        self.banner = None
-        self.accounts = []
+Account = AccountProvider
 
+class Port(PortProvider):
     def get_account(self, user, pwd):
         for a in self.accounts:
             if a.username == user and a.password == pwd:
@@ -73,17 +64,7 @@ class Port(object):
         self.accounts.append(a)
         return a
 
-class Profile(object):
-    def __init__(self):
-        self.l2_addr = None
-        self.l3_addr = None
-        self.hostname = None
-        self.distance = None
-        self.ports = []
-        self.type = None
-        self.fingerprint = None
-        self.vendor = None
-
+class Profile(ProfileProvider):
     def get_port(self, proto, port):
         for p in self.ports:
             if p.proto == proto and p.port == port:
@@ -118,7 +99,7 @@ class Profile(object):
 
 class Profiler(Plugin, OfflineAttack):
     def start(self, reader):
-        # We sae profile with l3_addr as key (IP address)
+        # We see profile with l3_addr as key (IP address)
         # and the overflowed items as a list. So we use a defaultdict
         self.profiles = defaultdict(list)
 
@@ -146,6 +127,47 @@ class Profiler(Plugin, OfflineAttack):
             log.info('Loaded %d MAC fingerprints.' % len(self.macdb))
         else:
             self.macdb = None
+
+        if reader:
+            self.debug = False
+
+            hltab = PMApp().main_window.get_tab('HostListTab')
+
+            if hltab:
+                hltab.info_cb = self.info_cb
+                hltab.populate_cb = self.populate_cb
+
+                self.hltab = hltab
+        else:
+            self.debug = True
+
+    def stop(self):
+        self.hltab.info_cb = None
+        self.hltab.populate_cb = None
+
+    def info_cb(self, intf, ip, mac):
+        """
+        @return a ProfileProvider object or None if not found
+        """
+
+        for prof in self.profiles[ip]:
+            if prof.l2_addr == mac:
+                return prof
+
+    def populate_cb(self, interface):
+        # This signal is triggered when the user change the interface
+        # combobox selection and we have to repopulate the tree
+
+        log.debug('Profiler is going to repopulate the hostlist for %s intf' % \
+                  interface)
+
+        ret = []
+
+        for ip in self.profiles:
+            for prof in self.profiles[ip]:
+                ret.append((ip, prof.l2_addr, prof.hostname))
+
+        return ret
 
     def register_hooks(self):
         manager = AttackManager()
@@ -209,10 +231,9 @@ class Profiler(Plugin, OfflineAttack):
 
             account = port.get_account(username, password)
             account.username = username
-            account.passwrod = password
+            account.password = password
 
-        #TODO: remove me
-        if prof:
+        if self.debug and prof:
             print prof
 
     def _parse_arp(self, mpkt):
@@ -274,7 +295,7 @@ __plugins_deps__ = [('Profiler', [], ['=Profiler-1.0'], [])]
 
 __attack_type__ = 0
 __protocols__ = (('icmp', None), ('eth', None))
-__configurations__ = (('offline.profiler',
-                       {'mac_fingerprint' : [True, 'Enable MAC lookup into DB '
-                                             'to report NIC vendor']}),
+__configurations__ = (('offline.profiler', {
+    'mac_fingerprint' : [True, 'Enable MAC lookup into DB to report NIC '
+                         'vendor']}),
 )

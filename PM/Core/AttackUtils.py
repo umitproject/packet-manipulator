@@ -22,6 +22,7 @@
 General purpose functions used by various attack plugins goes here.
 """
 
+import re
 import sys
 import array
 import struct
@@ -59,3 +60,16 @@ def attack_unittest(parameters, pcap=None):
 
     out, err = process.communicate()
     sys.stdout.write(out)
+
+################################################################################
+# String utilities
+################################################################################
+
+ip_regex = re.compile('\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}' \
+                      '(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b')
+mac_regex = re.compile('([0-9a-fA-F]{2}([:-]|$)){6}')
+
+def is_ip(txt):
+    return ip_regex.match(txt) is not None
+def is_mac(txt):
+    return mac_regex.match(txt) is not None

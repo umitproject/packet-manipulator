@@ -291,7 +291,7 @@ class HTTPRequest(object):
                 username = ''
                 ret = val[uoffset:uoffset + ulen]
 
-                for i in xrange(0, len(username), 2):
+                for i in xrange(0, len(ret), 2):
                     username += chr(ord(ret[i]) & 0x7f)
 
                 password = 'NTLM: '
@@ -304,7 +304,7 @@ class HTTPRequest(object):
 
                 password += ':' + self.session.data[1]
 
-                mpkt.set_cfield('user', username)
+                mpkt.set_cfield('username', username)
                 mpkt.set_cfield('password', password)
 
                 self.session.data = None
@@ -485,7 +485,7 @@ class HTTPDissector(Plugin, OfflineAttack):
         if stream.dport in HTTP_PORTS:
             stream.listeners.append(self._process_http)
 
-    def _process_http(self, stream, mpkt):
+    def _process_http(self, stream, mpkt, rcv):
         if hash(stream) not in self.sessions:
             sess = HTTPSession()
             self.sessions[hash(stream)] = sess
@@ -499,6 +499,8 @@ class HTTPDissector(Plugin, OfflineAttack):
                             stream.CONN_TIMED_OUT):
 
             del self.sessions[hash(stream)]
+
+        return INJ_COLLECT_MORE
 
 
 __plugins__ = [HTTPDissector]

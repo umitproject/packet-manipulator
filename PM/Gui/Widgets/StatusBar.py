@@ -30,6 +30,8 @@ class StatusBar(gtk.Statusbar):
         self.image = gtk.Image()
         self.progress = gtk.ProgressBar()
 
+        self.pushed = False
+
         self.timeout_id = None
 
         self.frame = gtk.Frame()
@@ -52,12 +54,17 @@ class StatusBar(gtk.Statusbar):
     def push(self, text, image=None, progress=None, pulse=False):
         """
         Set the status bar text
-        
+
         @param text the text to set in the statusbar
         @param image the image to use (None to hide)
         @param progress the progress bar fraction (None to hide)
         @param pulse if the progress should pulse (progress has precedence)
         """
+
+        if self.pushed:
+            self.pop()
+        else:
+            self.pushed = True
 
         if isinstance(image, basestring):
             self.image.set_from_stock(image, gtk.ICON_SIZE_MENU)
@@ -79,13 +86,29 @@ class StatusBar(gtk.Statusbar):
             self.timeout_id = None
             self.progress.hide()
 
-        gtk.Statusbar.push(self, 0, text)
+        gtk.Statusbar.push(self, -1, text)
+
+    def pop(self):
+        self.pushed = False
+
+        if self.image.flags() & gtk.VISIBLE:
+            self.image.hide()
+
+        if self.progress.flags() & gtk.VISIBLE:
+            self.progress.hide()
+            self.progress.set_value(0)
+
+        if self.timeout_id:
+            gobject.source_remove(self.timeout_id)
+            self.timeout_id = None
+
+        gtk.Statusbar.pop(self, -1)
 
     def __pulse_step(self):
         self.progress.pulse()
 
         return self.timeout_id != None
-    
+
 gobject.type_register(StatusBar)
 
 if __name__ == "__main__":

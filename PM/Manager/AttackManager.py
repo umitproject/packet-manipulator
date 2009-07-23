@@ -22,12 +22,14 @@
 Attack manager module
 """
 
+import sys
 import os.path
 
 from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
 
+from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import Singleton, defaultdict, generate_traceback
 from PM.Core.Const import PM_TYPE_STR, PM_HOME
@@ -230,9 +232,27 @@ class Configuration(object):
         return 'Conf: %s -> %s' % (self._name, self._dict)
 
     name = property(get_name)
+
 ###############################################################################
 # Implementation
 ###############################################################################
+
+class Forwarder(object):
+    """
+    A Forwarder is a kind of SendManager and it's used to forward packets to
+    received from intf1 and forward them to intf2.
+
+    It's heavilly used in MITM attacks
+    """
+
+    def __init__(self, supersocket):
+        self.socket = supersocket
+
+    def forward_l3(self, mpkt):
+        pass
+
+    def forward_l2(self, mpkt):
+        pass
 
 class AttackManager(Singleton):
     """
@@ -408,7 +428,7 @@ class AttackManager(Singleton):
             for post_hook in post:
                 post_hook(metapkt)
 
-            if isinstance(ret, tuple) and ret[0] != NEED_FRAGMENT:
+            if isinstance(ret, tuple):
                 # Infinite loop over there :)
                 level, type = ret
             else:
@@ -486,9 +506,168 @@ class OfflineAttack(AttackPlugin):
     # TODO: offline related methods goes here
     pass
 
+# TODO: the code related to gtk and PMApp should be moved outside this module
 class OnlineAttack(AttackPlugin):
-    # TODO: online related methods goes here
-    pass
+    """
+    OnlineAttacks could require user inputs.
+    The dialog to introduce inputs is created automatically by PacketManipulator
+    starting by the inputs element contained in Manifest.xml file.
+
+    On load the plugin could user add_menu_entry() function to create a menu
+    entry under Attacks menu in MainWindow. If the user will click on that
+    entry PM will create an input dialog and if the user press OK the inputs
+    will be passed as dict in execute_attack() callback that the plugin should
+    overload.
+
+    About executing the attack you could use an Operation if the attack should
+    run in a continuous mode or is long job.
+
+    If your plugin doesn't need any type of inputs you could set __inputs__ to
+    an empty tuple ().
+
+    __inputs__ = (
+      ('gateway', ('127.0.0.1', 'The Gateway IP address or hostname')),
+      ('port', (80, 'The HTTP port')),
+    )
+    """
+
+    __inputs__ = ()
+
+    def remove_menu_entry(self, item):
+        import PM.Gui.Core.App
+
+        return PM.Gui.Core.App.PMApp().main_window.deregister_attack_item(
+            item
+        )
+
+    def add_menu_entry(self, name, lbl, tooltip, stock):
+        """
+        Add a MenuEntry to the MainWindow of PM.
+        @param name the name for the gtk.Action
+        @param label the label to use
+        @param tooltip a tooltip for the menuitem
+        @param stock a stock-id to use
+        """
+
+        log.debug('Creating a new menu entry with \'%s\' as label' % lbl)
+
+        import PM.Gui.Core.App
+
+        return PM.Gui.Core.App.PMApp().main_window.register_attack_item(
+            name, lbl, tooltip, stock, self.on_input_request
+        )
+
+    def execute_attack(self, input_dct=None):
+        """
+        Overload me.
+        @return a bool with True if the attack is executed or False
+        """
+        raise Exception('This method must be overloaded.')
+
+    def on_input_request(self, action):
+        if not self.__inputs__:
+            return self.execute_attack()
+
+        import gtk
+        import PM.Gui.Core.App
+
+        dialog = gtk.Dialog(_('Inputs for %s - PacketManipulator') % \
+                            self.__class__.__name__,
+                            PM.Gui.Core.App.PMApp().main_window,
+                            gtk.DIALOG_DESTROY_WITH_PARENT,
+                            (gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
+                             gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
+
+        tbl = gtk.Table(2, 1, False)
+
+        tbl.set_border_width(4)
+        tbl.set_col_spacings(4)
+        tbl.set_row_spacings(4)
+
+        dialog.vbox.pack_start(tbl)
+
+        idx = 0
+
+        for txt, (opt_val, desc) in self.__inputs__:
+            lbl = gtk.Label('')
+            lbl.set_alignment(.0, .5)
+            lbl.set_markup('<b>%s:</b>' % txt.capitalize())
+
+            if isinstance(opt_val, bool):
+                widget = gtk.ToggleButton('')
+                widget.set_active(opt_val)
+
+                widget.get_child().set_text(widget.get_active() \
+                                            and _('Enabled') \
+                                            or _('Disabled'))
+
+                widget.connect('toggled', lambda w: w.get_child().set_text( \
+                    w.get_active() and _('Enabled') or _('Disabled')))
+
+            elif isinstance(opt_val, str):
+                widget = gtk.Entry()
+                widget.set_text(opt_val)
+
+            elif isinstance(opt_val, int):
+                widget = gtk.SpinButton(gtk.Adjustment(opt_val, -sys.maxint,
+                                                       sys.maxint, 1, 10),
+                                        digits=0)
+
+            elif isinstance(opt_val, float):
+                widget = gtk.SpinButton(gtk.Adjustment(opt_val, -sys.maxint,
+                                                       sys.maxint, 1, 10),
+                                        digits=4)
+
+            lbl.props.has_tooltip = True
+            widget.props.has_tooltip = True
+
+            lbl.set_tooltip_markup(desc)
+            widget.set_tooltip_markup(desc)
+            widget.set_name(txt)
+
+            tbl.attach(lbl, 0, 1, idx, idx + 1, gtk.FILL, gtk.FILL)
+            tbl.attach(widget, 1, 2, idx, idx + 1, yoptions=gtk.FILL)
+            idx += 1
+
+        tbl.show_all()
+        dialog.connect('response', self.__on_dialog_response)
+        dialog.show()
+
+    def __on_dialog_response(self, dialog, rid):
+        import gtk
+
+        if rid != gtk.RESPONSE_ACCEPT:
+            dialog.hide()
+            dialog.destroy()
+            return
+
+        table = dialog.vbox.get_children()[0]
+
+        assert isinstance(table, gtk.Table)
+
+        inp_dict = {}
+
+        for widget in table:
+            if isinstance(widget, gtk.Label):
+                continue
+
+            if isinstance(widget, gtk.SpinButton):
+                if widget.get_digits() == 0:
+                    value = widget.get_value_as_int()
+                else:
+                    value = widget.get_value()
+
+            elif isinstance(widget, gtk.ToggleButton):
+                value = widget.get_active()
+            else:
+                value = widget.get_text()
+
+            inp_dict[widget.get_name()] = value
+
+        dialog.hide()
+        dialog.destroy()
+
+        self.execute_attack(inp_dict)
 
 ###############################################################################
 # Testing classes
