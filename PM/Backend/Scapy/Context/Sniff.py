@@ -98,9 +98,15 @@ def register_sniff_context(BaseSniffContext):
                                 linktype = \
                                          conf.l3types.layer2num[self.socket.LL]
                             else:
+                                log.debug('Falling back to IL_TYPE_ETH as DL')
                                 linktype = IL_TYPE_ETH
                         except:
-                            linktype = self.socket.ins.datalink()
+                            try:
+                                linktype = self.socket.ins.datalink()
+                            except:
+                                log.debug('It seems that we\'re using PF_PACKET'
+                                          ' socket. Using IL_TYPE_ETH as DL')
+                                linktype = IL_TYPE_ETH
 
                         self.attack_dispatcher = AttackDispatcher(linktype)
 
