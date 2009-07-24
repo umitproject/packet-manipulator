@@ -18,24 +18,28 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-import os
-import sys
+import gtk
 
-os.putenv('PM_DEVELOPMENT', '1')
-os.putenv('PM_NOPSYCO', '1')
-os.putenv('PM_LOGLEVEL', '1')
-os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep,
-                                    os.getenv('PYTHONPATH', '')))
+from PM.Core.I18N import _
+from PM.Core.Logger import log
 
-if os.name == 'nt':
-    os.chdir('PM')
-    os.system('python PacketManipulator %s' % ' '.join(sys.argv[1:]))
-else:
-    if '--debug' in sys.argv:
-        args = sys.argv[1:]
-        args.remove('--debug')
-        os.system('gdb --args %s PM/PacketManipulator %s' % (sys.executable,
-                                                             ' '.join(args)))
-    else:
-        os.system('%s PM/PacketManipulator %s' % (sys.executable,
-                                                  ' '.join(sys.argv[1:])))
+from PM.Gui.Pages.Base import Perspective
+from PM.Gui.Tabs.OperationsTab import OperationTree
+
+class AttackPage(Perspective):
+    icon = gtk.STOCK_CONNECT
+    title = _('Attack perspective')
+
+    def create_ui(self):
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+
+        self.tree = OperationTree()
+        sw.add(self.tree)
+
+        self.pack_start(sw)
+        self.show_all()
+
+    def reload(self):
+        print "Reloading the tree"

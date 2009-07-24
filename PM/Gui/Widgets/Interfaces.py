@@ -25,6 +25,7 @@ from PM.Core.I18N import _
 
 class InterfacesCombo(gtk.ComboBox):
     def __init__(self, add_auto=True):
+        self.add_auto = add_auto
         self.store = gtk.ListStore(str, str)
 
         gtk.ComboBox.__init__(self, self.store)
@@ -38,7 +39,7 @@ class InterfacesCombo(gtk.ComboBox):
         self.set_attributes(pix, stock_id=0)
         self.set_attributes(txt, markup=1)
 
-        if add_auto:
+        if self.add_auto:
             self.store.append([gtk.STOCK_CONNECT, _("<b>Auto</b>")])
 
         for iface in Backend.find_all_devs():
@@ -52,7 +53,8 @@ class InterfacesCombo(gtk.ComboBox):
     def get_interface(self):
         id = self.get_active()
 
-        if id <= 0:
+        if (self.add_auto and id <= 0) or \
+           (not self.add_auto and id < 0):
             return None
 
         iter = self.get_active_iter()

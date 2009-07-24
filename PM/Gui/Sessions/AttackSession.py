@@ -18,24 +18,18 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-import os
-import sys
+from Base import Session
+from PM.Gui.Pages.AttackPage import AttackPage
 
-os.putenv('PM_DEVELOPMENT', '1')
-os.putenv('PM_NOPSYCO', '1')
-os.putenv('PM_LOGLEVEL', '1')
-os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep,
-                                    os.getenv('PYTHONPATH', '')))
+class AttackSession(Session):
+    session_id = 2
+    session_name = "ATTACK"
 
-if os.name == 'nt':
-    os.chdir('PM')
-    os.system('python PacketManipulator %s' % ' '.join(sys.argv[1:]))
-else:
-    if '--debug' in sys.argv:
-        args = sys.argv[1:]
-        args.remove('--debug')
-        os.system('gdb --args %s PM/PacketManipulator %s' % (sys.executable,
-                                                             ' '.join(args)))
-    else:
-        os.system('%s PM/PacketManipulator %s' % (sys.executable,
-                                                  ' '.join(sys.argv[1:])))
+    def create_ui(self):
+        self.attack_page = self.add_perspective(AttackPage, True,
+                                                True, False)
+
+        self.editor_cbs.insert(0, lambda: self.attack_page.reload())
+
+        self.pack_start(self.paned)
+        self.show_all()

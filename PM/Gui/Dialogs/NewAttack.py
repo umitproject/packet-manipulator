@@ -94,6 +94,7 @@ class NewAttackDialog(gtk.Dialog):
         self.intf2_combo.set_sensitive(widget.get_active())
 
     def get_inputs(self):
-        return self.intf1_combo.get_interface(), \
-               self.intf2_combo.get_interface(), \
-               self.filter.get_text()
+        return (self.intf1_combo.get_interface(), \
+                self.intf2_combo.get_active() and \
+                    self.intf2_combo.get_interface() or None,
+                self.filter.get_text())

@@ -42,7 +42,7 @@ class BaseStaticContext(object):
         """
 
         self._data = []
-        self._title = title or 'blah'
+        self._title = title or 'Title not setted'
         self._status = self.NOT_SAVED
         self.attacks = attacks
 

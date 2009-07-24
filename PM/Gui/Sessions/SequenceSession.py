@@ -26,7 +26,6 @@ from PM.Gui.Pages.SequencePage import SequencePage
 class SequenceSession(Session):
     session_id = 0
     session_name = "SEQUENCE"
-    session_menu = _("New empty sequence")
 
     def create_ui(self):
         self.sequence_page = self.add_perspective(SequencePage, True,

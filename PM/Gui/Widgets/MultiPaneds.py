@@ -24,14 +24,20 @@ Simple widgets that emulate the behaviour of a paned with multiple childs
 
 import gtk
 
+from PM.Core.Logger import log
+from PM.Gui.Widgets.Expander import AnimatedExpander
+
 class MultiPaned(object):
     def __init__(self):
         self.current = None
         self.paneds = []
 
     def add_child(self, widget, resize=False, shrink=True):
-        pass
-    
+        if isinstance(widget, (gtk.Expander, AnimatedExpander)):
+            widget.connect('activate', self.__on_expanded)
+        else:
+            log.debug('This is not a gtk.Expander neither AnimatedExpander')
+
     def remove_child(self, widget):
         i = len(self.paneds) - 1
 
@@ -52,6 +58,36 @@ class MultiPaned(object):
 
             i -= 1
 
+    def __on_expanded(self, widget):
+        for paned in self.paneds:
+            w = paned.get_child1()
+
+            if w is not widget:
+                w = paned.get_child2()
+
+                if w is not widget:
+                    continue
+
+            if not widget.get_expanded():
+                cur_values = paned.child_get_property(w, 'resize'), \
+                           paned.child_get_property(w, 'shrink')
+
+                w.set_data('pm::old_state', cur_values)
+
+                paned.child_set_property(w, 'resize', False)
+                paned.child_set_property(w, 'shrink', False)
+
+            else:
+                old_values = w.get_data('pm::old_state')
+
+                if not isinstance(old_values, tuple):
+                    return
+
+                paned.child_set_property(w, 'resize', old_values[0])
+                paned.child_set_property(w, 'shrink', old_values[1])
+
+            return
+
 class VMultiPaned(gtk.VPaned, MultiPaned):
     def __init__(self):
         MultiPaned.__init__(self)
@@ -69,6 +105,8 @@ class VMultiPaned(gtk.VPaned, MultiPaned):
         self.current = new_paned
         self.paneds.append(new_paned)
 
+        MultiPaned.add_child(self, widget, resize, shrink)
+
 class HMultiPaned(gtk.HPaned, MultiPaned):
     def __init__(self):
         MultiPaned.__init__(self)
@@ -83,6 +121,8 @@ class HMultiPaned(gtk.HPaned, MultiPaned):
         self.current.pack2(new_paned, False, False)
 
         self.current = new_paned
+
+        MultiPaned.add_child(self, widget, resize, shrink)
 
 if __name__ == "__main__":
     pan = VMultiPaned()

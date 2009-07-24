@@ -28,28 +28,39 @@ class BaseAttackContext(TimedContext):
     has_pause = False
     has_restart = False
 
-    def __init__(self, dev1, dev2=None, bpf_filter=None):
+    def __init__(self, dev1, dev2=None, bpf_filter=None, capmethod=0):
         """
         @param dev1 the first interface to sniff on
         @param dev2 the second interface to sniff on (used in bridged sniffing)
-               or None
+                    or None
         @param bpf_filter pcap filter to apply to the inputs interfaces
+        @param capmethod use 0 for standard capture, 1 for tcpdump and 2 for
+                         dumpcap helper
         @return a BaseAttackContext
         """
 
-        self._socket1 = None
-        self._socket2 = None
+        TimedContext.__init__(self)
+
+        # These are sockets used to send packets
+        self._l2_socket = None
+        self._l3_socket = None
+        self._lb_socket = None
+
+        # Listen sockets
+        self._listen_dev1 = None
+        self._listen_dev2 = None
+
+        self.capmethod = capmethod
 
     def _stop(self):
         pass
 
-    def get_socket1(self):
-        return self._socket1
+    def get_l2socket(self): return self._l2_socket
+    def get_l3socket(self): return self._l3_socket
+    def get_lbsocket(self): return self._lb_socket
 
-    def get_socket2(self):
-        return self._socket2
-
-    socket1 = property(get_socket1)
-    socket2 = property(get_socket2)
+    l2_socket = property(get_l2socket)
+    l3_socket = property(get_l3socket)
+    lb_socket = property(get_lbsocket)
 
 AttackContext = register_attack_context(BaseAttackContext)

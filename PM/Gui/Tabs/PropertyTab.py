@@ -49,6 +49,7 @@ class PropertyTab(UmitView):
         self.notify = {}
 
         # Start disabled
+        self._main_widget.set_border_width(0)
         self._main_widget.set_sensitive(False)
 
     def connect_tab_signals(self):

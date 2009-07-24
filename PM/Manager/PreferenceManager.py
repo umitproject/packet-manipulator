@@ -215,6 +215,7 @@ class Prefs(Singleton):
         'backend.system.sniff.capmethod' : 0,
         'backend.system.sendreceive.capmethod' : 0,
         'backend.system.sequence.capmethod' : 0,
+        'backend.system.attack.capmethod' : 0,
 
         'backend.system.sniff.attacks' : True,
         'backend.system.static.attacks' : True,

@@ -1,7 +1,7 @@
-#!/usr/bin/env python                                    
-# -*- coding: utf-8 -*-                                  
-# Copyright (C) 2008 Adriano Monteiro Marques            
-#                                                        
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
 # Author: Francesco Piccinno <stack.box@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -68,7 +68,8 @@ def new_adj():
 
 class Layout(gtk.Container):
     __gsignals__ = {
-        'animation-end' : (gobject.SIGNAL_RUN_LAST, None, (gobject.TYPE_BOOLEAN, )),
+        'animation-end' : (gobject.SIGNAL_RUN_LAST, None,
+                           (gobject.TYPE_BOOLEAN, )),
         'set_scroll_adjustments' : (gobject.SIGNAL_RUN_LAST, None,
                                    (gtk.Adjustment, gtk.Adjustment))
     }
@@ -442,37 +443,42 @@ Layout.set_set_scroll_adjustments_signal('set-scroll-adjustments')
 
 class AnimatedExpander(gtk.Frame):
     __gtype_name__ = "AnimatedExpander"
+    __gsignals__ = {
+        'activate' : (gobject.SIGNAL_RUN_LAST, None, ()),
+    }
 
     def __init__(self, label=None, image=gtk.STOCK_PROPERTIES,
                  orientation=gtk.ORIENTATION_VERTICAL):
-        
+
         gtk.Frame.__init__(self)
         self.set_shadow_type(gtk.SHADOW_NONE)
-        
+
         if orientation is gtk.ORIENTATION_VERTICAL:
             self.mainbox = gtk.VBox(False, 2)
         else:
             self.mainbox = gtk.HBox(False, 2)
-        
+
         # What we need is the arrow button a label with markup and
         # optionally a close button :)
-        
+
         self._arrow = HIGArrowButton(orientation)
         self._arrow.set_relief(gtk.RELIEF_NONE)
         self._arrow.set_size_request(20, 20)
 
         self._arrow.connect('clicked', self.do_toggle_animation)
         self._arrow.connect('force-clicked', self.do_force_animation)
-        
+
         self._label = gtk.Label('')
         self.label = label
-        
+
         self._image = gtk.Image()
         self.image = image
-        
+
         # The layout part
         self._layout = Layout(orientation)
-        
+        self._layout.connect('animation-end',
+                             lambda w, z: self.emit('activate'))
+
         # Pack all
 
         if orientation is gtk.ORIENTATION_VERTICAL:
@@ -489,10 +495,10 @@ class AnimatedExpander(gtk.Frame):
 
         frame = gtk.Frame()
         frame.add(box)
-        
+
         self._happy_box = gtk.EventBox()
         self._happy_box.add(frame)
-        
+
         self.mainbox.pack_start(self._happy_box, False, False)
         self.mainbox.pack_start(self._layout)
 
@@ -542,12 +548,15 @@ class AnimatedExpander(gtk.Frame):
     def do_toggle_animation(self, btn):
         if self._layout.toggle_animation():
             self._arrow.set_active(not self._arrow.get_active())
-    
+
     def get_image(self):
         return self._image
-    
+
     def set_image(self, stock):
         self._image.set_from_stock(stock, gtk.ICON_SIZE_MENU)
+
+    def get_expanded(self):
+        return self._layout.get_active()
 
     label = property(get_label, set_label)
     image = property(get_image, set_image)
@@ -560,7 +569,9 @@ class ToolPage(AnimatedExpander):
 
     (friend of ToolBox. Don't use in other widgets)
     """
-    def __init__(self, parent, label=None, image=gtk.STOCK_PROPERTIES, expand=True):
+    def __init__(self, parent, label=None, image=gtk.STOCK_PROPERTIES, \
+                 expand=True):
+
         assert(isinstance(parent, ToolBox))
 
         super(ToolPage, self).__init__(label, image)
@@ -630,14 +641,16 @@ class ToolBox(gtk.VBox):
 
     # Public API
 
-    def append_page(self, child, txt=None, image=gtk.STOCK_PROPERTIES, expand=True):
+    def append_page(self, child, txt=None, image=gtk.STOCK_PROPERTIES, \
+                    expand=True):
+
         page = ToolPage(self, txt, image, expand)
         page.add_widget(child, expand)
 
         self.pack_start(page, expand, expand)
         self._pages.append(page)
         #self._set_active_page(page)
-    
+
     # Private API
 
     def _set_expanded(self, page, val):
@@ -655,11 +668,12 @@ class ToolBox(gtk.VBox):
         #if self._active_page == page:
         # We should do a reverse foreach to find a page
         # that is active but packed with False False
-        
+
         children = self.get_children()
         children.reverse()
 
-        spulciato = filter(lambda x: x._expand and x._layout.get_active(), children)
+        spulciato = filter(lambda x: x._expand and x._layout.get_active(),
+                           children)
 
         if spulciato:
             children = spulciato
@@ -668,7 +682,7 @@ class ToolBox(gtk.VBox):
             if page == child or \
                not isinstance(child, ToolPage) or \
                not child._layout.get_active():
-                   continue
+                continue
 
             info = self.query_child_packing(page)
 
@@ -680,7 +694,7 @@ class ToolBox(gtk.VBox):
                 return
 
         self._active_page = None
-    
+
     def _repack(self, page):
         if not page._expand:
             return False
@@ -690,7 +704,8 @@ class ToolBox(gtk.VBox):
         if not info[0] or not info[1]:
 
             if self._active_page:
-                self.set_child_packing(self._active_page, False, False, 0, gtk.PACK_START)
+                self.set_child_packing(self._active_page, False, False, 0,
+                                       gtk.PACK_START)
 
             self._active_page = page
             self.set_child_packing(page, True, True, 0, gtk.PACK_START)
@@ -705,19 +720,21 @@ class ToolBox(gtk.VBox):
             if self._one_page:
                 self._set_expanded(self._active_page, False)
             else:
-                self.set_child_packing(self._active_page, False, False, 0, gtk.PACK_START)
+                self.set_child_packing(self._active_page, False, False, 0,
+                                       gtk.PACK_START)
 
         self._active_page = page
 
         if page:
 
-            # Here we should check if there's a child with True as packing options
-            # if not ignore the page._expand and set the packing to True
+            # Here we should check if there's a child with True as packing
+            # options if not ignore the page._expand and set the packing to True
 
             for child in self.get_children():
 
                 if 1 in self.query_child_packing(child)[0:2]:
-                    self.set_child_packing(page, page._expand, page._expand, 0, gtk.PACK_START)
+                    self.set_child_packing(page, page._expand, page._expand, 0,
+                                           gtk.PACK_START)
                     return
 
             # If we are here not True :D
@@ -731,7 +748,7 @@ class ToolBox(gtk.VBox):
 
     def set_single_page(self, val):
         self._one_page = val
-    
+
     single_page = property(get_single_page, set_single_page)
 
 def main(klass):

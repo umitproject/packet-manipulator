@@ -62,9 +62,10 @@ from PM.Gui.Tabs.StatusTab import StatusTab
 from PM.Gui.Tabs.ConsoleTab import ConsoleTab
 from PM.Gui.Tabs.PropertyTab import PropertyTab
 from PM.Gui.Tabs.HostListTab import HostListTab
-from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation
 from PM.Gui.Tabs.OperationsTab import FileOperation
 from PM.Gui.Tabs.ProtocolSelectorTab import ProtocolSelectorTab
+from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation, \
+     AttackOperation
 
 from PM.Gui.Dialogs.Interface import InterfaceDialog
 from PM.Gui.Dialogs.Preferences import PreferenceDialog
@@ -370,7 +371,12 @@ class MainWindow(gtk.Window):
         @return id
         """
 
+        log.debug('Registering a new session')
+
         if sessklass.session_menu is not None:
+            log.debug('Creating new menu entry named %s for the session' % \
+                      sessklass.session_menu)
+
             item = self.ui_manager.get_widget('/menubar/File')
             menu = item.get_submenu()
 
@@ -578,7 +584,7 @@ class MainWindow(gtk.Window):
         if isinstance(widget, gtk.MenuItem) and tooltip:
             cid = widget.connect('select', self.__on_menuitem_selected, tooltip)
             cid2 = widget.connect('deselect', self.__on_menuitem_deselected)
-            widget.set_data('pm::cids', tuple(cid, cid2))
+            widget.set_data('pm::cids', (cid, cid2))
 
     def __on_disconnect_proxy(self, uimgr, action, widget):
         cids = widget.get_data('pm::cids')
@@ -586,8 +592,11 @@ class MainWindow(gtk.Window):
         if not isinstance(cids, tuple):
             return
 
-        for name, cid in cids:
-            widget.disconnect(cid)
+        try:
+            for name, cid in cids:
+                widget.disconnect(cid)
+        except:
+            pass
 
     def __connect_signals(self):
         "Connect signals"
@@ -698,7 +707,7 @@ class MainWindow(gtk.Window):
             args = dialog.get_options()
 
             if iface or args['capmethod'] == 1:
-                tab = self.get_tab("OperationsTab")
+                tab = self.get_tab('OperationsTab')
                 tab.tree.append_operation(SniffOperation(iface, **args))
 
         dialog.hide()
@@ -708,13 +717,18 @@ class MainWindow(gtk.Window):
         dialog = NewAttackDialog(self)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
-            print dialog.get_inputs()
+            inputs = dialog.get_inputs()
+
+            log.debug('Creating a new AttackOperation using %s %s %s' % inputs)
+
+            tab = self.get_tab('OperationsTab')
+            tab.tree.append_operation(AttackOperation(*inputs))
 
         dialog.hide()
         dialog.destroy()
 
     def __on_new_sequence(self, action):
-        tab = self.get_tab("MainTab")
+        tab = self.get_tab('MainTab')
         tab.session_notebook.create_sequence_session([])
 
     def __on_open_session(self, action):

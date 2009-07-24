@@ -1,3 +1,43 @@
+2009-06-24 Francesco Piccinno <stack.box@gmail.com>
+    * PacketManipulator
+        - Setting PM_NOPSYCO to avoid using psyco module while developing.
+    * PM/Gui/Sessions/AttackSession.py:
+        - First draft of AttackSession that uses the AttackPage explained below.
+    * PM/Gui/Pages/AttackPage.py:
+        - First draft of the AttackPage. We use the OperationsTree to organize
+          the various attacks that could run on AttackContext.
+    * PM/Gui/Dialogs/Preferences.py:
+        - Add the capmethod option also for the AttackContext.
+    * PM/Gui/Dialogs/NewAttack.py:
+        - Avoid to return the second interface if the gtk.ComboBox is not
+          sensitive.
+    * PM/Gui/Sessions/SniffSession.py
+      PM/Gui/Sessions/SequenceSession.py:
+        - Removing unused class attribute.
+    * PM/Gui/Widgets/Interfaces.py:
+        - Fixed a regression introduced by the addition of add_auto parameter.
+    * PM/Gui/Widgets/MultiPaneds.py:
+        - Implemented automatic resize of the paned's children. Really useful.
+    * PM/Gui/Widgets/Expander.py:
+        - Fixed indentation problems and introduce activate signal used in
+          MultiPaneds.py file (described above).
+    * PM/Gui/Core/MainWindow.py:
+        - Fixed a bug due to __on_disconnect_proxy.
+        - New attack menu entry is not dummy anymore.
+    * PM/Gui/Core/Views.py:
+        - Leaving a reasonable amount of free pixels as borders.
+    * PM/Gui/Tabs/OperationsTab.py:
+        - Implemented AttackOperation.
+    * PM/Gui/Tabs/MainTab.py:
+        - Introduced create_attack_session() method.
+    * PM/Backend/Scapy/Context/Sniff.py:
+        - Fixed ''_socketobject has no attribute datalink' bug.
+    * PM/Manager/PreferenceManager.py
+      PM/Backend/Abstract/BaseContext/Attack.py:
+        - Introduced capmethod in AttackContext.
+    * PM/Backend/Scapy/Context/Attack.py:
+        - First implementation of Scapy AttackContext.
+
 2009-07-23 Francesco Piccinno <stack.box@gmail.com>
     * PM/Gui/Tabs/MainTab.py:
         - Fixing the background color of gtk.EventBox to avoid wrong colors

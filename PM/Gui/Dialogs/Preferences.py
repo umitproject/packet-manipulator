@@ -306,6 +306,10 @@ class BackendPage(Page):
            ('backend.system.sequence.capmethod',
             _('Capture method for Sequence:'),
             new_combo_enumerator(('Native', 'TCPDump', 'Dumpcap'))),
+
+           ('backend.system.attack.capmethod',
+            _('Capture method for Attack:'),
+            new_combo_enumerator(('Native', 'TCPDump', 'Dumpcap'))),
           )
         ),
 

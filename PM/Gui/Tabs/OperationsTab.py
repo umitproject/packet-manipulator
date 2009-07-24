@@ -61,6 +61,16 @@ class Operation(object):
         "Called when the user clicks on the row"
         pass
 
+    def get_summary(self):
+        return 'Implement me'
+
+    def get_percentage(self):
+        """
+        @return None if we should pulse or a int
+                if None you should provide percentage attribute
+        """
+        return None
+
 class FileOperation(Operation):
     """
     Abstract class to manage file operations like save/load
@@ -168,7 +178,7 @@ class FileOperation(Operation):
 
     @trace
     def start_async_thread(self, udata):
-        self.thread = Thread(target=self._thread_main, name="FileOperation",
+        self.thread = Thread(target=self._thread_main, name='FileOperation',
                              args=udata)
         self.thread.setDaemon(True)
         self.thread.start()
@@ -182,7 +192,7 @@ class FileOperation(Operation):
 
             log.debug('Creating a new session after loading for %s' % str(ctx))
 
-            tab = PMApp().main_window.get_tab("MainTab")
+            tab = PMApp().main_window.get_tab('MainTab')
 
             if ctx is Backend.SequenceContext:
                 from PM.Gui.Sessions.SequenceSession import SequenceSession
@@ -280,7 +290,7 @@ class SendReceiveOperation(Backend.SendReceiveContext, Operation):
         capmethod = Prefs()['backend.system.sendreceive.capmethod'].value
 
         if capmethod < 0 or capmethod > 2:
-            Prefs()['backend.system.sendreceive.capmethod'] = 0
+            Prefs()['backend.system.sendreceive.capmethod'].value = 0
             capmethod = 0
 
         log.debug('Using %d as capmethod for SendReceiveContext' % capmethod)
@@ -345,7 +355,7 @@ class SniffOperation(Backend.SniffContext, Operation):
                                       self.__recv_callback, None)
 
         if not self.background:
-            nb = PMApp().main_window.get_tab("MainTab").session_notebook
+            nb = PMApp().main_window.get_tab('MainTab').session_notebook
             self.session = nb.create_sniff_session(self)
         else:
             self.session = None
@@ -365,7 +375,7 @@ class SniffOperation(Backend.SniffContext, Operation):
 
     def activate(self):
         if not self.session:
-            nb = PMApp().main_window.get_tab("MainTab").session_notebook
+            nb = PMApp().main_window.get_tab('MainTab').session_notebook
             self.session = nb.create_sniff_session(self)
 
     def __recv_callback(self, packet, udata):
@@ -380,7 +390,7 @@ class SequenceOperation(Backend.SequenceContext, Operation):
         capmethod = Prefs()['backend.system.sequence.capmethod'].value
 
         if capmethod < 0 or capmethod > 2:
-            Prefs()['backend.system.sendreceive.capmethod'] = 0
+            Prefs()['backend.system.sendreceive.capmethod'].value = 0
             capmethod = 0
 
         log.debug('Using %d as capmethod for SendReceiveContext' % capmethod)
@@ -392,7 +402,7 @@ class SequenceOperation(Backend.SequenceContext, Operation):
                                          self.__send_callback,             \
                                          self.__receive_callback)
 
-        nb = PMApp().main_window.get_tab("MainTab").session_notebook
+        nb = PMApp().main_window.get_tab('MainTab').session_notebook
         self.session = nb.create_sniff_session(self)
 
     def __send_callback(self, packet, want_reply, loop, count, udata):
@@ -412,6 +422,19 @@ class SequenceOperation(Backend.SequenceContext, Operation):
 
         return ret
 
+class AttackOperation(Backend.AttackContext, Operation):
+    def __init__(self, dev1, dev2, bpf_filter):
+        capmethod = Prefs()['backend.system.attack.capmethod'].value
+
+        if capmethod < 0 or capmethod > 2:
+            Prefs()['backend.system.sendreceive.capmethod'].value = 0
+            capmethod = 0
+
+        Operation.__init__(self)
+        Backend.AttackContext.__init__(self, dev1, dev2, bpf_filter, capmethod)
+
+        nb = PMApp().main_window.get_tab('MainTab').session_notebook
+        self.session = nb.create_attack_session(self)
 
 class OperationTree(gtk.TreeView):
     def __init__(self):

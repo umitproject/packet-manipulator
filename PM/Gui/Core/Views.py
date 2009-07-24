@@ -135,6 +135,8 @@ class UmitView(UmitViewMixin):
         UmitViewMixin.__init__(self, *args, **kw)
 
         self._main_widget = gtk.VBox()
+        self._main_widget.set_border_width(4)
+
         self.label_text = title or self.label_text
         self.icon_name = icon or self.icon_name
         self.name = self.name

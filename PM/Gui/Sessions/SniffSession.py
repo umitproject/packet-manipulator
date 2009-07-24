@@ -27,7 +27,6 @@ from PM.Gui.Pages.PacketPage import PacketPage
 class SniffSession(Session):
     session_id = 1
     session_name = "SNIFF"
-    session_menu = None
 
     def create_ui(self):
         self.sniff_page = self.add_perspective(SniffPage, True,

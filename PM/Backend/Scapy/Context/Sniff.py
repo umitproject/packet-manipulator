@@ -83,7 +83,7 @@ def register_sniff_context(BaseSniffContext):
         def _start(self):
             self.prevtime = datetime.now()
 
-            if self.iface and self.capmethod != 1:
+            if self.iface and self.capmethod == 0:
                 try:
                     self.socket = conf.L2listen(type=ETH_P_ALL,
                                                 iface=self.iface,
