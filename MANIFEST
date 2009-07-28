@@ -7,9 +7,12 @@ csniff/basesniffmodule.h
 csniff/basesniffmodule.c
 csniff/sniffio.c
 csniff/sniffio.h
+csniff/sniffcrack.c
+csniff/sniffcrack.h
 umit/__init__.py
 umit/bluetooth/__init__.py
 umit/bluetooth/sniffcommon.py
 umit/bluetooth/sniffer.py
+umit/bluetooth/crack.py
 scripts/devrun
 

@@ -60,7 +60,6 @@ _dump_events(int dumpfd, uint8_t isMaster, PyObject *pkt)
 	}
 
 	/* event header */
-
 	memset(&evt, 0, sizeof(evt));
 	evt.evt		= EVT_VENDOR;
 	evt.plen	= sizeof(csr_lmp);
@@ -218,11 +217,13 @@ sniffio_writetofile(PyObject *self, PyObject *args, PyObject *kwds)
 			"filename",
 			NULL
 	};
-	if(!PyArg_ParseTupleAndKeywords(args, kwds, "bibOs:writetofile", kwlist,
-			&type, &llid, &isMaster, &packet, &fname)){
 
+	if(!PyArg_ParseTupleAndKeywords(args, kwds, "bibOs:writetofile", kwlist,
+			&type, &llid, &isMaster, &packet, &fname))
+	{
 		return NULL;
 	}
+
 
 	Py_BEGIN_ALLOW_THREADS
 	 fd = open(fname, O_APPEND | O_WRONLY | O_CREAT, 0644);

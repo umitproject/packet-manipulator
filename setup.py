@@ -4,22 +4,33 @@ Taken from PythonInfo Wiki Distutils Tutorial, with thanks to DonnIngle
 """
 
 from distutils.core import setup, Extension
-import sys
+import sys, os
+
+PARENT_PKG = 'umit.bluetooth'
+BTLIBRARIES = ['bluetooth']
+SNIFFMODDIR = 'csniff'
+INCLUDE_DIRS = [SNIFFMODDIR]
 
 mods = []
 if sys.platform == 'linux2':
-	print 'linux'
-	mod = Extension('umit.bluetooth.sniff',
-			libraries = ['bluetooth'],
-			include_dirs = ['csniff'],
-		sources = ['csniff/basesniffmodule.c', 'csniff/bthandler.c'])
+	# print 'linux'
+	mod = Extension(PARENT_PKG + '.sniff',
+			libraries = BTLIBRARIES,
+			include_dirs = INCLUDE_DIRS,
+		sources = [SNIFFMODDIR + os.sep + 'basesniffmodule.c', 
+				   SNIFFMODDIR + os.sep + 'bthandler.c'])
 	
-	mod2 = Extension('umit.bluetooth.sniff_fileio',
-			libraries = ['bluetooth'],
-			include_dirs = ['csniff'],
-		sources = ['csniff/sniffio.c'])
+	mod2 = Extension(PARENT_PKG + '.sniff_fileio',
+			libraries = BTLIBRARIES,
+			include_dirs = INCLUDE_DIRS,
+		sources = [ SNIFFMODDIR  + os.sep + 'sniffio.c'])
+
+	mod3 = Extension(PARENT_PKG + '._crack',
+			libraries = BTLIBRARIES,
+			include_dirs = INCLUDE_DIRS,
+		sources = [ SNIFFMODDIR + os.sep + 'sniffcrack.c'])
 	
-	mods = [mod, mod2]
+	mods = [mod, mod2, mod3]
 
 setup( name = 'UmitBluetoothSniffer',
 	version = '0.1',

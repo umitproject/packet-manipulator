@@ -15,8 +15,6 @@
 
 static PyTypeObject PySniffPacketType;
 
-
-
 //General sniffing exception
 PyObject *SniffError;
 
@@ -62,6 +60,32 @@ send_debug_no_rp(PyState *s, struct dbg_packet *dp)
 {
 	unsigned char rp[254];
 	return send_debug(s, dp, rp, sizeof(rp));
+}
+
+static PyObject *
+populateGenPkt(PySniffPacket *pkt, void *buf, int len)
+{
+	PyGenericPacket *gp;
+	int tmplen = len;
+	uint8_t *data = (uint8_t *) buf;
+	//Create L2CAP packet -- generic packet
+	gp = (PyGenericPacket *)PyGenericPacketType.tp_new(&PyGenericPacketType, NULL, NULL);
+	if(PyGenericPacketType.tp_init((PyObject *) gp, NULL, NULL) < 0)
+	{
+		PyErr_SetString(SniffError, "process_l2cap: error creating l2cap packet.");
+		return NULL;
+	}
+
+	while(tmplen--) {
+		if(PyList_Append((PyObject *)gp->data, PyInt_FromLong((long) *data++)) < 0)
+		{
+			PyErr_SetString(SniffError, "populateGenPkt: error append");
+			return NULL;
+		}
+	}
+
+	pkt->_payloadpkt = (PyObject *) gp;
+	RETURN_VOID
 }
 
 /*
@@ -134,15 +158,13 @@ basesniff_set_filter(PyObject *dummy, PyObject *args)
 	if(!PyArg_ParseTuple(args, "OsI", &state, &devname, &val))
 		return NULL;
 
-	//printf("Filter packets: %d\n", (unsigned char)val);
 	state->s_fd = get_dev_fd(devname);
 
 	pkt.dp_data[0] = (unsigned char) val;
 	send_debug_no_rp(state, &pkt);
 	close_dev(state->s_fd);
 
-	Py_INCREF(Py_None);
-	return Py_None;
+	RETURN_VOID
 }
 
 
@@ -163,9 +185,7 @@ basesniff_sniff_stop(PyObject *dummy, PyObject *args)
 	send_debug_no_rp(state, &pkt);
 	close_dev(state->s_fd);
 
-	Py_INCREF(Py_None);
-	return Py_None;
-
+	RETURN_VOID
 }
 
 //	args should consist of a PyState object, a string containing the device name
@@ -224,13 +244,14 @@ basesniff_sniff_start(PyObject *dummy, PyObject *args)
 
 	send_debug_no_rp(state, &pkt);
 	close_dev(state->s_fd);
-	Py_INCREF(Py_None);
-	return Py_None;
+
+	RETURN_VOID
 }
 
 /* End Module Functions */
 
 //Mark for removal soon
+/*
 static void hexdump(void *buf, int len)
 {
 	unsigned char *p = buf;
@@ -239,6 +260,7 @@ static void hexdump(void *buf, int len)
 		printf("%.2X ", *p++);
 	printf("\n");
 }
+*/
 
 static PyObject *
 process_l2cap(PyState *s, void *buf, int len,
@@ -248,24 +270,14 @@ process_l2cap(PyState *s, void *buf, int len,
 	uint8_t type = HCI_ACLDATA_PKT;
 	hci_acl_hdr acl;
 	PyGenericPacket *gp;
-	uint8_t *data = (uint8_t *) buf;
-	int totlen = sizeof(type) + sizeof(acl) + len, tmplen = len;
+	int totlen = sizeof(type) + sizeof(acl) + len;
 
-	printf("L2CAP: ");
-	hexdump(buf, len);
-
+//	printf("L2CAP: ");
+//	hexdump(buf, len);
 	if (s->s_dump == -1)
 		RETURN_VOID
 
-	//Create L2CAP packet -- generic packet
-	gp = (PyGenericPacket *)PyGenericPacketType.tp_new(&PyGenericPacketType, NULL, NULL);
-	if(PyGenericPacketType.tp_init((PyObject *) gp, NULL, NULL) < 0)
-		PyErr_SetString(SniffError, "process_l2cap: error creating l2cap packet.");
-
-	while(tmplen--)
-		if(PyList_Append((PyObject *)gp->data, PyInt_FromLong((long) *data++)) < 0)
-			PyErr_SetString(SniffError, "process_l2cap: error append");
-
+	populateGenPkt(pkt, buf, len);
 	if(PyErr_Occurred())
 		return NULL;
 
@@ -276,7 +288,7 @@ process_l2cap(PyState *s, void *buf, int len,
 		PyErr_SetString(SniffError, "process_l2cap: recvl2cap failed");
 		return NULL;
 	}
-
+/*
 	memset(&dh, 0, sizeof(dh));
 	dh.len		= totlen;
 	dh.in		= 1;
@@ -297,11 +309,15 @@ process_l2cap(PyState *s, void *buf, int len,
 	if (write(s->s_dump, buf, len) != len)
 		err(1, "write()");
 	Py_END_ALLOW_THREADS
-
+*/
 	RETURN_VOID
 }
 
 
+/**
+ * Mark for removal
+ */
+/*
 static void dump_lmp(PyState *s, void *buf, int len)
 {
 	struct hcidump_hdr dh;
@@ -313,7 +329,7 @@ static void dump_lmp(PyState *s, void *buf, int len)
 
 	assert(len <= 17);
 
-	/* hcidump header */
+	/* hcidump header
 	memset(&dh, 0, sizeof(dh));
 	dh.len		= totlen;
 	dh.in		= 1;
@@ -328,7 +344,7 @@ static void dump_lmp(PyState *s, void *buf, int len)
 		err(1, "write()");
 	Py_END_ALLOW_THREADS
 
-	/* event header */
+	/* event header
 	memset(&evt, 0, sizeof(evt));
 	evt.evt		= EVT_VENDOR;
 	evt.plen	= sizeof(csr_lmp);
@@ -336,108 +352,20 @@ static void dump_lmp(PyState *s, void *buf, int len)
 	if (write(s->s_dump, &evt, sizeof(evt)) != sizeof(evt))
 		err(1, "write()");
 	Py_END_ALLOW_THREADS
-	/* CSRized LMP packet */
+	/* CSRized LMP packet
 	memset(csr_lmp, 0, sizeof(csr_lmp));
-	*p++ = 20; /* channel ID */
+	*p++ = 20; /* channel ID
 	*p++ = s->s_master ? 0x10 : 0x0f;
 	memcpy(p, buf, len);
 	p += 17;
-	*p = 0; /* connection handle */
+	*p = 0; /* connection handle
 	assert(((unsigned long) p - (unsigned long) csr_lmp)< sizeof(csr_lmp));
 	Py_BEGIN_ALLOW_THREADS
 	if (write(s->s_dump, csr_lmp, sizeof(csr_lmp)) != sizeof(csr_lmp))
 		err(1, "write()");
 	Py_END_ALLOW_THREADS
 }
-
-
-/*
- * For pin-cracking
- *
- */
-#define GOT_IN_RAND	(1 << 1)
-#define GOT_COMB1	(1 << 2)
-#define GOT_COMB2	(1 << 3)
-#define GOT_AU_RAND1	(1 << 4)
-#define GOT_SRES1	(1 << 5)
-#define GOT_AU_RAND2	(1 << 6)
-#define GOT_SRES2	(1 << 7)
-static void do_pin(PyState *s, int op, void *buf, int len)
-{
-	int i, j;
-
-	switch (op) {
-	case LMP_IN_RAND:
-		s->s_pin = 1 | GOT_IN_RAND;
-		s->s_pin_master = s->s_master;
-		memcpy(s->s_pin_data[0], buf, len);
-		break;
-
-	case LMP_COMB_KEY:
-		if (!(s->s_pin & GOT_IN_RAND))
-			return;
-
-		if (s->s_master == s->s_pin_master) {
-			memcpy(s->s_pin_data[1], buf, len);
-			s->s_pin |= GOT_COMB1;
-		} else {
-			memcpy(s->s_pin_data[2], buf, len);
-			s->s_pin |= GOT_COMB2;
-		}
-		break;
-
-	case LMP_AU_RAND:
-		if ((!(s->s_pin & GOT_COMB1))
-		    || (!(s->s_pin & GOT_COMB2)))
-			return;
-
-		if (s->s_master == s->s_pin_master) {
-			memcpy(s->s_pin_data[3], buf, len);
-			s->s_pin |= GOT_AU_RAND1;
-		} else {
-			memcpy(s->s_pin_data[4], buf, len);
-			s->s_pin |= GOT_AU_RAND2;
-		}
-		break;
-
-	case LMP_SRES:
-		if (s->s_master != s->s_pin_master) {
-			if (!(s->s_pin & GOT_AU_RAND1))
-				return;
-			memcpy(s->s_pin_data[6], buf, len);
-			s->s_pin |= GOT_SRES1;
-		} else {
-			if (!(s->s_pin & GOT_AU_RAND2))
-				return;
-			memcpy(s->s_pin_data[5], buf, len);
-			s->s_pin |= GOT_SRES2;
-		}
-		break;
-
-	default:
-		return;
-	}
-
-	if (s->s_pin != 0xFF)
-		return;
-
-	printf("btpincrack Go ");
-	if (s->s_pin_master)
-		printf("<master> <slave> ");
-	else
-		printf("<slave> <master> ");
-
-	for (i = 0;  i < 7; i++) {
-		int len = i >= 5 ? 4 : 16;
-
-		for (j = 0; j < len; j++)
-			printf("%.2x", s->s_pin_data[i][j]);
-
-		printf(" ");
-	}
-	printf("\n");
-	s->s_pin = 1;
-}
+*/
 
 
 
@@ -480,57 +408,37 @@ process_lmp(PyState *s, void *buf, int len,
 		}
 	}
 
+	/* run do_pin if s->s_pin */
+
 	// Python code for callback.
 	assert(handler != NULL);
-	if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvlmp"), sniffpkt, NULL))
+	if(!PyObject_CallMethodObjArgs(handler, PyString_FromString("recvlmp"), sniffpkt, NULL))
 	{
 		fprintf(stderr, "process_lmp: error with callback\n");
 		return PyErr_SetFromErrno(SniffError);
 	}
 
 	/* Do in callback handler as well*/
-	if (s->s_dump != -1)
+/*	if (s->s_dump != -1)
 	{
 		dump_lmp(s, buf, len);
 	}
-/*
- *
- * Duplicated this functionality in Python sniffer.LMPPacket class.
-	data = buf;
-	op1 = *data++;
-	len--;
-	assert(len >= 0);
-	tid = op1 & LMP_TID_MASK;
-	op1 >>= LMP_OP1_SHIFT;
-
-	if (op1 >= 124 && op1 <= 127) {
-		op2 = *data++;
-		len--;
-		assert(len >= 0);
-	}
-
-	printf("LMP Tid %d Op1 %d", tid, op1);
-	if (op2 != -1)
-		printf(" Op2 %d", op2);
-
-	printf(": ");
-	hexdump(data, len); */
-
-	/*
-	 * Do not run! This is no longer consistent!
-	if (s->s_pin)
-		do_pin(s, op1, data, len);
-	*/
+*/
 
 	RETURN_VOID
 }
 
 
 static PyObject *
-process_dv(PyState *s, void *buf, int len)
+process_dv(PyState *s, void *buf, int len, PySniffPacket *sniffpkt,
+		PyObject *handler)
 {
-	printf("DV: ");
-	hexdump(buf, len);
+	populateGenPkt(sniffpkt, buf, len);
+	if(!PyObject_CallMethodObjArgs(handler, PyString_FromString("recvdv"), sniffpkt, NULL))
+	{
+		fprintf(stderr, "process_dv: error with callback\n");
+		return PyErr_SetFromErrno(SniffError);
+	}
 	RETURN_VOID
 }
 
@@ -541,7 +449,7 @@ process_payload(PyState *s, void *buf, int len,
 	PyObject *procresult;
 	switch (s->s_type) {
 		case TYPE_DV:
-			procresult = process_dv(s, buf, len);
+			procresult = process_dv(s, buf, len, sniffpkt, handler);
 			return procresult;
 	}
 
@@ -561,7 +469,7 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 	int type = (fp->fp_hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK;
 	int plen = fp->fp_len >> FP_LEN_SHIFT;
 	uint8_t *start = (uint8_t*) fp;
-	//int status = fp->fp_hdr0 & FP_ADDR_MASK;
+	int status = fp->fp_hdr0 & FP_ADDR_MASK;
 	int i;
 	int hlen = fp->fp_hlen;
 
@@ -572,7 +480,8 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 		break;
 	default:
 		printf("Unknown header len %d\n", hlen);
-		abort();
+		//abort();
+		RETURN_VOID
 		break;
 	}
 	start += hlen;
@@ -603,14 +512,15 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 	s->s_llid	= (fp->fp_len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
 	s->s_master	= !(fp->fp_clock & FP_SLAVE_MASK); //this must be kept
 	s->s_type	= type;
-	/* this can be handled in the handler
+	// this can be handled in the handler
+
 	printf("HL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X"
-	       " [type: %d addr: %d] LLID %d Len %d",
+	       " [type: %d addr: %d] LLID %d Len %d\n",
 	       fp->fp_hlen, fp->fp_chan, s->s_master ? 'M' : 'S',
 	       fp->fp_clock & FP_CLOCK_MASK,
 	       fp->fp_clock >> FP_STATUS_SHIFT, fp->fp_hdr0,
 	       type, status, s->s_llid, plen);
-	*/
+
 	len -= hlen;
 	assert(len >= 0);
 	assert(len >= plen);
@@ -657,9 +567,6 @@ process(PyState *state, void *buf, int len, PyObject *handler)
 }
 
 
-// Main function:
-// Take note, we change this to include the string representation of the device
-// as one of the parameters(checked)
 static PyObject *
 basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 {
@@ -703,9 +610,13 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
-	while(1){
+	//while(1){
+	if(state->s_continue) {
+		printf("continue =  %d\n", state->s_continue);
+	}
 
-		//blocking calls need to be sandwiched with this. If I remember correctly.
+	while(state->s_continue){
+
 		Py_BEGIN_ALLOW_THREADS
 		state->s_len = read(state->s_fd, state->s_buf, sizeof(state->s_buf));
 		Py_END_ALLOW_THREADS
@@ -720,15 +631,15 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 
 	}
 
+	printf("continue = 0\n");
 	close_dev(state->s_fd);
 	if(state->s_dump != -1){
 		Py_BEGIN_ALLOW_THREADS
 		close(state->s_dump);
 		Py_END_ALLOW_THREADS
 	}
-	// C Idiom for returning type void
-	Py_INCREF(Py_None);
-	return Py_None;
+
+	RETURN_VOID
 }
 
 /* PyState type definition */
@@ -738,6 +649,7 @@ static int
 PyState_traverse(PyState *self, visitproc visit, void *arg)
 {
 	Py_VISIT(self->s_ignore_list);
+	Py_VISIT(self->s_pindata);
 	return 0;
 }
 
@@ -748,13 +660,22 @@ PyState_clear(PyState *self)
 	tmp = self->s_ignore_list;
 	self->s_ignore_list = NULL;
 	Py_XDECREF(tmp);
+
+	tmp = self->s_pindata;
+	self->s_pindata = NULL;
+	Py_XDECREF(tmp);
+
 	return 0;
 }
 
 static PyMemberDef PyState_members[] = {
 		{"llid", T_INT, offsetof(PyState, s_llid), 0, "LLID"},
-		{"master", T_INT, offsetof(PyState, s_master), 0, "Positive is is master"},
+		{"master", T_INT, offsetof(PyState, s_master), 0, "Positive is master"},
+		{"pinstate", T_UBYTE, offsetof(PyState, s_pin), 0, "Indicates whether pin cracking should be done"},
+		{"cont_sniff", T_BYTE, offsetof(PyState, s_continue), 0, "Signals end of sniffing if false."},
 		{"ignore_types", T_OBJECT_EX, offsetof(PyState, s_ignore_list), 0, "List of types to ignore"},
+		{"pindata", T_OBJECT_EX, offsetof(PyState, s_pindata), 0, "Pin data (used for cracking)"},
+		{"pinmaster", T_INT, offsetof(PyState, s_pin_master), 0, "Is pin master. Used in pincracking"},
 		{"ignore_zero", T_INT, offsetof(PyState, s_ignore_zero), 0, "Ignore zero"},
 		{NULL}
 };
@@ -775,7 +696,9 @@ static PyObject *
 PyState_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
 	PyState *self;
+	PyObject *tmp;
 	unsigned char *p;
+	int i;
 
 	self = (PyState *) type->tp_alloc(type, 0);
 	p = (unsigned char *) &(self->s_fd);
@@ -786,15 +709,37 @@ PyState_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		while( p < (unsigned char *)self + sizeof(PyState))
 			*p++ = 0;
 	}
+
+	// Restrict the type of exposed members
+	self->s_ignore_list = PyList_New(0);
+	if(!self->s_ignore_list)
+		return NULL;
+
+	//Populate number of slots in ignore types
+	for (i = 0; i < MAX_TYPES; i++)
+	{
+		PyList_Append(self->s_ignore_list, PyInt_FromLong(-1));
+	}
+
+	// Set s_pindata to be a 7 by 16 two dimensional list of lists
+	// This is done here to restrict the type and dimensions of s_pindata
+	self->s_pindata = PyList_New(7);
+	if(!self->s_pindata) return NULL;
+	for(i = 0; i  < 7; i++)
+	{
+		tmp = PyList_GetItem(self->s_pindata, i);
+		PyList_SetItem(self->s_pindata, i, PyList_New(16));
+		Py_XDECREF(tmp);
+	}
+	self->s_pin = 0;
+
 	return (PyObject *) self;
 }
 
 static int
 PyState_init(PyState *self, PyObject  *args, PyObject *kwds)
 {
-	self->s_ignore_list = PyList_New(0);
-	if(!self->s_ignore_list)
-		return -1;
+	self->s_continue = 1;
 	return 0;
 }
 

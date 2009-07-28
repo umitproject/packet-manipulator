@@ -1,7 +1,7 @@
 import umit.bluetooth.sniff_fileio as sfio
 import umit.bluetooth.sniff as sniff
 import umit.bluetooth.sniffer as sniffer
-
+import umit.bluetooth.handlers as handlers
 
 class HCIDumpHandler(sniff.SniffHandler):
     
@@ -10,7 +10,7 @@ class HCIDumpHandler(sniff.SniffHandler):
         if not writer:
             writer = sfio.HCIWriter()
         self._writer = writer
-        self._lmpbasehandler = sniffer.BTSniffHandler()
+        self._lmpbasehandler = handlers.BTSniffHandler()
         if state and write_file:
             self._state = state
             self._write_file = write_file
@@ -38,7 +38,7 @@ class HCIDumpHandler(sniff.SniffHandler):
 if __name__=='__main__':
 #    sniffer.run(handler = HCIDumpHandler(state = start_state, write_file = 'eg1hcidump.cap'),
 #                state = start_state)
-    #bthandler = sniffer.BTSniffHandler()
+    hcihandler = handlers.BTSniffHandler()
     start_state = sniff.State()
-    hcihandler = HCIDumpHandler(start_state, "eg1.cap") 
+    #hcihandler = HCIDumpHandler(start_state, "eg1.cap") 
     sniffer.run(handler = hcihandler, state = start_state)

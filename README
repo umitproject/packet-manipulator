@@ -1,6 +1,12 @@
 Umit Bluetooth Sniffer - A Google Summer of Code 2009 project
 ==========================
 
+Configuration 
+=====================
+Depending on the firmware installed on the dongle, define FIRMWARE_47 
+in basesniffmodule.h before build.
+
+
 This version(0.1) is not ready for install as of yet.
 
 To run development build:

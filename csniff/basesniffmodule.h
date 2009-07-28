@@ -7,7 +7,7 @@
 /**
  * Define firmware version
  */
-#define FIRMWARE_47
+//#define FIRMWARE_47
 
 /* Constants from frontline.c */
 #define STATUS_OK		0
@@ -109,9 +109,11 @@ typedef struct {
 	int	s_dump;
 	int	s_ignore_zero;
 	int	s_type;
+	uint8_t s_continue;
 	uint8_t	s_pin;
 	uint8_t	s_pin_data[7][16];
 	int	s_pin_master;
+	PyObject *s_pindata;
 	PyObject *s_ignore_list;
 
 } __packed PyState;

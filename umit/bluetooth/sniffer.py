@@ -1,8 +1,85 @@
 import sniff
 from sniffcommon import *
+import handlers
 import struct
 
+# TODO: State machine for sniffing. To control threads (e.g. running of pincracking, we
+# should not resync the sniffer)
 
+####     Classes for the backend     #### 
+
+import threading
+
+_runnerthread = None
+
+class SniffRunner(object):
+    
+    def __init__(self, session, handler, synctime = 30.0):
+        # super(threading.Thread, self).__init__()
+        self._session, self._handler = session, handler
+        self._synctime = synctime
+
+    def sync(self):
+        """
+            Every _synctime seconds we are to sync to  compensate for DC-offset.
+        """
+        self._session.state.cont_sniff = 0
+        try:
+            print 'Stopping'
+            sniff.stop_sniff(self._session.state, self._session.device)
+            print 'Set filter'
+            sniff.set_filter(self._session.state, self._session.device, 
+                             self._session.filter)
+            print 'Starting'
+            sniff.start_sniff(self._session.state, self._session.device,
+                              self._session.master, self._session.slave)
+            self._session.state.cont_sniff = 1
+            # Continue sniffing
+            print 'Continue sniff'
+            sniff.sniff(self._session.state, self._session.device, self._session.dump,
+                        self._handler)
+        except:
+            print 'General exception'
+            import sys
+            print sys.exc_info()        
+            self._session.state.cont_sniff = 0
+            exit()
+            if _runnerthread and _runnerthead.isAlive():
+                print 'Cancelling running thread'
+                _runnerthread.cancel()
+#        except sniff.SniffError: 
+#            self._session.state.cont_sniff = 0
+#            if _runnerthread:
+#                _runnerthread.cancel()
+#        except KeyboardInterrupt:
+#            print "Keyboard Interrupt"
+#            if _runnerthread:
+#                _runnerthread.cancel()
+        
+            
+        
+    def sniff(self):
+        sniff.sniff(self._session.state, self._session.device, self._session.dump,
+                    self._handler)
+#        _runnerthread = threading.Timer(self._synctime, self.sync)
+#        _runnerthread.start()
+#        try:
+#            self.sync()
+#        except KeyboardInterrupt:
+#            _runnerthread.cancel()
+#            exit()
+        
+    def run(self):
+        print "Start sniffing"
+#        self.sniff()
+        self.sync()
+
+###############################################
+#    Data structures for Bluetooth packets    #
+###############################################
+
+## This class is not used at all in the program.
+## Mark for removal.
 class L2CAPPacket(object):
     
     def __init__(self, packet = None):
@@ -12,6 +89,14 @@ class L2CAPPacket(object):
     
     def getdata(self):
         return self._packet.data
+    
+    def __repr__(self):
+        return str(self)
+    
+    def __str__(self):
+        pstr = 'L2CAP: '
+        payloadstr = (len(self.getdata()) * '%.2X ' % tuple(self.getdata())) if len(self.getdata()) else None
+        return ' '.join([pstr, payloadstr if payloadstr else ''])
     
     data = property(getdata, None)
 
@@ -55,58 +140,7 @@ class LMPPacket(object):
     tid = property(gettid, None)
     data = property(getdata, None)
 
-class BTSniffHandler(sniff.SniffHandler):
-    """
-        Subclassed SniffHandler can be wired to handle recvpacket events
-    """
-    def __init__(self):
-        super(sniff.SniffHandler, self).__init__()
-    
-    def recvgenevt(self, packet):
-        """
-            Parameters:
-            packet    -    sniff.SniffPacket
-        """
-        master = not (packet.clock & FP_SLAVE_MASK)
-        header_len = packet.hlen
-        channel = packet.chan
-        clock = packet.clock & FP_CLOCK_MASK
-        status = packet.clock >> FP_STATUS_SHIFT
-        hdr0 = packet.hdr0
-        type = (hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK
-        address = hdr0 & FP_ADDR_MASK
-        llid = (packet.len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK
-        length = packet.len >> FP_LEN_SHIFT
-        
-        print 'PL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X [type: %d addr: %d] LLID %d Len %d' \
-                        % (header_len, 
-                            channel,
-                            'M' if master else 'S',
-                            clock, 
-                            status,
-                            hdr0,
-                            type,
-                            address,
-                            llid,
-                            length),
-    
-    def recvdv(self, packet):
-        pass
-    def recvl2cap(self, packet):
-        self.recvdv(packet)
-        
-    def recvlmp(self, packet):
-        """
-            Do duplicate printing as to the original frontline tool. Used to manually diff the 2 outputs
-            This can be modified to do anything we wish with the received packet.
-        """
-        self.recvgenevt(packet)
-        # Process payload. We watch for LMPs
-        if packet.payload:
-            paypkt = LMPPacket(packet.payload)
-            print str(paypkt)
-        else: print 
-        
+
 
 def parse_macs(mac_add):
     """
@@ -126,14 +160,17 @@ def parse_macs(mac_add):
     maclist = []
     if(m and len(m.groups()) == 6):
         for i in range(1, 6 + 1):
-            maclist.append(int(m.group(i), 16)) #base 16 representation
+            maclist.append(int(m.group(i), 16)) # base 16 representation
     else:
-        raise UmitBTError("Invalid mac address: " + mac_add) #raise an error here. invalid mac address
+        raise sniff.SniffError("Invalid mac address: " + mac_add) #raise an error here. invalid mac address
     return maclist
 
 
 def getcmdoptions():
-        # Process command line arguments.
+    '''
+        Returns tuple (option, args) from OptionParser
+    '''
+    # Process command line arguments.
     from optparse import OptionParser
     parser = OptionParser() 
         
@@ -155,23 +192,23 @@ def getcmdoptions():
                           help='sniff')
     parser.add_option('-w', action='store', dest='dump', type='string',
                           help='<dump_to_file>')
-    parser.add_option('-p', action='store', dest='pin', 
+    parser.add_option('-p', action='store', dest='pin', default = False,
                           help='own pin')
     return parser.parse_args()
     
-    
+
 def run(handler = None, state = None):
-    
+    print "Sniffer run"
     if not handler:
-        handler = BTSniffHandler()
+        handler = handlers.BTSniffHandler()
     if not state:
         state = sniff.State()
 
     (options, args) = getcmdoptions()
 
     state.ignore_zero = 1 if options.ignore_zero else 0
-    for i in range(MAX_SNIFF_TYPES):
-        state.ignore_types.append(-1)
+#    for i in range(MAX_SNIFF_TYPES):
+#        state.ignore_types.append(-1)
     # Note for ignore_types as of now we only allow ignoring of one type
     state.ignore_types[0] = options.ignore_type if options.ignore_type else -1
     
@@ -197,6 +234,7 @@ def run(handler = None, state = None):
     
     if options.snif:
         sniff.sniff(state, options.device, options.dump, handler)
+
 
 
   

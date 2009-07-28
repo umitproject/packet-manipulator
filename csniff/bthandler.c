@@ -9,7 +9,6 @@
 #include "structmember.h"
 
 
-
 static int
 PyGenericPacket_traverse(PyGenericPacket *self, visitproc visit, void *arg)
 {
@@ -26,7 +25,6 @@ PyGenericPacket_clear(PyGenericPacket *self)
 	Py_XDECREF(tmp);
 	return 0;
 }
-
 
 static int
 PyGenericPacket_init(PyGenericPacket *self, PyObject *args, PyObject *kwds)

@@ -1,3 +1,26 @@
+2009-07-28 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added second example (test_pincrackrunner()) to illustrate pin-cracking use. Does not do real-time sniffing as part 
+		of pin-cracking. Added example (mainI()) that does pin-cracking with sniffing.
+		- eg2runner.py
+	* Added PinCrackData data structure (attribute of SniffSession) to store relevant LMP data for pin-cracking. 
+	Pin-cracking designed to be done asynchronous to sniffing.
+		- sniffcommon.py
+	* PinCrackRunner Thread subclass for pincracking.
+		- crack.py
+	* Added script to setup examples for running in build directory. Copies btpincrack-v0.3 into build directory.
+		- examples/setupegs
+
+2009-07-21 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added module for all cracks. Contains private function that does legwork for computation of pin.
+		- sniffcrack.c/h
+		- crack.py
+	* Added SniffSession class as blanket structure for details that might be needed for sniffing.
+		- sniffcommon.py
+	* handlers module added. Refactoring: BTSniffHandler added to handlers. New handler: FrontlineHandler 
+	which duplicates the functionality of the original frontline tool.
+		- handlers.py
 
 2009-07-15 Quek Shu Yang (quekshuy@gmail.com)
 ==============================================
