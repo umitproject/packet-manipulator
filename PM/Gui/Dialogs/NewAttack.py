@@ -72,7 +72,7 @@ class NewAttackDialog(gtk.Dialog):
 
         table.show_all()
 
-        for btn in self.get_action_area():
+        for btn in self.action_area:
             if btn.get_label() == gtk.STOCK_NEW:
                 self.intf1_combo.connect('changed', self.__on_changed, btn)
                 self.intf2_combo.connect('changed', self.__on_changed, btn)

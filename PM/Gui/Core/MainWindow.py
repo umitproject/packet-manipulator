@@ -237,6 +237,8 @@ class MainWindow(gtk.Window):
         attackitem = self.ui_manager.get_widget('/menubar/Attacks')
         menu = attackitem.get_submenu()
 
+        attackitem.show()
+
         if not menu:
             menu = gtk.Menu()
             attackitem.set_submenu(menu)
