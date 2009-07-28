@@ -19,19 +19,43 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from datetime import datetime
+
 from PM.Core.Logger import log
 from PM.Core.Atoms import generate_traceback
-from PM.Backend.Scapy.translator import global_trans
-from PM.Backend.Scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
-                                       Raw, IP, get_proto_size
 from PM.Core.NetConst import IL_TYPE_ETH, IL_TYPE_TR, IL_TYPE_FDDI, \
                              IL_TYPE_RAWIP, IL_TYPE_WIFI, IL_TYPE_COOK, \
                              IL_TYPE_PRISM
+
+from PM.Backend.Scapy.translator import global_trans
+from PM.Backend.Scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
+                                       Raw, IP, get_proto_size, get_proto
+
 
 class MetaPacket(object):
     def __init__(self, proto=None, cfields=None):
         self.root = proto
         self.cfields = cfields or {}
+
+    def __div__(self, other):
+        cfields = self.cfields.copy()
+        cfields.update(other.cfields)
+
+        return MetaPacket(self.root / other.root, cfields)
+
+    def hashret(self):
+        return self.root.hashret()
+
+    def answers(self, other):
+        return self.root.answers(other.root)
+
+    @classmethod
+    def new(cls, proto_name):
+        try:
+            klass = global_trans[proto_name][0]
+            return MetaPacket(klass())
+        except ValueError:
+            log.error('Protocol %s not registered. Add it to global_trans')
+            return None
 
     def insert(self, proto, layer):
         if layer == -1:
@@ -259,7 +283,22 @@ class MetaPacket(object):
         return None
 
     def set_field(self, fieldname, value):
-        print "IMPLEMENT ME"
+        try:
+            ret = fieldname.split('.')
+            layer = self.root.getlayer(global_trans[ret[0]][0])
+
+            if not layer:
+                return None
+
+            if len(ret) > 1:
+                setattr(layer, ret[1], value)
+            else:
+                log.error('Cannot set an entire protocol')
+
+        except Exception, err:
+            log.error('Error while setting %s field to %s. Traceback:' % \
+                      (fieldname, repr(value)))
+            log.error(generate_traceback())
 
     def get_field(self, fieldname):
         try:
@@ -274,7 +313,7 @@ class MetaPacket(object):
             else:
                 return str(layer)
         except Exception, err:
-            log.error('Error in get_field. Traceback:')
+            log.error('Error while getting %s field. Traceback:' % fieldname)
             log.error(generate_traceback())
             return None
 

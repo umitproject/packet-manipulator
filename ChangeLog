@@ -1,4 +1,55 @@
-2009-06-24 Francesco Piccinno <stack.box@gmail.com>
+2009-07-27 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/offline/tcp/sources/main.py:
+        - Moving connection enumeration in NetConst module.
+        - Adding get_source(), get_dest(), get_bytes() method to TCPStream
+          objects.
+        - Reassembler now makes use of an inject callback to manage packet
+          injection and modification.
+    * attacks/online/arpping/sources/main.py:
+        - Add simple ARP ping online plugin that show how the online
+          infrastructure is organized. It simply send who-has arp packet
+          and wait for the reply by using deferred style callback provided
+          by the new AttackContext.
+    * attacks/online/injector/sources/main.py:
+        - Add general purpose injector online plugin.
+        - It provides a tree view where you could view active connections
+          and kill a selected for the moment. The entire part relative to
+          the real injection is missing but is going to be implemented soon.
+    * README:
+        - Fixing trailing spaces and correcting the site.
+    * PM/Gui/Core/MainWindow.py:
+        - The attack menu is set sensitive only if the active page is an
+          AttackSession.
+        - Add new public function start_new_attack() used by App.py.
+    * PM/Gui/Core/App.py:
+        - Now we have an '-a' command line option to launch an attack.
+    * PM/Backend/Scapy/translator.py:
+        - Adding 'arp' alias for ARP protocol.
+    * PM/Backend/Scapy/Context/Attack.py:
+        - Add a SendWorker class to manage the send of the packets trough
+          the thread pool.
+        - Now we have si_l{2,3,b}, s_l{2,3,b} and sr_l{2,3,b} to send packets
+          trough the sockets opened for the attack.
+        - s_* and sr_* functions accept deferred style callbacks.
+        - Everything is consumed in a thread pool so make sure to isolate your
+          code with mutexes if necessary.
+    * PM/Backend/Scapy/packet.py:
+        - Add missing __div__ operator to concatenate various packets together.
+        - Add hashret() and answers() method to manage the replies.
+        - Add new() classmethod to create new packets.
+        - Implemented set_field() method.
+    * PM/Core/NetConst.py:
+        - Rearranging INJ_* constants and adding CONN_* from tcpdecoder plugin.
+    * PM/Manager/AttackManager.py:
+        - Adding attack_sess parameter to execute_attack()
+        - Various fix.
+
+    - Online infrastructure finished.
+    - ARPPing plugin added.
+    - Injector plugin added but still incomplete.
+
+2009-07-24 Francesco Piccinno <stack.box@gmail.com>
+
     * PacketManipulator
         - Setting PM_NOPSYCO to avoid using psyco module while developing.
     * PM/Gui/Sessions/AttackSession.py:
@@ -38,7 +89,11 @@
     * PM/Backend/Scapy/Context/Attack.py:
         - First implementation of Scapy AttackContext.
 
+    - General bug fixing.
+    - First implemenntation of AttackContext
+
 2009-07-23 Francesco Piccinno <stack.box@gmail.com>
+
     * PM/Gui/Tabs/MainTab.py:
         - Fixing the background color of gtk.EventBox to avoid wrong colors
           on dark color gtk themes.
@@ -111,12 +166,13 @@
     * PM/Core/AttackUtils.py:
         - Add new string utilities functions like is_ip() and is_mac() that
           could be used by various plugins.
-    
+
     - Various bug fixes.
     - Introducing HostListTab.
     - Preparing the environment for the online attacks.
 
 2009-07-13 Francesco Piccinno <stack.box@gmail.com>
+
     * plugins/http-analyzer/sources/main.py:
         - Now HTTP analyzer can plot numeric cookies for further analysis.
           This is useful when the user needs to check if the next cookie is
@@ -155,7 +211,7 @@
     * PM/Gui/Plugins/Engine.py:
         - Fixed a stupid bug.
     * PM/Gui/Plugins/AttackPage.py:
-        - Now we have an attack tab where the user could load, find and 
+        - Now we have an attack tab where the user could load, find and
           configures various attacks with a friendly UI.
     * PM/Gui/Plugins/PluginPage.py:
         - Plugin are now hidden in the plugin page and only showed in update
@@ -194,6 +250,7 @@
     - Attacks configurations are now stored to attacks-conf.xml file.
 
 2009-07-07 Francesco Piccinno <stack.box@gmail.com>
+
     * plugins/http-analyzer/sources/main.py:
         - Add HTTP analyzer plugin that exploits cfields setted from
           http dissector attack. Cookie analyzer is not implemented yet.
@@ -245,6 +302,7 @@
     - HTTP analyzer plugin started.
 
 2009-06-29 Francesco Piccinno <stack.box@gmail.com>
+
     * attacks/offline/http/sources/main.py:
         - First implementation of HTTP decoder/dissector.
     * attacks/offline/profiler/sources/main.py:
@@ -283,6 +341,7 @@
     - Initial work on HTTP dissector and TCP stream reassembling.
 
 2009-06-22 Francesco Piccinno <stack.box@gmail.com>
+
     * attacks/offline/fingerprint/sources/main.py:
         - Now we use a remote_os cfield to set the fingerprint on a packet.
         - Renamed various classes.
@@ -339,6 +398,7 @@
     - General bug fixing.
 
 2009-06-13 Francesco Piccinno <stack.box@gmail.com>
+
     * attacks/run-tester.sh:
         - Simple attacktester.py runner to avoid setting PYTHONPATH at every
           run.
@@ -398,6 +458,7 @@
       speed up the development phase.
 
 2009-06-07 Francesco Piccinno <stack.box@gmail.com>
+
     * PM/Gui/Pages/SniffPage.py:
         - Fixing a bug due to check_finished() called on context that doesn't
           provide, like Sequence.
@@ -446,6 +507,7 @@
     - Helper methods for SendReceiveContext and SequenceContext.
 
 2009-06-02 Francesco Piccinno <stack.box@gmail.com>
+
     * attacks/offline/wifi/sources/main.py:
         - First (dummy) implementation of Wifi decoder module.
     * attacks/offline/ethernet/sources/main.py:
@@ -479,7 +541,7 @@
         - Add AttackDispatcher class to separate the feed behaviour from the
           Singleton class. This lets you call various dispatcher without
           having the mess to create a single AttackManager for every invocation.
-        - Add AttackPlugin as base class and the derived one OfflineAttack, 
+        - Add AttackPlugin as base class and the derived one OfflineAttack,
           OnlineAttack.
         - Add AttackTester class used for testing purpose.
 
@@ -487,6 +549,7 @@
      - First approach of AttackFramework idea.
 
 2009-05-24  Francesco Piccinno  <stack.box@gmail.com>
+
     * PM/Gui/Widgets/Plotter.py
       PM/Gui/Widgets/PropertyGrid.py:
         - Fixing various bugs due to ConditionalField used by Scapy.
@@ -518,6 +581,7 @@
     - 80 columns line wrap fixed in various files and general bug fixing.
 
 2009-05-19 Francesco Piccinno <stack.box@gmail.com>
+
     * PM/Backend/Scapy/Context/Sniff.py
       PM/Backend/Scapy/utils.py:
         - Moving helper related code to utils.
@@ -535,6 +599,7 @@
     - Win32 fixes.
 
 2009-05-18 Francesco Piccinno <stack.box@gmail.com>
+
     * PM/Backend/Scapy/Context/Sniff.py
       PM/Backend/Scapy/utils.py:
         - Moving all helper related code to utils.py to make SendReceive and

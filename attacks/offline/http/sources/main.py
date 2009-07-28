@@ -500,7 +500,7 @@ class HTTPDissector(Plugin, OfflineAttack):
 
             del self.sessions[hash(stream)]
 
-        return INJ_COLLECT_MORE
+        return INJ_COLLECT_DATA
 
 
 __plugins__ = [HTTPDissector]

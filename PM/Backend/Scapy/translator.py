@@ -18,12 +18,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from PM.Backend.Scapy.wrapper import Ether, IP, TCP, ICMP, Raw
+from PM.Backend.Scapy.wrapper import Ether, ARP, IP, TCP, ICMP, Raw
 
 # Scapy seems to respec wireshark nomenclature for protocol and fields.
 
 global_trans = {
     'eth' : (Ether, None),
+    'arp' : (ARP, None),
     'ip' : (IP, None),
     'icmp' : (ICMP, None),
     'tcp' : (TCP, None),

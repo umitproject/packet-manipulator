@@ -115,24 +115,14 @@ class HalfStream(object):
 
         self.rmem_alloc = 0
         self.count_new = 0
+        self.count = 0
         self.data = ''
         self.urgdata = ''
 
         self.plist = None
         self.plist_tail = None
 
-    def get_count(self): return len(self.data)
-
-    count = property(get_count)
-
 class TCPStream(object):
-    CONN_UNDEFINED        = -1
-    CONN_JUST_ESTABLISHED = 0
-    CONN_DATA             = 1
-    CONN_RESET            = 2
-    CONN_CLOSE            = 3
-    CONN_TIMED_OUT        = 4
-
     def __init__(self, source, dest, sport, dport):
         self.reset(source, dest, sport, dport)
 
@@ -142,7 +132,7 @@ class TCPStream(object):
         self.sport = sport
         self.dport = dport
 
-        self.state = TCPStream.CONN_UNDEFINED
+        self.state = CONN_UNDEFINED
 
         self.client = HalfStream()
         self.server = HalfStream()
@@ -152,6 +142,16 @@ class TCPStream(object):
         self.next_free = None
 
         self.listeners = []
+
+    def get_source(self):
+        "@return the dotted decimal form of source IP"
+        return inet_ntoa(self.source)
+    def get_dest(self):
+        "@return the dotted decimal form of destination IP"
+        return inet_ntoa(self.dest)
+    def get_bytes(self):
+        "@return the bytes collected of the session"
+        return self.client.count + self.server.count
 
     def __hash__(self):
         return hash(self.source) ^ hash(self.sport) ^ \
@@ -183,6 +183,8 @@ class Reassembler(object):
         self.tcp_streams = {}
         self.free_streams = None
         self.tcp_timeouts = None
+
+        self._inject_cb = None
 
         for i in xrange(self.max_streams):
             stream = TCPStream(None, None, None, None)
@@ -230,7 +232,7 @@ class Reassembler(object):
         if hlf.state not in (TCP_SYN_SENT, TCP_SYN_RECV):
             return
 
-        stream.state = stream.CONN_RESET
+        stream.state = CONN_RESET
 
         for listener in stream.listeners:
             listener(stream, mpkt, None)
@@ -321,8 +323,8 @@ class Reassembler(object):
             return
 
         if tcpflags & TH_RST:
-            if stream.state == stream.CONN_DATA:
-                stream.state = stream.CONN_RESET
+            if stream.state == CONN_DATA:
+                stream.state = CONN_RESET
 
                 for listener in stream.listeners:
                     listener(stream, mpkt, None)
@@ -342,7 +344,7 @@ class Reassembler(object):
                     stream.client.ack_seq = tcpack
 
                     stream.server.state = TCP_ESTABLISHED
-                    stream.state = stream.CONN_JUST_ESTABLISHED
+                    stream.state = CONN_JUST_ESTABLISHED
 
                     for callback in self.analyzers:
                         callback(stream, mpkt)
@@ -351,7 +353,7 @@ class Reassembler(object):
                         self.free_tcp_stream(stream)
                         return
 
-                    stream.state = stream.CONN_DATA
+                    stream.state = CONN_DATA
 
         if tcpflags & TH_ACK:
             if tcpack - snd.ack_seq > 0:
@@ -360,7 +362,7 @@ class Reassembler(object):
             if rcv.state == FIN_SENT:
                 rcv.state = FIN_CONFIRMED
             if rcv.state == FIN_CONFIRMED and snd.state == FIN_CONFIRMED:
-                stream.state = stream.CONN_CLOSE
+                stream.state = CONN_CLOSE
 
                 for listener in stream.listeners:
                     listener(stream, mpkt, None)
@@ -403,30 +405,34 @@ class Reassembler(object):
     def add2buf(self, mpkt, rcv, data):
         rcv.data += data
         rcv.count_new = len(data)
+        rcv.count += rcv.count_new
 
     def notify(self, mpkt, stream, rcv):
+        ret = INJ_SKIP_PACKET
+
         for listener in stream.listeners:
-            ret = listener(stream, mpkt, rcv)
+            ret = max(ret,
+                       listener(stream, mpkt, rcv))
 
-            if ret == INJ_COLLECT_MORE:
-                print 'Collecting more packets'
-            else:
-                rcv.count_new = 0
-                rcv.data = ''
+            if ret == INJ_MODIFIED or ret == INJ_FORWARD:
 
-            if ret == INJ_MODIFIED:
-                # If you want to force the send of dirty packets
-                # just modify it and return INJ_FORWARD that sends the packet
-                # on L3 without any modifications.
-                print 'Recompute checksum here.'
+                if callable(self._inject_cb):
+                    self._inject_cb(ret, mpkt, stream, rcv)
 
-                ret = INJ_FORWARD
+                return
 
-            if ret == INJ_FORWARD:
-                print 'Forwarding packet'
+        if ret == INJ_COLLECT_STATS:
+            print 'Collecting stats'
+            rcv.data = ''
+        elif ret == INJ_SKIP_PACKET:
+            print 'Skipping packet'
+            rcv.count_new = 0
+            rcv.data = ''
+        else:
+            print 'Collecting data'
 
-            print inet_ntoa(stream.source), stream.sport, \
-                  inet_ntoa(stream.dest), stream.dport
+        print inet_ntoa(stream.source), stream.sport, \
+              inet_ntoa(stream.dest), stream.dport
 
     def add_from_skb(self, stream, mpkt, rcv, snd, payload, datalen, tcpseq, \
                      fin, urg, urg_ptr):
@@ -595,7 +601,7 @@ class Reassembler(object):
 
         if self.n_streams >= self.max_streams:
             orig_client_state = self.oldest_stream.client.state
-            self.oldest_stream.state = self.oldest_stream.CONN_TIMED_OUT
+            self.oldest_stream.state = CONN_TIMED_OUT
 
             for listener in self.oldest_stream.listeners:
                 listener(self.oldest_stream, mpkt, None)
@@ -782,6 +788,17 @@ class Reassembler(object):
         self.free_streams = stream
 
         self.n_streams -= 1
+
+    def get_inject_cb(self):
+        return self._inject_cb
+
+    def set_inject_cb(self, value):
+        if callable(value):
+            log.debug('Setting inject_cb to %s' % value)
+            self._inject_cb = value
+
+    inject_cb = property(get_inject_cb, set_inject_cb,
+                         doc="Callback to manage injections of TCP packets")
 
 class TCPDecoder(Plugin, OfflineAttack):
     def start(self, reader):

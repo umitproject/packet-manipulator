@@ -557,19 +557,24 @@ class OnlineAttack(AttackPlugin):
             name, lbl, tooltip, stock, self.on_input_request
         )
 
-    def execute_attack(self, input_dct=None):
+    def execute_attack(self, attack_sess, input_dct=None):
         """
         Overload me.
+        @param attack_sess an AttackSession object.
+        @param input_dict a dict containing attack inputs.
         @return a bool with True if the attack is executed or False
         """
         raise Exception('This method must be overloaded.')
 
     def on_input_request(self, action):
-        if not self.__inputs__:
-            return self.execute_attack()
-
         import gtk
         import PM.Gui.Core.App
+
+        if not self.__inputs__:
+            tab = PM.Gui.Core.App.PMApp().main_window.get_tab('MainTab')
+            attack_sess = tab.session_notebook.get_current_session()
+
+            return self.execute_attack(attack_sess, {})
 
         dialog = gtk.Dialog(_('Inputs for %s - PacketManipulator') % \
                             self.__class__.__name__,
@@ -635,6 +640,7 @@ class OnlineAttack(AttackPlugin):
 
     def __on_dialog_response(self, dialog, rid):
         import gtk
+        import PM.Gui.Core.App
 
         if rid != gtk.RESPONSE_ACCEPT:
             dialog.hide()
@@ -667,7 +673,10 @@ class OnlineAttack(AttackPlugin):
         dialog.hide()
         dialog.destroy()
 
-        self.execute_attack(inp_dict)
+        tab = PM.Gui.Core.App.PMApp().main_window.get_tab('MainTab')
+        attack_sess = tab.session_notebook.get_current_session()
+
+        self.execute_attack(attack_sess, inp_dict)
 
 ###############################################################################
 # Testing classes

@@ -92,6 +92,19 @@ ICMP_CODE_HOST_UNREACH  = 1
 # Injection stuff
 ###############################################################################
 
-INJ_COLLECT_MORE = 0
-INJ_FORWARD      = 1
-INJ_MODIFIED     = 2
+INJ_SKIP_PACKET   = 0 # Useless packet skip it
+INJ_COLLECT_DATA  = 1 # Data collection
+INJ_COLLECT_STATS = 2 # Drop data collect only number of bytes
+INJ_FORWARD       = 3 # Forward the packet as is
+INJ_MODIFIED      = 4 # Forward the packet but recompute checksums
+
+###############################################################################
+# Connection tracking constants
+###############################################################################
+
+CONN_UNDEFINED        = -1
+CONN_JUST_ESTABLISHED = 0
+CONN_DATA             = 1
+CONN_RESET            = 2
+CONN_CLOSE            = 3
+CONN_TIMED_OUT        = 4

@@ -7,8 +7,8 @@ Introduction
 
    The project goal is to develop a frontend that is really useful for
    advanced users and easy to be used by newbies. With PacketManipulator,
-   network admin can forge custom packets and send them over the wire 
-   to analyze the network, sniff on a selected interface or simply edit 
+   network admin can forge custom packets and send them over the wire
+   to analyze the network, sniff on a selected interface or simply edit
    a pcap file for further replay.
 
    For bugs/suggestions please contact the author or create a ticket on
@@ -52,7 +52,7 @@ Authors
 
 Homepage
 
-   http://trac.umitproject.org/wiki/PacketManipulator/FrontEnd
+   http://manipulator.umitproject.org
 
 Links
 

@@ -76,6 +76,8 @@ from PM.Gui.Plugins.Window import PluginWindow
 from PM.Gui.Pages import PerspectiveType
 
 from PM.Gui.Sessions.Base import Session
+from PM.Gui.Sessions.AttackSession import AttackSession
+
 from PM.Gui.Sessions import SessionType
 
 from PM.Core.I18N import _
@@ -234,8 +236,6 @@ class MainWindow(gtk.Window):
     def register_attack_item(self, name, lbl, tooltip, stock, callback):
         attackitem = self.ui_manager.get_widget('/menubar/Attacks')
         menu = attackitem.get_submenu()
-
-        attackitem.set_sensitive(True)
 
         if not menu:
             menu = gtk.Menu()
@@ -610,6 +610,8 @@ class MainWindow(gtk.Window):
                                          self.__on_maintab_page_added)
         maintab.session_notebook.connect('page-removed',
                                          self.__on_maintab_page_removed)
+        maintab.session_notebook.connect('switch-page',
+                                         self.__on_maintab_page_switched)
 
     def connect_tabs_signals(self):
         "Used to connect signals between tabs"
@@ -642,6 +644,18 @@ class MainWindow(gtk.Window):
                     callback(perspective, idx, True, False)
             except:
                 pass
+
+    def __on_maintab_page_switched(self, notebook, page, pagenum):
+        page = notebook.get_nth_page(pagenum)
+        item = self.ui_manager.get_widget('/menubar/Attacks')
+
+        if not isinstance(page, AttackSession):
+            item.set_sensitive(False)
+        else:
+            submenu = item.get_submenu()
+
+            if submenu and submenu.get_children():
+                item.set_sensitive(True)
 
     def __on_toggle_tab_menu(self, menuitem, tab):
         if menuitem.get_active():
@@ -713,16 +727,19 @@ class MainWindow(gtk.Window):
         dialog.hide()
         dialog.destroy()
 
+    def start_new_attack(self, dev1, dev2, bpf_filter):
+        log.debug('Creating a new AttackOperation using %s %s %s' \
+                  % (dev1, dev2, bpf_filter))
+
+        tab = self.get_tab('OperationsTab')
+        tab.tree.append_operation(AttackOperation(dev1, dev2, bpf_filter))
+
     def __on_new_attack(self, action):
         dialog = NewAttackDialog(self)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             inputs = dialog.get_inputs()
-
-            log.debug('Creating a new AttackOperation using %s %s %s' % inputs)
-
-            tab = self.get_tab('OperationsTab')
-            tab.tree.append_operation(AttackOperation(*inputs))
+            self.start_new_attack(*inputs)
 
         dialog.hide()
         dialog.destroy()
