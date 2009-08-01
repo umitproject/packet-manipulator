@@ -130,7 +130,7 @@ class FrontlineHandler(sniff.SniffHandler):
             
         if self._session.state.pinstate:
             print 'do pin'
-            pcd = crack.gen_pincrackdata(self._session.state, paypkt.op1, paypkt.data,
+            pcd = crack._gen_pincrackdata(self._session.state, paypkt.op1, paypkt.data,
                                  self._session.master, self._session.slave)
 #            print '============== pindata state ============'
 #            print self._session.state.pindata

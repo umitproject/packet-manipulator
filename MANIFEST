@@ -14,5 +14,6 @@ umit/bluetooth/__init__.py
 umit/bluetooth/sniffcommon.py
 umit/bluetooth/sniffer.py
 umit/bluetooth/crack.py
+umit/bluetooth/handlers.py
 scripts/devrun
 

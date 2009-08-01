@@ -10,85 +10,28 @@ import subprocess, os, re, threading, string
 BTPINCRACKDIR = 'btpincrack-v0.3'
 CRACKPROG = 'btpincrack'
 
-def gen_pincrackdata(state, op, data_list, master_add, slave_add):
-    """
-        Returns None when pin not ready. Otherwise return a sniffcommon.PinCrackData
-        object, that stores info relevant to pin cracking.
-        Parameters:
-            state         - sniffer.State object
-            op            - is the op1 code for the corresponding LMP PDU
-            data_list     - LMP PDU payload as a list of integers
-            master_add    - list of integers representing master MAC
-            slave_add     - list of integers representing slave MAC
-    """
-    _crack._setpindata(state, op, data_list)
+
+class PinCrackHelper(object):
     
-    # Only print when condition is met
-    if not state.pinstate == 0xff:
-        return None
-    else:
-        # TODO : populate the PinCrackData object and return
-        state.pinstate = 1
-        return _create_pincrackdata(state)
+    def __init__(self, session, pincrackrunner = None):
+        if pincrackrunner:
+            self._pcr = pincrackrunner
+        self._session = session
+    
+    def submitpkt(self, lmppkt):
+        _gen_pincrackdata(self._session.state, lmppkt.op1, lmppkt.data,
+                          self._session.master, self._session.slave)
+    
+
         
-#        print "done: dataprintout"
-#        print state.pindata
-    
-#    for i in range(7):
-#        length  =  4 if i >= 5 else 16
-#        pdsubstr = ''
-#        for j in range(length):
-#            pdsubstr = ''.join([pdsubstr, '%.2x' % state.pindata[i][j]])
-#        
-#        pindatastrs = ' '.join([pindatastrs, pdsubstr])
-#    
-#    cmd = BTPINCRACKDIR + os.sep + CRACKPROG + ' Go'    
-#    if state.pinmaster:
-#        cmd = ' '.join([cmd, ':'.join(['%.2x' % d for d in master_add]), 
-#                        ':'.join(['%.2x' % d for d in slave_add]), pindatastrs])
-#    else:
-#        cmd = ' '.join([cmd, ':'.join(['%.2x' % d for d in slave_add]), 
-#                        ':'.join(['%.2x' % d for d in master_add]), pindatastrs])
-#    ##
-#    ##    TODO: We should have pincracking done in a separate thread.
-#    ##    Otherwise, there will be unnecessary delay to sniffing
-#    ##
-#    if os.path.exists(BTPINCRACKDIR + os.sep + CRACKPROG):
-#        
-#        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-#        procout = proc.communicate()[0]
-#        
-#        pinp = re.compile(r'pin:\s*(\d+)')
-#        pin = pinp.search(procout)
-#        
-#        if pin and len(pin.groups()) == 1:
-#            print 'found pin: %s' % pin.group(1)
-#            return pin.group(1)
-#        else:
-#            raise StandardError("breakpin: regex error")
-#    else:
-#        print 'breakpin: not found'
-#        raise IOError("breakpin: %s not found" % BTPINCRACKDIR)
-
-
-#######################################
-#     Internal classes and methods    #
-#######################################
-
-def _create_pincrackdata(state):
-    pcd = sniffcommon.PinCrackData(not state.pinmaster == 0 )
-    type_d = {0:'in_rand', 1:'m_comb_key', 2:'s_comb_key', 3:'m_au_rand', 4:
-              's_au_rand', 5:'m_sres', 6:'s_sres'}
-    for i in range(7):
-        length = 4 if i >= 5 else 16
-        keyintlist = []
-        for j in range(length):
-            keyintlist.append(state.pindata[i][j])
-        pcd.__setattr__(type_d[i], keyintlist)
-    print 'create_pincrackdata:\n', str(pcd)
-    return pcd
-
 class PinCrackRunner(threading.Thread):
+    '''
+            Usage: 
+            Pincrackdata needs to be collected prior to using PinCrackRunner.
+            call runcrack and receive threading.Event object. 
+            Wait on object to determine when pin-cracking is complete. Then call
+            PinCrackRunner.getpin() for the computed pin.    
+    '''
     
     _PIN_HEADER = 'pin:'
     def __init__(self):
@@ -183,3 +126,42 @@ class PinCrackRunner(threading.Thread):
     
     def run(self):
         self._startprog(self._pcd, self._master, self._slave, self._tmpfile) 
+        
+
+#######################################
+#     Internal classes and methods    #
+#######################################
+
+
+def _gen_pincrackdata(state, op, data_list, master_add, slave_add):
+    """
+        Returns None when pin not ready. Otherwise return a sniffcommon.PinCrackData
+        object, that stores info relevant to pin cracking.
+        Parameters:
+            state         - sniffer.State object
+            op            - is the op1 code for the corresponding LMP PDU
+            data_list     - LMP PDU payload as a list of integers
+            master_add    - list of integers representing master MAC
+            slave_add     - list of integers representing slave MAC
+    """
+    _crack._setpindata(state, op, data_list)
+    
+    if not state.pinstate == 0xff:
+        return None
+    else:
+        state.pinstate = 1
+        return _create_pincrackdata(state)
+
+def _create_pincrackdata(state):
+    pcd = sniffcommon.PinCrackData(not state.pinmaster == 0 )
+    type_d = {0:'in_rand', 1:'m_comb_key', 2:'s_comb_key', 3:'m_au_rand', 4:
+              's_au_rand', 5:'m_sres', 6:'s_sres'}
+    for i in range(7):
+        length = 4 if i >= 5 else 16
+        keyintlist = []
+        for j in range(length):
+            keyintlist.append(state.pindata[i][j])
+        pcd.__setattr__(type_d[i], keyintlist)
+    print 'create_pincrackdata:\n', str(pcd)
+    return pcd
+

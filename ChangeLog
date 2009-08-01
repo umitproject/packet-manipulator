@@ -1,3 +1,9 @@
+2009-07-30 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added simple testing harness; makes use of nosetests. Tests PinCrackRunner in module crack
+		- tests/run_all.py
+		- tests/testcrack.py
+
 2009-07-28 Quek Shu Yang (quekshuy@gmail.com)
 ==============================================
 	* Added second example (test_pincrackrunner()) to illustrate pin-cracking use. Does not do real-time sniffing as part 

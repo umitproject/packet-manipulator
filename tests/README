@@ -1,0 +1,6 @@
+The contents of this directory mimic that of the package hierarchy for BTSniffer.
+The tests should also be organized in the same packages as the modules to be tested.
+
+Run run_all.py to execute tests.
+
+run_all will build the project using disutils, copy the tests, run the tests (using nosetest), report and subsequently clean up.
