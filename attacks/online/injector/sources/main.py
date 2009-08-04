@@ -21,6 +21,7 @@
 import gtk
 import gobject
 
+import string
 import threading
 
 from PM.Core.I18N import _
@@ -48,6 +49,15 @@ COLUMN_OBJECT = range(8)
 # Special constant to track idle connections
 CONN_IDLE = CONN_TIMED_OUT + 1
 
+escape_table = '.........\t\n\x0b\x0c\r..................' \
+               ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFG' \
+               'HIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno' \
+               'pqrstuvwxyz{|}~..........................' \
+               '.........................................' \
+               '.........................................' \
+               '.....................'
+
+escape_raw = lambda x: string.translate(x, escape_table)
 
 def _kill_stream_seq(ctx, stream, seqoff):
     pkt = MetaPacket.new('ip') / MetaPacket.new('tcp')
@@ -78,88 +88,175 @@ def kill_stream(ctx, stream):
     _kill_stream_seq(ctx, stream, False)
     _kill_stream_seq(ctx, stream, True)
 
-class ConnectionsList(gtk.GenericTreeModel):
-    __gtype_name__ = 'ConnectionsList'
+class InjectDialog(gtk.Dialog):
+    def __init__(self, stream, inj_file=False):
+        gtk.Dialog.__init__(self, _('Active connections'), PMApp().main_window,
+                            gtk.DIALOG_DESTROY_WITH_PARENT,
+                            (gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
+                             gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
 
-    columns = (
-        gobject.TYPE_STRING, gobject.TYPE_INT,
-        gobject.TYPE_STRING, gobject.TYPE_INT,
-        gobject.TYPE_STRING, gobject.TYPE_INT, gobject.TYPE_INT
-    )
+        tbl = gtk.Table(2, 2, False)
 
-    def __init__(self):
-        gtk.GenericTreeModel.__init__(self)
+        self.rsrc = gtk.RadioButton(None, '%s:%d' % (stream.get_source(),
+                                                     stream.sport))
+        self.rdst = gtk.RadioButton(rsrc, '%s:%d' % (stream.get_dest(),
+                                                     stream.dport))
 
-        # This contains pointer to streams or tuple of values for orphans
-        self.stream_list = []
+        lbl = gtk.Label(_('Send to:'))
+        lbl.set_alignment(.0, .5)
 
-        # This is to speedup the search phase
-        self.stream_dict = {}
+        tbl.attach(lbl, 0, 1, 0, 1, gtk.FILL, gtk.FILL)
+        tbl.attach(self.rsrc, 1, 2, 0, 1, gtk.FILL, gtk.FILL)
+        tbl.attach(self.rdst, 2, 3, 0, 1, gtk.FILL, gtk.FILL)
 
-    def on_get_flags(self):
-        return gtk.TREE_MODEL_LIST_ONLY|gtk.TREE_MODEL_ITERS_PERSIST
+        if inj_file:
+            self.entry = gtk.Entry()
+            btn = gtk.Button(stock=gtk.STOCK_OPEN)
+            btn.connect('clicked', self.__on_open, self.entry)
 
-    def on_get_n_columns(self):
-        return len(self.columns)
+            tbl.attach(self.entry, 0, 2, 1, 2, yoptions=gtk.FILL)
+            tbl.attach(btn, 2, 3, 1, 2, gtk.FILL, gtk.FILL)
 
-    def on_get_column_type(self, index):
-        return self.columns[index]
-
-    def on_get_iter(self, path):
-        try:
-            if self.stream_list[path[0]]:
-                return path[0]
-        except IndexError:
-            return None
-
-    def on_get_path(self, rowref):
-        return tuple(rowref)
-
-    def on_get_value(self, rowref, column):
-        try:
-            return self.stream_list[rowref][column]
-        except IndexError:
-            return None
-
-    def on_iter_next(self, rowref):
-        try:
-            self.stream_list[rowref+1]
-        except IndexError:
-            return None
         else:
-            return rowref+1
+            self.view = gtk.TextView()
 
-    def on_iter_children(self, parent):
-        return None
+            sw = gtk.ScrolledWindow()
+            sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+            sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
-    def on_iter_has_child(self, rowref):
-        return False
+            sw.add(self.view)
 
-    def on_iter_n_children(self, rowref):
-        if rowref:
-            return 0
-        return len(self.stream_list)
+            tbl.attach(sw, 0, 3, 1, 2)
 
-    def on_iter_nth_child(self, parent, n):
-        if parent:
-            return None
-        try:
-            self.stream_list[n]
-        except IndexError:
-            return None
+        tbl.show_all()
+        self.vbox.pack_start(tbl, False, False)
+
+    def __on_open(self, btn, entry):
+        dialog = gtk.FileChooserDialog(_('Select a file to inject'),
+                              PMApp().main_window, gtk.FILE_CHOOSER_ACTION_OPEN,
+                              (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
+                               gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            entry.set_text(dialog.get_filename())
+
+        dialog.hide()
+        dialog.destroy()
+
+    def get_inject_data(self):
+        is_client = rdst.get_active()
+
+        if hasattr(self, 'entry'):
+            fname = self.entry.get_text()
+
+            try:
+                return is_client, open(fname, 'r').read()
+            except:
+                return is_client, None
         else:
-            return n
+            return is_client, self.view.get_buffer().get_text(
+                *self.view.get_buffer().get_bounds()
+            )
 
-    def on_iter_parent(self, child):
-        return None
+class TabDetails(gtk.VBox):
+    tagtable = None
 
+    def __init__(self, connw, stream):
+        gtk.VBox.__init__(self, False, 2)
 
-gobject.type_register(ConnectionsList)
+        self.stream = stream
+        self.connw = connw
+
+        # This is for data collected
+        # Everything is saved in the form (is_client : bool, data : str)
+        self.data_frags = []
+
+        # This is for data to inject
+        self.client_inj_frags = [':hjacked 220 YES you have been hacked.\r\n']
+        self.server_inj_frags = ['USER test injection test :Tester\r\n', 'PING :pingthis\r\n']
+
+        if not self.tagtable:
+            self.tagtable = gtk.TextTagTable()
+
+            tag = gtk.TextTag('src')
+            tag.set_property('foreground', 'blue')
+            tag.set_property('font', 'Monospace 9')
+            self.tagtable.add(tag)
+
+            tag = gtk.TextTag('dst')
+            tag.set_property('foreground', 'red')
+            tag.set_property('font', 'Monospace 9')
+            self.tagtable.add(tag)
+
+        self.buff = gtk.TextBuffer(self.tagtable)
+        self.view = gtk.TextView(self.buff)
+        self.view.set_wrap_mode(gtk.WRAP_CHAR)
+
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+
+        sw.add(self.view)
+
+        self.pack_start(sw)
+
+        bb = gtk.HButtonBox()
+        bb.set_layout(gtk.BUTTONBOX_END)
+
+        btn = gtk.Button(_('Inject file'))
+        btn.set_relief(gtk.RELIEF_NONE)
+        btn.connect('clicked', self.__on_inject, True)
+
+        bb.pack_start(btn)
+
+        btn = gtk.Button(_('Inject data'))
+        btn.set_relief(gtk.RELIEF_NONE)
+        btn.connect('clicked', self.__on_inject, False)
+
+        bb.pack_start(btn)
+
+        btn = gtk.Button(_('Kill connection'))
+        btn.set_relief(gtk.RELIEF_NONE)
+        btn.connect('clicked', self.__on_kill)
+
+        bb.pack_start(btn)
+
+        btn = gtk.Button(stock=gtk.STOCK_CLOSE)
+        btn.set_relief(gtk.RELIEF_NONE)
+        btn.connect('clicked', self.__on_close)
+
+        bb.pack_start(btn)
+
+        self.pack_start(bb, False, False)
+
+    def __on_close(self, btn):
+        self.connw.remove_tab_details(self)
+
+    def __on_kill(self, btn):
+        kill_stream(self.connw.session.context, self.stream)
+
+    def __on_inject(self, btn, is_file):
+        dialog = InjectDialog(self.stream, is_file)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            is_client, data = dialog.get_inject_data()
+
+            if data:
+                if is_client:
+                    self.client_inj_frags.append(data)
+                else:
+                    self.server_inj_frags.append(data)
+
+        dialog.hide()
+        dialog.destroy()
 
 class ConnectionsWindow(gtk.Dialog):
     def __init__(self, reassembler):
         self.session = None
         self.reassembler = reassembler
+
+        self.stream_dict = {}
+        self.following = {}
 
         self.status_string = (_('established'), _('active'), _('reset'),
                               _('closed'), _('timed out'), _('idle'))
@@ -170,7 +267,12 @@ class ConnectionsWindow(gtk.Dialog):
 
         self.vbox.set_border_width(4)
 
-        self.stream_dict = {}
+        vbox = gtk.VBox(False, 2)
+        vbox.set_border_width(4)
+
+        self.notebook = gtk.Notebook()
+        self.notebook.set_scrollable(True)
+        self.notebook.append_page(vbox, gtk.Label(_('Connections')))
 
         self.store = gtk.ListStore(str, int, str, int, str, int, int, object)
         self.tree = gtk.TreeView(self.store)
@@ -197,14 +299,16 @@ class ConnectionsWindow(gtk.Dialog):
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         sw.add(self.tree)
-        sw.show_all()
+        vbox.pack_start(sw)
 
-        self.vbox.pack_start(sw)
+        self.vbox.pack_start(self.notebook)
+        self.notebook.show_all()
 
         self.menu = gtk.Menu()
 
         lbls = (('details', _('Details'), gtk.STOCK_INFO, self.__on_details),
-                ('kill', _('Kill connection'), gtk.STOCK_CLEAR, self.__on_kill))
+                ('kill', _('Kill connection'), gtk.STOCK_CLEAR, self.__on_kill),
+                ('clear', _('Clear'), gtk.STOCK_CLEAR, self.__on_clear))
 
         for name, lbl, stock, callback in lbls:
             act = gtk.Action(name, lbl, None, stock)
@@ -218,7 +322,12 @@ class ConnectionsWindow(gtk.Dialog):
         self.connect('response', self.__on_response)
         self.tree.connect('button-press-event', self.__on_button_pressed)
 
-        gobject.timeout_add(1000, self.__on_update_tree)
+        self.update_id = None
+        self.set_size_request(400, 200)
+
+    def start_update(self):
+        if not self.update_id:
+            gobject.timeout_add(1000, self.__on_update_tree)
 
     def add_connection(self, stream):
         if stream in self.stream_dict and self.stream_dict[stream][0] is stream:
@@ -232,9 +341,23 @@ class ConnectionsWindow(gtk.Dialog):
         path = self.store.iter_n_children(None) - 1
         self.stream_dict[stream] = (stream, path)
 
+        # DEBUG: remove me after injection is complete
+        if stream.sport == 6667 or stream.dport == 6667:
+            details = TabDetails(self.session, stream)
+            details.show_all()
+
+            self.following[stream] = details
+
+            self.notebook.append_page(details, gtk.Label('%s:%d <-> %s:%d' \
+                % (stream.get_source(), stream.sport,
+                   stream.get_dest(), stream.dport)))
+
         log.debug('Connection added')
 
     def remove_connection(self, stream):
+        if stream in self.stream_dict:
+            return
+
         idx = self.stream_dict[stream][1]
 
         del self.stream_dict[stream]
@@ -242,6 +365,9 @@ class ConnectionsWindow(gtk.Dialog):
         self.store[idx][COLUMN_OBJECT] = (stream.get_bytes(), stream.state)
 
         log.debug('Reference removed')
+
+    def remove_tab_details(self, tab):
+        pass
 
     def get_extern_iter(self, top=True):
         rect = self.tree.get_visible_rect()
@@ -263,7 +389,21 @@ class ConnectionsWindow(gtk.Dialog):
             pass
 
     def __on_details(self, action):
-        pass
+        sel = self.tree.get_selection()
+        model, iter = sel.get_selected()
+
+        if iter:
+            stream = self.store.get_value(iter, COLUMN_OBJECT)
+
+            if stream and not isinstance(stream, (tuple, int)):
+                details = TabDetails(self.session, stream)
+                details.show_all()
+
+                self.following[stream] = details
+
+                self.notebook.append_page(details, gtk.Label('%s:%d <-> %s:%d' \
+                    % (stream.get_source(), stream.sport,
+                       stream.get_dest(), stream.dport)))
 
     def __on_kill(self, action):
         sel = self.tree.get_selection()
@@ -274,6 +414,10 @@ class ConnectionsWindow(gtk.Dialog):
 
             if stream and not isinstance(stream, (tuple, int)):
                 kill_stream(self.session.context, stream)
+
+    def __on_clear(self, action):
+        self.stream_dict.clear()
+        self.store.clear()
 
     def __on_button_pressed(self, widget, evt):
         sel = self.tree.get_selection()
@@ -290,35 +434,52 @@ class ConnectionsWindow(gtk.Dialog):
                 self.menu.popup(None, None, None, evt.button, evt.time, None)
 
     def __on_update_tree(self):
-        log.debug('Updating tree view (%d connections)' % \
-                  self.store.iter_n_children(None))
+        page = self.notebook.get_current_page()
 
-        start, end = self.get_extern_iter(), self.get_extern_iter(False)
+        if page == 0:
+            log.debug('Updating tree view (%d connections)' % \
+                      self.store.iter_n_children(None))
 
-        if not start:
-            return True
+            start, end = self.get_extern_iter(), self.get_extern_iter(False)
 
-        while start != end:
-            try:
-                stream = self.store.get_value(start, COLUMN_OBJECT)
-            except Exception, err:
+            if not start:
                 return True
 
-            if isinstance(stream, tuple):
-                self.store.set_value(start, COLUMN_BYTES, stream[0])
-                self.store.set_value(start, COLUMN_STATUS, stream[1])
-                self.store.set_value(start, COLUMN_OBJECT, None)
-            elif stream is not None:
-                old_bytes = self.store.get_value(start, COLUMN_BYTES)
-                new_bytes = stream.get_bytes()
+            while start != end:
+                try:
+                    stream = self.store.get_value(start, COLUMN_OBJECT)
+                except Exception, err:
+                    return True
 
-                if old_bytes == new_bytes:
-                    self.store.set_value(start, COLUMN_STATUS, CONN_IDLE)
-                else:
-                    self.store.set_value(start, COLUMN_STATUS, stream.state)
-                    self.store.set_value(start, COLUMN_BYTES, new_bytes)
+                if isinstance(stream, tuple):
+                    self.store.set_value(start, COLUMN_BYTES, stream[0])
+                    self.store.set_value(start, COLUMN_STATUS, stream[1])
+                    self.store.set_value(start, COLUMN_OBJECT, None)
+                elif stream is not None:
+                    old_bytes = self.store.get_value(start, COLUMN_BYTES)
+                    new_bytes = stream.get_bytes()
 
-            start = self.store.iter_next(start)
+                    if old_bytes == new_bytes:
+                        self.store.set_value(start, COLUMN_STATUS, CONN_IDLE)
+                    else:
+                        self.store.set_value(start, COLUMN_STATUS, stream.state)
+                        self.store.set_value(start, COLUMN_BYTES, new_bytes)
+
+                        print new_bytes
+
+                start = self.store.iter_next(start)
+        else:
+            page = self.notebook.get_nth_page(page)
+
+            log.debug('Adding missing fragments %s' % page.data_frags)
+
+            while page.data_frags:
+                is_client, data = page.data_frags.pop(0)
+
+                page.buff.insert_with_tags(
+                    page.buff.get_end_iter(), escape_raw(data),
+                    page.tagtable.lookup((is_client and 'src' or 'dst')),
+                )
 
         return True
 
@@ -331,6 +492,9 @@ class ConnectionsWindow(gtk.Dialog):
 
     def __on_response(self, dialog, rid):
         if rid == gtk.RESPONSE_CLOSE:
+            if self.update_id:
+                gobject.source_remove(self.update_id)
+
             self.hide()
 
 class Injector(Plugin, OnlineAttack):
@@ -344,8 +508,7 @@ class Injector(Plugin, OnlineAttack):
             raise PMErrorException('TCP segments reassembling disabled '
                                    'in TCPDecoder.')
 
-        tcpdecoder.reassembler.inject_cb = self.__inject_cb
-        tcpdecoder.reassembler.add_analyzer(self.__tcp_callback)
+        tcpdecoder.reassembler.analyzers.insert(0, self.__tcp_callback)
 
         self.item = self.add_menu_entry('Injector', _('Active connections'),
                                         _('View active connections or inject '
@@ -353,6 +516,8 @@ class Injector(Plugin, OnlineAttack):
                                         gtk.STOCK_INDEX)
 
         self.window = ConnectionsWindow(tcpdecoder.reassembler)
+        self.window.show()
+        self.window.start_update()
 
     def stop(self):
         self.remove_menu_entry(self.item)
@@ -363,22 +528,49 @@ class Injector(Plugin, OnlineAttack):
 
         if not self.window.flags() & gtk.VISIBLE:
             self.window.show()
-
-    def __inject_cb(self, type, stream, mpkt, rcv):
-        log.debug('Managing injection of %s' % mpkt)
-
-        if type == INJ_MODIFIED:
-            pass
-        elif type == INJ_FORWARD:
-            pass
+            self.window.start_update()
 
     def __tcp_callback(self, stream, mpkt):
-        self.window.add_connection(stream)
-        stream.listeners.append(self.__follow_connection)
+        # DEBUG: remove me
+        if stream.sport == 6667 or stream.dport == 6667:
+            self.window.add_connection(stream)
+            stream.listeners.append(self.__follow_connection)
 
     def __follow_connection(self, stream, mpkt, rcv):
         if stream.state != CONN_DATA:
             self.window.remove_connection(stream)
+
+        elif stream in self.window.following:
+            page = self.window.following[stream]
+
+            log.debug('Collecting data for %s' % stream)
+
+            if rcv is stream.server:
+                data = \
+                    stream.server.data[stream.server.count - \
+                                       stream.server.count_new:]
+
+                if data:
+                    page.data_frags.append((0, data))
+
+                if page.server_inj_frags:
+                    inj_data = page.server_inj_frags.pop(0)
+                    mpkt.set_cfield('inj::payload', inj_data)
+
+                    return INJ_MODIFIED
+            else:
+                data = \
+                    stream.client.data[stream.client.count - \
+                                       stream.client.count_new:]
+
+                if data:
+                    page.data_frags.append((1, data))
+
+                if page.client_inj_frags:
+                    inj_data = page.client_inj_frags.pop(0)
+                    mpkt.set_cfield('inj::payload', inj_data)
+
+                    return INJ_MODIFIED
 
         return INJ_COLLECT_STATS
 

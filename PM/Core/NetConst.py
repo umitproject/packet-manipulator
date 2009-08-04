@@ -95,8 +95,9 @@ ICMP_CODE_HOST_UNREACH  = 1
 INJ_SKIP_PACKET   = 0 # Useless packet skip it
 INJ_COLLECT_DATA  = 1 # Data collection
 INJ_COLLECT_STATS = 2 # Drop data collect only number of bytes
-INJ_FORWARD       = 3 # Forward the packet as is
-INJ_MODIFIED      = 4 # Forward the packet but recompute checksums
+INJ_FORWARDED     = 3 # Forwarded
+INJ_FORWARD       = 4 # Forward the packet as is
+INJ_MODIFIED      = 5 # Forward the packet but recompute checksums
 
 ###############################################################################
 # Connection tracking constants

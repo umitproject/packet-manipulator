@@ -32,7 +32,7 @@ from xml.sax.xmlreader import AttributesImpl
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import Singleton, defaultdict, generate_traceback
-from PM.Core.Const import PM_TYPE_STR, PM_HOME
+from PM.Core.Const import PM_TYPE_STR, PM_TYPE_INT, PM_TYPE_INSTANCE, PM_HOME
 from PM.Core.NetConst import *
 
 ###############################################################################
@@ -265,6 +265,7 @@ class AttackManager(Singleton):
         # but instead only create a new pointer to the same object.
         # Here we need separated dict so we should declare them all
         self._decoders = ({}, {}, {}, {}, {}, {}, {})
+        self._injectors = ({}, {}, {}, {}, {}, {}, {})
         self._configurations = {}
 
         self.load_configurations()
@@ -283,6 +284,12 @@ class AttackManager(Singleton):
                                ' has a wrong checksum'),
             'reassembled_payload' : (PM_TYPE_STR, 'Used by attacks that can '
                                      'treassemble fragments of packets'),
+
+            'inj::l4proto' : (PM_TYPE_INT, 'Used to track down L4 protocol for '
+                             'injection'),
+            'inj::flags' : (PM_TYPE_INT, 'Used for injection'),
+            'inj::payload' : (PM_TYPE_STR, 'Data for injection'),
+            'inj::data' : (PM_TYPE_INSTANCE, 'General objects'),
         })
 
     # Configurations stuff
@@ -363,7 +370,48 @@ class AttackManager(Singleton):
             else:
                 self._output.info(out)
 
+    ############################################################################
+    # Injectors
+    ############################################################################
+
+    def add_injector(self, level, type, injector):
+        """
+        Add a injector for the given level
+        @param level the level where the injector works on
+        @param type the type of injector
+        @param injector a callable object
+        """
+        log.debug("Registering injector %s for level %s with type %s" % \
+                  (injector, level, type))
+        self._injectors[level][type] = injector
+
+    def remove_injector(self, level, type, injector, force=False):
+        """
+        Remove a injector for the given level
+        @param level the level where the injector works on
+        @param type the type of injector
+        @param injector a callable object
+        @param force if force is True and post or pre hooks are set
+               remove anyway
+        """
+
+        tup = self._injectors[level][type]
+
+        if any(tup[1:]) and not force:
+                return False
+
+        del self._injectors[level][type]
+        return True
+
+    def get_injector(self, level, type):
+        try:
+            return self._injectors[level][type]
+        except:
+            return None
+
+    ############################################################################
     # Decoders stuff
+    ############################################################################
 
     def add_decoder(self, level, type, decoder):
         """
@@ -422,13 +470,11 @@ class AttackManager(Singleton):
 
             if decoder:
                 ret = decoder(metapkt)
-            else:
-                ret = None
 
             for post_hook in post:
                 post_hook(metapkt)
 
-            if isinstance(ret, tuple):
+            if decoder and isinstance(ret, tuple):
                 # Infinite loop over there :)
                 level, type = ret
             else:
@@ -444,12 +490,6 @@ class AttackManager(Singleton):
         # The dissector is only a special case of a decoder.
         self.add_decoder(APP_LAYER_TCP, port, dissector)
 
-    def add_filter(self):
-        pass
-
-    def add_injector(self):
-        pass
-
     # Properties
 
     def get_global_conf(self): return self._global_conf
@@ -457,7 +497,7 @@ class AttackManager(Singleton):
     global_conf = property(get_global_conf)
 
 class AttackDispatcher(object):
-    def __init__(self, datalink=IL_TYPE_ETH):
+    def __init__(self, datalink=IL_TYPE_ETH, context=None):
         """
         Create an attack manager to use in conjunction with a PacketProducer
         that feeds the instance with feed() method @see AttackManager.feed.
@@ -466,10 +506,11 @@ class AttackDispatcher(object):
                         For more information on that @see pcap_datalink manpage
         """
         self._datalink = datalink
+        self._context = context
         self._main_decoder = AttackManager().get_decoder(LINK_LAYER,
                                                          self._datalink)
 
-    def feed(self, metapkt, *args):
+    def feed(self, mpkt, *args):
         """
         General purpose procedure.
         Will be used the main_decoder created in the constructor. So if you need
@@ -478,11 +519,55 @@ class AttackDispatcher(object):
 
         @param metapkt a MetaPacket object or None
         """
-        if not metapkt or not self._main_decoder:
+        if not mpkt or not self._main_decoder:
             return
 
         #assert isinstance(metapkt, Backend.MetaPacket)
-        AttackManager().run_decoder(LINK_LAYER, metapkt.get_datalink(), metapkt)
+        AttackManager().run_decoder(LINK_LAYER, self.datalink, mpkt)
+
+        if self._context:
+            flags = mpkt.cfields.get('inj::flags', None)
+            l4proto = mpkt.cfields.get('inj::l4proto', None)
+
+            if flags == INJ_FORWARDED:
+                log.debug('Skipping forwarded packet')
+                return
+
+            while mpkt is not None:
+                injector = AttackManager().get_injector(1, l4proto)
+
+                if not injector:
+                    return
+
+                print "FLAGS:", flags
+                print "INJECTOR IS", injector
+
+                if flags == INJ_MODIFIED:
+                    if injector(self._context, mpkt):
+                        self._context.si_l3(mpkt)
+
+                        mpkt.root.show()
+                        print mpkt.summary()
+
+                        log.debug('Packet correctly injected.')
+                    else:
+                        log.warning('Something went wrong in %s injector' % \
+                                    injector)
+                        return
+
+                elif flags == INJ_FORWARD:
+                    log.error('IMPLEMENT ME')
+
+                # Get the next packet to inject
+                next = mpkt.cfields.get('inj::data', None)
+
+                if 'inj::data' in mpkt.cfields:
+                    mpkt.unset_cfield('inj::data')
+
+                print "PREV PACKET IS", mpkt
+                print "NEXT PACKET IS", next
+
+                mpkt = next
 
     def get_main_decoder(self): return self._main_decoder
     def set_main_decoder(self, dec): self._main_decoder = dec

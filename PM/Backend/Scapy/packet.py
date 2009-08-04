@@ -35,6 +35,7 @@ class MetaPacket(object):
     def __init__(self, proto=None, cfields=None):
         self.root = proto
         self.cfields = cfields or {}
+        self.flags = 0
 
     def __div__(self, other):
         cfields = self.cfields.copy()
@@ -281,6 +282,24 @@ class MetaPacket(object):
         if isinstance(self.root, RadioTap):
             return IL_TYPE_WIFI
         return None
+
+    def reset_field(self, fieldname):
+        try:
+            ret = fieldname.split('.')
+            layer = self.root.getlayer(global_trans[ret[0]][0])
+
+            if not layer:
+                return None
+
+            if len(ret) > 1:
+                delattr(layer, ret[1])
+            else:
+                log.error('Cannot set an entire protocol')
+
+        except Exception, err:
+            log.error('Error while resetting %s field. Traceback:' % \
+                      fieldname)
+            log.error(generate_traceback())
 
     def set_field(self, fieldname, value):
         try:

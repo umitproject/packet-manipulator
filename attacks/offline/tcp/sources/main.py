@@ -39,6 +39,8 @@ from PM.Manager.AttackManager import AttackManager, OfflineAttack
 from PM.Core.NetConst import *
 from PM.Core.AttackUtils import checksum
 
+from PM.Backend import MetaPacket
+
 TCP_ESTABLISHED = 1
 TCP_SYN_SENT    = 2
 TCP_SYN_RECV    = 3
@@ -89,13 +91,14 @@ def get_ts(mpkt, opt_type=8):
 
 class Buffer(object):
     def __init__(self):
-        self.prev, self.next = None, None
         self.data = ''
 
-        self.fin = None
-        self.urg = None
+        self.fin = 0
+        self.urg = 0
         self.seq = 0
         self.ack = 0
+
+        self.prev, self.next = None, None
 
 class HalfStream(object):
     def __init__(self):
@@ -103,6 +106,7 @@ class HalfStream(object):
         self.seq = 0
         self.first_data_seq = 0
         self.ack_seq = 0
+        self.seq_adj = 0 # For injection
         self.window = 0
 
         self.ts_on = 0
@@ -184,8 +188,6 @@ class Reassembler(object):
         self.free_streams = None
         self.tcp_timeouts = None
 
-        self._inject_cb = None
-
         for i in xrange(self.max_streams):
             stream = TCPStream(None, None, None, None)
 
@@ -244,6 +246,11 @@ class Reassembler(object):
         Process a TCP packet
         @param mpkt a MetaPacket object
         """
+
+        if mpkt.cfields.get('inj::flags', None) == INJ_FORWARDED:
+            # Bumps forward?
+            return
+
         datalen = mpkt.get_field('ip.len') - \
                   4 * mpkt.get_field('ip.ihl') - \
                   4 * (mpkt.get_field('tcp.dataofs') or 0)
@@ -359,6 +366,8 @@ class Reassembler(object):
             if tcpack - snd.ack_seq > 0:
                 snd.ack_seq = tcpack
 
+                # XXX: we should check for seq_adj
+
             if rcv.state == FIN_SENT:
                 rcv.state = FIN_CONFIRMED
             if rcv.state == FIN_CONFIRMED and snd.state == FIN_CONFIRMED:
@@ -380,8 +389,6 @@ class Reassembler(object):
 
         if rcv.rmem_alloc > 65535:
             self.prune_queue(rcv)
-
-        return is_client, stream
 
     def prune_queue(self, rcv):
         """
@@ -412,27 +419,40 @@ class Reassembler(object):
 
         for listener in stream.listeners:
             ret = max(ret,
-                       listener(stream, mpkt, rcv))
+                      listener(stream, mpkt, rcv))
 
             if ret == INJ_MODIFIED or ret == INJ_FORWARD:
 
-                if callable(self._inject_cb):
-                    self._inject_cb(ret, mpkt, stream, rcv)
+                if ret == INJ_MODIFIED:
+                    mpkt.set_cfield('inj::l4proto', NL_TYPE_TCP)
+                    mpkt.set_cfield('inj::data', (stream, rcv))
 
+                mpkt.set_cfield('inj::flags', ret)
                 return
 
         if ret == INJ_COLLECT_STATS:
-            print 'Collecting stats'
+            #log.debug('Collecting stats')
             rcv.data = ''
         elif ret == INJ_SKIP_PACKET:
-            print 'Skipping packet'
+            #log.debug('Skipping packet')
             rcv.count_new = 0
             rcv.data = ''
         else:
-            print 'Collecting data'
+            #log.debug('Collecting data')
+            pass
 
-        print inet_ntoa(stream.source), stream.sport, \
-              inet_ntoa(stream.dest), stream.dport
+        if rcv.seq_adj != 0:
+            # Ok this stream is a child of a previous injection so
+            # we have to modify the seq and ack to respect the flow
+
+            mpkt.set_cfield('inj::l4proto', NL_TYPE_TCP)
+            mpkt.set_cfield('inj::data', (stream, rcv))
+            mpkt.set_cfield('inj::flags', INJ_MODIFIED)
+
+            log.error('Adjusting seq and ack')
+
+        #print inet_ntoa(stream.source), stream.sport, \
+        #      inet_ntoa(stream.dest), stream.dport
 
     def add_from_skb(self, stream, mpkt, rcv, snd, payload, datalen, tcpseq, \
                      fin, urg, urg_ptr):
@@ -519,15 +539,17 @@ class Reassembler(object):
                 packet = rcv.plist
 
                 while packet:
+                    print packet
                     if packet.seq - exp_seq > 0:
                         break
-                    if (packet.seq + packet.len + packet.fin) - exp_seq > 0:
+                    if (packet.seq + len(packet.data) + packet.fin) - \
+                       exp_seq > 0:
                         self.add_from_skb(stream, mpkt, rcv, snd, packet.data,
-                                          packet.len, packet.seq, packet.fin,
-                                          packet.urg,
+                                          len(packet.data), packet.seq,
+                                          packet.fin, packet.urg,
                                           packet.urg_ptr + packet.seq - 1)
 
-                    rcv.rmem_alloc -= packet.truesize
+                    rcv.rmem_alloc -= len(packet.data)
 
                     if packet.prev:
                         packet.prev.next = packet.next
@@ -610,7 +632,6 @@ class Reassembler(object):
 
             if orig_client_state != TCP_SYN_SENT:
                 log.debug('Removing last stream. Limit hit.')
-
 
         new_stream = self.free_streams
 
@@ -789,17 +810,6 @@ class Reassembler(object):
 
         self.n_streams -= 1
 
-    def get_inject_cb(self):
-        return self._inject_cb
-
-    def set_inject_cb(self, value):
-        if callable(value):
-            log.debug('Setting inject_cb to %s' % value)
-            self._inject_cb = value
-
-    inject_cb = property(get_inject_cb, set_inject_cb,
-                         doc="Callback to manage injections of TCP packets")
-
 class TCPDecoder(Plugin, OfflineAttack):
     def start(self, reader):
         self.checksum_check = True
@@ -821,6 +831,98 @@ class TCPDecoder(Plugin, OfflineAttack):
                                            conf['reassemble_maxstreams'])
             self.manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_ICMP,
                                           self.reassembler.process_icmp, 1)
+            self.manager.add_injector(1, NL_TYPE_TCP, self._inject_tcp)
+
+    def _inject_tcp(self, context, mpkt):
+        stream, orcv = mpkt.cfields.get('inj::data', (None, None))
+
+        if not stream:
+            log.debug('Last packet')
+            return True
+
+        if stream.client is orcv:
+            rcv = stream.server
+        else:
+            rcv = stream.client
+
+        if not stream:
+            raise Exception('inj::data key not present')
+
+        if stream.state == CONN_UNDEFINED:
+            log.warning('The data can\'t be injected in a UNDEFINED stream')
+            return False
+
+        injector = AttackManager().get_injector(0, LL_TYPE_IP)
+
+        if not injector(context, mpkt):
+            log.warning('Error in underlayer injector')
+
+        payload = mpkt.cfields.get('inj::payload', None)
+
+        if not payload:
+            # Here we have only to adjust the sequence
+
+            if mpkt.get_field('tcp.seq') == rcv.seq + rcv.seq_adj:
+                log.debug('This is the injected packet skipping it')
+                return False
+
+            log.debug('Adjusting sequence and ack for current packet')
+
+            mpkt.set_field('tcp.seq', mpkt.get_field('tcp.seq') + orcv.seq_adj)
+            mpkt.set_field('tcp.ack', mpkt.get_field('tcp.ack') - rcv.seq_adj)
+            mpkt.reset_field('tcp.chksum')
+            mpkt.unset_cfield('inj::data')
+
+            # Adjust the seq_adj by adding the payload length
+            #rcv.seq_adj += len(mpkt.get_field('tcp')) - \
+            #                    mpkt.get_field('tcp.dataofs') * 4
+
+        else:
+            log.debug('Forging injection packet')
+
+            plen = len(payload)
+            pkt = mpkt.cfields.get('inj::data', None)
+
+            if not pkt:
+                log.warning('The underlayer injector returns None as mpkt')
+                return False
+
+            # Adjust the seq_adj by adding the payload length
+            rcv.seq_adj += len(mpkt.get_field('tcp')) - \
+               mpkt.get_field('tcp.dataofs') * 4
+
+            log.debug('Packing a TCP + Raw packet to ' + str(pkt))
+
+            mtu = context.get_mtu() - pkt.get_size()
+
+            if plen > mtu:
+                plen = mtu
+
+            pkt = pkt / MetaPacket.new('tcp') / MetaPacket.new('raw')
+            pkt.set_field('tcp.sport', mpkt.get_field('tcp.sport'))
+            pkt.set_field('tcp.dport', mpkt.get_field('tcp.dport'))
+            pkt.set_field('tcp.flags', TH_PSH)
+            pkt.set_field('tcp.seq', rcv.seq + rcv.seq_adj )
+            pkt.set_field('tcp.ack', rcv.ack_seq - orcv.seq_adj)
+
+            if rcv.ack_seq != 0:
+                pkt.set_field('tcp.flags', TH_PSH | TH_ACK)
+
+            pkt.set_field('raw.load', payload[:plen])
+
+            remaining = payload[plen:]
+
+            if remaining:
+                pkt.set_cfield('inj::data', (stream, orcv))
+                pkt.set_cfield('inj::payload', remaining)
+
+            mpkt.set_cfield('inj::data', pkt)
+            mpkt.unset_cfield('inj::payload')
+
+        mpkt.unset_cfield('inj::flags')
+        mpkt.unset_cfield('inj::l4proto')
+
+        return True
 
     def _process_tcp(self, mpkt):
         if self.checksum_check:
@@ -859,15 +961,11 @@ class TCPDecoder(Plugin, OfflineAttack):
             return None
 
         ret = self.manager.run_decoder(APP_LAYER_TCP,
-                                       mpkt.get_field('tcp.dport'), mpkt)
+                                 mpkt.get_field('tcp.dport'), mpkt)
 
-        ret = self.manager.run_decoder(APP_LAYER_TCP,
-                                       mpkt.get_field('tcp.sport'), mpkt)
+        ret = max(ret, self.manager.run_decoder(APP_LAYER_TCP,
+                                 mpkt.get_field('tcp.sport'), mpkt))
 
-        # TODO: Here we've to handle injected buffer and split overflowed
-        # data in various packets (check MTU).
-
-        # Nothing to parse at this point
         return None
 
 __plugins__ = [TCPDecoder]

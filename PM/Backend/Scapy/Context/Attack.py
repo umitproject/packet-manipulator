@@ -26,6 +26,7 @@ from threading import Thread
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import ThreadPool, defaultdict
+from PM.Core.NetConst import INJ_FORWARDED
 from PM.Manager.AttackManager import AttackDispatcher, IL_TYPE_ETH
 
 from PM.Backend.Scapy import *
@@ -93,6 +94,7 @@ def register_attack_context(BaseAttackContext):
             self.thread1 = None
             self.thread2 = None
 
+
             self.thread_pool = ThreadPool()
             self.attack_dispatcher = None
 
@@ -111,8 +113,17 @@ def register_attack_context(BaseAttackContext):
                 self._l2_socket = conf.L2socket(iface=dev1)
                 self._l3_socket = conf.L3socket(iface=dev1)
 
+                self._ip1 = get_if_addr(dev1)
+                self._mac1 = get_if_hwaddr(dev1)
+
                 if dev2:
+                    self._ip2 = get_if_addr(dev2)
+                    self._mac2 = get_if_hwaddr(dev2)
+
                     self._lb_socket = conf.L2socket(iface=dev2)
+                else:
+                    self._ip2 = None
+                    self._mac2 = None
 
                 if capmethod == 0:
                     log.debug('Creating listen sockets')
@@ -143,7 +154,7 @@ def register_attack_context(BaseAttackContext):
                                       ' socket. Using IL_TYPE_ETH as DL')
                             linktype = IL_TYPE_ETH
 
-                    self.attack_dispatcher = AttackDispatcher(linktype)
+                    self.attack_dispatcher = AttackDispatcher(linktype, self)
                 else:
                     log.debug('Creating helper processes')
 
@@ -156,10 +167,20 @@ def register_attack_context(BaseAttackContext):
 
             except socket.error, (errno, err):
                 self.summary = str(err)
+                log.error(generate_traceback())
                 return
 
             except Exception, err:
                 self.summary = str(err)
+                log.error(generate_traceback())
+
+        def get_mtu(self):
+            return 1500
+
+        def get_ip1(self):
+            return self._ip1
+        def get_mac1(self):
+            return self._mac1
 
         ########################################################################
         # Threads callbacks
@@ -226,11 +247,13 @@ def register_attack_context(BaseAttackContext):
             except OSError, err:
                 errstr = err.strerror
                 self.internal = False
+                log.error(generate_traceback())
             except Exception, err:
                 errstr = str(err)
                 self.internal = False
+                log.error(generate_traceback())
 
-            self.attack_dispatcher = AttackDispatcher(reader.linktype)
+            self.attack_dispatcher = AttackDispatcher(reader.linktype, self)
 
             log.debug('Entering in the helper mainloop')
 
@@ -285,6 +308,7 @@ def register_attack_context(BaseAttackContext):
                 except Exception, err:
                     if self.internal:
                         errstr = str(err)
+                        log.error(generate_traceback())
 
                     self.internal = False
                     break
@@ -341,6 +365,15 @@ def register_attack_context(BaseAttackContext):
                         rcv((obj is self._listen_dev1 and \
                              self.socket1 or self.socket2), mpkt)
 
+
+            # Packets with equal MAC address and different IP
+            # are sent by us so ignore it.
+
+            if mpkt.get_field('eth.src') == self.get_mac1() and \
+               mpkt.get_field('ip.src') != self.get_ip1():
+
+                mpkt.set_cfield('inj::flags', INJ_FORWARDED)
+
             self.attack_dispatcher.feed(mpkt)
 
         ########################################################################
@@ -348,7 +381,7 @@ def register_attack_context(BaseAttackContext):
         ########################################################################
 
         def __worker_thread(self, send):
-            while send.repeat > 0:
+            while send.repeat != 0:
                 send.ans_left = len(send.mpkts)
 
                 for mpkt in send.mpkts:
@@ -532,7 +565,7 @@ def register_attack_context(BaseAttackContext):
 
             timeout = max(0, timeout)
             delay = max(0, delay)
-            repeat = max(1, repeat)
+            #repeat = max(1, repeat)
 
             send = SendWorker(sck, mpkts, repeat, delay, oncomplete, onerror, \
                               timeout, onrecv, onreply, udata)

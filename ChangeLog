@@ -1,3 +1,55 @@
+2009-08-04 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/online/injector/sources/main.py:
+        - Removing unused ConnectionsList (forgot to remove it in the first
+          commit).
+    * PM/Manager/AttackManager.py:
+        - Adding injectors and various methods like add_injector(),
+          remove_injector() and get_injector() to manage injection of the
+          packets in active sessions.
+        - Now AttackDispatcher accepts an AttackContext as argument in the
+          constructor.
+        - Adding a primitive way to inject packets in feed() method. We make
+          use of cfields to control the send. So I've added inj::l4proto,
+          inj::flags, inj::payload, inj::data cfields to control and manage
+          the injection. The code is still buggy and incomplete. I need more
+          time to tune the TCP decoder. At this point we're able only to inject
+          various packets and then lose the total control over the TCP flow.
+    * PM/Core/NetConst.py:
+        - Add INJ_FORWARDED to check that the packet sniffed on the wire is
+          one of ours injected set.
+    * PM/Backend/Scapy/packet.py:
+        - Add reset_field() method to reset the value of a field in a packet.
+          Used to recompute checksum in various plugins.
+    * PM/Backend/Scapy/Context/Attack.py:
+        - Add get_mtu(), get_ip1(), get_mac1() method in order to obtain the
+          MTU, the IP address and the MAC address of the first NIC.
+        - Packets with equal MAC address and different source IP are marked as
+          INJ_FORWARDED before passing them to feed().
+        - Fixing a bug with negative repeat argument.
+    * attacks/online/arpcachepoison/sources/main.py:
+        - ARP cache poison attack added.
+    * attacks/online/injector/sources/main.py:
+        - Now injector plugin could see data in transit between TCP sessions
+          without CPU burning.
+        - Active connections could be killed or we could inject data within.
+        - The data could be taken from a file or typed with keyboard in a
+          TextView.
+        - The file contains debug code and need to be cleaned up. The unused code
+          should be remove when the injection will be complete and fully working.
+     * attacks/offline/ip/sources/main.py:
+        - Now IP decoder provides an injector routine that recompute checksum or
+          create a new IP MetaPacket that will held injected data.
+     * attacks/offline/tcp/sources/main.py:
+        - Various bug fixed due to wrong Buffer usage.
+        - The inject_cb is dropped leaving space to the new injection
+          infrastructure.
+        - Add _inject_tcp() method to manage injection of TCP fragments in an
+          active connection.
+
+    - Bug fixing.
+    - First draft of injection.
+    - ARP cache poison plugin added.
+
 2009-07-27 Francesco Piccinno <stack.box@gmail.com>
     * attacks/offline/tcp/sources/main.py:
         - Moving connection enumeration in NetConst module.

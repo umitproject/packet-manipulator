@@ -67,7 +67,8 @@ class PMLogger(Logger, object):
     def set_formatter(self, fmt):
         self.__formatter = Formatter(fmt)
 
-    format = "(%(levelname)s) %(threadName)s:%(msecs)dms at %(filename)s:%(lineno)d $(): %(message)s".replace("$",
+    format = "(%(levelname)s) %(threadName)s:%(msecs)dms at %(filename)s:" \
+             "%(lineno)d $(): %(message)s".replace("$",
         (STATUS != "beta") and ("%(funcName)s") or ("")
     )
 

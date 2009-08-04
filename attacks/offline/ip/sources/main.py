@@ -54,6 +54,8 @@ from PM.Manager.AttackManager import AttackManager, OfflineAttack
 from PM.Core.NetConst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP
 from PM.Core.AttackUtils import checksum
 
+from PM.Backend import MetaPacket
+
 def ip_decoder():
     manager = AttackManager()
 
@@ -202,9 +204,28 @@ def ip_decoder():
 
     return ip
 
+def ip_injector(context, mpkt):
+    pkt = MetaPacket.new('ip')
+
+    if mpkt.cfields.get('inj::payload', None):
+        pkt.set_field('ip.src', mpkt.get_field('ip.src'))
+        pkt.set_field('ip.dst', mpkt.get_field('ip.dst'))
+
+        # DEBUG: remove me after finished. Only used to track
+        # IP packets
+        pkt.set_field('ip.id', 666)
+
+        mpkt.set_cfield('inj::data', pkt)
+    else:
+        mpkt.reset_field('ip.chksum')
+
+    return True
+
 class IPDecoder(Plugin, OfflineAttack):
     def register_decoders(self):
-        AttackManager().add_decoder(NET_LAYER, LL_TYPE_IP, ip_decoder())
+        manager = AttackManager()
+        manager.add_decoder(NET_LAYER, LL_TYPE_IP, ip_decoder())
+        manager.add_injector(0, LL_TYPE_IP, ip_injector)
 
 __plugins__ = [IPDecoder]
 __plugins_deps__ = [('IPDecoder', ['EthDecoder'], ['=IPDecoder-1.0'], [])]
