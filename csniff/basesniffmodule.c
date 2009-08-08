@@ -14,6 +14,7 @@
 #include "structmember.h"
 
 static PyTypeObject PySniffPacketType;
+static void setup_PySniffPacket(PySniffPacket *self, struct frontline_packet *fp);
 
 //General sniffing exception
 PyObject *SniffError;
@@ -266,11 +267,11 @@ static PyObject *
 process_l2cap(PyState *s, void *buf, int len,
 		PySniffPacket *pkt, PyObject *handler )
 {
-	struct hcidump_hdr dh;
-	uint8_t type = HCI_ACLDATA_PKT;
-	hci_acl_hdr acl;
+//	struct hcidump_hdr dh;
+//	uint8_t type = HCI_ACLDATA_PKT;
+//	hci_acl_hdr acl;
 	PyGenericPacket *gp;
-	int totlen = sizeof(type) + sizeof(acl) + len;
+//	int totlen = sizeof(type) + sizeof(acl) + len;
 
 //	printf("L2CAP: ");
 //	hexdump(buf, len);
@@ -447,13 +448,13 @@ process_payload(PyState *s, void *buf, int len,
 		PySniffPacket *sniffpkt, PyObject *handler)
 {
 	PyObject *procresult;
-	switch (s->s_type) {
+	switch (sniffpkt->type) {
 		case TYPE_DV:
 			procresult = process_dv(s, buf, len, sniffpkt, handler);
 			return procresult;
 	}
 
-	if (s->s_llid == LLID_LMP)
+	if (sniffpkt->llid == LLID_LMP)
 		procresult = process_lmp(s, buf, len, sniffpkt, handler);
 	else
 		procresult = process_l2cap(s, buf, len, sniffpkt, handler);
@@ -508,19 +509,22 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 	//Create a new PySniffPacket and assign the relevant
 	sniffpkt = (PySniffPacket *) PySniffPacketType.tp_new(&PySniffPacketType, NULL, NULL);
 	sniffpkt->_csrpkt = fp;
+	setup_PySniffPacket(sniffpkt, fp);
 
+	/*
 	s->s_llid	= (fp->fp_len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
 	s->s_master	= !(fp->fp_clock & FP_SLAVE_MASK); //this must be kept
 	s->s_type	= type;
-	// this can be handled in the handler
+	*/
 
+/* // this can be handled in the handler
 	printf("HL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X"
 	       " [type: %d addr: %d] LLID %d Len %d\n",
 	       fp->fp_hlen, fp->fp_chan, s->s_master ? 'M' : 'S',
 	       fp->fp_clock & FP_CLOCK_MASK,
 	       fp->fp_clock >> FP_STATUS_SHIFT, fp->fp_hdr0,
 	       type, status, s->s_llid, plen);
-
+*/
 	len -= hlen;
 	assert(len >= 0);
 	assert(len >= plen);
@@ -572,7 +576,7 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyState *state = NULL;
 	PyObject *handler = NULL;
-	char *hcidev, *dump;
+	char *hcidev, *dump, proceed;
 	struct hci_filter flt;
 	int errnum;
 
@@ -610,12 +614,19 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
+	/**
+	 * Ensures atomicity of assignment
+	 */
+	Py_BEGIN_ALLOW_THREADS
+	proceed = state->s_continue;
+	Py_END_ALLOW_THREADS
+
 	//while(1){
 	if(state->s_continue) {
-		printf("continue =  %d\n", state->s_continue);
+		printf("continue =  %d\n", proceed);
 	}
 
-	while(state->s_continue){
+	while(proceed){
 
 		Py_BEGIN_ALLOW_THREADS
 		state->s_len = read(state->s_fd, state->s_buf, sizeof(state->s_buf));
@@ -669,8 +680,6 @@ PyState_clear(PyState *self)
 }
 
 static PyMemberDef PyState_members[] = {
-		{"llid", T_INT, offsetof(PyState, s_llid), 0, "LLID"},
-		{"master", T_INT, offsetof(PyState, s_master), 0, "Positive is master"},
 		{"pinstate", T_UBYTE, offsetof(PyState, s_pin), 0, "Indicates whether pin cracking should be done"},
 		{"cont_sniff", T_BYTE, offsetof(PyState, s_continue), 0, "Signals end of sniffing if false."},
 		{"ignore_types", T_OBJECT_EX, offsetof(PyState, s_ignore_list), 0, "List of types to ignore"},
@@ -789,8 +798,25 @@ static PyTypeObject PyStateType =  {
 
 /*
  * Definiton for PySniffPacket. Garbage collection is important for this object,
- * since so many are going to be created.
+ *
  */
+
+/**
+ *  Populate the SniffPacket fields
+ */
+static void
+setup_PySniffPacket(PySniffPacket *self, struct frontline_packet *fp)
+{
+
+	self->llid  = (fp->fp_len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
+	self->bool_isFromMaster = PyBool_FromLong((long) !( fp->fp_clock & FP_SLAVE_MASK));
+	self->type = (fp->fp_hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK;
+	self->status = fp->fp_clock >> FP_STATUS_SHIFT;
+	self->chan = fp->fp_chan;
+	self->dlen = fp->fp_len >> FP_LEN_SHIFT;
+	self->seq = fp->fp_seq;
+	self->clock = fp->fp_clock & FP_CLOCK_MASK;
+}
 
 static int
 PySniffPacket_traverse(PySniffPacket *self, visitproc visit, void *arg)
@@ -837,43 +863,31 @@ PySniffPacket_dealloc(PySniffPacket *self)
 	self->ob_type->tp_free((PyObject *) self);
 }
 
-#define PSP_GETTER_DEFINE(name) \
-	static PyObject * PySniffPacket_get ## name (PySniffPacket *self, void *closure) \
-	{\
-		if (self->_csrpkt == NULL) return NULL;\
-		return Py_BuildValue("I", (unsigned int)((PySniffPacket *) self)->_csrpkt->fp_ ## name);\
-	}
-/*
- * TODO:
- * Add docstrings
- */
 
-PSP_GETTER_DEFINE(hlen)
-PSP_GETTER_DEFINE(clock)
-PSP_GETTER_DEFINE(hdr0)
-PSP_GETTER_DEFINE(len)
-PSP_GETTER_DEFINE(timer)
-PSP_GETTER_DEFINE(chan)
-PSP_GETTER_DEFINE(seq)
+static PyMemberDef PySniffPacket_members[] = {
 
-static PyObject * PySniffPacket_getpayload(PySniffPacket *self, void *closure)
-{
-	Py_INCREF(self->_payloadpkt);
-	return self->_payloadpkt;
-}
+		{"llid", T_INT, offsetof(PySniffPacket, llid), 0, "LLID."},
 
-#define PSP_GETSET_DEF(name, docstring) { #name, (getter) PySniffPacket_get ## name,  NULL, docstring, NULL }
+		{"fromMaster", T_OBJECT, offsetof(PySniffPacket, bool_isFromMaster),
+				0, "Indicates if packet is sent from master device."},
 
-static PyGetSetDef PySniffPacket_getsets[] = {
-		PSP_GETSET_DEF(hlen, "hlen"),
-		PSP_GETSET_DEF(clock, "clock"),
-		PSP_GETSET_DEF(hdr0, "hdr0"),
-		PSP_GETSET_DEF(len, "len"),
-		PSP_GETSET_DEF(timer, "timer"),
-		PSP_GETSET_DEF(chan, "chan"),
-		PSP_GETSET_DEF(seq, "seq"),
-		PSP_GETSET_DEF(payload, "payload"),
+		{"type", T_INT, offsetof(PySniffPacket, type), 0, "Type of packet."},
+
+		{"clock", T_UINT, offsetof(PySniffPacket, clock), 0, "Clock."},
+
+		// Status needs to be figured out first.
+		//{"status", T_INT, offsetof(PySniffPacket, status), 0, "Status. 0 is successful."},
+
+		{"plen", T_USHORT, offsetof(PySniffPacket, dlen), 0, "Payload length."},
+
+		//Not useful
+		//{"seq", T_UBYTE, offsetof(PySniffPacket, seq), 0, "Sequence number"},
+		{"channel", T_UBYTE, offsetof(PySniffPacket, chan), 0, "Channel number."},
+
+		{"payload", T_OBJECT, offsetof(PySniffPacket, _payloadpkt), 0, "Payload packet."},
+
 		{NULL}
+
 };
 
 
@@ -907,8 +921,8 @@ static PyTypeObject PySniffPacketType =  {
 		0,                          /* tp_iter */
 		0,                          /* tp_iternext */
 		0,             				/* tp_methods */
-		0,					      /* tp_members */
-		PySniffPacket_getsets ,     /* tp_getset */
+		PySniffPacket_members,      /* tp_members */
+		0 ,     					/* tp_getset */
 		0,                         /* tp_base */
 		0,                         /* tp_dict */
 		0,                         /* tp_descr_get */

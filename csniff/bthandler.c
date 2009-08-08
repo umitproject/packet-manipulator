@@ -104,7 +104,7 @@ PyTypeObject PyGenericPacketType =  {
 static int
 PyLMPPacket_traverse(PyLMPPacket *self, visitproc visit, void *arg)
 {
-	Py_VISIT(self->payload_list);
+	Py_VISIT(self->payload);
 	return 0;
 }
 
@@ -112,7 +112,7 @@ static int
 PyLMPPacket_clear(PyLMPPacket *self)
 {
 	PyObject *tmp;
-	tmp = self->payload_list;
+	tmp = self->payload;
 	self->payload_list = NULL;
 	Py_XDECREF(tmp);
 	return 0;
@@ -125,8 +125,8 @@ PyLMPPacket_init(PyLMPPacket *self, PyObject *args, PyObject *kwds)
 	self->tid = -1;
 	self->op1 = -1;
 	self->op2 = -1;
-	self->payload_list = PyList_New(0);
-	if(! self->payload_list)
+	self->payload = Py_None;
+	if(! self->payload)
 		return -1;
 	return 0;
 }
@@ -146,7 +146,7 @@ PyLMPPacket_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	self->op1 = -1;
 	self->op2 = -1;
 	self->tid = -1;
-	self->payload_list = NULL;
+	self->payload = NULL;
 
 	return (PyObject *) self;
 }
@@ -155,7 +155,7 @@ static PyMemberDef PyLMPPacket_members[] =  {
 		{"tid", T_UBYTE, offsetof(PyLMPPacket, tid), 0, "Transaction ID"},
 		{"op1", T_UBYTE, offsetof(PyLMPPacket, op1), 0, "Op code 1"},
 		{"op2", T_UBYTE, offsetof(PyLMPPacket, op2), 0, "Op code 2"},
-		{"data", T_OBJECT_EX, offsetof(PyLMPPacket, payload_list), 0, "Python list of integers corresponding to the payload"},
+		{"data", T_OBJECT_EX, offsetof(PyLMPPacket, payload), 0, "Python list of integers corresponding to the payload"},
 		{ NULL }
 };
 

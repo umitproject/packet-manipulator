@@ -2,6 +2,7 @@
 #define _basesniffmodule_h_
 
 #include <Python.h>
+#include "layers.h"
 #define	__packed __attribute__((__packed__))
 
 /**
@@ -58,8 +59,7 @@
 #define CMD_TIMER	0x34
 
 
-#define LMP_TID_MASK	1
-#define LMP_OP1_SHIFT	1
+
 
 #define FP_CLOCK_MASK	0xFFFFFFF
 #define FP_SLAVE_MASK	0x2
@@ -104,8 +104,6 @@ typedef struct {
 	int	s_fd;
 	int	s_buf[1024];
 	int	s_len;
-	int	s_llid;
-	int	s_master;
 	int	s_dump;
 	int	s_ignore_zero;
 	int	s_type;
@@ -143,9 +141,14 @@ typedef struct {
 
 	PyObject_HEAD
 	int llid;
-	int master;
 	int type;
+	uint32_t clock;
+	uint32_t status;
+	uint16_t dlen;
+	uint8_t chan;
+	uint8_t seq;
 	struct frontline_packet *_csrpkt;
+	PyObject *bool_isFromMaster;
 	PyObject *_payloadpkt;
 
 } __packed PySniffPacket;

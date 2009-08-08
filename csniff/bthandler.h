@@ -26,7 +26,7 @@ typedef struct  {
 	uint8_t tid;
 	uint8_t op1;
 	uint8_t op2; //may not exist
-	PyObject *payload_list;
+	PyObject *payload;
 
 } __packed PyLMPPacket;
 

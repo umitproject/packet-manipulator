@@ -210,16 +210,16 @@ sniffio_writetofile(PyObject *self, PyObject *args, PyObject *kwds)
 	int fd, llid;
 
 	char *kwlist[] = {
+			"filename",
 			"hcipkttype",
 			"llid",
 			"ismaster",
 			"packet",
-			"filename",
 			NULL
 	};
 
-	if(!PyArg_ParseTupleAndKeywords(args, kwds, "bibOs:writetofile", kwlist,
-			&type, &llid, &isMaster, &packet, &fname))
+	if(!PyArg_ParseTupleAndKeywords(args, kwds, "sbibO:writetofile", kwlist,
+			 &fname, &type, &llid, &isMaster, &packet))
 	{
 		return NULL;
 	}
@@ -247,27 +247,27 @@ sniffio_writetofile(PyObject *self, PyObject *args, PyObject *kwds)
 
 //Untested
 static PyObject *
-sniffio_write(PyObject *self, PyObject *args, PyObject *kwds)
+sniffio_writefd(PyObject *self, PyObject *args, PyObject *kwds)
 {
-	PyState *state;
+	int fd;
 	PyObject *packet;
 	uint8_t type, isMaster;
 	int llid;
 
 	char *kwlist[] = {
+		"filedesc",
 		"hcipkttype",
 		"llid",
 		"ismaster",
 		"packet",
-		"sniffstate",
 		NULL
 	};
 
-	if(!PyArg_ParseTupleAndKeywords(args, kwds, "bibOO", kwlist,
-			&type, &llid, &isMaster, &packet, &state))
+	if(!PyArg_ParseTupleAndKeywords(args, kwds, "ibibO", kwlist,
+			&fd, &type, &llid, &isMaster, &packet))
 		return NULL;
 
-	return hciwrite(state->s_dump, packet, type, llid, isMaster);
+	return hciwrite(fd, packet, type, llid, isMaster);
 }
 
 
