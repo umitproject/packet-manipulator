@@ -75,9 +75,9 @@ for new_dir in (PM_HOME,
 
     create_dir(new_dir)
 
-# Enumeration of types supported by attack plugins
+# Enumeration of types supported by audit plugins
 # Used as the value of <int id="configuration_id" description="desc">ENUM</int>
-# to expose cfields setted by various attacks to the GUI of PM.
+# to expose cfields setted by various audits to the GUI of PM.
 
 PM_TYPE_NULL,      \
 PM_TYPE_BOOLEAN,   \

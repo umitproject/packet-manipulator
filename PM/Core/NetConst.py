@@ -92,6 +92,7 @@ ICMP_CODE_HOST_UNREACH  = 1
 # Injection stuff
 ###############################################################################
 
+INJ_ERROR         = -1
 INJ_SKIP_PACKET   = 0 # Useless packet skip it
 INJ_COLLECT_DATA  = 1 # Data collection
 INJ_COLLECT_STATS = 2 # Drop data collect only number of bytes

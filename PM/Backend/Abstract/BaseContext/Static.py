@@ -31,20 +31,20 @@ class BaseStaticContext(object):
 
     NOT_SAVED, SAVED = range(2)
 
-    def __init__(self, title, fname=None, attacks=False):
+    def __init__(self, title, fname=None, audits=False):
         """
         Create a BaseStaticContext object
 
         @param title the title for the session
         @param fname the cap_file
-        @param attacks a bool to indicate if attackdispatcher should be feeded
+        @param audits a bool to indicate if auditdispatcher should be feeded
                        with captured packets.
         """
 
         self._data = []
         self._title = title or 'Title not setted'
         self._status = self.NOT_SAVED
-        self.attacks = attacks
+        self.audits = audits
 
         if fname:
             self._summary = fname

@@ -29,7 +29,7 @@ from PM.Core.Logger import log
 from PM.Gui.Plugins.Atoms import Version, DepDict
 from PM.Gui.Plugins.Core import Core
 
-from PM.Manager.AttackManager import OfflineAttack, OnlineAttack
+from PM.Manager.AuditManager import PassiveAudit, ActiveAudit
 
 from distutils.sysconfig import get_config_vars
 
@@ -545,17 +545,17 @@ class PluginsTree(object):
             for plug in lst:
                 try:
 
-                    if issubclass(plug, OfflineAttack):
-                        is_attack = 1
-                    elif issubclass(plug, OnlineAttack):
-                        is_attack = 2
+                    if issubclass(plug, PassiveAudit):
+                        is_audit = 1
+                    elif issubclass(plug, ActiveAudit):
+                        is_audit = 2
                     else:
-                        is_attack = 0
+                        is_audit = 0
 
                     inst = plug()
                     inst.start(pkg)
 
-                    if is_attack:
+                    if is_audit:
                         inst.register_decoders()
                         inst.register_hooks()
 

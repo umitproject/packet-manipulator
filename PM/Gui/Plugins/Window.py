@@ -29,7 +29,7 @@ from PM.higwidgets.higanimates import HIGAnimatedBar
 from PM.higwidgets.higtoolbars import HIGToolBar, HIGToolItem
 
 from PathPage import PathPage
-from AttackPage import AttackPage
+from AuditPage import AuditPage
 from PluginPage import PluginPage
 
 from PM.Gui.Plugins.Update import UpdateEngine
@@ -65,7 +65,7 @@ class PluginWindow(HIGWindow):
         self.notebook.set_show_border(False)
 
         self.plug_page = PluginPage(self)
-        self.attack_page = AttackPage(self)
+        self.audit_page = AuditPage(self)
         self.path_page = PathPage(self)
 
     def __pack_widgets(self):
@@ -76,7 +76,7 @@ class PluginWindow(HIGWindow):
         self.vbox.pack_start(self.notebook)
 
         self.notebook.append_page(self.plug_page)
-        self.notebook.append_page(self.attack_page)
+        self.notebook.append_page(self.audit_page)
         self.notebook.append_page(self.path_page)
 
         self.toolbar.connect('changed', self.__on_switch_page)
@@ -85,7 +85,7 @@ class PluginWindow(HIGWindow):
 
         # Create the pages
 
-        lbls = (_('Extensions'), _('Attacks'), _('Paths'))
+        lbls = (_('Extensions'), _('Audits'), _('Paths'))
         imgs = ('extension_small', gtk.STOCK_CONNECT, 'paths_small')
 
         for lbl, stock in zip(lbls, imgs):

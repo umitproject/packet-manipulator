@@ -151,7 +151,7 @@ class CaptureOptions(gtk.Expander):
 
         self.background = gtk.CheckButton(_('Start in background mode'))
 
-        self.attacks = gtk.CheckButton(_('Enable attacks'))
+        self.audits = gtk.CheckButton(_('Enable audits'))
 
         tbl.attach(self.gui_real, 3, 4, 0, 1)
         tbl.attach(self.gui_scroll, 3, 4, 1, 2)
@@ -163,7 +163,7 @@ class CaptureOptions(gtk.Expander):
         tbl.attach(self.res_transport, 3, 4, 5, 6)
 
         tbl.attach(self.background, 3, 4, 6, 7)
-        tbl.attach(self.attacks, 3, 4, 7, 8)
+        tbl.attach(self.audits, 3, 4, 7, 8)
 
         # Setting the default values
         self.res_mac.set_active(True)
@@ -172,8 +172,8 @@ class CaptureOptions(gtk.Expander):
         self.gui_scroll.set_active(True)
         self.net_promisc.set_active(True)
 
-        if Prefs()['backend.system.sniff.attacks'].value == True:
-            self.attacks.set_active(True)
+        if Prefs()['backend.system.sniff.audits'].value == True:
+            self.audits.set_active(True)
 
         self.add(tbl)
 
@@ -285,7 +285,7 @@ class CaptureOptions(gtk.Expander):
         restransport = self.res_transport.get_active()
         promisc = self.net_promisc.get_active()
         background = self.background.get_active()
-        attacks = self.attacks.get_active()
+        audits = self.audits.get_active()
 
         dct = {
             'filter'       : filter,
@@ -303,7 +303,7 @@ class CaptureOptions(gtk.Expander):
             'restransport' : restransport,
             'promisc'      : promisc,
             'background'   : background,
-            'attacks'      : attacks,
+            'audits'      : audits,
         }
 
         return dct

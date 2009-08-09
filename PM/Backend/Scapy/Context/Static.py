@@ -23,7 +23,7 @@ import os.path
 
 from PM.Backend.Scapy.packet import MetaPacket
 from PM.Backend.Scapy.wrapper import PcapWriter, PcapReader, wrpcap, PacketList
-from PM.Manager.AttackManager import AttackDispatcher, IL_TYPE_ETH
+from PM.Manager.AuditManager import AuditDispatcher, IL_TYPE_ETH
 
 from PM.Core.I18N import _
 
@@ -64,10 +64,10 @@ class CustomPcapWriter(PcapWriter):
 def register_static_context(BaseStaticContext):
 
     class StaticContext(BaseStaticContext):
-        def __init__(self, title, fname=None, attacks=False):
-            BaseStaticContext.__init__(self, title, fname, attacks)
+        def __init__(self, title, fname=None, audits=False):
+            BaseStaticContext.__init__(self, title, fname, audits)
 
-            self.attack_dispatcher = None
+            self.audit_dispatcher = None
 
         def load(self, operation=None):
             if not self.cap_file:
@@ -80,8 +80,8 @@ def register_static_context(BaseStaticContext):
                 reader = PcapReader(self.cap_file)
                 size = os.stat(self.cap_file).st_size
 
-                if self.attacks:
-                    self.attack_dispatcher = AttackDispatcher(reader.linktype)
+                if self.audits:
+                    self.audit_dispatcher = AuditDispatcher(reader.linktype)
 
                 if size >= 1024 ** 3:
                     fsize = "%.1f GB" % (size / (1024.0 ** 3))
@@ -121,8 +121,8 @@ def register_static_context(BaseStaticContext):
                         self.data.append(mpkt)
 
                         # TODO: overhead
-                        if self.attack_dispatcher:
-                            self.attack_dispatcher.feed(mpkt)
+                        if self.audit_dispatcher:
+                            self.audit_dispatcher.feed(mpkt)
 
                 if operation:
                     operation.summary = _('Loaded %s - %d packets (%s)') % \

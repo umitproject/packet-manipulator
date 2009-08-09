@@ -1,3 +1,71 @@
+2009-08-09 Francesco Piccinno <stack.box@gmail.com>
+    * plugins/schemas/AttackPlugins.xsd
+      audits/offline/http/sources/main.py
+      audits/offline/profiler/sources/main.py
+      audits/offline/profiler/data/finger.mac.db
+      audits/offline/tcp/sources/main.py
+      audits/offline/fingerprint/sources/main.py
+      audits/offline/fingerprint/data/finger.os.db
+      audits/offline/icmp/sources/main.py
+      audits/offline/ip/sources/main.py
+      audits/offline/ftp/sources/main.py
+      audits/offline/ethernet/sources/main.py
+      audits/offline/wifi/sources/main.py
+      audits/online/arpping/sources/main.py
+      audits/online/injector/sources/main.py
+      audits/online/arpcachepoison/sources/main.py
+      audits/audittester.py
+      audits/setup-autogen.py
+      audits/passive/http/sources/main.py
+      audits/passive/profiler/sources/main.py
+      audits/passive/tcp/sources/main.py
+      audits/passive/fingerprint/sources/main.py
+      audits/passive/icmp/sources/main.py
+      audits/passive/ip/sources/main.py
+      audits/passive/ftp/sources/main.py
+      audits/passive/ethernet/sources/main.py
+      audits/passive/wifi/sources/main.py
+      audits/active/arpping/sources/main.py
+      audits/active/injector/sources/main.py
+      audits/active/arpcachepoison/sources/main.py
+      PM/Gui/Pages/AuditPage.py
+      PM/Gui/Plugins/PluginPage.py
+      PM/Gui/Plugins/Tree.py
+      PM/Gui/Plugins/AuditPage.py
+      PM/Gui/Plugins/AttackPage.py
+      PM/Gui/Plugins/Containers.py
+      PM/Gui/Plugins/Engine.py
+      PM/Gui/Plugins/Window.py
+      PM/Gui/Dialogs/Interface.py
+      PM/Gui/Dialogs/NewAudit.py
+      PM/Gui/Dialogs/Preferences.py
+      PM/Gui/Sessions/AuditSession.py
+      PM/Gui/Core/MainWindow.py
+      PM/Gui/Core/App.py
+      PM/Gui/Tabs/OperationsTab.py
+      PM/Gui/Tabs/MainTab.py
+      PM/Backend/Scapy/Context/__init__.py
+      PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/Context/Audit.py
+      PM/Backend/Scapy/Context/Static.py
+      PM/Backend/Abstract/BaseContext/Sniff.py
+      PM/Backend/Abstract/BaseContext/Audit.py
+      PM/Backend/Abstract/BaseContext/Static.py
+      PM/Backend/Abstract/Context/__init__.py
+      PM/Backend/__init__.py
+      PM/Core/NetConst.py
+      PM/Core/Providers.py
+      PM/Core/Const.py
+      PM/Core/AuditUtils.py
+      PM/Manager/PreferenceManager.py
+      PM/Manager/AuditManager.py:
+        - Renaming to AuditFramework.
+        - Bug fixing in Injector and TCP decoder.
+
+    - Refactoring all the code to respect new AuditFramework nomenclature:
+        - Attacks are now audits organized in passive and active.
+        - OfflinePlugin and OnlinePlugin are now PassiveAudit and ActiveAudit.
+
 2009-08-04 Francesco Piccinno <stack.box@gmail.com>
     * attacks/online/injector/sources/main.py:
         - Removing unused ConnectionsList (forgot to remove it in the first

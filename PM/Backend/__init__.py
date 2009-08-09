@@ -37,7 +37,7 @@ from Abstract.BaseContext.Send import SendContext
 from Abstract.BaseContext.SendReceive import SendReceiveContext
 from Abstract.BaseContext.Sniff import SniffContext
 from Abstract.BaseContext.Sequence import SequenceContext
-from Abstract.BaseContext.Attack import AttackContext
+from Abstract.BaseContext.Audit import AuditContext
 
 from PM.Manager.PreferenceManager import Prefs
 

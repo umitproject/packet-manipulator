@@ -27,7 +27,7 @@ from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import with_decorator
 from PM.Manager.PreferenceManager import Prefs
-from PM.Manager.AttackManager import AttackDispatcher
+from PM.Manager.AuditManager import AuditDispatcher
 
 from PM.Backend.Scapy import *
 
@@ -54,7 +54,7 @@ def register_sniff_context(BaseSniffContext):
             self.thread = None
             self.priv = []
 
-            self.attack_dispatcher = None
+            self.audit_dispatcher = None
 
         @with_decorator
         def get_all_data(self):
@@ -89,7 +89,7 @@ def register_sniff_context(BaseSniffContext):
                                                 iface=self.iface,
                                                 filter=self.filter)
 
-                    if self.attacks:
+                    if self.audits:
                         try:
                             if self.socket.LL in conf.l2types.layer2num:
                                 linktype = \
@@ -108,7 +108,7 @@ def register_sniff_context(BaseSniffContext):
                                           ' socket. Using IL_TYPE_ETH as DL')
                                 linktype = IL_TYPE_ETH
 
-                        self.attack_dispatcher = AttackDispatcher(linktype)
+                        self.audit_dispatcher = AuditDispatcher(linktype)
 
                 except socket.error, (errno, err):
                     self.summary = str(err)
@@ -204,8 +204,8 @@ def register_sniff_context(BaseSniffContext):
 
             log.debug("Entering in the main loop")
 
-            if self.attacks:
-                self.attack_dispatcher = AttackDispatcher(reader.linktype)
+            if self.audits:
+                self.audit_dispatcher = AuditDispatcher(reader.linktype)
 
             while self.internal:
 
@@ -253,8 +253,8 @@ def register_sniff_context(BaseSniffContext):
                     self.data.append(pkt)
                     reported_packets += 1
 
-                    if self.attack_dispatcher:
-                        self.attack_dispatcher.feed(pkt)
+                    if self.audit_dispatcher:
+                        self.audit_dispatcher.feed(pkt)
 
                     if self.callback:
                         self.callback(pkt, self.udata)
@@ -407,8 +407,8 @@ def register_sniff_context(BaseSniffContext):
 
                 self.data.append(packet)
 
-                if self.attack_dispatcher:
-                    self.attack_dispatcher.feed(packet)
+                if self.audit_dispatcher:
+                    self.audit_dispatcher.feed(packet)
 
                 # FIXME: This probably should be moved inside the run() function
                 if self.callback:

@@ -131,16 +131,16 @@ class PMApp(Singleton):
             if options.fread:
                 self.main_window.open_generic_file_async(options.fread)
 
-            if options.attack:
-                dev1, dev2, bpf_filter = options.attack, '', ''
+            if options.audit:
+                dev1, dev2, bpf_filter = options.audit, '', ''
 
                 try:
-                    dev1, dev2 = options.attack.split(',', 1)
+                    dev1, dev2 = options.audit.split(',', 1)
                     dev2, bpf_filter = other.split(':', 1)
                 except:
                     pass
 
-                self.main_window.start_new_attack(dev1, dev2, bpf_filter)
+                self.main_window.start_new_audit(dev1, dev2, bpf_filter)
 
             return False
 
@@ -161,7 +161,7 @@ class PMApp(Singleton):
         opt = OptionParser()
         opt.add_option('-r', None, dest="fread",
                        help="Read packets/sequence from file.")
-        opt.add_option('-a', None, dest="attack",
-                       help="Start an attack using intf1[,intf2][:bpf_filter]")
+        opt.add_option('-a', None, dest="audit",
+                       help="Start an audit using intf1[,intf2][:bpf_filter]")
 
         return opt

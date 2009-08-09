@@ -26,7 +26,7 @@ import gtk
 
 from PM.Core.I18N import _
 from PM.Manager.PreferenceManager import Prefs
-from PM.Manager.AttackManager import AttackManager
+from PM.Manager.AuditManager import AuditManager
 
 # Dummy class
 class EnumeratorBox(gtk.ComboBox):
@@ -307,18 +307,18 @@ class BackendPage(Page):
             _('Capture method for Sequence:'),
             new_combo_enumerator(('Native', 'TCPDump', 'Dumpcap'))),
 
-           ('backend.system.attack.capmethod',
-            _('Capture method for Attack:'),
+           ('backend.system.audit.capmethod',
+            _('Capture method for Audit:'),
             new_combo_enumerator(('Native', 'TCPDump', 'Dumpcap'))),
           )
         ),
 
-        (_('Attacks'),
+        (_('Audits'),
           (
-           ('backend.system.sniff.attacks', None,
-            gtk.CheckButton(_('Enable offline attacks on sniff'))),
-           ('backend.system.static.attacks', None,
-            gtk.CheckButton(_('Enable offline attacks on loaded files'))),
+           ('backend.system.sniff.audits', None,
+            gtk.CheckButton(_('Enable passive audits on sniff'))),
+           ('backend.system.static.audits', None,
+            gtk.CheckButton(_('Enable passive audits on loaded files'))),
           )
         ),
 
@@ -376,7 +376,7 @@ class SniffPage(gtk.VBox):
 
         # Last column
         model = gtk.ListStore(str)
-        cfields = AttackManager().get_configuration('global.cfields').keys()
+        cfields = AuditManager().get_configuration('global.cfields').keys()
         cfields.sort()
 
         for field in cfields:
@@ -437,7 +437,7 @@ class SniffPage(gtk.VBox):
         value = model.get_value(iter, 2)[1:-1]
 
         try:
-            desc = AttackManager().get_configuration('global.cfields') \
+            desc = AuditManager().get_configuration('global.cfields') \
                  .get_description(value)
 
             tooltip.set_markup('<b>%s:</b> %s' % (value, desc))

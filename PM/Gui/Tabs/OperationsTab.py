@@ -233,7 +233,7 @@ class FileOperation(Operation):
                  ctx is Backend.StaticContext:
 
                 rctx = Backend.StaticContext(self.file, self.file,
-                                 Prefs()['backend.system.static.attacks'].value)
+                                 Prefs()['backend.system.static.audits'].value)
 
             if rctx is not None:
                 # Let's update our operation directly from load
@@ -345,13 +345,13 @@ class SniffOperation(Backend.SniffContext, Operation):
     def __init__(self, iface, filter=None, minsize=0, maxsize=0, capfile=None, \
                  scount=0, stime=0, ssize=0, real=True, scroll=True, \
                  resmac=True, resname=False, restransport=True, promisc=True, \
-                 background=False, capmethod=0, attacks=True):
+                 background=False, capmethod=0, audits=True):
 
         Operation.__init__(self)
         Backend.SniffContext.__init__(self, iface, filter, minsize, maxsize,
                                       capfile, scount, stime, ssize, real,
                                       scroll, resmac, resname, restransport,
-                                      promisc, background, capmethod, attacks,
+                                      promisc, background, capmethod, audits,
                                       self.__recv_callback, None)
 
         if not self.background:
@@ -422,19 +422,19 @@ class SequenceOperation(Backend.SequenceContext, Operation):
 
         return ret
 
-class AttackOperation(Backend.AttackContext, Operation):
+class AuditOperation(Backend.AuditContext, Operation):
     def __init__(self, dev1, dev2, bpf_filter):
-        capmethod = Prefs()['backend.system.attack.capmethod'].value
+        capmethod = Prefs()['backend.system.audit.capmethod'].value
 
         if capmethod < 0 or capmethod > 2:
             Prefs()['backend.system.sendreceive.capmethod'].value = 0
             capmethod = 0
 
         Operation.__init__(self)
-        Backend.AttackContext.__init__(self, dev1, dev2, bpf_filter, capmethod)
+        Backend.AuditContext.__init__(self, dev1, dev2, bpf_filter, capmethod)
 
         nb = PMApp().main_window.get_tab('MainTab').session_notebook
-        self.session = nb.create_attack_session(self)
+        self.session = nb.create_audit_session(self)
 
 class OperationTree(gtk.TreeView):
     def __init__(self):

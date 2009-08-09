@@ -110,7 +110,7 @@ class PluginPage(gtk.VBox):
         # We have to load available_plugins from engine
         for reader in self.p_window.engine.available_plugins:
 
-            if reader.attack_type != -1:
+            if reader.audit_type != -1:
                 continue
 
             # Check if it's already present then remove the original
@@ -277,7 +277,7 @@ class PluginPage(gtk.VBox):
         update the gui at interval of 300 milliseconds.
         """
 
-        # First add attacks to the list
+        # First add audits to the list
         presents = []
 
         def add_to_list(row, list):
@@ -290,7 +290,7 @@ class PluginPage(gtk.VBox):
         # We have to load available_plugins from engine
         for reader in self.p_window.engine.available_plugins:
 
-            if reader.attack_type == -1:
+            if reader.audit_type == -1:
                 continue
 
             # Check if it's already present then remove the original

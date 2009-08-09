@@ -29,7 +29,7 @@ from PM.Gui.Core.Views import UmitView
 
 from PM.Gui.Sessions.Base import Session
 from PM.Gui.Sessions.SniffSession import SniffSession
-from PM.Gui.Sessions.AttackSession import AttackSession
+from PM.Gui.Sessions.AuditSession import AuditSession
 from PM.Gui.Sessions.SequenceSession import SequenceSession
 
 from PM.Manager.PreferenceManager import Prefs
@@ -129,8 +129,8 @@ class SessionNotebook(gtk.Notebook):
         session = SniffSession(ctx)
         return self.__append_session(session)
 
-    def create_attack_session(self, ctx):
-        session = AttackSession(ctx)
+    def create_audit_session(self, ctx):
+        session = AuditSession(ctx)
         return self.__append_session(session)
 
     def load_static_session(self, fname):

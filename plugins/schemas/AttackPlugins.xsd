@@ -35,14 +35,14 @@
 		</xs:simpleContent>
 	</xs:complexType>
 	<!-- This is for attribute -->
-	<xs:simpleType name="attributeAttackType">
+	<xs:simpleType name="attributeAuditType">
 		<xs:restriction base="xs:string">
-			<xs:enumeration value="offline"/>
-			<xs:enumeration value="online"/>
+			<xs:enumeration value="passive"/>
+			<xs:enumeration value="active"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<!-- This is our attack type both for offline and online attacks -->
-	<xs:complexType name="attackType">
+	<!-- This is our audit type both for offline and online audits -->
+	<xs:complexType name="auditType">
 		<xs:sequence>
 			<xs:element minOccurs="0" name="configurations">
 				<xs:complexType>
@@ -179,5 +179,5 @@
 		</xs:sequence>
 		<xs:attribute name="type" type="attributeAttackType" use="required"/>
 	</xs:complexType>
-	<xs:element name="attack" type="attackType"/>
+	<xs:element name="audit" type="auditType"/>
 </xs:schema>

@@ -67,8 +67,8 @@ import shutil
 
 SIGNATURE = "UmitPlugin"
 
-OFFLINE_ATTACK_TYPE = 0
-ONLINE_ATTACK_TYPE  = 1
+PASSIVE_AUDIT_TYPE = 0
+ACTIVE_AUDIT_TYPE  = 1
 
 class ManifestObject(object):
     def __init__(self):
@@ -82,7 +82,7 @@ class ManifestObject(object):
             ['provide', 'need', 'conflict'],
             ['license', 'copyright', 'author',
              'contributor', 'translator', 'artist'],
-            [], # From here fields are for offline/online attacks
+            [], # From here fields are for active/passive audits
             ['configuration', 'bool', 'int', 'float', 'str'],
             ['protocol'],
             ['vulnerability', 'description', 'classes', 'class', 'systems',
@@ -90,7 +90,7 @@ class ManifestObject(object):
              'discovered', 'references', 'url', 'platforms', 'platform'],
         ]
 
-        self.containers = [SIGNATURE, 'runtime', 'deptree', 'credits', 'attack',
+        self.containers = [SIGNATURE, 'runtime', 'deptree', 'credits', 'audit',
                            'configurations', 'protocols', 'vulnerabilities']
 
         self.name = ''
@@ -113,7 +113,7 @@ class ManifestObject(object):
         self.artist = []
 
         # -1 for standard plugin
-        self.attack_type = -1
+        self.audit_type = -1
 
         # (('configuration_name', {'option_id' : (value, 'description') })
         self.configurations = []
@@ -295,9 +295,9 @@ class ManifestLoader(handler.ContentHandler, ManifestObject):
                     else:
                         self.attr_type = 'ui'
 
-                elif self.parsing_pass == 4: # <attack>
-                    self.attack_type = attrs.get('type') == 'online' and 1 or 0
-                    log.debug("Attack type is %d" % self.attack_type)
+                elif self.parsing_pass == 4: # <audit>
+                    self.audit_type = attrs.get('type') == 'active' and 1 or 0
+                    log.debug("Audit type is %d" % self.audit_type)
 
             except ValueError:
                 log.warning('Element named `%s` not excepted.' % name)
@@ -493,10 +493,10 @@ class ManifestWriter(object):
         self.writer.characters('  ' * self.depth_idx)
         self.endElement('credits')
 
-        if self.manifest.attack_type == OFFLINE_ATTACK_TYPE:
-            self.dump_offline_attack()
-        elif self.manifest.attack_type == ONLINE_ATTACK_TYPE:
-            self.dump_offline_attack(True)
+        if self.manifest.audit_type == PASSIVE_AUDIT_TYPE:
+            self.dump_passive_audit()
+        elif self.manifest.audit_type == ACTIVE_AUDIT_TYPE:
+            self.dump_passive_audit(True)
 
         self.endElement('UmitPlugin')
         self.writer.endDocument()
@@ -517,7 +517,7 @@ class ManifestWriter(object):
                 self.writer.characters(item)
                 self.endElement(name)
 
-    def dump_offline_attack(self, online=False):
+    def dump_passive_audit(self, active=False):
         trans = {
             bool : 'bool',
             float : 'float',
@@ -525,8 +525,8 @@ class ManifestWriter(object):
             str : 'str',
         }
 
-        self.startElement('attack', AttributesImpl(
-            {'type' : (online and 'online' or 'offline')}
+        self.startElement('audit', AttributesImpl(
+            {'type' : (active and 'active' or 'passive')}
         ))
         self.writer.characters('\n')
 
@@ -583,7 +583,7 @@ class ManifestWriter(object):
 
         if not self.manifest.vulnerabilities:
             self.writer.characters('  ' * self.depth_idx)
-            self.endElement('attack')
+            self.endElement('audit')
             return
 
         self.startElement('vulnerabilities', {})
@@ -713,7 +713,7 @@ class ManifestWriter(object):
         self.endElement('vulnerabilities')
 
         self.writer.characters('  ' * self.depth_idx)
-        self.endElement('attack')
+        self.endElement('audit')
 
     def get_output(self):
         return self.output.getvalue()
@@ -970,7 +970,7 @@ class PluginWriter(ManifestObject):
         FIELDS = ('name', 'version', 'description', 'url', 'start_file',
                   'update', 'provide', 'need', 'conflict', 'license',
                   'copyright', 'author', 'contributor', 'translator', 'artist',
-                  'attack_type', 'configurations', 'protocols',
+                  'audit_type', 'configurations', 'protocols',
                   'vulnerabilities')
 
         # Filter out fields that are not related to the schema

@@ -23,7 +23,7 @@ This is the place where interface class are held.
 """
 
 ################################################################################
-# Profile, Port, Account providers used by Profiler attack plugin
+# Profile, Port, Account providers used by Profiler audit plugin
 ################################################################################
 
 UNKNOWN_TYPE       = 0

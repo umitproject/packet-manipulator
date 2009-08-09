@@ -26,11 +26,11 @@ In this module are defined:
     - register_send_receive_context
     - register_sniff_context
     - register_sequence_context
-    - register_attack_context
+    - register_audit_context
 
 respectively to hook the contexts StaticContext, TimedContext,
 SendContext, SendReceiveContext, SniffContext, SequenceContext and
-AttackContext class creation.
+AuditContext class creation.
 
 It accepts as argument a BaseContext class objects defined in
 Abstact/BaseContext and should return a new class object that
@@ -80,10 +80,10 @@ def register_sequence_context(context_class):
     log.debug("SequenceContext not overloaded")
     return context_class
 
-def register_attack_context(context_class):
-    "Override this to create your own AttackContext"
+def register_audit_context(context_class):
+    "Override this to create your own AuditContext"
 
-    log.debug("AttackContext not overloaded")
+    log.debug("AuditContext not overloaded")
     return context_class
 
 from PM.Manager.PreferenceManager import Prefs

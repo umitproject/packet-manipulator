@@ -28,7 +28,7 @@ import os
 from PM import Backend
 from PM.Core.Logger import log
 from PM.Manager.PreferenceManager import Prefs
-from PM.Manager.AttackManager import AttackManager
+from PM.Manager.AuditManager import AuditManager
 
 from PM.Gui.Widgets.StatusBar import StatusBar
 from PM.higwidgets.higdialogs import HIGAlertDialog
@@ -65,18 +65,18 @@ from PM.Gui.Tabs.HostListTab import HostListTab
 from PM.Gui.Tabs.OperationsTab import FileOperation
 from PM.Gui.Tabs.ProtocolSelectorTab import ProtocolSelectorTab
 from PM.Gui.Tabs.OperationsTab import OperationsTab, SniffOperation, \
-     AttackOperation
+     AuditOperation
 
 from PM.Gui.Dialogs.Interface import InterfaceDialog
 from PM.Gui.Dialogs.Preferences import PreferenceDialog
-from PM.Gui.Dialogs.NewAttack import NewAttackDialog
+from PM.Gui.Dialogs.NewAudit import NewAuditDialog
 from PM.Gui.Dialogs.Routes import RoutesDialog
 from PM.Gui.Plugins.Window import PluginWindow
 
 from PM.Gui.Pages import PerspectiveType
 
 from PM.Gui.Sessions.Base import Session
-from PM.Gui.Sessions.AttackSession import AttackSession
+from PM.Gui.Sessions.AuditSession import AuditSession
 
 from PM.Gui.Sessions import SessionType
 
@@ -121,8 +121,8 @@ class MainWindow(gtk.Window):
         self.main_actions = [
             ('File', None, _('File'), None),
 
-            ('NewAttack', gtk.STOCK_NEW, _('New A_ttack'), '<Control>t',
-                _('Create a new attack'), self.__on_new_attack),
+            ('NewAudit', gtk.STOCK_NEW, _('New A_udit'), '<Control>t',
+                _('Create a new audit'), self.__on_new_audit),
 
             ('NewSequence', gtk.STOCK_NEW, _('_New sequence'), '<Control>n',
                 _('Create a new sequence'), self.__on_new_sequence),
@@ -144,7 +144,7 @@ class MainWindow(gtk.Window):
             ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i',
                 _('Capture from interface'), self.__on_select_iface),
 
-            ('Attacks', None, _('Attacks'), None),
+            ('Audits', None, _('Audits'), None),
 
             ('Options', None, _('Options'), None),
 
@@ -167,7 +167,7 @@ class MainWindow(gtk.Window):
         self.default_ui = """<menubar>
             <menu action='File'>
                 <menuitem action='NewSequence'/>
-                <menuitem action='NewAttack'/>
+                <menuitem action='NewAudit'/>
                 <separator/>
                 <menuitem action='Open'/>
                 <menuitem action='Save'/>
@@ -178,7 +178,7 @@ class MainWindow(gtk.Window):
             <menu action='Capture'>
                 <menuitem action='Interface'/>
             </menu>
-            <menu action='Attacks'/>
+            <menu action='Audits'/>
             <menu action='Options'>
                 <menuitem action='Routes'/>
                 <separator/>
@@ -193,6 +193,9 @@ class MainWindow(gtk.Window):
             </menubar>
 
             <toolbar>
+                <toolitem action='NewSequence'/>
+                <toolitem action='NewAudit'/>
+                <separator/>
                 <toolitem action='Open'/>
                 <toolitem action='Save'/>
                 <toolitem action='Interface'/>
@@ -221,8 +224,8 @@ class MainWindow(gtk.Window):
         self.ui_manager.connect('connect-proxy', self.__on_connect_proxy)
         self.ui_manager.connect('disconnect-proxy', self.__on_disconnect_proxy)
 
-        # Set unsensitive the attack menu
-        item = self.ui_manager.get_widget('/menubar/Attacks')
+        # Set unsensitive the audit menu
+        item = self.ui_manager.get_widget('/menubar/Audits')
         item.set_sensitive(False)
 
         # Central widgets
@@ -233,15 +236,15 @@ class MainWindow(gtk.Window):
 
         self.plugin_window = PluginWindow()
 
-    def register_attack_item(self, name, lbl, tooltip, stock, callback):
-        attackitem = self.ui_manager.get_widget('/menubar/Attacks')
-        menu = attackitem.get_submenu()
+    def register_audit_item(self, name, lbl, tooltip, stock, callback):
+        audititem = self.ui_manager.get_widget('/menubar/Audits')
+        menu = audititem.get_submenu()
 
-        attackitem.show()
+        audititem.show()
 
         if not menu:
             menu = gtk.Menu()
-            attackitem.set_submenu(menu)
+            audititem.set_submenu(menu)
 
         act = gtk.Action(name, lbl, tooltip, stock)
         act.connect('activate', callback)
@@ -253,9 +256,9 @@ class MainWindow(gtk.Window):
 
         return act, item
 
-    def deregister_attack_item(self, item):
-        attackitem = self.ui_manager.get_widget('/menubar/Attacks')
-        menu = attackitem.get_submenu()
+    def deregister_audit_item(self, item):
+        audititem = self.ui_manager.get_widget('/menubar/Audits')
+        menu = audititem.get_submenu()
 
         if not menu:
             return
@@ -266,7 +269,7 @@ class MainWindow(gtk.Window):
                 menu.remove(citem)
 
                 if not menu.get_children():
-                    attackitem.set_sensitive(False)
+                    audititem.set_sensitive(False)
 
                 return True
 
@@ -546,7 +549,7 @@ class MainWindow(gtk.Window):
         item = self.ui_manager.get_widget('/menubar/Views')
         item.remove_submenu()
 
-        item = self.ui_manager.get_widget('/menubar/Attacks')
+        item = self.ui_manager.get_widget('/menubar/Audits')
         item.remove_submenu()
 
         self.vbox.pack_start(self.main_paned)
@@ -649,9 +652,9 @@ class MainWindow(gtk.Window):
 
     def __on_maintab_page_switched(self, notebook, page, pagenum):
         page = notebook.get_nth_page(pagenum)
-        item = self.ui_manager.get_widget('/menubar/Attacks')
+        item = self.ui_manager.get_widget('/menubar/Audits')
 
-        if not isinstance(page, AttackSession):
+        if not isinstance(page, AuditSession):
             item.set_sensitive(False)
         else:
             submenu = item.get_submenu()
@@ -729,19 +732,19 @@ class MainWindow(gtk.Window):
         dialog.hide()
         dialog.destroy()
 
-    def start_new_attack(self, dev1, dev2, bpf_filter):
-        log.debug('Creating a new AttackOperation using %s %s %s' \
+    def start_new_audit(self, dev1, dev2, bpf_filter):
+        log.debug('Creating a new AuditOperation using %s %s %s' \
                   % (dev1, dev2, bpf_filter))
 
         tab = self.get_tab('OperationsTab')
-        tab.tree.append_operation(AttackOperation(dev1, dev2, bpf_filter))
+        tab.tree.append_operation(AuditOperation(dev1, dev2, bpf_filter))
 
-    def __on_new_attack(self, action):
-        dialog = NewAttackDialog(self)
+    def __on_new_audit(self, action):
+        dialog = NewAuditDialog(self)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             inputs = dialog.get_inputs()
-            self.start_new_attack(*inputs)
+            self.start_new_audit(*inputs)
 
         dialog.hide()
         dialog.destroy()
@@ -889,7 +892,7 @@ class MainWindow(gtk.Window):
         log.debug('Saving options before exiting')
         Prefs().write_options()
 
-        log.debug('Saving attack configurations')
-        AttackManager().write_configurations()
+        log.debug('Saving audit configurations')
+        AuditManager().write_configurations()
 
         gtk.main_quit()
