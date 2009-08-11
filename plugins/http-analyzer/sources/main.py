@@ -292,6 +292,9 @@ class HTTPage(Perspective):
                                           'file:///')
             return
 
+        log.debug('These are the available headers: %s' % headers)
+        log.debug('Looking for content type ...')
+
         if headers and 'content-type' in headers:
             conttype = headers['content-type'][0]
 

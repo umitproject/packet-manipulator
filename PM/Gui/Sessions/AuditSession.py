@@ -20,6 +20,7 @@
 
 from Base import Session
 from PM.Gui.Pages.AuditPage import AuditPage
+from PM.Gui.Pages.AuditOutputPage import AuditOutputPage
 
 class AuditSession(Session):
     session_id = 2
@@ -27,6 +28,8 @@ class AuditSession(Session):
 
     def create_ui(self):
         self.audit_page = self.add_perspective(AuditPage, True,
+                                                True, False)
+        self.output_page = self.add_perspective(AuditOutputPage, True,
                                                 True, False)
 
         self.editor_cbs.insert(0, lambda: self.audit_page.reload())

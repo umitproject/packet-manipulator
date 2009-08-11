@@ -1,3 +1,38 @@
+2009-08-11 Francesco Piccinno <stack.box@gmail.com>
+    * plugins/http-analyzer/sources/main.py
+      audits/passive/http/sources/main.py:
+        - Fixing a regression. Now http-analyzer plugin works again.
+    * PacketManipulator:
+        - Adding PM_LOGEXCLUDE enviroment option to filter useless debug
+          messages.
+    * audits/active/icmpredirect/sources/main.py:
+        - Adding icmpredirect active audit plugin.
+    * audits/active/synflood/sources/main.py:
+        - Adding synflood active audit plugin.
+    * PM/Gui/Pages/AuditPage.py:
+        - Implemented a new AuditTree to manage currently active audits
+          from a nice TreeView like in OperationsTabs.
+    * PM/Gui/Pages/AuditOutputPage.py:
+        - This file contains widgets used to report status messages coming
+          from online audits.
+    * PM/Gui/Sessions/AuditSession.py:
+        - Adding OutputPage perspective to the AuditSession.
+    * PM/Core/Logger.py:
+        - PM_LOGEXCLUDE functionality added to Logger.
+    * PM/Core/Const.py:
+        - More constants added.
+    * PM/Core/AuditUtils.py:
+        - Netmask class and utilities functions added.
+        - Add AuditOperation class that could be used to create sophisticated
+          audits.
+    * PM/Manager/AuditManager.py:
+        - Adding missing remove_decoder_hook function.
+
+    - Various bugs fixed
+    - TCP syn flooding implemented as audit plugin.
+    - ICMP Redirect MITM attack implemented as audit plugin.
+    - Various GUI improvements.
+
 2009-08-09 Francesco Piccinno <stack.box@gmail.com>
     * plugins/schemas/AttackPlugins.xsd
       audits/offline/http/sources/main.py
@@ -102,8 +137,9 @@
         - Active connections could be killed or we could inject data within.
         - The data could be taken from a file or typed with keyboard in a
           TextView.
-        - The file contains debug code and need to be cleaned up. The unused code
-          should be remove when the injection will be complete and fully working.
+        - The file contains debug code and need to be cleaned up. The unused
+          code should be remove when the injection will be complete and fully
+          working.
      * attacks/offline/ip/sources/main.py:
         - Now IP decoder provides an injector routine that recompute checksum or
           create a new IP MetaPacket that will held injected data.

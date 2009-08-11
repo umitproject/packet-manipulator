@@ -24,6 +24,7 @@ import sys
 os.putenv('PM_DEVELOPMENT', '1')
 os.putenv('PM_NOPSYCO', '1')
 os.putenv('PM_LOGLEVEL', '1')
+os.putenv('PM_LOGEXCLUDE', '(register_tab|Containers.py|doc.py|MainWindow.py|dump\(\)\:)')
 os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep,
                                     os.getenv('PYTHONPATH', '')))
 

@@ -190,6 +190,8 @@ class HTTPRequest(object):
             return last
 
     def analyze_headers(self, mpkt):
+        mpkt.set_cfield(HTTP_NAME + '.headers', self.headers)
+
         if self.http_type == HTTP_REQUEST:
             mpkt.set_cfield(HTTP_NAME + '.is_request', True)
             mpkt.set_cfield(HTTP_NAME + '.is_response', False)
@@ -495,8 +497,7 @@ class HTTPDissector(Plugin, PassiveAudit):
         sess.feed_response(stream.client, mpkt)
         sess.feed_request(stream.server, mpkt)
 
-        if stream.state in (stream.CONN_RESET, stream.CONN_CLOSE, \
-                            stream.CONN_TIMED_OUT):
+        if stream.state in (CONN_RESET, CONN_CLOSE, CONN_TIMED_OUT):
 
             del self.sessions[hash(stream)]
 

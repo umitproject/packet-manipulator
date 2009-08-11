@@ -92,3 +92,17 @@ PM_TYPE_DICT,      \
 PM_TYPE_CLASS,     \
 PM_TYPE_INSTANCE,  \
 PM_TYPE_CALLABLE = range(13)
+
+################################################################################
+# Used by AttackManager. See also user_msg
+################################################################################
+
+STATUS_EMERG,   \
+STATUS_ALERT,   \
+STATUS_CRIT,    \
+STATUS_ERR,     \
+STATUS_WARNING, \
+STATUS_NOTICE,  \
+STATUS_INFO,    \
+STATUS_DEBUG,   \
+STATUS_NONE = range(9)

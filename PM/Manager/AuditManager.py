@@ -31,6 +31,7 @@ from xml.sax.xmlreader import AttributesImpl
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
+from PM.Core.AuditUtils import AuditOperation
 from PM.Core.Atoms import Singleton, defaultdict, generate_traceback
 from PM.Core.Const import PM_TYPE_STR, PM_TYPE_INT, PM_TYPE_INSTANCE, PM_HOME
 from PM.Core.NetConst import *
@@ -448,6 +449,13 @@ class AuditManager(Singleton):
 
         self._decoders[level][type][post + 1].append(decoder_hook)
 
+    def remove_decoder_hook(self, level, type, decoder_hook, post=0):
+        if type not in self._decoders[level]:
+            return False
+
+        self._decoders[level][type][post + 1].remove(decoder_hook)
+        return True
+
     def get_decoder(self, level, type):
         try:
             return self._decoders[level][type]
@@ -667,7 +675,8 @@ class ActiveAudit(AuditPlugin):
             tab = PM.Gui.Core.App.PMApp().main_window.get_tab('MainTab')
             audit_sess = tab.session_notebook.get_current_session()
 
-            return self.execute_audit(audit_sess, {})
+            self.__start_audit(audit_sess, {})
+            return
 
         dialog = gtk.Dialog(_('Inputs for %s - PacketManipulator') % \
                             self.__class__.__name__,
@@ -731,6 +740,13 @@ class ActiveAudit(AuditPlugin):
         dialog.connect('response', self.__on_dialog_response)
         dialog.show()
 
+    def __start_audit(self, audit_sess, inp_dict):
+        ret = self.execute_audit(audit_sess, inp_dict)
+
+        if isinstance(ret, AuditOperation):
+            log.debug('Nice. This audit implements AuditOperation')
+            audit_sess.audit_page.tree.append_operation(ret)
+
     def __on_dialog_response(self, dialog, rid):
         import gtk
         import PM.Gui.Core.App
@@ -769,7 +785,7 @@ class ActiveAudit(AuditPlugin):
         tab = PM.Gui.Core.App.PMApp().main_window.get_tab('MainTab')
         audit_sess = tab.session_notebook.get_current_session()
 
-        self.execute_audit(audit_sess, inp_dict)
+        self.__start_audit(audit_sess, inp_dict)
 
 ###############################################################################
 # Testing classes

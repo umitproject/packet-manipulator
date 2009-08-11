@@ -21,10 +21,13 @@
 """
 Logger module
 
-Use PM_LOGLEVEL to set the loglevel
+Use PM_LOGLEVEL to set the loglevel and
+    PM_LOGEXCLUDE to exclude certain log records
 """
 
 import os
+import re
+
 from logging import Logger, StreamHandler, Formatter, addLevelName
 from logging import __status__ as STATUS
 
@@ -51,15 +54,41 @@ else:
     addLevelName(40, '%sERR%s' % (red, reset))
     addLevelName(50, '%sCRI%s' % (red, reset))
 
+class PMLogHandler(StreamHandler):
+    def __init__(self):
+        regex = os.getenv('PM_LOGEXCLUDE', '')
+
+        if regex:
+            try:
+                rex = re.compile(regex)
+                print "Using %s to filter logging" % regex
+                self.rex = rex
+            except:
+                print "Error while compiling except regex %s" % regex
+                self.rex = None
+        else:
+            self.rex = None
+
+        StreamHandler.__init__(self)
+
+    def emit(self, record):
+        if self.rex and self.rex.findall(self.format(record)):
+            return
+
+        StreamHandler.emit(self, record)
+
+    def set_regex(self, rex):
+        self.rex = rex
+
 class PMLogger(Logger, object):
     def __init__(self, name, level):
         Logger.__init__(self, name, level)
         self.formatter = self.format
 
-        handler = StreamHandler()
-        handler.setFormatter(self.formatter)
+        self.handler = PMLogHandler()
+        self.handler.setFormatter(self.formatter)
 
-        self.addHandler(handler)
+        self.addHandler(self.handler)
 
     def get_formatter(self):
         return self.__formatter

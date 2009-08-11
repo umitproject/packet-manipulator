@@ -40,12 +40,15 @@ class Operation(object):
     like sending packets or receiving packets and should be ovverriden
     """
 
+    RUNNING, NOT_RUNNING = range(2)
+
     # CHECKME: Add this to avoid multiple request of that prefs.
     SKIP_UPDATE = Prefs()['gui.operationstab.uniqueupdate'].value
 
     def __init__(self):
         self.iter = None
         self.model = None
+        self.state = self.NOT_RUNNING
 
     def set_iter(self, model, iter):
         self.iter = iter
@@ -76,7 +79,6 @@ class FileOperation(Operation):
     Abstract class to manage file operations like save/load
     """
     TYPE_LOAD, TYPE_SAVE = range(2)
-    RUNNING, NOT_RUNNING = range(2)
 
     has_pause = False
     has_stop = False
