@@ -64,7 +64,12 @@ class AuditTree(gtk.HBox):
 
         self.__create_buttons()
 
-        self.pack_start(self.tree)
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        sw.add(self.tree)
+
+        self.pack_start(sw)
         self.pack_start(self.toolbar, False, False)
 
         self.tree.get_selection().connect('changed', self.__on_sel_changed)
@@ -225,7 +230,8 @@ class AuditTree(gtk.HBox):
                 self.tool_items[ITEM_STOP].set_sensitive(False)
 
             self.tool_items[ITEM_RESTART].set_sensitive(operation.has_restart)
-            self.tool_items[ITEM_RECONFIGURE].set_sensitive(operation.has_reconfigure)
+            self.tool_items[ITEM_RECONFIGURE].set_sensitive(
+                operation.has_reconfigure)
 
             self.tool_items[ITEM_OPEN].set_sensitive(True)
             self.tool_items[ITEM_REMOVE].set_sensitive(True)
@@ -295,7 +301,6 @@ class AuditTree(gtk.HBox):
     def __on_reconfigure(self, action, operation):
         operation.reconfigure()
 
-    @get_operation
     def __on_clear(self, action):
         def scan(model, path, iter, lst):
             op = model.get_value(iter, 0)

@@ -226,6 +226,17 @@ class GUIPage(Page):
           )
         ),
 
+        (_('Audit output perspective'),
+          (
+           (
+            ('gui.maintab.auditoutputview.font',
+                _('Audit output font:'), gtk.FontButton()),
+            ('gui.maintab.auditoutputview.timeformat',
+                _('Audit output time column str format (strftime):'),
+                gtk.Entry()))
+          )
+        ),
+
         (_('Hex view window'),
           (
            ('gui.maintab.hexview.font', _('HexView font:'),

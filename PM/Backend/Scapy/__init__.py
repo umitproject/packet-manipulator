@@ -30,6 +30,7 @@ PMFlagsField        = FlagsField
 
 PMBitField          = None
 PMIPField           = IPField
+PMMACField          = MACField
 PMByteField         = ByteField
 PMShortField        = ShortField
 PMLEShortField      = LEShortField

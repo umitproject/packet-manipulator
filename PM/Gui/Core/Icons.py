@@ -75,7 +75,7 @@ def register_icons():
 def get_pixbuf(stock_id, w=None, h=None):
     "Get the pixbuf for a stock item defined in icons"
 
-    name, size = stock_id.split("_")
+    name, size = stock_id.rsplit("_")
 
     if size == "small":
         size = 16

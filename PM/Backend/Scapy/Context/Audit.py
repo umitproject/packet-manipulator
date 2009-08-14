@@ -18,10 +18,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+import os
 import time
 import socket
 
+from fcntl import ioctl
 from threading import Thread
+from struct import pack, unpack_from
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
@@ -35,6 +38,26 @@ from PM.Backend.Scapy import *
 
 ERR_TIMEOUT   = 0
 ERR_EXCEPTION = 1
+
+PF_INET = socket.AF_INET
+SIOCGIFMTU = 0x8921
+
+if os.name != 'nt':
+    def get_mtu(iface):
+        s = socket.socket(PF_INET, socket.SOCK_DGRAM, 0)
+        mtu = unpack_from("16sI",
+                          ioctl(s.fileno(),
+                                SIOCGIFMTU,
+                                pack("16sI", iface, 0)))[1]
+        s.close()
+
+        log.debug('%s MTU = %d' % (iface, mtu))
+
+        return mtu
+else:
+    def get_mtu(iface):
+        log.warning('Returning 1500 as MTU for %s' % iface)
+        return 1500
 
 class SendWorker(object):
     def __init__(self, sck, mpkts, repeat=1, delay=None, oncomplete=None, \
@@ -94,7 +117,6 @@ def register_audit_context(BaseAuditContext):
             self.thread1 = None
             self.thread2 = None
 
-
             self.thread_pool = ThreadPool()
             self.audit_dispatcher = None
 
@@ -115,15 +137,18 @@ def register_audit_context(BaseAuditContext):
 
                 self._ip1 = get_if_addr(dev1)
                 self._mac1 = get_if_hwaddr(dev1)
+                self._mtu1 = get_mtu(dev1)
 
                 if dev2:
                     self._ip2 = get_if_addr(dev2)
                     self._mac2 = get_if_hwaddr(dev2)
+                    self._mtu2 = get_mtu(dev2)
 
                     self._lb_socket = conf.L2socket(iface=dev2)
                 else:
                     self._ip2 = None
                     self._mac2 = None
+                    self._mtu2 = None
 
                 if capmethod == 0:
                     log.debug('Creating listen sockets')
@@ -166,12 +191,12 @@ def register_audit_context(BaseAuditContext):
                                                        bpf_filter)
 
             except socket.error, (errno, err):
-                self.summary = str(err)
+                self.summary = self.title + ' (' + str(err) +')'
                 log.error(generate_traceback())
                 return
 
             except Exception, err:
-                self.summary = str(err)
+                self.summary = self.title + ' (' + str(err) +')'
                 log.error(generate_traceback())
 
         def get_mtu(self):
@@ -181,17 +206,31 @@ def register_audit_context(BaseAuditContext):
             return self._ip1
         def get_mac1(self):
             return self._mac1
+        def get_ip2(self):
+            return self._ip2
+        def get_mac2(self):
+            return self._mac2
+        def get_mtu(self):
+            return self._mtu1
+        def get_mtu1(self):
+            return self._mtu1
+        def get_mtu2(self):
+            return self._mtu2
 
         ########################################################################
         # Threads callbacks
         ########################################################################
 
         def _stop(self):
-            if self.internal:
+            if not self.internal:
                 log.error('Audit is already stopped')
                 return False
 
             self.internal = False
+            self.summary = self.title + _(' (stopping)')
+
+            log.debug('Stopping thread pool')
+            self.thread_pool.stop()
 
             log.debug('Joining threads')
 
@@ -201,7 +240,12 @@ def register_audit_context(BaseAuditContext):
             if self.thread2:
                 self.thread2.join()
 
+            self.state = self.NOT_RUNNING
+
             log.debug('AuditContext succesfully stopped')
+            self.summary = self.title + _(' (stopped)')
+
+            return True
 
         def _start(self):
             if self.internal:
@@ -232,10 +276,12 @@ def register_audit_context(BaseAuditContext):
             log.debug('Spawning thread pool for sending')
             self.thread_pool.start()
 
+            self.state = self.RUNNING
+
             return True
 
         def __helper_thread(self, obj):
-            errstr = _('Audit finished')
+            errstr = None
 
             try:
                 for reader in bind_reader(obj[0], obj[1]):
@@ -277,10 +323,13 @@ def register_audit_context(BaseAuditContext):
 
                 report_idx = reported_packets
 
-            self.summary = errstr
+            if errstr:
+                self.internal = False
+                self.state = self.NOT_RUNNING
+                self.summary = self.title + ' (' + errstr + ')'
 
         def __sniff_thread(self, obj):
-            errstr = _('Audit finished')
+            errstr = None
 
             log.debug('Entering in the native mainloop')
 
@@ -313,7 +362,10 @@ def register_audit_context(BaseAuditContext):
                     self.internal = False
                     break
 
-            self.summary = errstr
+            if errstr:
+                self.internal = False
+                self.state = self.NOT_RUNNING
+                self.summary = self.title + ' (' + errstr + ')'
 
         def __manage_mpkt(self, obj, mpkt):
             found = False
@@ -381,7 +433,7 @@ def register_audit_context(BaseAuditContext):
         ########################################################################
 
         def __worker_thread(self, send):
-            while send.repeat != 0:
+            while send.repeat != 0 and self.internal:
                 send.ans_left = len(send.mpkts)
 
                 for mpkt in send.mpkts:
@@ -399,13 +451,12 @@ def register_audit_context(BaseAuditContext):
 
                         if found:
                             lst[idx][2] += 1
-                            print lst[idx]
                         else:
                             lst.append([mpkt, send, 1])
 
                     send.socket.send(mpkt.root)
 
-                    if send.delay:
+                    if send.delay and self.internal:
                         time.sleep(send.delay / 1000.0)
 
                 send.repeat -= 1
@@ -426,7 +477,7 @@ def register_audit_context(BaseAuditContext):
                 # If timeout is not setted we've to leave it
                 log.debug('Send complete for %s. Waiting for timeout' % send)
 
-                if send.ans_left > 0:
+                if send.ans_left > 0 and self.internal:
                     time_left = send.timeout * 1000
                     delay = max(100, send.delay)
 

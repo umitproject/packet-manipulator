@@ -1,3 +1,90 @@
+2009-08-14 Francesco Piccinno <stack.box@gmail.com>
+    * audits/run-tester.sh:
+        - Adjusting PYTHONPATH
+        - Using audittester.py instead of old attacktester.py
+    * audits/passive/tcp/sources/main.py
+      audits/passive/fingerprint/sources/main.py
+      audits/passive/icmp/sources/main.py
+      audits/passive/ip/sources/main.py:
+        - I18N fixes.
+        - Bug fixing.
+    * audits/passive/udp/sources/main.py:
+        - Add new UDP decoder with checksum check of UDP packets and a simple
+          injector function (not tested).
+    * audits/active/dnsspoof/sources/main.py:
+        - Add new DNSSpoof plugin that could spoof MX, A, PTR and WINS records.
+    * audits/active/injector/sources/main.py:
+        - Commented out debug code.
+        - Implemented missing methods.
+    * audits/active/synflood/sources/main.py:
+        - Removed unused code.
+    * PM/Gui/Pages/SniffPage.py:
+        - Add redraw() method. Now selected rows are redrawed correctly after
+          packet changes.
+    * PM/Gui/Pages/AuditPage.py:
+        - Fixed 80 columns line wrap.
+        - Fixed a bug when the user clicks on clear.
+        - Now the treeview is packed inside gtk.ScrolledWindow.
+    * PM/Gui/Pages/PacketPage.py:
+        - Fixed a bug when the user tries to add a packet in the protocol
+          hierarchy widget within an empty SequenceSession.
+    * PM/Gui/Pages/AuditOutputPage.py:
+        - New shiny GUI, with a filter widget to search for interesting records.
+        - Multiple log records could be selected and copied in the clipboard, or
+          saved to a file (XML file format or plain text available).
+    * PM/Gui/Plugins/PathPage.py:
+        - Removed trailing spaces.
+        - Update audit page when the paths are modified.
+    * PM/Gui/Plugins/AuditPage.py:
+        - Add a InfoPage showing informations related to the selected plugins.
+    * PM/Gui/Plugins/Containers.py:
+        - Changing default icons for PassiveAudits and ActiveAudits.
+    * PM/Gui/Dialogs/Preferences.py
+      PM/Manager/PreferenceManager.py:
+        - Font and timeformat options added for AuditOutputPage.
+    * PM/Gui/Sessions/SniffSession.py:
+        - Fixed a bug.
+    * PM/Gui/Widgets/PropertyGrid.py:
+        - Fixed a bug with Float fields.
+        - Add MACEditor.
+    * PM/Gui/Widgets/FilterEntry.py:
+        - Trailing spaces and 80 columns line wraps.
+    * PM/Gui/Core/Icons.py:
+        - Fixing a bug with icon names having underscore.
+    * PM/Gui/Tabs/PropertyTab.py:
+        - Behaviour fix.
+    * PM/Backend/Scapy/translator.py:
+        - Adding udp, dns, dnsqr, dnsrr packet aliases.
+    * PM/Backend/Scapy/Context/Audit.py:
+        - Implementing get_mtu function for posix oses. Leaving it dummy for
+          windows.
+        - Add missing get_ip2(), get_mac2(), get_mtu(), get_mtu1(), get_mtu2().
+        - Summary is correctly setted now.
+        - Stop is correctly implemented now.
+    * PM/Backend/Scapy/__init__.py:
+        - MAC field added.
+    * PM/Backend/Scapy/wrapper.py:
+        - Fixing get_field_size() function.
+    * PM/Backend/Scapy/packet.py:
+        - set_field() now accepts also MetaPacket.
+        - set_field() and get_field() now accepts arguments with 2 inderections.
+    * PM/Backend/Abstract/BaseContext/Audit.py:
+        - Adding missing methods to the interface.
+        - Resetting file_types class attribute. This context could not be saved.
+    * PM/Core/Logger.py:
+        - Removing unused code.
+    * PM/Core/Atoms.py:
+        - Add strip_tags() function to strip HTML tags.
+    * PM/Manager/AuditManager.py:
+        - Various bugs fixed.
+    * PM/higwidgets/hignetwidgets.py:
+        - Generalization of HIGIpEntry into HIGGenericEntry and creating
+          HIGMacEntry for editing MAC fields.
+
+    - DNS spoof plugin added.
+    - UDP decoder added.
+    - Various bugs fixed.
+
 2009-08-11 Francesco Piccinno <stack.box@gmail.com>
     * plugins/http-analyzer/sources/main.py
       audits/passive/http/sources/main.py:

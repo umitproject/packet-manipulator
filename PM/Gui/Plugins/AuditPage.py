@@ -25,6 +25,7 @@ import datetime
 
 from PM.Core.I18N import _
 from PM.Gui.Core.App import PMApp
+from PM.Gui.Plugins.Core import Core
 
 from PM.Manager.AuditManager import AuditManager
 from PM.higwidgets.higdialogs import HIGAlertDialog
@@ -584,6 +585,9 @@ class OptionsPage(gtk.Table):
         row = 0
 
         for conf_name, conf_dict in plugin.configurations:
+            if conf_name == 'global.cfields':
+                continue
+
             opt_list = conf_dict.items()
             opt_list.sort()
 
@@ -633,6 +637,180 @@ class OptionsPage(gtk.Table):
             self.widgets.append((conf_frame, conf_widgets))
             row += 1
 
+class InfoPage(gtk.VBox):
+    def __init__(self):
+        gtk.VBox.__init__(self, False, 2)
+        self.set_border_width(4)
+
+        self.not_selected_lbl = gtk.Label('')
+        self.not_selected_lbl.set_markup(_('<span size=\'large\'><b>'
+                                           'No plugin selected.</b></span>'))
+
+        self.tagtable = gtk.TextTagTable()
+
+        self.bold = gtk.TextTag('bold')
+        self.bold.set_property('right-margin', 15)
+        self.bold.set_property('weight', pango.WEIGHT_BOLD)
+        self.tagtable.add(self.bold)
+
+        self.par = gtk.TextTag('par')
+        self.par.set_property('left-margin', 15)
+        self.par.set_property('right-margin', 15)
+        self.par.set_property('justification', gtk.JUSTIFY_FILL)
+        self.tagtable.add(self.par)
+
+        self.link = gtk.TextTag('link')
+        self.link.set_property('foreground', '#0000FF')
+        self.link.set_property('right-margin', 15)
+        self.link.set_property('underline', pango.UNDERLINE_SINGLE)
+        self.link.connect('event', self.__on_link)
+        self.tagtable.add(self.link)
+
+        self.buff = gtk.TextBuffer(self.tagtable)
+        self.text = gtk.TextView(self.buff)
+        self.text.modify_font(pango.FontDescription('Monospace 9'))
+        self.text.set_editable(False)
+        self.text.set_wrap_mode(gtk.WRAP_WORD_CHAR)
+
+        self.sw = gtk.ScrolledWindow()
+        self.sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        self.sw.add(self.text)
+
+        self.pack_start(self.not_selected_lbl)
+        self.pack_end(self.sw)
+
+        self.current_plugin = None
+
+        self.show()
+        self.not_selected_lbl.show()
+
+        self.connect('realize', self.__on_realize)
+
+    def __on_realize(self, widget):
+        self.sw.hide()
+
+    def __on_link(self, tag, widget, event, start):
+        if event.type == gtk.gdk.BUTTON_PRESS and event.button == 1:
+
+            end = start.copy()
+            start.backward_to_tag_toggle(self.link)
+            end.forward_to_tag_toggle(self.link)
+
+            link = self.buff.get_text(start, end)
+
+            Core().open_url(link)
+
+    def reload(self, plugin):
+        if self.current_plugin is plugin:
+            return
+
+        if self.current_plugin:
+            self.buff.set_text('')
+
+        self.current_plugin = plugin
+
+        if not self.current_plugin or \
+           (not plugin.protocols and not plugin.vulnerabilities):
+
+            if not self.not_selected_lbl.flags() & gtk.VISIBLE:
+                self.not_selected_lbl.show()
+
+            return
+
+        if self.not_selected_lbl.flags() & gtk.VISIBLE:
+            self.not_selected_lbl.hide()
+            self.sw.show()
+
+        self.append(_('Protocols:\n'), self.bold)
+
+        for pname, pport in plugin.protocols:
+            self.append('- %s\n' % ('%s/%s' %
+                                  (pport and str(pport) or '*', pname)),
+                        self.par)
+
+        for vulnname, vulndict in plugin.vulnerabilities:
+            self.append('\n' + vulnname + ':\n\n', self.bold)
+
+            if 'description' in vulndict:
+                self.append(vulndict['description'] + '\n', self.par)
+
+
+            if 'classes' in vulndict:
+                self.append(_('\nClasses:\n'), self.bold)
+
+                for kls in vulndict['classes']:
+                    self.append('- %s\n' % kls, self.par)
+
+            if 'systems' in vulndict:
+                aff, notaff = vulndict['systems']
+
+                if aff:
+                    self.append(_('\nAffected systems:\n'), self.bold)
+
+                    for sys in aff:
+                        self.append('- ' + sys + '\n', self.par)
+
+                if notaff:
+                    self.append(_('\n Not-affected systems:\n'), self.bold)
+
+                    for sys in aff:
+                        self.append('- ' + sys + '\n', self.par)
+
+            if 'versions' in vulndict:
+                aff, notaff = vulndict['versions']
+
+                if aff:
+                    self.append(_('\nAffected versions:\n'), self.bold)
+
+                    for sys in aff:
+                        self.append('- ' + sys + '\n', self.par)
+
+                if notaff:
+                    self.append(_('\n Not-affected versions:\n'), self.bold)
+
+                    for sys in aff:
+                        self.append('- ' + sys + '\n', self.par)
+
+            if 'platforms' in vulndict:
+                platforms = vulndict['platforms']
+
+                if platforms:
+                    self.append(_('\nPlatforms:\n'), self.bold)
+
+                    for name, arch in platforms:
+                        self.append('- ' + name + ' (' + arch + ')\n', self.par)
+
+            if 'credits' in vulndict:
+                date, authors = vulndict['credits']
+
+                self.append(_('Pubblished on: '), self.bold)
+                self.append(date + '\n')
+
+                if authors:
+                    self.append('\nAuthors:\n', self.bold)
+
+                    for auth in authors:
+                        self.append('- ' + auth + '\n', self.par)
+
+            if 'references' in vulndict:
+                refs = vulndict['references']
+
+                if refs:
+                    self.append(_('\nReferences:\n'), self.bold)
+
+                    for typ, href in refs:
+                        self.append('- ', self.par)
+                        self.append(href, self.link)
+
+                        if typ:
+                            self.append(' (' + typ + ')\n')
+                        else:
+                            self.append('\n')
+
+    def append(self, txt, *args):
+        self.buff.insert_with_tags(self.buff.get_end_iter(), txt, *args)
+
 class AuditPage(gtk.VBox):
     def __init__(self, parent):
         gtk.VBox.__init__(self, False, 4)
@@ -677,6 +855,7 @@ class AuditPage(gtk.VBox):
         self.sw.set_size_request(230, -1)
 
         self.notebook = gtk.Notebook()
+        self.info_page = InfoPage()
         self.options_page = OptionsPage()
         self.filters_page = FiltersPage()
         self.filters_page.find_cb = self.__on_find
@@ -684,8 +863,9 @@ class AuditPage(gtk.VBox):
         self.filter_model = self.store.filter_new()
         self.filter_model.set_visible_func(self.filters_page.filter_func)
 
-        self.notebook.append_page(self.options_page, None)
+        self.notebook.append_page(self.info_page, None)
         self.notebook.append_page(self.filters_page, None)
+        self.notebook.append_page(self.options_page, None)
 
         self.notebook.set_show_border(False)
         self.notebook.set_show_tabs(False)
@@ -703,6 +883,7 @@ class AuditPage(gtk.VBox):
         self.combo.add_attribute(txt_rend, 'text', 1)
 
         store.append([gtk.STOCK_INDEX, _('Show plugins')])
+        store.append([gtk.STOCK_ABOUT, _('Information')])
         store.append([gtk.STOCK_FIND, _('Find plugins')])
         store.append([gtk.STOCK_PREFERENCES, _('Configure plugins')])
 
@@ -739,11 +920,21 @@ class AuditPage(gtk.VBox):
             self.tree.set_model(self.store)
             self.tree.expand_all()
 
-        if id == 0:
+        if id == 0: # Show plugins
             self.hbox.set_child_packing(self.sw, True, True, 0, gtk.PACK_START)
             self.notebook.hide()
 
-        elif id == 1:
+        elif id == 1: # Information
+            self.hbox.set_child_packing(self.sw, False, False, 0,
+                                        gtk.PACK_START)
+
+            self.tree.set_model(self.filter_model)
+            self.tree.expand_all()
+
+            self.notebook.set_current_page(0)
+            self.notebook.show()
+
+        elif id == 2: # Find
             self.hbox.set_child_packing(self.sw, False, False, 0,
                                         gtk.PACK_START)
 
@@ -753,15 +944,17 @@ class AuditPage(gtk.VBox):
             self.notebook.set_current_page(1)
             self.notebook.show()
 
-        elif id == 2:
+        elif id == 3: # Configure
             self.hbox.set_child_packing(self.sw, False, False, 0,
                                         gtk.PACK_START)
 
             self.tree.set_model(self.store)
             self.tree.expand_all()
 
-            self.notebook.set_current_page(0)
+            self.notebook.set_current_page(2)
             self.notebook.show()
+
+        self.__on_selection_changed(self.tree.get_selection())
 
     def __on_find(self):
         self.filter_model.refilter()
@@ -792,10 +985,17 @@ class AuditPage(gtk.VBox):
                 secondary_text=errmsg.summary
             )
             dialog.run()
+            dialog.hide()
             dialog.destroy()
 
     def __on_selection_changed(self, selection):
-        if self.combo.get_active() != 2:
+        act = self.combo.get_active()
+
+        if act == 1:
+            page = self.info_page
+        elif act == 3:
+            page = self.options_page
+        else:
             return
 
         model, iter = selection.get_selected()
@@ -808,7 +1008,7 @@ class AuditPage(gtk.VBox):
         if not obj:
             return False
 
-        self.options_page.reload(obj)
+        page.reload(obj)
 
     def __act_cell_data_func(self, col, cell, model, iter):
         plugin = model.get_value(iter, COLUMN_OBJECT)
@@ -829,6 +1029,8 @@ class AuditPage(gtk.VBox):
                                                            plugin.description))
 
     def populate(self):
+        self.store.clear()
+
         passive_it = self.store.append(None,
             [None, _('Passive audits'), None])
 

@@ -31,7 +31,8 @@ class FilterEntry(gtk.HBox):
 
         self._entry = gtk.Entry()
         self._box = gtk.EventBox()
-        self._box.add(gtk.image_new_from_stock(gtk.STOCK_CLEAR, gtk.ICON_SIZE_MENU))
+        self._box.add(gtk.image_new_from_stock(gtk.STOCK_CLEAR,
+                                               gtk.ICON_SIZE_MENU))
 
         self._entry.set_has_frame(False)
 
@@ -42,7 +43,7 @@ class FilterEntry(gtk.HBox):
         self._entry.connect('changed', self.__on_update)
 
         self._colors = None
-    
+
     def do_realize(self):
         gtk.HBox.do_realize(self)
 
@@ -50,31 +51,31 @@ class FilterEntry(gtk.HBox):
             self.style.white,
             gtk.gdk.color_parse("#FEFEDC")
         )
-        
+
         self.__on_update(self._entry)
 
     def do_expose_event(self, evt):
-        alloc = self.allocation    
+        alloc = self.allocation
         rect = gtk.gdk.Rectangle(alloc.x, alloc.y, alloc.width, alloc.height)
 
         self.style.paint_flat_box(
-            self.window,          
-            self._entry.state,  
-            self._entry.get_property('shadow_type'),
-            alloc,                                    
-            self._entry,                            
-            'entry_bg',                               
-            rect.x, rect.y, rect.width, rect.height   
-        )                                             
-
-        self.style.paint_shadow(
-            self.window,        
+            self.window,
             self._entry.state,
             self._entry.get_property('shadow_type'),
-            alloc,                                    
-            self._entry,                            
-            'entry',                                  
-            rect.x, rect.y, rect.width, rect.height   
+            alloc,
+            self._entry,
+            'entry_bg',
+            rect.x, rect.y, rect.width, rect.height
+        )
+
+        self.style.paint_shadow(
+            self.window,
+            self._entry.state,
+            self._entry.get_property('shadow_type'),
+            alloc,
+            self._entry,
+            'entry',
+            rect.x, rect.y, rect.width, rect.height
         )
 
         return gtk.HBox.do_expose_event(self, evt)

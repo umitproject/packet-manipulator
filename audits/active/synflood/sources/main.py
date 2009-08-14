@@ -57,8 +57,6 @@ class SynFlood(Plugin, ActiveAudit):
     )
 
     def start(self, reader):
-        self.status = PMApp().main_window.get_tab('StatusTab').status
-
         a, self.item = self.add_menu_entry('SynFlood', 'SYN flooding ...',
                                            _('Start a SYN flooding attack against a target'),
                                            gtk.STOCK_EXECUTE)

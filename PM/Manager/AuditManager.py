@@ -228,6 +228,9 @@ class Configuration(object):
     def keys(self): return self._dict.keys()
     def items(self): return self._dict.items()
     def update(self, new_dict): self._dict.update(new_dict)
+    def revupdate(self, new_dict):
+        new_dict.update(self._dict)
+        self._dict = new_dict
 
     def __repr__(self):
         return 'Conf: %s -> %s' % (self._name, self._dict)
@@ -265,32 +268,32 @@ class AuditManager(Singleton):
         # It seems that specifying {} * n doesn't create a new object
         # but instead only create a new pointer to the same object.
         # Here we need separated dict so we should declare them all
-        self._decoders = ({}, {}, {}, {}, {}, {}, {})
-        self._injectors = ({}, {}, {}, {}, {}, {}, {})
+        self._decoders = ({}, {}, {}, {}, {}, {}, {}, {})
+        self._injectors = ({}, {}, {}, {}, {}, {}, {}, {})
         self._configurations = {}
 
         self.load_configurations()
 
         self._global_conf = self.register_configuration('global', {
-            'debug' : [False, 'Turn out debugging']
+            'debug' : [False, 'Turn out debugging'],
         })
 
         self._global_cfields = self.register_configuration('global.cfields', {
-            'username' : (PM_TYPE_STR, 'Account username'),
-            'password' : (PM_TYPE_STR, 'Account password'),
-            'banner'   : (PM_TYPE_STR, 'Service banner'),
+            'username' : [PM_TYPE_STR, 'Account username'],
+            'password' : [PM_TYPE_STR, 'Account password'],
+            'banner'   : [PM_TYPE_STR, 'Service banner'],
 
-            'good_checksum' : (PM_TYPE_STR, 'Hex string representation of the '
+            'good_checksum' : [PM_TYPE_STR, 'Hex string representation of the '
                                'good checksum for the packet. Set if the packet'
-                               ' has a wrong checksum'),
-            'reassembled_payload' : (PM_TYPE_STR, 'Used by audits that can '
-                                     'treassemble fragments of packets'),
+                               ' has a wrong checksum'],
+            'reassembled_payload' : [PM_TYPE_STR, 'Used by audits that can '
+                                     'treassemble fragments of packets'],
 
-            'inj::l4proto' : (PM_TYPE_INT, 'Used to track down L4 protocol for '
-                             'injection'),
-            'inj::flags' : (PM_TYPE_INT, 'Used for injection'),
-            'inj::payload' : (PM_TYPE_STR, 'Data for injection'),
-            'inj::data' : (PM_TYPE_INSTANCE, 'General objects'),
+            'inj::l4proto' : [PM_TYPE_INT, 'Used to track down L4 protocol for '
+                             'injection'],
+            'inj::flags' : [PM_TYPE_INT, 'Used for injection'],
+            'inj::payload' : [PM_TYPE_STR, 'Data for injection'],
+            'inj::data' : [PM_TYPE_INSTANCE, 'General objects'],
         })
 
     # Configurations stuff
@@ -330,7 +333,7 @@ class AuditManager(Singleton):
             log.debug('Configuration %s registered.' % conf_name)
         else:
             conf = self._configurations[conf_name]
-            conf.update(conf_dict)
+            conf.revupdate(conf_dict)
 
             log.debug('Configuration %s updated.' % conf_name)
 
@@ -368,8 +371,7 @@ class AuditManager(Singleton):
                 import PM.Gui.Core.App
                 tab = PM.Gui.Core.App.PMApp().main_window.get_tab('StatusTab')
                 self._output = tab.status
-            else:
-                self._output.info(out)
+            self._output.info(out)
 
     ############################################################################
     # Injectors
@@ -495,8 +497,9 @@ class AuditManager(Singleton):
         @param port the remote port
         @param dissector a callable
         """
+        assert layer in (APP_LAYER_TCP, APP_LAYER_UDP)
         # The dissector is only a special case of a decoder.
-        self.add_decoder(APP_LAYER_TCP, port, dissector)
+        self.add_decoder(layer, port, dissector)
 
     # Properties
 
@@ -572,16 +575,19 @@ class AuditDispatcher(object):
                                     injector)
                         return
 
-                    # TODO: clean up cfields
-
                 elif flags == INJ_FORWARD:
-                    log.error('IMPLEMENT ME')
+                    self._context.si_l3(mpkt)
 
                 # Get the next packet to inject
                 next = mpkt.cfields.get('inj::data', None)
 
-                if 'inj::data' in mpkt.cfields:
-                    mpkt.unset_cfield('inj::data')
+                # Cleaning up cfields
+
+                fields = ('inj::data', 'inj::flags', 'inj::data', 'inj::payload')
+
+                for f in fields:
+                    if f in mpkt.cfields:
+                        mpkt.unset_cfield(f)
 
                 mpkt = next
 

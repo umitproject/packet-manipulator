@@ -805,7 +805,12 @@ class PluginReader(ManifestLoader):
 
             from PM.Gui.Core.Icons import get_pixbuf
 
-            return get_pixbuf('extension_normal', w, h)
+            if self.audit_type == 0:
+                return get_pixbuf('sniff_normal', w, h)
+            elif self.audit_type == 1:
+                return get_pixbuf('packet_normal', w, h)
+            else:
+                return get_pixbuf('extension_normal', w, h)
 
     def get_path(self):
         return self.path

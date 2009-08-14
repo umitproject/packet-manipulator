@@ -43,7 +43,7 @@ def icmp_decoder():
         if not checksum_check:
             return None
 
-        if mpkt.get_field('ip.flags') & 1:
+        if mpkt.get_field('ip.flags', 0) & 1:
             # Only a fragment
             return None
 

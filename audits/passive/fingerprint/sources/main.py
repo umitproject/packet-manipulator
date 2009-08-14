@@ -31,11 +31,11 @@ import os.path
 from socket import ntohs
 from struct import unpack
 
-from PM.Core.Atoms import defaultdict, odict, generate_traceback
+from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Gui.Plugins.Core import Core
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import PassiveAudit, AuditManager, coroutine
+from PM.Manager.AuditManager import PassiveAudit, AuditManager
+from PM.Core.Atoms import defaultdict, odict, generate_traceback
 from PM.Core.NetConst import *
 from PM.Core.Const import PM_TYPE_STR, PM_TYPE_LIST
 
@@ -62,8 +62,8 @@ def tcp_fp(finger):
     def internal(mpkt):
         try:
             finger.push(mpkt, finger.TTL, mpkt.get_field('ip.ttl'))
-            finger.push(mpkt, finger.DF, mpkt.get_field('ip.frag') & 0x400)
-            finger.push(mpkt, finger.LT, (mpkt.get_field('ip.ihl') or 0) * 4)
+            finger.push(mpkt, finger.DF, mpkt.get_field('ip.frag', 0) & 0x400)
+            finger.push(mpkt, finger.LT, mpkt.get_field('ip.ihl', 0) * 4)
 
             tcpraw = mpkt.get_field('tcp')
             flags = mpkt.get_field('tcp.flags')
@@ -108,12 +108,12 @@ def tcp_fp(finger):
                 remote_os = finger.report(mpkt)
 
                 mpkt.set_cfield('remote_os', remote_os)
-                manager.user_msg('%s is running %s' % (mpkt.get_field('ip.src'),
-                                                       remote_os),
+                manager.user_msg(_('%s is running %s') % (mpkt.get_field('ip.src'),
+                                                          remote_os),
                                  5, 'fingerprint')
         except Exception, err:
-            log.debug('Ignoring exception while setting fingerprint.')
-            log.debug(generate_traceback())
+            log.error('Ignoring exception while setting fingerprint.')
+            log.error(generate_traceback())
 
             log.debug('Clearing fingerprint.')
             finger.clear(mpkt)
@@ -266,7 +266,7 @@ class OSFPModule(object):
             else:
                 return 'Unknown fingerprint (%s)' % cfield
 
-class OSFP(Plugin, PassiveAudit):
+class OSFP(PassiveAudit):
     def register_hooks(self):
         AuditManager().add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
                                          self._tcp_hook, 1)

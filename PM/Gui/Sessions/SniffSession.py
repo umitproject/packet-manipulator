@@ -44,9 +44,14 @@ class SniffSession(Session):
         self.show_all()
 
     def reload_container(self, packet=None):
-        # FIXME: check packet and emit a row-changed
         if not isinstance(self.context, Backend.TimedContext):
+
+            if packet:
+                self.sniff_page.redraw(packet)
+                return
+
             self.sniff_page.clear()
+
         self.sniff_page.reload()
 
     def save_session(self, fname, async=True):

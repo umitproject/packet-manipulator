@@ -28,7 +28,7 @@ from PM.Core.I18N import _
 from PM.Core.Logger import log
 
 from PM.higwidgets.higbuttons import MiniButton
-from PM.higwidgets.hignetwidgets import HIGIpEntry
+from PM.higwidgets.hignetwidgets import HIGIpEntry, HIGMacEntry
 
 from PM.Gui.Core.Icons import get_pixbuf
 from PM.Gui.Widgets.Expander import ToolBox
@@ -121,10 +121,10 @@ class IntEditor(Editor):
             self.digits = 0
 
     def __on_changed(self, spin):
-        if isinstance(self.value, int):
-            self.value = self.spin.get_value_as_int()
-        else:
+        if self.spin.get_digits() != 0:
             self.value = self.spin.get_value()
+        else:
+            self.value = self.spin.get_value_as_int()
 
 class BitEditor(Editor):
     def create_widgets(self):
@@ -352,6 +352,13 @@ class IPv4Editor(Editor):
     def __on_changed(self, entry):
         self.value = self.entry.get_text()
 
+class MACEditor(IPv4Editor):
+    def create_widgets(self):
+        self.entry = HIGMacEntry()
+
+        if self.value:
+            self.entry.set_text(self.value)
+
 def get_editor(field):
     "@return the corresponding editor class for field or None"
 
@@ -363,7 +370,7 @@ def get_editor(field):
     # IPField
 
     # We use a list because order is important here
-    table = [#(Backend.PMMACField, MACEditor),
+    table = [(Backend.PMMACField, MACEditor),
              (Backend.PMStrField, StrEditor),
              (Backend.PMIPField, IPv4Editor),
              (Backend.PMEnumField, EnumEditor),
@@ -776,7 +783,7 @@ class PropertyGridTree(gtk.ScrolledWindow):
 
     def __on_reset_field(self, action):
         packet, proto, field = self.get_selected_field()
-        packet.reset(proto, field=field)
+        packet.reset(proto, proto, field=field)
 
     def __on_reset_proto_fields(self, action):
         packet, proto, field = self.get_selected_field()

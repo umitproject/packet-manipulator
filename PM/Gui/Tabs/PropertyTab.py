@@ -180,6 +180,14 @@ class PropertyTab(UmitView):
             start  = Backend.get_field_offset(packet, proto, field)
             length = Backend.get_field_size(proto, field)
 
+            log.debug('Field %s start at %d and finish at %d' % (field, start,
+                                                                 length))
+
+            if length == 0:
+                # Deselect all
+                page.packet_page.hexview.select_block(0, 0)
+                return
+
             page.packet_page.hexview.select_block(start / 8, max(length / 8, 1))
 
             # This will cause the sniff page to be cleared and repopulated

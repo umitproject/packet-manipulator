@@ -51,7 +51,7 @@ from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Gui.Plugins.Engine import Plugin
 from PM.Manager.AuditManager import AuditManager, PassiveAudit
-from PM.Core.NetConst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP
+from PM.Core.NetConst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP, INJ_FORWARD
 from PM.Core.AuditUtils import checksum
 
 from PM.Backend import MetaPacket
@@ -102,8 +102,8 @@ def ip_decoder():
 
                 # TODO: check ip.flags standard name in UMPA
                 ts = time()
-                mf = mpkt.get_field('ip.flags') & 1
-                frag_off = mpkt.get_field('ip.frag') * 8
+                mf = mpkt.get_field('ip.flags', 0) & 1
+                frag_off = mpkt.get_field('ip.frag', 0) * 8
 
                 if not mf and frag_off == 0:
                     return PROTO_LAYER, mpkt.get_field('ip.proto')
@@ -219,7 +219,7 @@ def ip_injector(context, mpkt):
     else:
         mpkt.reset_field('ip.chksum')
 
-    return True
+    return INJ_FORWARD
 
 class IPDecoder(Plugin, PassiveAudit):
     def register_decoders(self):

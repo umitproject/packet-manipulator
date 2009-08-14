@@ -27,21 +27,21 @@ import re
 import gtk
 import gobject
 
-class HIGIpEntry(gtk.HBox):
-    """
-    A simple IP widget Entry
-    """
+class HIGGenericEntry(gtk.HBox):
     __gtype_name__ = "HIGIpEntry"
     __gsignals__ = {
         'changed' : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
     }
     regex = re.compile("\\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b")
+    groups = 4
+    maxlength = 3
+    separator = '.'
 
     def __init__(self):
         gtk.HBox.__init__(self, False, 2)
 
         self._current = None
-        self._entries = [gtk.Entry(3) for i in xrange(4)]
+        self._entries = [gtk.Entry(self.maxlength) for i in xrange(self.groups)]
         self._img_error = gtk.image_new_from_stock(
                 gtk.STOCK_DIALOG_ERROR, gtk.ICON_SIZE_MENU
         )
@@ -51,7 +51,7 @@ class HIGIpEntry(gtk.HBox):
 
         self.has_frame = True
 
-        redraw = lambda x, y, root: root.queue_draw() 
+        redraw = lambda x, y, root: root.queue_draw()
 
         for entry in self._entries:
             entry.connect('focus-in-event', redraw, self)
@@ -67,18 +67,16 @@ class HIGIpEntry(gtk.HBox):
         for e in self._entries:
             e.set_alignment(0.5)
             e.set_has_frame(False)
-            e.set_width_chars(3)
+            e.set_width_chars(self.maxlength)
 
-        self.pack_start(self._entries[0], False, False, 0)
-        self.pack_start(gtk.Label("."), False, False, 0)
+        idx = 0
+        for i in xrange(self.groups):
+            self.pack_start(self._entries[idx], False, False, 0)
 
-        self.pack_start(self._entries[1], False, False, 0)
-        self.pack_start(gtk.Label("."), False, False, 0)
+            if idx != self.groups - 1:
+                self.pack_start(gtk.Label(self.separator), False, False, 0)
 
-        self.pack_start(self._entries[2], False, False, 0)
-        self.pack_start(gtk.Label("."), False, False, 0)
-
-        self.pack_start(self._entries[3], False, False, 0)
+            idx += 1
 
         self.pack_start(self._img_error, False, False, 0)
         self.pack_start(self._img_ok, False, False, 0)
@@ -89,11 +87,17 @@ class HIGIpEntry(gtk.HBox):
         self._img_ok.hide()
 
     def __on_key_press(self, widget, evt):
-        if evt.keyval == gtk.keysyms.BackSpace:
+        if evt.keyval == gtk.keysyms.BackSpace or \
+           evt.keyval == gtk.keysyms.Left:
             self.__move_next(False)
             return True
 
-        elif evt.keyval <= 256 and chr(evt.keyval) == '.':
+        elif evt.keyval == gtk.keysyms.Tab or \
+           evt.keyval == gtk.keysyms.Right:
+            self.__move_next()
+            return True
+
+        elif evt.keyval <= 256 and chr(evt.keyval) == self.separator:
             self.__move_next()
             return True
 
@@ -101,7 +105,7 @@ class HIGIpEntry(gtk.HBox):
 
     def __on_key_release(self, widget, evt):
         if evt.keyval <= 256 and chr(evt.keyval).isdigit() and \
-             widget.get_property('cursor_position') == 3:
+             widget.get_property('cursor_position') == (self.groups - 1):
             self.__move_next()
 
         self.__validate()
@@ -121,14 +125,14 @@ class HIGIpEntry(gtk.HBox):
         else:
             i -= 1
 
-        if i < 0 or i >= 4:
+        if i < 0 or i >= self.groups:
             i = 0
 
         self._entries[i].grab_focus()
         self._current = self._entries[i]
 
     def __validate(self):
-        if HIGIpEntry.regex.match(self.text):
+        if self.regex.match(self.text):
             self._img_error.hide()
             self._img_ok.show()
             self.emit('changed')
@@ -145,7 +149,7 @@ class HIGIpEntry(gtk.HBox):
 
         if self.has_frame:
             self.style.paint_flat_box(
-                self.window, 
+                self.window,
                 self._current.state,
                 self._current.get_property('shadow_type'),
                 alloc,
@@ -155,7 +159,7 @@ class HIGIpEntry(gtk.HBox):
             )
 
             self.style.paint_shadow(
-                self.window, 
+                self.window,
                 self._current.state,
                 self._current.get_property('shadow_type'),
                 alloc,
@@ -167,12 +171,12 @@ class HIGIpEntry(gtk.HBox):
         return gtk.Bin.do_expose_event(self, evt)
 
     def get_text(self):
-        return ".".join(map(lambda e: e.get_text(), self._entries))
+        return self.separator.join(map(lambda e: e.get_text(), self._entries))
 
     def set_text(self, txt):
-        t = txt.split(".")
-        
-        if len(t) == 4:
+        t = txt.split(self.separator)
+
+        if len(t) == self.groups:
             [e.set_text(v) for e, v in zip(self._entries, t)]
 
     def set_has_frame(self, val):
@@ -183,7 +187,15 @@ class HIGIpEntry(gtk.HBox):
 
     text = property(get_text, set_text)
 
-gobject.type_register(HIGIpEntry)
+gobject.type_register(HIGGenericEntry)
+
+HIGIpEntry = HIGGenericEntry
+
+class HIGMacEntry(HIGGenericEntry):
+    regex = re.compile('([0-9a-fA-F]{2}([:-]|$)){6}')
+    groups = 6
+    maxlength = 2
+    separator = ':'
 
 if __name__ == "__main__":
     w = gtk.Window()

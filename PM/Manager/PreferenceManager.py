@@ -192,6 +192,8 @@ class Prefs(Singleton):
         'gui.maintab.hexview.bpl' : 16,
         'gui.maintab.sequenceview.font' : 'Monospace 10',
         'gui.maintab.sequenceview.usecolors' : True,
+        'gui.maintab.auditoutputview.font' : 'Monospace 8',
+        'gui.maintab.auditoutputview.timeformat' : '',
         'gui.maintab.autostop' : False,
         'gui.maintab.askforsave' : True,
 

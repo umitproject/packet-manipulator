@@ -294,7 +294,7 @@ class MetaPacket(object):
             if len(ret) > 1:
                 delattr(layer, ret[1])
             else:
-                log.error('Cannot set an entire protocol')
+                log.error('Cannot reset an entire protocol')
 
         except Exception, err:
             log.error('Error while resetting %s field. Traceback:' % \
@@ -302,6 +302,9 @@ class MetaPacket(object):
             log.error(generate_traceback())
 
     def set_field(self, fieldname, value):
+        if isinstance(value, MetaPacket):
+            value = value.root
+
         try:
             ret = fieldname.split('.')
             layer = self.root.getlayer(global_trans[ret[0]][0])
@@ -309,8 +312,15 @@ class MetaPacket(object):
             if not layer:
                 return None
 
-            if len(ret) > 1:
+            if len(ret) == 2:
                 setattr(layer, ret[1], value)
+            elif len(ret) == 3:
+                val = getattr(layer, ret[1])
+
+                if val is not None:
+                    setattr(val, ret[2], value)
+                else:
+                    raise Exception('Middle value is None')
             else:
                 log.error('Cannot set an entire protocol')
 
@@ -319,22 +329,27 @@ class MetaPacket(object):
                       (fieldname, repr(value)))
             log.error(generate_traceback())
 
-    def get_field(self, fieldname):
+    def get_field(self, fieldname, default=None):
         try:
             ret = fieldname.split('.')
             layer = self.root.getlayer(global_trans[ret[0]][0])
 
             if not layer:
-                return None
+                return default
 
             if len(ret) > 1:
-                return getattr(layer, ret[1])
+                val = getattr(layer, ret[1])
+
+                if len(ret) == 3 and val:
+                    val = getattr(val, ret[2])
+
+                return val != None and val or default
             else:
                 return str(layer)
         except Exception, err:
             log.error('Error while getting %s field. Traceback:' % fieldname)
             log.error(generate_traceback())
-            return None
+            return default
 
     def copy(self):
         if self.root:

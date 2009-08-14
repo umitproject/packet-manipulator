@@ -77,9 +77,6 @@ class PMLogHandler(StreamHandler):
 
         StreamHandler.emit(self, record)
 
-    def set_regex(self, rex):
-        self.rex = rex
-
 class PMLogger(Logger, object):
     def __init__(self, name, level):
         Logger.__init__(self, name, level)

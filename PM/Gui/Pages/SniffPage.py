@@ -301,6 +301,13 @@ class SniffPage(Perspective):
 
         # Maybe we have to switch back to list store mode?
 
+    def redraw(self, packet=None):
+        model, lst = self.tree.get_selection().get_selected_rows()
+
+        for idx in lst:
+            iter = model.get_iter(lst[0])
+            model.row_changed(idx, iter)
+
     def reload(self):
         for packet in self.session.context.get_data():
             self.list_store.append([packet])

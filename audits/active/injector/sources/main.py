@@ -173,7 +173,10 @@ class TabDetails(gtk.VBox):
 
         # This is for data to inject
         self.client_inj_frags = []
-        self.server_inj_frags = ['USER test injection test :Tester\r\n', 'PING :pingthis\r\n']
+        self.server_inj_frags = [
+            #'USER test injection test :Tester\r\n',
+            #'PING :pingthis\r\n'
+        ]
 
         if not self.tagtable:
             self.tagtable = gtk.TextTagTable()
@@ -191,6 +194,7 @@ class TabDetails(gtk.VBox):
         self.buff = gtk.TextBuffer(self.tagtable)
         self.view = gtk.TextView(self.buff)
         self.view.set_wrap_mode(gtk.WRAP_CHAR)
+        self.view.set_editable(False)
 
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
@@ -342,15 +346,15 @@ class ConnectionsWindow(gtk.Dialog):
         self.stream_dict[stream] = (stream, path)
 
         # DEBUG: remove me after injection is complete
-        if stream.sport in (6667, 80) or stream.dport in (6667, 80):
-            details = TabDetails(self.session, stream)
-            details.show_all()
+        #if stream.sport in (6667, 80) or stream.dport in (6667, 80):
+            #details = TabDetails(self.session, stream)
+            #details.show_all()
 
-            self.following[stream] = details
+            #self.following[stream] = details
 
-            self.notebook.append_page(details, gtk.Label('%s:%d <-> %s:%d' \
-                % (stream.get_source(), stream.sport,
-                   stream.get_dest(), stream.dport)))
+            #self.notebook.append_page(details, gtk.Label('%s:%d <-> %s:%d' \
+                #% (stream.get_source(), stream.sport,
+                   #stream.get_dest(), stream.dport)))
 
         log.debug('Connection added')
 
@@ -367,7 +371,13 @@ class ConnectionsWindow(gtk.Dialog):
         log.debug('Reference removed')
 
     def remove_tab_details(self, tab):
-        pass
+        log.debug('Removing page')
+
+        pagenum = self.notebook.page_num(tab)
+        self.notebook.remove_page(pagenum)
+
+        if tab.stream in self.following:
+            del self.following[tab.stream]
 
     def get_extern_iter(self, top=True):
         rect = self.tree.get_visible_rect()
@@ -396,7 +406,7 @@ class ConnectionsWindow(gtk.Dialog):
             stream = self.store.get_value(iter, COLUMN_OBJECT)
 
             if stream and not isinstance(stream, (tuple, int)):
-                details = TabDetails(self.session, stream)
+                details = TabDetails(self, stream)
                 details.show_all()
 
                 self.following[stream] = details
@@ -465,8 +475,6 @@ class ConnectionsWindow(gtk.Dialog):
                         self.store.set_value(start, COLUMN_STATUS, stream.state)
                         self.store.set_value(start, COLUMN_BYTES, new_bytes)
 
-                        print new_bytes
-
                 start = self.store.iter_next(start)
         else:
             page = self.notebook.get_nth_page(page)
@@ -516,8 +524,9 @@ class Injector(Plugin, ActiveAudit):
                                         gtk.STOCK_INDEX)
 
         self.window = ConnectionsWindow(tcpdecoder.reassembler)
-        self.window.show()
-        self.window.start_update()
+        # DEBUG:
+        #self.window.show()
+        #self.window.start_update()
 
     def stop(self):
         self.remove_menu_entry(self.item)
@@ -532,9 +541,9 @@ class Injector(Plugin, ActiveAudit):
 
     def __tcp_callback(self, stream, mpkt):
         # DEBUG: remove me
-        if stream.sport in (6667, 80) or stream.dport in (6667, 80):
-            self.window.add_connection(stream)
-            stream.listeners.append(self.__follow_connection)
+        #if stream.sport in (6667, 80) or stream.dport in (6667, 80):
+        self.window.add_connection(stream)
+        stream.listeners.append(self.__follow_connection)
 
     def __follow_connection(self, stream, mpkt, rcv):
         if stream.state != CONN_DATA:
@@ -546,9 +555,7 @@ class Injector(Plugin, ActiveAudit):
             log.debug('Collecting data for %s' % stream)
 
             if rcv is stream.server:
-                data = \
-                    stream.server.data[stream.server.count - \
-                                       stream.server.count_new:]
+                data = stream.server.data[-stream.server.count_new:]
 
                 if data:
                     page.data_frags.append((0, data))
@@ -559,9 +566,7 @@ class Injector(Plugin, ActiveAudit):
 
                     return INJ_MODIFIED
             else:
-                data = \
-                    stream.client.data[stream.client.count - \
-                                       stream.client.count_new:]
+                data = stream.client.data[-stream.client.count_new:]
 
                 if data:
                     page.data_frags.append((1, data))
@@ -572,7 +577,9 @@ class Injector(Plugin, ActiveAudit):
 
                     return INJ_MODIFIED
 
-        return INJ_COLLECT_DATA
+            return INJ_COLLECT_DATA
+
+        return INJ_COLLECT_STATS
 
 __plugins__ = [Injector]
 __plugins_deps__ = [('Injector', ['TCPDecoder'], [], [])]

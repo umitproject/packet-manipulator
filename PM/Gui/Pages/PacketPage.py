@@ -160,15 +160,17 @@ class ProtocolHierarchy(gtk.ScrolledWindow):
 
         if self.session.packet.insert(packet, where):
             self.session.reload_container(self.session.packet)
-            self.session.reload_editor()
+            self.session.reload_editors()
 
             return True
 
         return False
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
-        if not self.session.packet or not data:
+        if not self.session.packet or not data or \
+           self.store.iter_n_children(None) == 0:
             ctx.finish(False, False, time)
+            return
 
         if self.append_packet(data.data, (x, y)):
             ctx.finish(True, False, time)

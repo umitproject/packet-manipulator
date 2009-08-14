@@ -31,6 +31,7 @@ from datetime import datetime
 from struct import pack, unpack
 from socket import inet_aton, ntohl, inet_ntoa
 
+from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Tracing import trace
 from PM.Gui.Plugins.Core import Core
@@ -347,8 +348,8 @@ class Reassembler(object):
                 stream.server.wscale = 1
 
         if not (not datalen and tcpseq == (rcv.ack_seq)) and \
-           (not (tcpseq - (rcv.ack_seq + rcv.window * rcv.wscale - snd.seq_adj) <= 0) or \
-            (tcpseq + datalen) - (rcv.ack_seq - snd.seq_adj) < 0):
+           (not (tcpseq - (rcv.ack_seq + rcv.window * rcv.wscale) <= 0) or \
+            (tcpseq + datalen) - rcv.ack_seq < 0):
             print "*" * 80
             print mpkt.get_field('raw.load')
             print "*" * 80
@@ -392,7 +393,7 @@ class Reassembler(object):
             print "ACKDIFF:", tcpack - snd.ack_seq, tcpack, snd.ack_seq
             print snd
 
-            if tcpack - (snd.ack_seq - rcv.seq_adj) > 0:
+            if tcpack - snd.ack_seq > 0:
                 snd.ack_seq = tcpack# + rcv.seq_adj
                 print snd
 
@@ -404,7 +405,7 @@ class Reassembler(object):
                 mpkt.set_cfield('inj::data', (stream, rcv))
                 mpkt.set_cfield('inj::flags', INJ_MODIFIED)
 
-                log.error('Fixing ACK packet')
+                log.debug('Fixing ACK packet')
 
             if rcv.state == FIN_SENT:
                 rcv.state = FIN_CONFIRMED
@@ -469,14 +470,14 @@ class Reassembler(object):
                 return
 
         if ret == INJ_COLLECT_STATS:
-            log.error('Collecting stats')
+            log.debug('Collecting stats')
             rcv.data = ''
         elif ret == INJ_SKIP_PACKET:
-            log.error('Skipping packet')
+            log.debug('Skipping packet')
             rcv.count_new = 0
             rcv.data = ''
         else:
-            log.error('Collecting data')
+            log.debug('Collecting data')
             pass
 
         if rcv.seq_adj != 0:
@@ -487,7 +488,7 @@ class Reassembler(object):
             mpkt.set_cfield('inj::data', (stream, rcv))
             mpkt.set_cfield('inj::flags', INJ_MODIFIED)
 
-            log.error('Adjusting seq and ack')
+            log.debug('Adjusting seq and ack')
 
         #print inet_ntoa(stream.source), stream.sport, \
         #      inet_ntoa(stream.dest), stream.dport
@@ -511,7 +512,7 @@ class Reassembler(object):
         exp_seq = (snd.first_data_seq + rcv.count + rcv.urg_count)
         lost = exp_seq - tcpseq
 
-        log.error('exp_seq: %d tcpseq: %d lost: %d' % (exp_seq, tcpseq, lost))
+        log.debug('exp_seq: %d tcpseq: %d lost: %d' % (exp_seq, tcpseq, lost))
 
         if urg and urg_ptr - (exp_seq - 1) > 0 and \
            (not rcv.urg_seen or urg_ptr - rcv.urg_ptr > 0):
@@ -545,7 +546,7 @@ class Reassembler(object):
                 self.notify(mpkt, stream, rcv)
         else:
             if datalen - lost > 0:
-                log.error('add2buf() %d:%d' % (lost, datalen))
+                log.debug('add2buf() %d:%d' % (lost, datalen))
                 self.add2buf(mpkt, rcv, payload[lost:datalen])
                 self.notify(mpkt, stream, rcv)
 
@@ -571,36 +572,37 @@ class Reassembler(object):
 
         exp_seq = (snd.first_data_seq + rcv.count + rcv.urg_count)
 
-        log.error('Original TCP sequence: %d seq_adj: %d exp_seq: %d' % (tcpseq, rcv.seq_adj, exp_seq))
+        log.debug('Original TCP sequence: %d seq_adj: %d exp_seq: %d' \
+                  % (tcpseq, rcv.seq_adj, exp_seq))
 
         if tcpseq != exp_seq:# and tcpseq + rcv.seq_adj == exp_seq:
-            log.error('Current TCP sequence adjusted to exp_seq by adding seq_adj')
+            log.debug('Current TCP sequence adjusted to exp_seq (+ seq_adj)')
             tcpseq += rcv.seq_adj
 
         if not tcpseq - exp_seq > 0:
-            log.error('Before data')
+            log.debug('Before data')
 
             # This packet is old because seq < current
             if (tcpseq + datalen + (tcpflags & TH_FIN)) - exp_seq > 0:
 
-                log.error('Last packet of the window')
+                log.debug('Last packet of the window')
 
                 cur_ts = get_ts(mpkt)[1]
                 self.add_from_skb(stream, mpkt, rcv, snd, payload, datalen,
                                   tcpseq, tcpflags & TH_FIN, tcpflags & TH_URG,
-                                  mpkt.get_field('tcp.urgptr') + tcpseq - 1)
+                                  mpkt.get_field('tcp.urgptr', 0) + tcpseq - 1)
 
                 packet = rcv.plist
 
                 while packet:
-                    if packet.seq + rcv.seq_adj - exp_seq > 0:
+                    if packet.seq - exp_seq > 0:
                         break
-                    if (packet.seq + rcv.seq_adj + len(packet.data) + packet.fin) - \
+                    if (packet.seq + len(packet.data) + packet.fin) - \
                        exp_seq > 0:
                         self.add_from_skb(stream, mpkt, rcv, snd, packet.data,
-                                          len(packet.data), packet.seq + rcv.seq_adj,
+                                          len(packet.data), packet.seq,
                                           packet.fin, packet.urg,
-                                          packet.urg_ptr + packet.seq  + rcv.seq_adj - 1)
+                                          packet.urg_ptr + packet.seq - 1)
 
                     rcv.rmem_alloc -= len(packet.data)
 
@@ -619,10 +621,10 @@ class Reassembler(object):
                     del packet
                     packet = tmp
             else:
-                log.error('Inconsistent packet. Payload: "%.10s" Ignoring it.' % payload)
+                log.warning('Inconsistent packet (%.10s) ignored.' % payload)
                 return
         else:
-            log.error('Standard packet. Looking for the right position')
+            log.debug('Standard packet. Looking for the right position')
 
             p = rcv.plist_tail
 
@@ -658,20 +660,20 @@ class Reassembler(object):
                 if not rcv.plist_tail:
                     rcv.plist_tail = packet
 
-                log.error('Prepending packet %s' % packet)
+                log.debug('Prepending packet %s' % packet)
             else:
                 packet.next  = p.next
                 p.next = packet
                 packet.prev = p
 
-                log.error('Appending %s after %s' % (packet, p))
+                log.debug('Appending %s after %s' % (packet, p))
 
                 if packet.next:
                     packet.next.prev = packet
                 else:
                     rcv.plist_tail = packet
 
-            log.error('List: %s' % rcv.plist.dump())
+            log.debug('List: %s' % rcv.plist.dump())
 
     def add_new_tcp(self, mpkt):
         """
@@ -904,7 +906,7 @@ class TCPDecoder(Plugin, PassiveAudit):
         stream, orcv = mpkt.cfields.get('inj::data', (None, None))
 
         if not stream:
-            log.error('Last packet of the chain. Exiting')
+            log.debug('Last packet of the chain. Exiting')
             return INJ_FORWARD
 
         rcv = (stream.client is orcv) and (stream.server) or (stream.client)
@@ -918,7 +920,7 @@ class TCPDecoder(Plugin, PassiveAudit):
 
         injector = AuditManager().get_injector(0, LL_TYPE_IP)
 
-        if not injector(context, mpkt):
+        if injector(context, mpkt) == INJ_ERROR:
             log.error('Error in underlayer injector')
             return INJ_ERROR
 
@@ -930,7 +932,7 @@ class TCPDecoder(Plugin, PassiveAudit):
             # the seq_adj and return True
 
             if mpkt.get_field('tcp.seq') == rcv.seq + rcv.seq_adj:
-                log.error('This is the injected packet skipping it')
+                log.debug('This is the injected packet skipping it')
 
                 ret = INJ_SKIP_PACKET
                 mpkt.unset_cfield('inj::data')
@@ -939,10 +941,12 @@ class TCPDecoder(Plugin, PassiveAudit):
                 cseq = mpkt.get_field('tcp.seq')
                 cack = mpkt.get_field('tcp.ack')
 
-                log.error('Adjusting sequence for TCP packet')
-                log.error('TCP sequence %d + %d = %d', cseq, rcv.seq_adj, rcv.seq_adj + cseq)
-                log.error('TCP ack %d - %d = %d', cack, orcv.seq_adj, cack - orcv.seq_adj)
-                log.error('Resetting TCP checksum')
+                log.debug('Adjusting sequence for TCP packet')
+                log.debug('TCP sequence %d + %d = %d', cseq, rcv.seq_adj,
+                          rcv.seq_adj + cseq)
+                log.debug('TCP ack %d - %d = %d', cack, orcv.seq_adj,
+                          cack - orcv.seq_adj)
+                log.debug('Resetting TCP checksum')
 
                 mpkt.set_field('tcp.seq', cseq + rcv.seq_adj)
                 mpkt.set_field('tcp.ack', cack - orcv.seq_adj)
@@ -960,16 +964,18 @@ class TCPDecoder(Plugin, PassiveAudit):
             elif mpkt.get_field('tcp.seq') == rcv.seq + rcv.seq_adj:
 
                 ret = INJ_SKIP_PACKET
-                log.error('This packet doesn\'t need adjustment. SEQ and ACK are ok')
+                log.debug('No adjustments needed. SEQ & ACK are ok')
 
             else:
                 cseq = mpkt.get_field('tcp.seq')
                 cack = mpkt.get_field('tcp.ack')
 
-                log.error('Adjusting current TCP packet')
-                log.error('TCP sequence %d + %d = %d', cseq, rcv.seq_adj, rcv.seq_adj + cseq)
-                log.error('TCP ack %d - %d = %d', cack, orcv.seq_adj, cack - orcv.seq_adj)
-                log.error('Resetting TCP checksum')
+                log.debug('Adjusting current TCP packet')
+                log.debug('TCP sequence %d + %d = %d', cseq, rcv.seq_adj,
+                          rcv.seq_adj + cseq)
+                log.debug('TCP ack %d - %d = %d', cack, orcv.seq_adj,
+                          cack - orcv.seq_adj)
+                log.debug('Resetting TCP checksum')
 
                 mpkt.set_field('tcp.seq', cseq + rcv.seq_adj)
                 mpkt.set_field('tcp.ack', cack - orcv.seq_adj)
@@ -1000,9 +1006,9 @@ class TCPDecoder(Plugin, PassiveAudit):
             pkt.set_field('tcp.seq', nseq)
             pkt.set_field('tcp.ack', nack)
 
-            log.error('Forging new TCP + Raw packet (appended to %s)' % pkt)
-            log.error('TCP seq: %d' % nseq)
-            log.error('TCP ack: %d' % nack)
+            log.debug('Forging new TCP + Raw packet (appended to %s)' % pkt)
+            log.debug('TCP seq: %d' % nseq)
+            log.debug('TCP ack: %d' % nack)
 
             if rcv.ack_seq != 0:
                 pkt.set_field('tcp.flags', TH_PSH | TH_ACK)
@@ -1017,7 +1023,7 @@ class TCPDecoder(Plugin, PassiveAudit):
 
             rcv.seq_adj += cur_len
 
-            log.error('Current packet has a payload with length = %d. '
+            log.debug('Current packet has a payload with length = %d. '
                       'seq_adj become: %d' % (cur_len, rcv.seq_adj))
 
 
@@ -1027,8 +1033,6 @@ class TCPDecoder(Plugin, PassiveAudit):
 
             mpkt.set_cfield('inj::data', pkt)
             mpkt.unset_cfield('inj::payload')
-
-        log.error('Cleaning up inj:: cfields')
 
         mpkt.unset_cfield('inj::flags')
         mpkt.unset_cfield('inj::l4proto')
@@ -1056,15 +1060,15 @@ class TCPDecoder(Plugin, PassiveAudit):
                     chksum = checksum(psdhdr + tcpraw[:16] + \
                                       "\x00\x00" + tcpraw[18:])
 
-                    if mpkt.get_field('tcp.chksum') != chksum:
+                    if mpkt.get_field('tcp.chksum', 0) != chksum:
                         mpkt.set_cfield('good_checksum', hex(chksum))
                         self.manager.user_msg(
-                                         "Invalid TCP packet from %s to %s : " \
-                                         "wrong checksum %s instead of %s" %   \
-                                         (ip_src, ip_dst,                      \
-                                          hex(mpkt.get_field('tcp.chksum')),   \
-                                          hex(chksum)),
-                                         5, 'decoder.tcp')
+                                    _("Invalid TCP packet from %s to %s : " \
+                                      "wrong checksum %s instead of %s") %  \
+                                    (ip_src, ip_dst,                        \
+                                     hex(mpkt.get_field('tcp.chksum', 0)),  \
+                                     hex(chksum)),
+                                    5, 'decoder.tcp')
                     elif self.reassembler:
                         self.reassembler.process_tcp(mpkt)
 
@@ -1085,9 +1089,6 @@ __plugins_deps__ = [('TCPDecoder', ['IPDecoder'], ['=TCPDecoder-1.0'], [])]
 # Passive audits fields
 __audit_type__ = 0
 __protocols__   = (('tcp', None), )
-__references__  = (
-    (None, 'http://en.wikipedia.org/wiki/Transmission_Control_Protocol'),
-)
 __configurations__ = (
     ('decoder.tcp', {
         'checksum_check' : [True, 'Cheksum check for TCP segments'],

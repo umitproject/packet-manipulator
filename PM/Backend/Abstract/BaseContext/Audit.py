@@ -27,6 +27,7 @@ class BaseAuditContext(TimedContext):
     has_stop = True
     has_pause = False
     has_restart = False
+    file_types = []
 
     def __init__(self, dev1, dev2=None, bpf_filter=None, capmethod=0):
         """
@@ -51,6 +52,7 @@ class BaseAuditContext(TimedContext):
         self._listen_dev2 = None
 
         self.capmethod = capmethod
+        self.status = self.SAVED
 
     def _stop(self):
         pass
@@ -58,6 +60,14 @@ class BaseAuditContext(TimedContext):
     def get_l2socket(self): return self._l2_socket
     def get_l3socket(self): return self._l3_socket
     def get_lbsocket(self): return self._lb_socket
+
+    def get_ip1(self): pass
+    def get_mac1(self): pass
+    def get_ip2(self): pass
+    def get_ip2(self): pass
+    def get_mtu(self): pass
+    def get_mtu1(self): pass
+    def get_mtu2(self): pass
 
     l2_socket = property(get_l2socket)
     l3_socket = property(get_l3socket)

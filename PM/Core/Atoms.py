@@ -31,6 +31,8 @@ import threading
 import StringIO
 import traceback
 
+from HTMLParser import HTMLParser
+
 from PM.Core.Logger import log
 
 try:
@@ -471,3 +473,20 @@ class Singleton(object):
                 pass
             cls.__init__ = nothing
         return Singleton.instances[cls]
+
+class HTMLStripper(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.fed = []
+    def handle_data(self, d):
+        self.fed.append(d)
+    def get_stripped_data(self):
+        return ''.join(self.fed)
+
+def strip_tags(x):
+    s = HTMLStripper()
+    s.feed(x)
+    return s.get_stripped_data()
+
+__all__ = ['strip_tags', 'Singleton', 'Interruptable', 'ThreadPool', 'Node', \
+           'generate_traceback', 'with_decorator', 'defaultdict', 'odict']

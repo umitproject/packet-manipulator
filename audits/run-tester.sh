@@ -8,8 +8,8 @@ bashtrap()
     mv ~/.PacketManipulator/pm-prefs.xml.bak ~/.PacketManipulator/pm-prefs.xml
 }
 
-export PYTHONPATH="$(dirname `pwd`):$PYHONPATH"
+export PYTHONPATH="$PYTHONPATH:$(dirname `pwd`)"
 echo "Masking pm-prefs.xml"
 mv ~/.PacketManipulator/pm-prefs.xml ~/.PacketManipulator/pm-prefs.xml.bak
-python attacktester.py $*
+python audittester.py $*
 bashtrap

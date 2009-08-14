@@ -38,7 +38,7 @@ class PathPage(gtk.VBox):
         gtk.VBox.__init__(self, False, 2)
 
         self.p_window = parent
-        
+
         self.set_spacing(6)
         self.__create_widgets()
         self.__pack_widgets()
@@ -62,7 +62,7 @@ class PathPage(gtk.VBox):
 
         # Enable drag moving
         entries = [('PathView', gtk.TARGET_SAME_WIDGET, 0)]
-        
+
         self.path_view.enable_model_drag_source(
             gtk.gdk.BUTTON1_MASK,
             entries,
@@ -73,7 +73,7 @@ class PathPage(gtk.VBox):
             entries,
             gtk.gdk.ACTION_MOVE
         )
-        
+
         self.path_view.connect(
             'drag-data-received', PathPage.__on_drag_data_received
         )
@@ -162,7 +162,7 @@ class PathPage(gtk.VBox):
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             path = dialog.get_filename()
-            
+
             # Check for duplicates
             for i in self.path_store:
                 if i[1] == path:
@@ -210,3 +210,4 @@ class PathPage(gtk.VBox):
             self.p_window.plug_page.richlist.foreach(block_row, None)
 
         self.p_window.plug_page.populate()
+        self.p_window.audit_page.populate()
