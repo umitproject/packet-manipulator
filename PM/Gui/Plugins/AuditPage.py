@@ -752,7 +752,7 @@ class InfoPage(gtk.VBox):
                         self.append('- ' + sys + '\n', self.par)
 
                 if notaff:
-                    self.append(_('\n Not-affected systems:\n'), self.bold)
+                    self.append(_('\nNot-affected systems:\n'), self.bold)
 
                     for sys in aff:
                         self.append('- ' + sys + '\n', self.par)
@@ -767,7 +767,7 @@ class InfoPage(gtk.VBox):
                         self.append('- ' + sys + '\n', self.par)
 
                 if notaff:
-                    self.append(_('\n Not-affected versions:\n'), self.bold)
+                    self.append(_('\nNot-affected versions:\n'), self.bold)
 
                     for sys in aff:
                         self.append('- ' + sys + '\n', self.par)

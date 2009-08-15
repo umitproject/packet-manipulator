@@ -57,6 +57,10 @@
       audits/passive/ftp/sources/main.py
       audits/passive/ethernet/sources/main.py:
         - Fixed stop() method.
+    * PM/share/locale/it/it.po
+      PM/share/locale/packetmanipulator.pot
+      PM/share/locale/it/LC_MESSAGES/packetmanipulator.mo:
+        - Updated pot catalog and IT translation.
 
     - Various bugs fixed.
     - GUI improvements.
