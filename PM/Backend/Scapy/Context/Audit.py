@@ -137,9 +137,9 @@ def register_audit_context(BaseAuditContext):
             self.receivers = [] # A list of callable
 
             if dev2:
-                self.title = self.summary = _('Audit on %s:%s' % (dev1, dev2))
+                self.title = self.summary = _('Audit on %s:%s') % (dev1, dev2)
             else:
-                self.title = self.summary = _('Audit on %s' % dev1)
+                self.title = self.summary = _('Audit on %s') % dev1
 
             log.debug('Creating send sockets')
 

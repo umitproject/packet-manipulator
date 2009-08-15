@@ -35,10 +35,10 @@ from PM.Core.BugRegister import BugRegister
 class BugReport(HIGDialog):
     def __init__(self, title=_('Bug Report'), description='', traceback=''):
 
-        HIGDialog.__init__(self, title=title, 
+        HIGDialog.__init__(self, title=title,
                            buttons=(gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
                                     gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
-        
+
         self.set_position(gtk.WIN_POS_CENTER_ALWAYS)
 
         self._create_widgets()
@@ -47,7 +47,7 @@ class BugReport(HIGDialog):
 
         self.description = description
         self.traceback = traceback
-        
+
     def _create_widgets(self):
         self.email_label = HIGHintSectionLabel(_("Email"),
             _("Please inform a valid e-mail address from "
@@ -66,8 +66,8 @@ class BugReport(HIGDialog):
         self.bug_icon = gtk.Image()
         self.bug_text = gtk.Label(_("This Bug Report dialog allows you "
             "to easily tell us about a problem that you may have found on "
-            "Umit. Doing so, you help us to help you, by fixing and "
-            "improving Umit faster than usual."))
+            "PM. Doing so, you help us to help you, by fixing and "
+            "improving PM faster than usual."))
 
         self.hbox = HIGHBox(False)
         self.table = HIGTable()
@@ -86,7 +86,7 @@ class BugReport(HIGDialog):
         self.bug_text.set_alignment(0, 0.5)
 
         self.hbox.set_border_width(4)
-        
+
         self.table.attach(self.email_label, 0, 1, 0, 1, yoptions=gtk.SHRINK)
         self.table.attach(self.email_entry, 1, 2, 0, 1, yoptions=gtk.SHRINK)
 
@@ -124,9 +124,9 @@ class BugReport(HIGDialog):
 
         # now send report
         gobject.idle_add(self._send_report)
-        
+
     def restore_state(self):
-        """Restore dialog state, just like it was before calling 
+        """Restore dialog state, just like it was before calling
         send_report."""
         self.window.set_cursor(None)
         for child in self.vbox.get_children():
@@ -149,7 +149,7 @@ class BugReport(HIGDialog):
         bug_register.reporter = self.email
         bug_register.details = "%s\n[[BR]]\n[[BR]]\nGenerated traceback:\n[[BR]]\n%s" % \
                                (self.description.replace("\n", "[[BR]]"), self.traceback)
-        
+
         bug_page = None
         try:
             bug_page = bug_register.report()
@@ -183,7 +183,7 @@ class BugReport(HIGDialog):
             except: # XXX What exceptions should be caught here ?
                 page_dialog = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
                     message_format=_("Could not open default Web Browser"),
-                    secondary_text=_("Umit was unable to open your default "
+                    secondary_text=_("PM was unable to open your default "
                         "web browser to show the bug tracker page with the "
                         "report status. Try visiting Umit's bug tracker "
                         "page to see if your bug was reported."))
