@@ -99,8 +99,9 @@ class InjectDialog(gtk.Dialog):
 
         self.rsrc = gtk.RadioButton(None, '%s:%d' % (stream.get_source(),
                                                      stream.sport))
-        self.rdst = gtk.RadioButton(rsrc, '%s:%d' % (stream.get_dest(),
-                                                     stream.dport))
+        self.rdst = gtk.RadioButton(self.rsrc, '%s:%d' % (stream.get_dest(),
+                                                          stream.dport))
+        self.rdst.set_active(True)
 
         lbl = gtk.Label(_('Send to:'))
         lbl.set_alignment(.0, .5)
@@ -144,7 +145,7 @@ class InjectDialog(gtk.Dialog):
         dialog.destroy()
 
     def get_inject_data(self):
-        is_client = rdst.get_active()
+        is_client = self.rsrc.get_active()
 
         if hasattr(self, 'entry'):
             fname = self.entry.get_text()
@@ -478,6 +479,9 @@ class ConnectionsWindow(gtk.Dialog):
                 start = self.store.iter_next(start)
         else:
             page = self.notebook.get_nth_page(page)
+
+            if not page:
+                return True
 
             #log.debug('Adding missing fragments %s' % page.data_frags)
 

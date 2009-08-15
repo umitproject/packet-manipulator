@@ -223,7 +223,7 @@ class HostListTab(UmitView):
         self.populate()
 
     def __on_scan(self, button):
-        print "SCAN is not implemented yet"
+        self._scan_cb()
 
     def __on_info(self, button):
         model, iter = self.tree.get_selection().get_selected()

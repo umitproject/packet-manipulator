@@ -20,6 +20,7 @@
 
 import os
 import sys
+import select as selectmod
 
 __original_write = os.write
 
@@ -30,6 +31,22 @@ def __new_write(fd, txt):
         __original_write(fd, txt)
 
 os.write = __new_write
+
+__original_select = selectmod.select
+
+if not os.getenv('PM_NOSCAPYWORKAROUND', ''):
+
+    def __intr_select(_in, _out, _err, timeout=2):
+        while True:
+            try:
+                return __original_select(_in, _out, _err, timeout)
+            except selectmod.error, (ec, es):
+                if ec == 4: # EINTR
+                    continue
+                else:
+                    raise
+
+    selectmod.select = __intr_select
 
 PM_USE_NEW_SCAPY = False
 DARWIN, NETBSD, OPENBSD, FREEBSD = False, False, False, False

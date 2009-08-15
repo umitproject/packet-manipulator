@@ -23,11 +23,13 @@ import pango
 import gobject
 
 from os import unlink
+from os.path import exists
 from datetime import datetime
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
 from PM.Core.Atoms import strip_tags
+from PM.Core.Const import STATUS_INFO
 
 from PM.Gui.Core.App import PMApp
 from PM.Gui.Core.Icons import get_pixbuf
@@ -37,56 +39,62 @@ from PM.Manager.PreferenceManager import Prefs
 
 from PM.higwidgets.higdialogs import HIGAlertDialog
 
-ICONS = [gtk.STOCK_DIALOG_INFO,
+ICONS = ('error_small',
+         'locked_small',
+         'warning_small',
+         gtk.STOCK_DIALOG_ERROR,
          gtk.STOCK_DIALOG_WARNING,
-         gtk.STOCK_DIALOG_ERROR]
+         'sniff_small',
+         gtk.STOCK_DIALOG_INFO,
+         'operation_small',
+         'layer_small')
 
 # To convert STATUS_* to ICONS
-STATUS = (2, 2, 2, 2, 1, 1, 0, 0, 0)
+STATUS = tuple(range(9))
 STATUS_STRING = ('emerg', 'alert', 'crit', 'err', 'warn', 'notice', 'info',
                  'debug', 'none')
 
 COL_SEV, COL_TIME, COL_FAC, COL_MSG = range(4)
 
-class AuditOutputTree(gtk.TreeView):
+class AuditOutputTree(gtk.ScrolledWindow):
     def __init__(self):
         self.store = gtk.ListStore(int, object, str, str)
+        self.midvalues = []
 
         self.filter_txt = ''
         self.filter_model = self.store.filter_new()
         self.filter_model.set_visible_func(self.__filter_func)
 
-        gtk.TreeView.__init__(self, self.filter_model)
+        self.tree = gtk.TreeView(self.filter_model)
 
-        self.insert_column_with_data_func(-1, '', gtk.CellRendererPixbuf(),
-                                          self.__pix_func)
-        self.insert_column_with_attributes(-1, _('Time'),
-                                           gtk.CellRendererText())
-        self.insert_column_with_attributes(-1, _('Facility'),
-                                           gtk.CellRendererText(), text=COL_FAC)
-        self.insert_column_with_attributes(-1, _('Record'),
-                                           gtk.CellRendererText(),
-                                           markup=COL_MSG)
+        self.tree.insert_column_with_data_func(-1, '', gtk.CellRendererPixbuf(),
+                                               self.__pix_func)
+        self.tree.insert_column_with_attributes(-1, _('Time'),
+                                                gtk.CellRendererText())
+        self.tree.insert_column_with_attributes(-1, _('Facility'),
+                                                gtk.CellRendererText(), text=COL_FAC)
+        self.tree.insert_column_with_attributes(-1, _('Record'),
+                                                gtk.CellRendererText(),
+                                                markup=COL_MSG)
 
-        col = self.get_column(COL_TIME)
+        col = self.tree.get_column(COL_TIME)
         col.set_cell_data_func(col.get_cell_renderers()[0], self.__time_func)
         col.set_resizable(True)
 
-        col = self.get_column(COL_FAC)
+        col = self.tree.get_column(COL_FAC)
         col.set_resizable(True)
 
         rend = col.get_cell_renderers()[0]
         rend.set_property('weight', pango.WEIGHT_BOLD)
 
-        col = self.get_column(COL_MSG)
+        col = self.tree.get_column(COL_MSG)
         col.set_expand(True)
         col.set_resizable(True)
 
-        self.set_rules_hint(True)
-        #self.set_headers_visible(False)
-        self.set_rubber_banding(True)
+        self.tree.set_rules_hint(True)
+        self.tree.set_rubber_banding(True)
 
-        sel = self.get_selection()
+        sel = self.tree.get_selection()
         sel.set_mode(gtk.SELECTION_MULTIPLE)
 
         self.menu = gtk.Menu()
@@ -115,7 +123,14 @@ class AuditOutputTree(gtk.TreeView):
             self.__on_font_changed, True
         )
 
-        self.connect('button-press-event', self.__on_button_press)
+        self.timeout_id = None
+        self.tree.connect('button-press-event', self.__on_button_press)
+
+        gtk.ScrolledWindow.__init__(self)
+
+        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        self.add(self.tree)
 
     def __time_func(self, col, cell, model, iter):
         value = model.get_value(iter, 1)
@@ -138,14 +153,33 @@ class AuditOutputTree(gtk.TreeView):
         self.store.foreach(update)
 
     def __on_font_changed(self, value):
-        self.modify_font(pango.FontDescription(value))
+        self.tree.modify_font(pango.FontDescription(value))
 
     def __pix_func(self, col, cell, model, iter):
         value = model.get_value(iter, 0)
         cell.set_property('stock-id', ICONS[STATUS[value]])
 
     def user_msg(self, msg, severity=5, facility=None):
-        self.store.append([severity, datetime.now(), facility, msg])
+        self.midvalues.append((severity, datetime.now(), facility, msg))
+
+        if not self.timeout_id:
+            self.timeout_id = gobject.timeout_add(300, self.__update_store)
+
+    def __update_store(self):
+        l = len(self.midvalues)
+
+        while l != 0:
+            iter = self.store.append(self.midvalues.pop(0))
+            l -= 1
+
+        if Prefs()['gui.maintab.auditoutputview.autoscroll'].value:
+            self.tree.scroll_to_cell(self.store.get_path(iter))
+
+        if self.midvalues:
+            return True
+
+        self.timeout_id = None
+        return False
 
     def on_save_log(self, action, selection=False):
         if selection:
@@ -177,6 +211,22 @@ class AuditOutputTree(gtk.TreeView):
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             outname = dialog.get_filename()
             type = (dialog.get_filter() is xfilter and 1 or 0)
+
+            if exists(outname):
+                d = gtk.MessageDialog(PMApp().main_window,
+                                      gtk.DIALOG_MODAL,
+                                      gtk.BUTTONS_YES_NO,
+                                      _('A file named %s already exists. Do '
+                                        'want overwrite it?') % outname)
+                ret = d.run()
+                d.hide()
+                d.destroy()
+
+                if ret == gtk.RESPONSE_NO:
+                    dialog.hide()
+                    dialog.destroy()
+
+                    return
 
             try:
                 f = open(outname, 'w')
@@ -225,7 +275,7 @@ class AuditOutputTree(gtk.TreeView):
         dialog.destroy()
 
     def __on_copy(self, action):
-        sel = self.get_selection()
+        sel = self.tree.get_selection()
         model, rows = sel.get_selected_rows()
 
         out = ''
@@ -267,13 +317,14 @@ class AuditOutputTree(gtk.TreeView):
         if evt.button != 3:
             return
 
-        sel = self.get_selection()
+        sel = self.tree.get_selection()
         model, rows = sel.get_selected_rows()
 
         if not rows:
-            return
+            return False
 
         self.menu.popup(None, None, None, evt.button, evt.time)
+        return True
 
     def __filter_func(self, model, iter):
         if not self.filter_txt:
@@ -302,11 +353,6 @@ class AuditOutput(gtk.VBox):
         self.entry = FilterEntry()
         self.tree = AuditOutputTree()
 
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        sw.add(self.tree)
-
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
 
@@ -324,7 +370,7 @@ class AuditOutput(gtk.VBox):
         self.toolbar.insert(item, -1)
 
         self.pack_start(self.toolbar, False, False)
-        self.pack_end(sw)
+        self.pack_end(self.tree)
 
         self.entry.get_entry().connect('changed', self.__on_filter)
 
@@ -337,9 +383,8 @@ class AuditOutputPage(Perspective):
 
     def create_ui(self):
         self.output = AuditOutput()
-        self.user_msg(_('<tt>New audit started at <i>%s</i></tt>') \
-                      % str(datetime.now()),
-                      8, 'AuditManager')
+        self.user_msg(_('<tt>New audit session started.</tt>'),
+                      STATUS_INFO, 'AuditManager')
 
         self.pack_start(self.output)
         self.show_all()

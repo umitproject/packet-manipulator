@@ -191,7 +191,7 @@ class SynFloodOperation(AuditOperation):
                 packets += 1
 
                 if self.probes > 0:
-                    self.summary = AUDIT_MSG % _('%d of %d sent ...' \
+                    self.summary = AUDIT_MSG % _('%d of %d sent' \
                                    % (packets, self.probes))
                     self.percentage = (packets / float(self.probes)) * 100.0
                 else:

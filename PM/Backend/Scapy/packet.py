@@ -128,6 +128,9 @@ class MetaPacket(object):
     def get_datetime(self):
         return datetime.fromtimestamp(self.root.time)
 
+    def get_rawtime(self):
+        return self.root.time
+
     def get_time(self):
         #self.root.time
         return self.root.sprintf("%.time%")

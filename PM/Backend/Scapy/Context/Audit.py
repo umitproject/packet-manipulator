@@ -59,10 +59,19 @@ else:
         log.warning('Returning 1500 as MTU for %s' % iface)
         return 1500
 
+def get_routes(_iface):
+    for ip, netmask, gw, iface, outputip in conf.route.routes:
+        if iface == _iface:
+            return (socket.inet_ntoa(pack("!I", ip)),
+                    socket.inet_ntoa(pack("!I", netmask)),
+                    gw, outputip)
+
+    return (None, None, None, None)
+
 class SendWorker(object):
-    def __init__(self, sck, mpkts, repeat=1, delay=None, oncomplete=None, \
-                 onerror=None, timeout=None, onrecv=None, onreply=None, \
-                 udata=None):
+    def __init__(self, sck, mpkts, repeat=1, delay=None, onsend=None, \
+                 oncomplete=None, onerror=None, timeout=None, onrecv=None, \
+                 onreply=None, udata=None):
 
         if isinstance(mpkts, MetaPacket):
             mpkts = [mpkts]
@@ -82,6 +91,7 @@ class SendWorker(object):
         self.onerror = onerror
         self.onrecv = onrecv
         self.onreply = onreply
+        self.onsend = onsend
         self.udata = udata
 
         # Num of answers excepted
@@ -94,6 +104,7 @@ def register_audit_context(BaseAuditContext):
          - s_l{2,3,b} (mpkts = A single MetaPacket or a list,
                        repeat = how many time send the mpkts (-1 for infinite),
                        delay = time between two send,
+                       onsend = callable or None,
                        oncomplete = callable or None,
                        onerror = callable or None)
          - sr_l{2,3,b} (**same arguments of s_l***,
@@ -105,6 +116,8 @@ def register_audit_context(BaseAuditContext):
         NB: timeout parameter is in seconds, while delay in msecs
 
         Prototypes for callbacks:
+         - onsend(send, mpkt, udata)
+         - oncomplete(send, udata)
          - onerror(send, status, udata)
          - onreply(send, orig, ans, udata)
          - onrecv(send, mpkt, udata)
@@ -199,9 +212,6 @@ def register_audit_context(BaseAuditContext):
                 self.summary = self.title + ' (' + str(err) +')'
                 log.error(generate_traceback())
 
-        def get_mtu(self):
-            return 1500
-
         def get_ip1(self):
             return self._ip1
         def get_mac1(self):
@@ -216,6 +226,11 @@ def register_audit_context(BaseAuditContext):
             return self._mtu1
         def get_mtu2(self):
             return self._mtu2
+
+        def get_netmask1(self):
+            return get_routes(self._iface1)[1]
+        def get_netmask2(self):
+            return get_routes(self._iface2)[1]
 
         ########################################################################
         # Threads callbacks
@@ -454,6 +469,11 @@ def register_audit_context(BaseAuditContext):
                         else:
                             lst.append([mpkt, send, 1])
 
+                    mpkt.root.time = time.time()
+
+                    if callable(send.onsend):
+                        send.onsend(send, mpkt, send.udata)
+
                     send.socket.send(mpkt.root)
 
                     if send.delay and self.internal:
@@ -469,7 +489,7 @@ def register_audit_context(BaseAuditContext):
                 log.debug('Pure send process complete')
 
                 if callable(send.oncomplete):
-                    send.oncomplete()
+                    send.oncomplete(send, send.udata)
 
                 return
 
@@ -492,7 +512,7 @@ def register_audit_context(BaseAuditContext):
                     log.debug('Send process complete')
 
                     if callable(send.oncomplete):
-                        send.oncomplete()
+                        send.oncomplete(send, send.udata)
                 else:
                     log.debug('Send process complete with %d pending replies' \
                               % send.ans_left)
@@ -548,51 +568,51 @@ def register_audit_context(BaseAuditContext):
         # Pure send functions
         ########################################################################
 
-        def s_l2(self, mpkts, repeat=1, delay=None, oncomplete=None, \
-                 onerror=None, udata=None):
+        def s_l2(self, mpkts, repeat=1, delay=None, onsend=None, \
+                 oncomplete=None, onerror=None, udata=None):
             """Send packets at Layer 2"""
             return self.__sendrcv(self.l2_socket, mpkts, repeat, delay, \
-                                   oncomplete, onerror, udata)
+                                  onsend, oncomplete, onerror, udata)
 
-        def s_l3(self, mpkts, repeat=1, delay=None, oncomplete=None, \
-                 onerror=None, udata=None):
+        def s_l3(self, mpkts, repeat=1, delay=None, onsend=None, \
+                 oncomplete=None, onerror=None, udata=None):
             """Send packets at Layer 3"""
             return self.__sendrcv(self.l3_socket, mpkts, repeat, delay, \
-                                   oncomplete, onerror, udata)
+                                  onsend, oncomplete, onerror, udata)
 
-        def s_lb(self, mpkts, repeat=1, delay=None, oncomplete=None, \
-                 onerror=None, udata=None):
+        def s_lb(self, mpkts, repeat=1, delay=None, onsend=None, \
+                 oncomplete=None, onerror=None, udata=None):
             """Send packets to the bridge interface at Layer 2"""
             return self.__sendrcv(self.lb_socket, mpkts, repeat, delay, \
-                                   oncomplete, onerror, udata)
+                                  onsend, oncomplete, onerror, udata)
 
         ########################################################################
         # Send and receive functions
         ########################################################################
 
         def sr_l2(self, mpkts, repeat=1, delay=None, timeout=None, \
-                 oncomplete=None, onerror=None, onreply=None, onrecv=None, \
-                 udata=None):
+                  onsend=None, oncomplete=None, onerror=None, onreply=None, \
+                  onrecv=None, udata=None):
             """Send and receive packets at Layer 2"""
             return self.__sendrcv(self.l2_socket, mpkts, repeat, delay, \
-                                  oncomplete, onerror, timeout, onrecv, \
-                                  onreply, udata)
+                                  onsend, oncomplete, onerror, timeout, \
+                                  onrecv, onreply, udata)
 
         def sr_l3(self, mpkts, repeat=1, delay=None, timeout=None, \
-                 oncomplete=None, onerror=None, onreply=None, onrecv=None, \
-                 udata=None):
+                  onsend=None, oncomplete=None, onerror=None, onreply=None, \
+                  onrecv=None, udata=None):
             """Send and receive packets at Layer 3"""
             return self.__sendrcv(self.l3_socket, mpkts, repeat, delay, \
-                                  oncomplete, onerror, timeout, onrecv, \
-                                  onreply, udata)
+                                  onsend, oncomplete, onerror, timeout, \
+                                  onrecv, onreply, udata)
 
         def sr_lb(self, mpkts, repeat=1, delay=None, timeout=None, \
-                 oncomplete=None, onerror=None, onreply=None, onrecv=None, \
-                 udata=None):
+                  onsend=None, oncomplete=None, onerror=None, onreply=None, \
+                  onrecv=None, udata=None):
             """Send and receive packets at Layer 3"""
             return self.__sendrcv(self.lb_socket, mpkts, repeat, delay, \
-                                  oncomplete, onerror, timeout, onrecv, \
-                                  onreply, udata)
+                                  onsend, oncomplete, onerror, timeout, \
+                                  onrecv, onreply, udata)
 
         def si_l2(self, mpkt):
             """Send immediate at Layer 2"""
@@ -611,7 +631,7 @@ def register_audit_context(BaseAuditContext):
             """Send immediate to the bridge Layer 2"""
             self.lb_socket.send(mpkt.root)
 
-        def __sendrcv(self, sck, mpkts, repeat=1, delay=None, \
+        def __sendrcv(self, sck, mpkts, repeat=1, delay=None, onsend=None, \
                       oncomplete=None, onerror=None, timeout=None, \
                       onrecv=None, onreply=None, udata=None):
             """
@@ -625,8 +645,8 @@ def register_audit_context(BaseAuditContext):
             delay = max(0, delay)
             #repeat = max(1, repeat)
 
-            send = SendWorker(sck, mpkts, repeat, delay, oncomplete, onerror, \
-                              timeout, onrecv, onreply, udata)
+            send = SendWorker(sck, mpkts, repeat, delay, onsend, oncomplete, \
+                              onerror, timeout, onrecv, onreply, udata)
 
             if callable(onrecv):
                 log.debug('Appending to the list of receivers')

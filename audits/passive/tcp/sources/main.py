@@ -389,9 +389,8 @@ class Reassembler(object):
                     stream.state = CONN_DATA
 
         if tcpflags & TH_ACK:
-            print
-            print "ACKDIFF:", tcpack - snd.ack_seq, tcpack, snd.ack_seq
-            print snd
+            log.debug('ACK recvd -> CACK: %d OACK: %d ADJ: %d' % \
+                      (tcpack, snd.ack_seq, rcv.seq_adj))
 
             if tcpack - snd.ack_seq > 0:
                 snd.ack_seq = tcpack# + rcv.seq_adj
@@ -575,9 +574,9 @@ class Reassembler(object):
         log.debug('Original TCP sequence: %d seq_adj: %d exp_seq: %d' \
                   % (tcpseq, rcv.seq_adj, exp_seq))
 
-        if tcpseq != exp_seq:# and tcpseq + rcv.seq_adj == exp_seq:
-            log.debug('Current TCP sequence adjusted to exp_seq (+ seq_adj)')
-            tcpseq += rcv.seq_adj
+        #if tcpseq != exp_seq:# and tcpseq + rcv.seq_adj == exp_seq:
+        #    log.debug('Current TCP sequence adjusted to exp_seq (+ seq_adj)')
+        #    tcpseq += rcv.seq_adj
 
         if not tcpseq - exp_seq > 0:
             log.debug('Before data')

@@ -42,6 +42,9 @@ class BaseAuditContext(TimedContext):
 
         TimedContext.__init__(self)
 
+        self._iface1 = dev1
+        self._iface2 = dev2
+
         # These are sockets used to send packets
         self._l2_socket = None
         self._l3_socket = None
@@ -64,13 +67,33 @@ class BaseAuditContext(TimedContext):
     def get_ip1(self): pass
     def get_mac1(self): pass
     def get_ip2(self): pass
-    def get_ip2(self): pass
+    def get_mac2(self): pass
     def get_mtu(self): pass
     def get_mtu1(self): pass
     def get_mtu2(self): pass
+    def get_iface1(self): return self._iface1
+    def get_iface2(self): return self._iface2
+    def get_netmask1(self): pass
+    def get_netmask2(self): pass
 
     l2_socket = property(get_l2socket)
     l3_socket = property(get_l3socket)
     lb_socket = property(get_lbsocket)
+
+    ip1 = property(get_ip1)
+    ip2 = property(get_ip2)
+
+    mac1 = property(get_mac1)
+    mac2 = property(get_mac2)
+
+    mtu = property(get_mtu)
+    mtu1 = property(get_mtu1)
+    mtu2 = property(get_mtu2)
+
+    iface1 = property(get_iface1)
+    iface2 = property(get_iface2)
+
+    netmask1 = property(get_netmask1)
+    netmask2 = property(get_netmask2)
 
 AuditContext = register_audit_context(BaseAuditContext)

@@ -194,6 +194,7 @@ class Prefs(Singleton):
         'gui.maintab.sequenceview.usecolors' : True,
         'gui.maintab.auditoutputview.font' : 'Monospace 8',
         'gui.maintab.auditoutputview.timeformat' : '',
+        'gui.maintab.auditoutputview.autoscroll' : True,
         'gui.maintab.autostop' : False,
         'gui.maintab.askforsave' : True,
 

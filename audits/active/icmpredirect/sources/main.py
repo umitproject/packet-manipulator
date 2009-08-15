@@ -102,7 +102,7 @@ class IcmpRedirect(Plugin, ActiveAudit):
             except:
                 sess.output_page.user_msg(
                     _('Source mask is not a valid netmask'),
-                    STATUS_ERROR, AUDIT_NAME)
+                    STATUS_ERR, AUDIT_NAME)
                 return False
 
         if dmask:
@@ -111,7 +111,7 @@ class IcmpRedirect(Plugin, ActiveAudit):
             except:
                 sess.output_page.user_msg(
                     _('Destination mask is not a valid netmask'),
-                    STATUS_ERROR, AUDIT_NAME)
+                    STATUS_ERR, AUDIT_NAME)
                 return False
 
         return IcmpRedirectOperation(

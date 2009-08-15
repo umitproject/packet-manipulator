@@ -1,4 +1,4 @@
-include README AUTHORS COPYING COPYING_HIGWIDGETS
+include README AUTHORS COPYING COPYING_HIGWIDGETS ChangeLog
 
 include PM/moo/moopane.c
 include PM/moo/moopaned.override
@@ -27,3 +27,4 @@ recursive-include PM/share/pixmaps/umit *.png *.ico
 recursive-include PM/share/locale/it/LC_MESSAGES/ *.mo
 
 recursive-include plugins *
+recursive-include audits *

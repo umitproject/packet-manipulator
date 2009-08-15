@@ -1,3 +1,47 @@
+2009-08-15 Francesco Piccinno <stack.box@gmail.com>
+    * audits/passive/tcp/sources/main.py:
+        - Fixing debug messages.
+    * audits/active/arpping/sources/main.py:
+        - Adding a new functionality to scan the current network segment for
+          the presence of active hosts using ARP ping packets. This could be
+          used by pressing scan button inside HostListTab.
+        - Now ARPPing is an operation like the rest of plugins.
+        - Messages are printed directly into AuditOutputPage.
+    * audits/active/icmpredirect/sources/main.py:
+        - Fixing wrong constants use.
+    * audits/active/injector/sources/main.py:
+        - Fixing various bugs in injector.
+    * audits/active/synflood/sources/main.py:
+        - Fixed message.
+    * MANIFEST.in:
+        - Updated to respect the new structure.
+    * PM/Gui/Pages/AuditOutputPage.py:
+        - Checking for log file overwrite.
+        - Fixing a bug in button-press event handler.
+        - Autoscrolling and solved problems with threads.
+        - More icons.
+    * PM/Gui/Tabs/HostListTab.py:
+        - Now scan button is not dummy.
+    * PM/Backend/Scapy/Context/Audit.py:
+        - Adding get_netmask1() and get_netmask2() to AuditContext.
+        - Adding onsend() callback to the SendWorker class and to the various
+          AuditContext methods() like s_l{2,3,b}, si_l{2,3,b}, sr_l{2,3,b}.
+    * PM/Backend/Scapy/wrapper.py:
+        - Patching the select() used by scapy method with a custom one that
+          handles EINTR. This should solve:
+              select.error(4, 'Interrupted system call.')
+    * PM/Backend/Scapy/packet.py:
+        - Adding get_rawtime() method to MetaPacket.
+    * PM/Backend/Abstract/BaseContext/Audit.py:
+        - Add missing methods to the interface.
+    * PM/Gui/Dialogs/Preferences.py
+      PM/Manager/PreferenceManager.py:
+        - Adding autoscroll option for AuditOtputPage.
+
+    - Various bugs fixed.
+    - GUI improvements.
+    - Scan of the network segment implemented in ARPPing audit plugin.
+
 2009-08-14 Francesco Piccinno <stack.box@gmail.com>
     * audits/run-tester.sh:
         - Adjusting PYTHONPATH
