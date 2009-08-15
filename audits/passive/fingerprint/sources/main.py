@@ -269,7 +269,7 @@ class OSFPModule(object):
 class OSFP(PassiveAudit):
     def register_hooks(self):
         AuditManager().add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
-                                         self._tcp_hook, 1)
+                                        self._tcp_hook, 1)
 
     def start(self, reader):
         if reader:
@@ -287,6 +287,12 @@ class OSFP(PassiveAudit):
 
         log.debug('Destroying OSFP object %s' % obj)
         del obj
+
+        try:
+            AuditManager().remove_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
+                                               self._tcp_hook, 1)
+        except:
+            pass
 
 __plugins__ = [OSFP]
 __plugins_deps__ = [('OSFP', ['IPDecoder', 'TCPDecoder'], ['=OSFP-1.0'], [])]

@@ -432,7 +432,7 @@ class MainWindow(gtk.Window):
             if isinstance(page, klass):
                 self.apply_bindings(page, ptype)
 
-    def unbind_session(self, type, persp_klass):
+    def unbind_session(self, ptype, persp_klass):
         try:
             for i in range(len(self.session_binder[ptype])):
                 (klass, show, resize, shrink) = self.session_binder[ptype][i]
@@ -440,18 +440,18 @@ class MainWindow(gtk.Window):
                 if klass is not persp_klass:
                     continue
 
-                del self.session_binder[type][i]
+                del self.session_binder[ptype][i]
 
-                klass = SessionType.types[type]
+                klass = SessionType.types[ptype]
                 maintab = self.get_tab("MainTab")
 
                 for page in maintab.session_notebook:
                     if isinstance(page, klass):
-                        page.remove_perspective(klass)
+                        page.remove_perspective(persp_klass)
 
                 log.debug(
                     "Binding method %s for perspective of type %s removed" % \
-                    (persp_klass, SessionType.types[type])
+                    (persp_klass, SessionType.types[ptype])
                 )
 
                 return True

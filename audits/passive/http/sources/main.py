@@ -432,7 +432,9 @@ class HTTPDissector(Plugin, PassiveAudit):
 
         conf = AuditManager().get_configuration(HTTP_NAME)
 
-        if conf['reassemble']:
+        self.reassemble = conf['reassemble']
+
+        if self.reassemble:
             tcpdecoder = Core().get_need(reader, 'TCPDecoder')
 
             if not tcpdecoder:
@@ -442,6 +444,7 @@ class HTTPDissector(Plugin, PassiveAudit):
                 raise PMErrorException('TCP segments reassembling disabled '
                                        'in TCPDecoder.')
 
+            self.tcpdecoder = tcpdecoder
             tcpdecoder.reassembler.add_analyzer(self._tcp_callback)
 
         ufields = conf['username_fields']
@@ -452,13 +455,21 @@ class HTTPDissector(Plugin, PassiveAudit):
         gflieds = dict(map(lambda x: (x, 0), ufields.split(',')) +  \
                        map(lambda x: (x, 1), pfields.split(',')))
 
-    def register_decoders(self):
+    def stop(self):
         conf = AuditManager().get_configuration(HTTP_NAME)
 
-        if not conf['reassemble']:
+        if not self.reassemble:
+            for port in HTTP_PORTS:
+                AuditManager().remove_dissector(APP_LAYER_TCP, port,
+                                                self._http_decoder)
+        else:
+            self.tcpdecoder.remove_analyzer(self._tcp_callback)
+
+    def register_decoders(self):
+        if self.reassemble:
             for port in HTTP_PORTS:
                 AuditManager().add_dissector(APP_LAYER_TCP, port,
-                                              self._http_decoder)
+                                             self._http_decoder)
 
     def _http_decoder(self, mpkt):
         payload = mpkt.get_field('raw.load')

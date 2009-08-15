@@ -37,6 +37,26 @@
     * PM/Gui/Dialogs/Preferences.py
       PM/Manager/PreferenceManager.py:
         - Adding autoscroll option for AuditOtputPage.
+    * PM/Gui/Sessions/Base.py:
+        - Fixed remove_perspective() method.
+    * PM/Gui/Core/MainWindow.py:
+        - Fixed unbind_session() method.
+    * plugins/http-analyzer/sources/main.py:
+        - Fixed stop() method.
+    * plugins/cfields-explorer/sources/main.py:
+        - Adding a simple plugin for debug purposes.
+    * audits/setup-autogen.py:
+        - Fixed the creation of setup.py files.
+    * audits/passive/http/sources/main.py
+      audits/passive/profiler/sources/main.py
+      audits/passive/tcp/sources/main.py
+      audits/passive/fingerprint/sources/main.py
+      audits/passive/icmp/sources/main.py
+      audits/passive/ip/sources/main.py
+      audits/passive/udp/sources/main.py
+      audits/passive/ftp/sources/main.py
+      audits/passive/ethernet/sources/main.py:
+        - Fixed stop() method.
 
     - Various bugs fixed.
     - GUI improvements.

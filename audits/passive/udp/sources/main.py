@@ -141,7 +141,7 @@ class UDPDecoder(PassiveAudit):
     def stop(self):
         manager = AuditManager()
         manager.remove_decoder(PROTO_LAYER, NL_TYPE_UDP, self.decoder)
-        manager.remove_injector(PROTO_LAYER, NL_TYPE_UDP, self.injector)
+        manager.remove_injector(0, NL_TYPE_UDP, self.injector)
 
 __plugins__ = [UDPDecoder]
 __plugins_deps__ = [('UDPDecoder', ['IPDecoder'], ['=UDPDecoder-1.0'], [])]

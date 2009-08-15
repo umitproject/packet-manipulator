@@ -75,8 +75,14 @@ class Session(gtk.VBox):
 
         for persp in self.perspectives:
             if isinstance(persp, klass):
+                widget = persp
+
+                while self.paned != widget.get_parent():
+                    widget = widget.get_parent()
+
+                widget.hide()
                 self.perspectives.remove(persp)
-                self.paned.remove_child(persp)
+                self.paned.remove_child(widget)
 
     def add_perspective(self, klass, show_pers=True, resize=False, shrink=True):
         """

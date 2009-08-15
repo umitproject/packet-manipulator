@@ -228,12 +228,11 @@ class GUIPage(Page):
 
         (_('Audit output perspective'),
           (
-           (
             ('gui.maintab.auditoutputview.font',
                 _('Audit output font:'), gtk.FontButton()),
             ('gui.maintab.auditoutputview.timeformat',
                 _('Audit output time column str format (strftime):'),
-                gtk.Entry())),
+                gtk.Entry()),
             ('gui.maintab.auditoutputview.autoscroll', None,
                 gtk.CheckButton(_('Autoscroll for Audit output'))),
           )

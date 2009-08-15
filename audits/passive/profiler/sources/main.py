@@ -138,12 +138,32 @@ class Profiler(Plugin, PassiveAudit):
                 hltab.populate_cb = self.populate_cb
 
                 self.hltab = hltab
+            else:
+                self.hltab = None
         else:
             self.debug = True
 
     def stop(self):
-        self.hltab.info_cb = None
-        self.hltab.populate_cb = None
+        if self.hltab:
+            self.hltab.info_cb = None
+            self.hltab.populate_cb = None
+        try:
+            manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
+                                     self._parse_tcp, 1)
+        except:
+            pass
+
+        try:
+            manager.add_decoder_hook(NET_LAYER, LL_TYPE_ARP,
+                                     self._parse_arp, 1)
+        except:
+            pass
+
+        try:
+            manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_ICMP,
+                                     self._parse_icmp, 1)
+        except:
+            pass
 
     def info_cb(self, intf, ip, mac):
         """

@@ -107,8 +107,14 @@ def ftp_dissector():
     return ftp
 
 class FTPDissector(Plugin, PassiveAudit):
+    def start(self, reader):
+        self.dissector = ftp_dissector()
+
     def register_decoders(self):
-        AuditManager().add_dissector(APP_LAYER_TCP, 21, ftp_dissector())
+        AuditManager().add_dissector(APP_LAYER_TCP, 21, self.dissector)
+
+    def stop(self):
+        AuditManager().remove_dissector(APP_LAYER_TCP, 21, self.dissector)
 
 __plugins__ = [FTPDissector]
 __plugins_deps__ = [('FTPDissector', ['TCPDecoder'], ['FTPDecoder-1.0'], []),]

@@ -44,9 +44,9 @@ setup(
     scripts=['sources/%start_file_path%'],
     start_file='%start_file%',
     data_files=%data_files%,
-    needs=%needs%,
+    need=%needs%,
     provide=%provides%,
-    conflicts=%conflicts%,
+    conflict=%conflicts%,
     description='%description%',
     output='%outfile%',
 """

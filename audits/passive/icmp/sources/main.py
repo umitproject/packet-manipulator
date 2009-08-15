@@ -76,6 +76,9 @@ class ICMPDecoder(Plugin, PassiveAudit):
     def register_decoders(self):
         AuditManager().add_decoder(PROTO_LAYER, NL_TYPE_ICMP, icmp_decoder())
 
+    def stop(self):
+        AuditManager().remove_decoder(PROTO_LAYER, NL_TYPE_ICMP, icmp_decoder())
+
 __plugins__ = [ICMPDecoder]
 __audit_type__ = 0
 __protocols__ = (('icmp', None), )

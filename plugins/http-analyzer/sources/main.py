@@ -322,6 +322,6 @@ class HTTPAnalyzer(Plugin):
         g_js_graph = g_js_graph.replace('$script$', contents)
 
     def stop(self):
-        pass
+        PMApp().main_window.unbind_session(SessionType.SNIFF_SESSION, HTTPage)
 
 __plugins__ = [HTTPAnalyzer]

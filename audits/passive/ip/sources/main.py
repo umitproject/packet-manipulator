@@ -222,10 +222,20 @@ def ip_injector(context, mpkt):
     return INJ_FORWARD
 
 class IPDecoder(Plugin, PassiveAudit):
+    def start(self, reader):
+        self.ip_decoder = ip_decoder()
+
     def register_decoders(self):
         manager = AuditManager()
-        manager.add_decoder(NET_LAYER, LL_TYPE_IP, ip_decoder())
+        manager.add_decoder(NET_LAYER, LL_TYPE_IP, self.ip_decoder)
         manager.add_injector(0, LL_TYPE_IP, ip_injector)
+
+    def stop(self):
+        manager = AuditManager()
+        manager.remove_decoder(NET_LAYER, LL_TYPE_IP, self.ip_decoder)
+        manager.remove_injector(0, LL_TYPE_IP, ip_injector)
+
+        self.decoder = None
 
 __plugins__ = [IPDecoder]
 __plugins_deps__ = [('IPDecoder', ['EthDecoder'], ['=IPDecoder-1.0'], [])]

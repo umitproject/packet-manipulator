@@ -18,27 +18,19 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-"""
-Ethernet protocol decoder
-"""
+import os.path
+from PM.Gui.Plugins.Containers import setup
 
-from PM.Core.Logger import log
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
-from PM.Core.NetConst import *
-
-def eth_decoder(mpkt):
-    return NET_LAYER, mpkt.get_field('eth.type')
-
-class EthDecoder(Plugin, PassiveAudit):
-    def stop(self):
-        AuditManager().remove_decoder(LINK_LAYER, IL_TYPE_ETH, eth_decoder)
-
-    def register_decoders(self):
-        AuditManager().add_decoder(LINK_LAYER, IL_TYPE_ETH, eth_decoder)
-
-__plugins__ = [EthDecoder]
-__plugins_deps__ = [('EthDecoder', [], ['=EthDecoder-1.0'], [])]
-
-__audit_type__ = 0
-__protocols__ = (('eth', None), )
+setup(
+    name='CFieldsExplorer',
+    version='1.0',
+    author=['Francesco Piccinno'],
+    license=['GPL'],
+    copyright=['2008 Adriano Monteiro Marques'],
+    url='http://blog.archpwn.org',
+    scripts=['sources/main.py'],
+    start_file="main",
+    provide=['=CFieldsExplorer-1.0'],
+    description='Explorer cfields of metapacket. Only for debug purpose',
+    output='cfieldsexplorer.ump'
+)

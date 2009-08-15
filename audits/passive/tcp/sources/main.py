@@ -228,6 +228,8 @@ class Reassembler(object):
 
     def add_analyzer(self, analyzer):
         self.analyzers.append(analyzer)
+    def remove_analyzer(self, analyzer):
+        self.analyzers.remove(analyzer)
 
     def process_icmp(self, mpkt):
         """
@@ -350,9 +352,9 @@ class Reassembler(object):
         if not (not datalen and tcpseq == (rcv.ack_seq)) and \
            (not (tcpseq - (rcv.ack_seq + rcv.window * rcv.wscale) <= 0) or \
             (tcpseq + datalen) - rcv.ack_seq < 0):
-            print "*" * 80
-            print mpkt.get_field('raw.load')
-            print "*" * 80
+            #print "*" * 80
+            #print mpkt.get_field('raw.load')
+            #print "*" * 80
             return
 
         if tcpflags & TH_RST:
@@ -879,6 +881,17 @@ class TCPDecoder(Plugin, PassiveAudit):
         self.dissectors = True
         self.reassembler = None
         self.manager = None
+
+    def stop(self):
+        manager = AuditManager()
+        manager.remove_decoder(PROTO_LAYER, NL_TYPE_TCP, self._process_tcp)
+        manager.remove_injector(1, NL_TYPE_TCP, self._inject_tcp)
+
+        try:
+            manager.remove_decoder_hook(PROTO_LAYER, NL_TYPE_ICMP,
+                                             self.reassembler.process_icmp, 1)
+        except:
+            pass
 
     def register_decoders(self):
         self.manager = AuditManager()

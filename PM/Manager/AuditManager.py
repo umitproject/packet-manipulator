@@ -388,21 +388,15 @@ class AuditManager(Singleton):
                   (injector, level, type))
         self._injectors[level][type] = injector
 
-    def remove_injector(self, level, type, injector, force=False):
+    def remove_injector(self, level, type, injector):
         """
         Remove a injector for the given level
         @param level the level where the injector works on
         @param type the type of injector
         @param injector a callable object
-        @param force if force is True and post or pre hooks are set
-               remove anyway
         """
 
-        tup = self._injectors[level][type]
-
-        if any(tup[1:]) and not force:
-                return False
-
+        assert self._injectors[level][type], injector
         del self._injectors[level][type]
         return True
 
@@ -427,7 +421,7 @@ class AuditManager(Singleton):
                   (decoder, level, type))
         self._decoders[level][type] = (decoder, [], [])
 
-    def remove_decoder(self, level, type, decoder, force=False):
+    def remove_decoder(self, level, type, decoder, force=True):
         """
         Remove a decoder for the given level
         @param level the level where the decoder works on
@@ -500,6 +494,11 @@ class AuditManager(Singleton):
         assert layer in (APP_LAYER_TCP, APP_LAYER_UDP)
         # The dissector is only a special case of a decoder.
         self.add_decoder(layer, port, dissector)
+
+    def remove_dissector(self, layer, port, dissector):
+        assert layer in (APP_LAYER_TCP, APP_LAYER_UDP)
+        # The dissector is only a special case of a decoder.
+        self.remove_decoder(layer, port, dissector)
 
     # Properties
 
