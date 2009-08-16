@@ -22,9 +22,7 @@ import os
 import time
 import socket
 
-from fcntl import ioctl
 from threading import Thread
-from struct import pack, unpack_from
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log
@@ -43,6 +41,9 @@ PF_INET = socket.AF_INET
 SIOCGIFMTU = 0x8921
 
 if os.name != 'nt':
+    from fcntl import ioctl
+    from struct import pack, unpack_from
+
     def get_mtu(iface):
         s = socket.socket(PF_INET, socket.SOCK_DGRAM, 0)
         mtu = unpack_from("16sI",

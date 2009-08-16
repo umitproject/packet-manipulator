@@ -102,6 +102,7 @@ class Session(gtk.VBox):
         if Prefs()['gui.expander.standard'].value:
             widget = gtk.Expander(pers.title)
             widget.add(pers)
+            widget.set_expanded(True)
         else:
             widget = AnimatedExpander(pers.title, pers.icon,
                                       self.session_orientation)
