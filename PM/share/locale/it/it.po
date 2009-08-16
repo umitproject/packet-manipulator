@@ -196,10 +196,9 @@ msgid ""
 "\n"
 "Do you want to continue?"
 msgstr ""
-"PacketManipulator richiede una versione di Python maggiore o uguale a 2.6 "
-"ma sembra che la versione installata sia la %s. Non è garantito che tutto "
-"funzioni a dovere."
-"\n"
+"PacketManipulator richiede una versione di Python maggiore o uguale a 2.6 ma "
+"sembra che la versione installata sia la %s. Non è garantito che tutto "
+"funzioni a dovere.\n"
 "Vuoi comunque continuare?"
 
 #: PM/Gui/Core/App.py:85
@@ -264,10 +263,10 @@ msgid ""
 "may have found on PM. Doing so, you help us to help you, by fixing and "
 "improving PM faster than usual."
 msgstr ""
-"Questa finestra per la segnalazione dei bug permette di comunicarci un problema "
-"che tu potresti aver trovato in PM. Così facendo, ci aiuti a migliorare ed a "
-"sistemare PM nel minor tempo possibile, al fine di offrirti un prodotto "
-"sempre migliore."
+"Questa finestra per la segnalazione dei bug permette di comunicarci un "
+"problema che tu potresti aver trovato in PM. Così facendo, ci aiuti a "
+"migliorare ed a sistemare PM nel minor tempo possibile, al fine di offrirti "
+"un prodotto sempre migliore."
 
 #: PM/Gui/Core/BugReport.py:138
 msgid "Bug report is incomplete!"
@@ -440,10 +439,8 @@ msgid "About"
 msgstr "Riguardo"
 
 #: PM/Gui/Core/MainWindow.py:700
-msgid ""
-"Packet manipulation made easy%s\n"
-"\302\253Audaces fortuna adiuvat\302\273"
-msgstr ""
+msgid "Packet manipulation made easy%s\n"
+msgstr "Packet manipulation made easy%s\n"
 
 #: PM/Gui/Core/MainWindow.py:714
 msgid "This program is relased under the terms of GPLv2"
@@ -505,8 +502,8 @@ msgid ""
 "tcpdump.pdf</span>"
 msgstr ""
 "Inserisci un filtro pcap qui.\n"
-"Controlla anche <span foreground=\"blue\"http://www.cs.ucr.edu/~marios/ethereal-"
-"tcpdump.pdf</span>"
+"Controlla anche <span foreground=\"blue\"http://www.cs.ucr.edu/~marios/"
+"ethereal-tcpdump.pdf</span>"
 
 #: PM/Gui/Dialogs/Interface.py:102
 msgid "Native"
@@ -617,8 +614,8 @@ msgid ""
 "You've selected Virtual interface as capture method. You need to specify a "
 "file source to read from"
 msgstr ""
-"Hai selezionato l'interfaccia virtuale come metodo di cattura. Devi specificare "
-"un file sorgente da cui leggere"
+"Hai selezionato l'interfaccia virtuale come metodo di cattura. Devi "
+"specificare un file sorgente da cui leggere"
 
 #: PM/Gui/Dialogs/NewAudit.py:29
 msgid "New audit - PacketManipulator"
@@ -1318,7 +1315,8 @@ msgstr ""
 
 #: PM/Gui/Plugins/PathPage.py:208
 msgid "Need PacketManipulator restart to disable."
-msgstr "E' necessario un riavvio di PacketManipulator per disabilitare il plugin."
+msgstr ""
+"E' necessario un riavvio di PacketManipulator per disabilitare il plugin."
 
 #: PM/Gui/Plugins/PluginPage.py:61
 msgid "Find updates"
@@ -1346,7 +1344,9 @@ msgstr ""
 
 #: PM/Gui/Plugins/PluginPage.py:165
 msgid "Rembember to restart PacketManipulator to use new version of plugins."
-msgstr "Ricorda di riavviare PacketManipulator per usare le nuove versioni dei plugins."
+msgstr ""
+"Ricorda di riavviare PacketManipulator per usare le nuove versioni dei "
+"plugins."
 
 #: PM/Gui/Plugins/PluginPage.py:170
 msgid "Update skipped"
@@ -1495,7 +1495,8 @@ msgstr "Non riesco a trovare una nuova version (%s)"
 
 #: PM/Gui/Plugins/Update.py:434
 msgid "Various versions available but require manual intervention."
-msgstr "Varie versioni sono disponibili ma è necessario l'aggiormento manuale."
+msgstr ""
+"Varie versioni sono disponibili ma è necessario l'aggiormento manuale."
 
 #: PM/Gui/Plugins/Update.py:436
 msgid "Version %s available but need manual update."
@@ -1846,8 +1847,8 @@ msgid ""
 msgstr ""
 "Non posso modificare questo attributo perche non riesco a convertirlo in "
 "stringa utf8.\n"
-"Prova a editarlo con l'interprete python o install pygtkhex che fornisce "
-"una finestra esadecimale per editare i campi grezzi"
+"Prova a editarlo con l'interprete python o install pygtkhex che fornisce una "
+"finestra esadecimale per editare i campi grezzi"
 
 #: PM/Gui/Widgets/PropertyGrid.py:289
 msgid "Editing string field"
@@ -1919,9 +1920,6 @@ msgstr "<span size=\"medium\"><b>Informazioni</b></span>"
 
 #~ msgid "Open pcap file"
 #~ msgstr "Apri file pcap"
-
-#~ msgid "Packet manipulation made easy%s"
-#~ msgstr "Packet manipulation made easy%s"
 
 #~ msgid "Good luck"
 #~ msgstr "Buona fortuna"

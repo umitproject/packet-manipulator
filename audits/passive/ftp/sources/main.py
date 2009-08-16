@@ -121,3 +121,27 @@ __plugins_deps__ = [('FTPDissector', ['TCPDecoder'], ['FTPDecoder-1.0'], []),]
 
 __audit_type__ = 0
 __protocols__ = (('tcp', 21), ('ftp', None))
+__vulnerabilities__ = (('HTTP dissector', {
+    'description' : 'File Transfer Protocol (FTP) is a standard network '
+                    'protocol used to exchange and manipulate files over an '
+                    'Internet Protocol computer network, such as the Internet. '
+                    'FTP is built on a client-server architecture and utilizes '
+                    'separate control and data connections between the client '
+                    'and server applications. Client applications were '
+                    'originally interactive command-line tools with a '
+                    'standardized command syntax, but graphical user '
+                    'interfaces have been developed for all desktop operating '
+                    'systems in use today. FTP is also often used as an '
+                    'application component to automatically transfer files for '
+                    'program internal functions. FTP can be used with '
+                    'user-based password a While data is being transferred via '
+                    'the data stream, the control stream sits idle. This can '
+                    'cause problems with large data transfers through '
+                    'firewalls which time out sessions after lengthy periods '
+                    'of idleness. While the file may well be successfully '
+                    'transferred, the control session can be disconnected by '
+                    'the firewall, causing an error to be generated.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                            'File_Transfer_Protocol'), )
+    }),
+)

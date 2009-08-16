@@ -557,3 +557,35 @@ __configurations__ = (('global.cfields', {
                          'A coma separated string of possible password fields'],
     }),
 )
+__vulnerabilities__ = (('HTTP dissector', {
+    'description' : 'Hypertext Transfer Protocol (HTTP) is an '
+                    'application-level protocol for distributed, collaborative,'
+                    'hypermedia information systems.[1] Its use for retrieving '
+                    'inter-linked resources led to the establishment of the '
+                    'World Wide Web.\n\n'
+                    'HTTP development was coordinated by the World Wide Web '
+                    'Consortium and the Internet Engineering Task Force '
+                    '(IETF), culminating in the publication of a series of '
+                    'Requests for Comments (RFCs), most notably RFC 2616 '
+                    '(June 1999), which defines HTTP/1.1, the version of HTTP '
+                    'in common use.\n\n'
+                    'HTTP is a request/response standard of a client and a '
+                    'server. A client is the end-user, the server is the web '
+                    'site. The client making a HTTP request—using a web '
+                    'browser, spider, or other end-user tool—is referred to as '
+                    'the user agent. The responding server—which stores or '
+                    'creates resources such as HTML files and images—is called '
+                    'the origin server. In between the user agent and origin '
+                    'server may be several intermediaries, such as proxies, '
+                    'gateways, and tunnels. HTTP is not constrained to using '
+                    'TCP/IP and its supporting layers, although this is its '
+                    'most popular application on the Internet. Indeed HTTP can '
+                    'be "implemented on top of any other protocol on the '
+                    'Internet, or on other networks." HTTP only presumes a '
+                    'reliable transport; any protocol that provides such '
+                    'guarantees can be used."',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                            'Hypertext_Transfer_Protocol'), )
+    }),
+)
+

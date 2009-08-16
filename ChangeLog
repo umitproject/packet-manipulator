@@ -1,3 +1,41 @@
+2009-08-16 Francesco Piccinno <stack.box@gmail.com>
+    * PM/Core/AuditUtils.py
+      audits/audittester.py
+      PM/Manager/AuditManager.py:
+        - Now we accept datalink as argument.
+    * audits/nose-test.sh:
+        - Now we accept an argument to test a single file.
+    * audits/active/arpcachepoison/sources/main.py
+      audits/active/arpping/sources/main.py
+      audits/active/dnsspoof/sources/main.py
+      audits/active/icmpredirect/sources/main.py
+      audits/active/injector/sources/main.py
+      audits/active/synflood/sources/main.py
+      audits/passive/ethernet/sources/main.py
+      audits/passive/fingerprint/sources/main.py
+      audits/passive/ftp/sources/main.py
+      audits/passive/http/sources/main.py
+      audits/passive/icmp/sources/main.py
+      audits/passive/ip/sources/main.py
+      audits/passive/profiler/sources/main.py
+      audits/passive/tcp/sources/main.py
+      audits/passive/udp/sources/main.py
+      audits/passive/wifi/sources/main.py:
+        - Adding description and references.
+        - Wifi decoder fixed.
+    * PM/share/locale/it/it.po
+      PM/share/locale/packetmanipulator.pot
+      PM/share/locale/it/LC_MESSAGES/packetmanipulator.mo:
+        - Updated catalog and it translation.
+    * PM/Gui/Core/MainWindow.py:
+        - Codename changed.
+    * PM/Backend/Scapy/translator.py:
+        - Add radiotap and wifi protocol aliases.
+    * setup.py:
+        - Including generation and building of plugins.
+
+    - Freeze for upcoming release.
+
 2009-08-15 Francesco Piccinno <stack.box@gmail.com>
     * audits/passive/tcp/sources/main.py:
         - Fixing debug messages.

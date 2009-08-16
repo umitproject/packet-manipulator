@@ -42,3 +42,22 @@ __plugins_deps__ = [('EthDecoder', [], ['=EthDecoder-1.0'], [])]
 
 __audit_type__ = 0
 __protocols__ = (('eth', None), )
+__vulnerabilities__ = (('Ethernet decoder', {
+    'description' : 'Ethernet is a family of frame-based computer networking '
+                    'technologies for local area networks (LANs). The name '
+                    'comes from the physical concept of the ether. It defines '
+                    'a number of wiring and signaling standards for the '
+                    'Physical Layer of the OSI networking model, through '
+                    'means of network access at the Media Access Control '
+                    '(MAC) /Data Link Layer, and a common addressing format.'
+                    '\n\n'
+                    'Ethernet is standardized as IEEE 802.3. The combination '
+                    'of the twisted pair versions of Ethernet for connecting '
+                    'end systems to the network, along with the fiber optic '
+                    'versions for site backbones, is the most widespread '
+                    'wired LAN technology. It has been in use from around '
+                    '1980[1] to the present, largely replacing competing LAN '
+                    'standards such as token ring, FDDI, and ARCNET.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/Ethernet'), )
+    }),
+)

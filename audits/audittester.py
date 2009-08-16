@@ -35,6 +35,7 @@ import optparse
 from PM.Gui.Plugins.Tree import *
 from PM.Gui.Plugins.Engine import *
 from PM.Manager.AuditManager import *
+from PM.Core.NetConst import IL_TYPE_ETH
 from PM.Core.Atoms import generate_traceback
 
 class Tester(object):
@@ -43,7 +44,9 @@ class Tester(object):
             print "I need a pcap file as input to work."
             sys.exit(-1)
 
-        tester = AuditTester(args[0])
+        tester = AuditTester(args[0], ((options.datalink is None) \
+                                       and IL_TYPE_ETH \
+                                       or options.datalink))
 
         modules = []
         filters = []
@@ -157,6 +160,8 @@ if __name__ == "__main__":
                       help='Comma separated list of passive plugins to use')
     parser.add_option('-n', '--active', action='store', dest='active',
                       help='Comma separated list of active plugins to use')
+    parser.add_option('-t', '--dltype', action='store', dest='datalink',
+                      type='int', help='Type of datalink as integer')
     parser.add_option('-s', None, action='store', dest='setexp',
                       help='Option to set. Ex: -sdecoder.ip.checksum_check=1')
     parser.add_option('-p', '--profile', action='store_true', dest='profile',

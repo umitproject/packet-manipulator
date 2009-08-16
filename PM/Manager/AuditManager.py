@@ -518,7 +518,7 @@ class AuditDispatcher(object):
         self._datalink = datalink
         self._context = context
         self._main_decoder = AuditManager().get_decoder(LINK_LAYER,
-                                                         self._datalink)
+                                                        self._datalink)
 
     def feed(self, mpkt, *args):
         """
@@ -805,13 +805,13 @@ class AuditTester(object):
         test.start() # Threaded
         test.join()
     """
-    def __init__(self, pcapfile):
+    def __init__(self, pcapfile, datalink=IL_TYPE_ETH):
         """
         Launch an audit manager against a pcap file using the selected backend
         """
         import PM.Backend
 
-        self.dispatcher = AuditDispatcher()
+        self.dispatcher = AuditDispatcher(datalink)
         self.ctx = PM.Backend.SniffContext(None, capfile=pcapfile, capmethod=1,
                                            callback=self.dispatcher.feed,
                                            audits=False)

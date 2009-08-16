@@ -31,6 +31,8 @@ from struct import pack, unpack
 from subprocess import Popen, PIPE
 from socket import inet_ntoa, inet_aton
 
+from PM.Core.NetConst import IL_TYPE_ETH
+
 # Code ripped from scapy
 BIG_ENDIAN= pack("H",1) == "\x00\x01"
 
@@ -54,8 +56,8 @@ else:
         return (((s>>8)&0xff)|s<<8) & 0xffff
 
 
-def audit_unittest(parameters, pcap=None):
-    cmd = 'python audittester.py -q %s %s' % (parameters,
+def audit_unittest(parameters, pcap=None, dl=IL_TYPE_ETH):
+    cmd = 'python audittester.py -q -t%d %s %s' % (dl, parameters,
                                             (pcap) and 'pcap-tests/%s' % pcap \
                                                    or '')
 

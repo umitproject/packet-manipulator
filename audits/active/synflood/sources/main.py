@@ -216,4 +216,24 @@ __plugins_deps__ = []
 
 __audit_type__ = 1
 __protocols__ = (('tcp', None), )
+__vulnerabilities__ = (('TCP SYN Flood', {
+    'description' : 'A SYN flood is a form of denial-of-service attack in '
+                    'which an attacker sends a succession of SYN requests to a '
+                    'target\'s system.\n\n'
+                    'When a client attempts to start a TCP connection to a '
+                    'server, the client and server exchange a series of '
+                    'messages which normally runs like this:\n\n'
+                    '   1. The client requests a connection by sending a SYN '
+                    '(synchronize) message to the server.\n'
+                    '   2. The server acknowledges this request by sending '
+                    'SYN-ACK back to the client.\n'
+                    '   3. The client responds with an ACK, and the connection '
+                    'is established.\n\n'
+                    'This is called the TCP three-way handshake, and is the '
+                    'foundation for every connection established using the '
+                    'TCP protocol.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                            'Syn_flood'),)
+    }),
+)
 

@@ -135,4 +135,32 @@ __plugins_deps__ = []
 
 __audit_type__ = 1
 __protocols__ = (('arp', None), )
+__vulnerabilities__ = (('ARP cache poison', {
+    'description' : 'Address Resolution Protocol (ARP) spoofing, also known as '
+                    'ARP poisoning or ARP Poison Routing (APR), is a technique '
+                    'used to attack an Ethernet wired or wireless network. ARP '
+                    'Spoofing may allow an attacker to sniff data frames on a '
+                    'local area network (LAN), modify the traffic, or stop the '
+                    'traffic altogether (known as a denial of service attack). '
+                    'The attack can only be used on networks that actually '
+                    'make use of ARP and not another method of address '
+                    'resolution.\n\n'
+                    'The principle of ARP spoofing is to send fake, or '
+                    '"spoofed", ARP messages to an Ethernet LAN. Generally, '
+                    'the aim is to associate the attacker\'s MAC address with '
+                    'the IP address of another node (such as the default '
+                    'gateway). Any traffic meant for that IP address would be '
+                    'mistakenly sent to the attacker instead. The attacker '
+                    'could then choose to forward the traffic to the actual '
+                    'default gateway (passive sniffing) or modify the data '
+                    'before forwarding it (man-in-the-middle attack). The '
+                    'attacker could also launch a denial-of-service attack '
+                    'against a victim by associating a nonexistent MAC address '
+                    'to the IP address of the victim\'s default gateway.\n\n'
+                    'ARP spoofing attacks can be run from a compromised host, '
+                    'or from an attacker\'s machine that is connected directly '
+                    'to the target Ethernet segment.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/ARP_spoofing'),)
+    }),
+)
 

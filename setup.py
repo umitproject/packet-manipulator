@@ -172,12 +172,59 @@ class pm_install(install):
 
         install.run(self)
         self.build_plugins()
+        self.build_audits()
 
         print
         print "#" * 80
         print "# Packet manipulator is now installed"
         print "#" * 80
         print
+
+    def build_audits(self):
+        print
+        print "#" * 80
+        print "# Generating audits plugins"
+        print "#" * 80
+        print
+
+        dir = self.install_data
+        dirs = ['share', 'PacketManipulator', 'plugins']
+
+        while dirs:
+            dir = os.path.join(dir, dirs.pop(0))
+
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+
+        dest_dir = dir
+        old_cd = os.getcwd()
+        pm_dir = os.path.abspath(os.path.dirname(os.sys.argv[0]))
+        plugins_dir = os.path.join(pm_dir, 'audits')
+        os.chdir(plugins_dir)
+
+        if os.name =="nt":
+            os.system("C:\\python25\\python.exe setup-autogen.py passive")
+            os.system("C:\\python25\\python.exe setup-autogen.py active")
+        else:
+            os.system("python setup-autogen.py passive")
+            os.system("python setup-autogen.py active")
+
+        print
+        print "#" * 80
+        print "# Building plugins"
+        print "#" * 80
+        print
+
+        if os.name =="nt":
+            os.system("C:\\python25\\python.exe setup-autogen.py "
+                      "-o %s -b passive" % dest_dir)
+            os.system("C:\\python25\\python.exe setup-autogen.py "
+                      "-o %s -b active" % dest_dir)
+        else:
+            os.system("python setup-autogen.py -o %s -b passive" % dest_dir)
+            os.system("python setup-autogen.py -o %s -b active" % dest_dir)
+
+        os.chdir(old_cd)
 
     def build_plugins(self):
         print

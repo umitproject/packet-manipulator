@@ -248,3 +248,22 @@ __configurations__ = (('decoder.ip', {
     'reassemble_max_fraglist' : [30, 'Max number of IP flows to follow'],
     'reassemble_max_fragments' : [10, 'Max number of fragments in a flow']}),
 )
+__vulnerabilities__ = (('IP decoder', {
+    'description' : 'The Internet Protocol (IP) is a protocol used for '
+                    'communicating data across a packet-switched '
+                    'internetwork using the Internet Protocol Suite, also '
+                    'referred to as TCP/IP.\n\n'
+                    'IP is the primary protocol in the Internet Layer of the '
+                    'Internet Protocol Suite and has the task of delivering '
+                    'distinguished protocol datagrams (packets) from the '
+                    'source host to the destination host solely based on '
+                    'their addresses. For this purpose the Internet Protocol '
+                    'defines addressing methods and structures for datagram '
+                    'encapsulation. The first major version of addressing '
+                    'structure, now referred to as Internet Protocol Version '
+                    '4 (IPv4) is still the dominant protocol of the Internet, '
+                    'although the successor, Internet Protocol Version 6 '
+                    '(IPv6) is being deployed actively worldwide.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/Internet_Protocol'),)
+    }),
+)

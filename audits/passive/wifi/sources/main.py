@@ -22,28 +22,38 @@
 Wifi protocol decoder
 """
 
+# Leaves commented for now.
+#>>> from PM.Core.NetConst import IL_TYPE_WIFI
+#>>> from PM.Core.AuditUtils import audit_unittest
+#>>> audit_unittest('-fwifi', 'wifi.pcap', IL_TYPE_WIFI)
+
 from PM.Core.Logger import log
 from PM.Gui.Plugins.Engine import Plugin
 from PM.Manager.AuditManager import *
 from PM.Core.NetConst import *
 
-@coroutine
-def wifi_decoder():
-    try:
-        while True:
-            mpkt = (yield)
-            print "Wifi packet captured", mpkt.summary()
-    except GeneratorExit:
-        pass
+def wifi_decoder(mpkt):
+    if not mpkt.get_field('wifi', None):
+        return None
+
+    return NET_LAYER, mpkt.get_field('wifi.proto', 0)
 
 class WifiDecoder(Plugin, PassiveAudit):
-    def start(self, reader):
-        self._decoder = wifi_decoder()
-
     def stop(self):
-        pass
+        AuditManager().remove_decoder(LINK_LAYER, IL_TYPE_WIFI, wifi_decoder)
 
     def register_decoders(self):
-        AuditManager().add_decoder(LINK_LAYER, IL_TYPE_WIFI, self._decoder)
+        AuditManager().add_decoder(LINK_LAYER, IL_TYPE_WIFI, wifi_decoder)
 
 __plugins__ = [WifiDecoder]
+__plugins_deps__ = [('WifiDecoder', [], ['=WifiDecoder-1.0'], [])]
+__audit_type__ = 0
+__protocols__ = (('wifi', None), ('802.11', None))
+__vulnerabilities__ = (('IEEE 802.11 decoder', {
+    'description' : 'IEEE 802.11 is a set of standards carrying out wireless '
+                    'local area network (WLAN) computer communication in the '
+                    '2.4, 3.6 and 5 GHz frequency bands. They are implemented '
+                    'by the IEEE LAN/MAN Standards Committee (IEEE 802).',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/IEEE_802.11'), )
+    }),
+)

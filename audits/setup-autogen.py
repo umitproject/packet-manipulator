@@ -60,7 +60,7 @@ class Autogen(object):
         self.copyright = options.copyrights.split(',')
 
         self.cwd = os.getcwd()
-        self.outpath = os.path.abspath('compiled')
+        self.outpath = os.path.abspath(options.outpath or 'compiled')
 
         if not os.path.exists(self.outpath):
             os.mkdir(self.outpath)
@@ -176,6 +176,7 @@ if __name__ == '__main__':
     optparse.add_option('-c', '--copyright', default='2009 Adriano Monteiro Marques', dest='copyrights', help='Copyright string')
     optparse.add_option('-v', '--version', default='1.0', dest='version', help='Version string')
     optparse.add_option('-b', '--build', action='store_true', dest='build', help='Set it to build audits')
+    optparse.add_option('-o', '--outpath', default='compiled', dest='outpath', help='Output path')
 
     options, args = optparse.parse_args()
 

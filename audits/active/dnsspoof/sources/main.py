@@ -378,3 +378,24 @@ __configurations__ = ((AUDIT_NAME, {
 # host: is an IP address in dotted form or hostname""", 'UDP records'],
     }),
 )
+__vulnerabilities__ = (('DNS spoofing', {
+    'description' : 'DNS cache poisoning is a maliciously created or '
+                    'unintended situation that provides data to a caching name '
+                    'server that did not originate from authoritative Domain '
+                    'Name System (DNS) sources. This can happen through '
+                    'improper software design, misconfiguration of name '
+                    'servers, and maliciously designed scenarios exploiting '
+                    'the traditionally open-architecture of the DNS system. '
+                    'Once a DNS server has received such non-authentic data '
+                    'and caches it for future performance increase, it is '
+                    'considered poisoned, supplying the non-authentic data to '
+                    'the clients of the server.\n\n'
+                    'A domain name server translates a domain name (such as '
+                    'www.example.com) into an IP Address that Internet hosts '
+                    'use to contact Internet resources. If a DNS server is '
+                    'poisoned, it may return an incorrect IP Address, '
+                    'diverting traffic to another computer.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                            'DNS_cache_poisoning'),)
+    }),
+)

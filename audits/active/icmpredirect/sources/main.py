@@ -193,4 +193,25 @@ __plugins_deps__ = [('ICMPRedirect', ['IPDecoder'], ['=ICMPRedirect-1.0'], [])]
 
 __audit_type__ = 1
 __protocols__ = (('icmp', None), )
+__vulnerabilities__ = (('ICMP redirect', {
+    'description' : 'The ICMP type 5 contains a redirect message to send data '
+                    'packets on alternative route. ICMP Redirect is a '
+                    'mechanism for routers to convey routing information to '
+                    'hosts. The Redirect Message is an ICMP message which '
+                    'informs a host to redirect its routing information (to '
+                    'send packets on an alternate route). If the host tries to '
+                    'send data through a router (R1) and R1 sends the data on '
+                    'another router (R2) then to reach the host, and a direct '
+                    'path from the host to R2 is available, the redirect will '
+                    'inform the host of such a route. The router will still '
+                    'send the original datagram to the intended destination. '
+                    'However, if the datagram contains routing information, '
+                    'this message will not be sent even if a better route is '
+                    'available. RFC1122 states that redirects should only be '
+                    'sent by gateways and should not be sent by Internet '
+                    'hosts.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                            'ICMP_Redirect_Message'),)
+    }),
+)
 

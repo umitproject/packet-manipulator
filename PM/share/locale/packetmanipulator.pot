@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2009-08-15 21:30+CEST\n"
+"POT-Creation-Date: 2009-08-16 13:17+CEST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -391,7 +391,6 @@ msgstr ""
 #: PM/Gui/Core/MainWindow.py:700
 msgid ""
 "Packet manipulation made easy%s\n"
-"\302\253Audaces fortuna adiuvat\302\273"
 msgstr ""
 
 #: PM/Gui/Core/MainWindow.py:714
@@ -1161,7 +1160,7 @@ msgstr ""
 #: PM/Gui/Plugins/AuditPage.py:755
 msgid ""
 "\n"
-" Not-affected systems:\n"
+"Not-affected systems:\n"
 msgstr ""
 
 #: PM/Gui/Plugins/AuditPage.py:764
@@ -1173,7 +1172,7 @@ msgstr ""
 #: PM/Gui/Plugins/AuditPage.py:770
 msgid ""
 "\n"
-" Not-affected versions:\n"
+"Not-affected versions:\n"
 msgstr ""
 
 #: PM/Gui/Plugins/AuditPage.py:779

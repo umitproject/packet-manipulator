@@ -153,3 +153,41 @@ __configurations__ = (('decoder.udp', {
     'enable_dissectors' : [True, 'Enable UDP protocol dissectors'],
     }),
 )
+__vulnerabilities__ = (('UDP decoder', {
+    'description' : 'The User Datagram Protocol (UDP) is one of the core '
+                    'members of the Internet Protocol Suite, the set of '
+                    'network protocols used for the Internet. With UDP, '
+                    'computer applications can send messages, in this case '
+                    'referred to as datagrams, to other hosts on an Internet '
+                    'Protocol (IP) network without requiring prior '
+                    'communications to set up special transmission channels '
+                    'or data paths. UDP is sometimes called the Universal '
+                    'Datagram Protocol. The protocol was designed by David P. '
+                    'Reed in 1980 and formally defined in RFC 768.\n\n'
+                    'UDP uses a simple transmission model without implicit '
+                    'hand-shaking dialogues for guaranteeing reliability, '
+                    'ordering, or data integrity. Thus, UDP provides an '
+                    'unreliable service and datagrams may arrive out of '
+                    'order, appear duplicated, or go missing without notice. '
+                    'UDP assumes that error checking and correction is either '
+                    'not necessary or performed in the application, avoiding '
+                    'the overhead of such processing at the network interface '
+                    'level. Time-sensitive applications often use UDP because '
+                    'dropping packets is preferable to using delayed packets. '
+                    'If error correction facilities are needed at the network '
+                    'interface level, an application may use the Transmission '
+                    'Control Protocol (TCP) or Stream Control Transmission '
+                    'Protocol (SCTP) which are designed for this purpose.\n\n'
+                    'UDP\'s stateless nature is also useful for servers that '
+                    'answer small queries from huge numbers of clients. '
+                    'Unlike TCP, UDP is compatible with packet broadcast '
+                    '(sending to all on local network) and multicasting '
+                    '(send to all subscribers).\n\n'
+                    'Common network applications that use UDP include: the '
+                    'Domain Name System (DNS), streaming media applications '
+                    'such as IPTV, Voice over IP (VoIP), Trivial File '
+                    'Transfer Protocol (TFTP) and many online games.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                           'User_Datagram_Protocol'), )
+    }),
+)

@@ -590,3 +590,25 @@ __plugins_deps__ = [('Injector', ['TCPDecoder'], [], [])]
 
 __audit_type__ = 1
 __protocols__ = (('tcp', None), )
+__vulnerabilities__ = (('TCP session hijacking', {
+    'description' : 'TCP session hijacking is when a hacker takes over a TCP '
+                    'session between two machines. Since most authentication '
+                    'only occurs at the start of a TCP session, this allows '
+                    'the hacker to gain access to a machine.\n\n'
+                    'A popular method is using source-routed IP packets. This '
+                    'allows a hacker at point A on the network to participate '
+                    'in a conversation between B and C by encouraging the IP '
+                    'packets to pass through its machine.\n\n'
+                    'If source-routing is turned off, the hacker can use '
+                    '"blind" hijacking, whereby it guesses the responses of '
+                    'the two machines. Thus, the hacker can send a command, '
+                    'but can never see the response. However, a common command '
+                    'would be to set a password allowing access from somewhere '
+                    'else on the net.\n\n'
+                    'A hacker can also be "inline" between B and C using a '
+                    'sniffing program to watch the conversation. This is known '
+                    'as a "man-in-the-middle attack".',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                            'Session_hijacking'),)
+    }),
+)

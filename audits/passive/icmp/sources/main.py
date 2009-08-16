@@ -85,3 +85,23 @@ __protocols__ = (('icmp', None), )
 __configurations__ = (('decoder.icmp', {
     'checksum_check' : ['True', 'Check for correct checksum of ICMP packets'],}),
 )
+__vulnerabilities__ = (('ICMP decoder', {
+    'description' : 'The Internet Control Message Protocol (ICMP) is one of '
+                    'the core protocols of the Internet Protocol Suite. It is '
+                    'chiefly used by networked computers\' operating systems '
+                    'to send error messages—indicating, for instance, that a '
+                    'requested service is not available or that a host or '
+                    'router could not be reached.\n\n'
+                    'ICMP relies on IP to perform its tasks, and it is an '
+                    'integral part of IP. It differs in purpose from '
+                    'transport protocols such as TCP and UDP in that it is '
+                    'typically not used to send and receive data between end '
+                    'systems. It is usually not used directly by user network '
+                    'applications, with some notable exceptions being the '
+                    'ping tool and traceroute.\n\n'
+                    'ICMP for Internet Protocol version 4 (IPv4) is also '
+                    'known as ICMPv4. IPv6 has a similar protocol, ICMPv6.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                           'Internet_Control_Message_Protocol'), )
+    }),
+)

@@ -11,7 +11,14 @@ bashtrap()
 export PYTHONPATH="$PYTHONPATH:$(dirname `pwd`)"
 echo "Masking pm-prefs.xml"
 mv ~/.PacketManipulator/pm-prefs.xml ~/.PacketManipulator/pm-prefs.xml.bak
-echo "Running tests"
-find . -name "main.py" | xargs nosetests --with-doctest
-echo "Restoring pm-prefs.xml"
+
+if [ "$1" = "" ]; then
+    echo "Running tests"
+    find . -name "main.py" | xargs nosetests --with-doctest
+    echo "Restoring pm-prefs.xml"
+else
+    echo "Running selected test ($1)"
+    nosetests --with-doctest $1
+fi
+
 bashtrap

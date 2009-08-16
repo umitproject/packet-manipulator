@@ -1114,3 +1114,25 @@ __configurations__ = (
         'reassemble_maxstreams' : [30, 'Max number of streams to follow']
     }),
 )
+__vulnerabilities__ = (('TCP decoder', {
+    'description' : 'The Transmission Control Protocol (TCP) is one of the '
+                    'core protocols of the Internet Protocol Suite. TCP is '
+                    'one of the two original components of the suite (the '
+                    'other being Internet Protocol, or IP), so the entire '
+                    'suite is commonly referred to as TCP/IP. Whereas IP '
+                    'handles lower-level transmissions from computer to '
+                    'computer as a message makes its way across the '
+                    'Internet, TCP operates at a higher level, '
+                    'concerned only with the two end systems, for example '
+                    'a Web browser and a Web server. In particular, TCP '
+                    'provides reliable, ordered delivery of a stream of '
+                    'bytes from a program on one computer to another '
+                    'program on another computer. Besides the Web, other '
+                    'common applications of TCP include e-mail and file '
+                    'transfer. Among its other management tasks, TCP '
+                    'controls segment size, the rate at which data are '
+                    'exchanged, and network traffic congestion.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                           'Transmission_Control_Protocol'),)
+    }),
+)
