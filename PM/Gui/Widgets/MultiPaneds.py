@@ -31,6 +31,7 @@ class MultiPaned(object):
     def __init__(self):
         self.current = None
         self.paneds = []
+        self.active_widget = None
 
     def add_child(self, widget, resize=False, shrink=True):
         if isinstance(widget, (gtk.Expander, AnimatedExpander)):
@@ -58,35 +59,62 @@ class MultiPaned(object):
 
             i -= 1
 
-    def __on_expanded(self, widget):
+    def _get_paned_for(self, widget):
         for paned in self.paneds:
-            w = paned.get_child1()
+            if paned.get_child1() is widget:
+                return paned
 
-            if w is not widget:
-                w = paned.get_child2()
+    def __on_expanded(self, widget):
+        if not widget.get_expanded():
+            self._minimize_widget(widget)
+        else:
+            self._set_active(widget)
 
-                if w is not widget:
-                    continue
+    def _save_state(self, paned, w):
+        cur_values = paned.child_get_property(w, 'resize')
+        w.set_data('pm::old_resize', cur_values)
 
-            if not widget.get_expanded():
-                cur_values = paned.child_get_property(w, 'resize'), \
-                           paned.child_get_property(w, 'shrink')
+    def _set_state(self, paned, w, resize=None):
+        if resize:
+            paned.set_property('position', paned.get_property('max-position'))
+        else:
+            paned.set_property('position', 0)
 
-                w.set_data('pm::old_state', cur_values)
+        if resize != None:
+            paned.child_set_property(w, 'resize', resize)
+        else:
+            cur_values = w.get_data('pm::old_resize')
 
-                paned.child_set_property(w, 'resize', False)
-                paned.child_set_property(w, 'shrink', False)
+            if isinstance(cur_values, bool):
+                paned.child_set_property(w, 'resize', cur_values)
 
-            else:
-                old_values = w.get_data('pm::old_state')
+    def _restore_widget(self, w):
+        paned = self._get_paned_for(w)
 
-                if not isinstance(old_values, tuple):
-                    return
+        if paned:
+            self._set_state(paned, w)
 
-                paned.child_set_property(w, 'resize', old_values[0])
-                paned.child_set_property(w, 'shrink', old_values[1])
+    def _set_active(self, w):
+        if self.active_widget:
+            self._restore_widget(self.active_widget)
 
-            return
+        paned = self._get_paned_for(w)
+
+        if paned:
+            self._save_state(paned, w)
+            self._set_state(paned, w, True)
+
+        self.active_widget = w
+
+    def _minimize_widget(self, w):
+        paned = self._get_paned_for(w)
+
+        if paned:
+            self._save_state(paned, w)
+            self._set_state(paned, w, False)
+
+        if self.active_widget is w:
+            self.active_widget = None
 
 class VMultiPaned(gtk.VPaned, MultiPaned):
     def __init__(self):
