@@ -697,11 +697,11 @@ class MainWindow(gtk.Window):
         dialog.set_website(PM_SITE)
         dialog.set_website_label(PM_SITE)
 
-        dialog.set_comments(_("Packet manipulation made easy%s\n") + \
-                              "«Intelligenti pauca»" % \
+        dialog.set_comments(_("Packet manipulation made easy%s\n%s") % \
                             ((PM_DEVELOPMENT) and \
                                 (' (SVN revision %s)' % PM_SVN_REVISION) or \
-                                ('')))
+                                (''),
+                             "«Intelligenti pauca»"))
 
         dialog.set_authors(['Francesco Piccinno <stack.box@gmail.com>'])
 
