@@ -31,8 +31,16 @@
         - Codename changed.
     * PM/Backend/Scapy/translator.py:
         - Add radiotap and wifi protocol aliases.
-    * setup.py:
+    * setup.py
+      scripts/windows/setup.py:
         - Including generation and building of plugins.
+    * PM/Backend/Scapy/wrapper.py:
+        - Using more reasonable message to warng of scapy missing.
+        - Patch select only on posix systems.
+    * PM/PacketManipulator:
+        - Fixing launcher.
+    * MANIFEST.in:
+        - Include missing pixmaps.
 
     - Freeze for upcoming release.
 

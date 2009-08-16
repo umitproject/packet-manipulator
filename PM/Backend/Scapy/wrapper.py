@@ -34,7 +34,7 @@ os.write = __new_write
 
 __original_select = selectmod.select
 
-if not os.getenv('PM_NOSCAPYWORKAROUND', ''):
+if os.name != 'nt' and not os.getenv('PM_NOSCAPYWORKAROUND', ''):
 
     def __intr_select(_in, _out, _err, timeout=2):
         while True:
@@ -60,7 +60,10 @@ try:
 
 except ImportError:
     from PM.Core.Errors import PMErrorException
-    raise PMErrorException("Cannot use this backend without scapy installed")
+    raise PMErrorException(
+        "Cannot use this backend without scapy installed.\n\n"
+        "Get a copy from http://www.secdev.org/projects/scapy/"
+    )
 
 from PM.Core.I18N import _
 from PM.Core.Logger import log

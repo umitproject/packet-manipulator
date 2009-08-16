@@ -41,6 +41,7 @@ import cgitb
 import tempfile
 
 from PM.Core.I18N import _
+from PM.Core.Errors import PMErrorException
 from PM.Core.Const import PM_DEVELOPMENT, PM_VERSION
 
 if gtk.pygtk_version[1] < 10:
@@ -95,6 +96,22 @@ class PMExceptionHook(object):
 
             d.run()
             d.destroy()
+
+            if gtk.main_level() > 0:
+                gtk.main_quit()
+
+            return
+
+        if etype == PMErrorException:
+            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, \
+                               message_format=_("PM General Error"),
+                               secondary_text=str(emsg))
+
+            d.run()
+            d.destroy()
+
+            if gtk.main_level() > 0:
+                gtk.main_quit()
 
             return
 

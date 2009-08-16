@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2009-08-16 13:17+CEST\n"
+"POT-Creation-Date: 2009-08-16 18:31+CEST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,19 +27,19 @@ msgstr ""
 msgid "Pcap gz files"
 msgstr ""
 
-#: PM/Backend/Scapy/Context/Audit.py:140
+#: PM/Backend/Scapy/Context/Audit.py:141
 msgid "Audit on %s:%s"
 msgstr ""
 
-#: PM/Backend/Scapy/Context/Audit.py:142
+#: PM/Backend/Scapy/Context/Audit.py:143
 msgid "Audit on %s"
 msgstr ""
 
-#: PM/Backend/Scapy/Context/Audit.py:245
+#: PM/Backend/Scapy/Context/Audit.py:246
 msgid " (stopping)"
 msgstr ""
 
-#: PM/Backend/Scapy/Context/Audit.py:261
+#: PM/Backend/Scapy/Context/Audit.py:262
 msgid " (stopped)"
 msgstr ""
 
@@ -171,7 +171,7 @@ msgstr ""
 msgid "%d packets written."
 msgstr ""
 
-#: PM/Backend/Scapy/wrapper.py:188
+#: PM/Backend/Scapy/wrapper.py:191
 msgid "No description"
 msgstr ""
 
@@ -391,6 +391,7 @@ msgstr ""
 #: PM/Gui/Core/MainWindow.py:700
 msgid ""
 "Packet manipulation made easy%s\n"
+"%s"
 msgstr ""
 
 #: PM/Gui/Core/MainWindow.py:714
@@ -1438,7 +1439,7 @@ msgstr ""
 msgid "Paths"
 msgstr ""
 
-#: PM/Gui/Sessions/Base.py:193
+#: PM/Gui/Sessions/Base.py:194
 msgid "Save session file to"
 msgstr ""
 

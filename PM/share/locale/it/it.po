@@ -25,19 +25,19 @@ msgstr "File pcap"
 msgid "Pcap gz files"
 msgstr "File pcap gz"
 
-#: PM/Backend/Scapy/Context/Audit.py:140
+#: PM/Backend/Scapy/Context/Audit.py:141
 msgid "Audit on %s:%s"
 msgstr "Audit su %s:%s"
 
-#: PM/Backend/Scapy/Context/Audit.py:142
+#: PM/Backend/Scapy/Context/Audit.py:143
 msgid "Audit on %s"
 msgstr "Audit su %s"
 
-#: PM/Backend/Scapy/Context/Audit.py:245
+#: PM/Backend/Scapy/Context/Audit.py:246
 msgid " (stopping)"
 msgstr " (fermando)"
 
-#: PM/Backend/Scapy/Context/Audit.py:261
+#: PM/Backend/Scapy/Context/Audit.py:262
 msgid " (stopped)"
 msgstr " (fermato)"
 
@@ -169,7 +169,7 @@ msgstr "Nessun pacchetto da salvare"
 msgid "%d packets written."
 msgstr "%d pacchetti salvati."
 
-#: PM/Backend/Scapy/wrapper.py:188
+#: PM/Backend/Scapy/wrapper.py:191
 msgid "No description"
 msgstr "Nessuna descrizione"
 
@@ -439,7 +439,9 @@ msgid "About"
 msgstr "Riguardo"
 
 #: PM/Gui/Core/MainWindow.py:700
-msgid "Packet manipulation made easy%s\n"
+msgid ""
+"Packet manipulation made easy%s\n"
+"%s"
 msgstr "Packet manipulation made easy%s\n"
 
 #: PM/Gui/Core/MainWindow.py:714
@@ -1534,7 +1536,7 @@ msgstr "Estensioni"
 msgid "Paths"
 msgstr "Percorsi"
 
-#: PM/Gui/Sessions/Base.py:193
+#: PM/Gui/Sessions/Base.py:194
 msgid "Save session file to"
 msgstr "Salva file sessione come"
 
