@@ -8,3 +8,9 @@ cd PacketManipulator*
 cp -R ../../scripts/linux/ubuntu/debian .
 dpkg-buildpackage
 cd ../../..
+
+echo
+echo "################################################################################"
+echo "# Your deb package is under dist/"
+echo "################################################################################"
+echo

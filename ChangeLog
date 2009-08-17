@@ -65,6 +65,8 @@
       ubuntu/debian/pycompat
       ubuntu/generate_deb.sh:
         - Scripts to generate DEB package for debian and ubuntu.
+    * scripts/linux/fedora/generate_rpm.sh:
+        - Script to generate RPM file.
 
     - End user Audits framework documentation added.
     - PacketManipulator 0.3 released - codename
