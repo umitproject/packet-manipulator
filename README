@@ -22,7 +22,7 @@ Portability
      * Archlinux
      * Gentoo Linux
      * Ubuntu
-     * Microsoft Windows XP (send/receive not works - should be fixed soon)
+     * Microsoft Windows XP
 
 Installation
 
@@ -34,15 +34,16 @@ Installation
 
 Dependencies
 
-     * [1] Python 2.4 or higher
+     * [1] Python 2.6 or higher
      * [2] GTK+ 2.6 or higher
      * [3] PyGTK 2.6 or higher
      * [4] Psyco (optional)
+     * [5] PyGtkHex (optional)
 
 Supported Backends
 
-     * [5] Scapy/Scapy-win32
-     * [6] UMPA (not in this version)
+     * [6] Scapy/Scapy-win32
+     * [7] UMPA (not in this version)
 
 Authors
 
@@ -60,7 +61,7 @@ Links
 [2] GTK official website - http://www.gtk.org
 [3] PyGTK official website - http://www.pygtk.org
 [4] Pysco website - http://psyco.sourceforge.net
+[5] PyGtkHex website - http://code.google.com/p/pygtkhex/
 
-[5] Scapy official website - http://www.secdev.org/projects/scapy/
-[6] UMPA trac site - http://trac.umitproject.org/browser/branch/UMPA
-
+[6] Scapy official website - http://www.secdev.org/projects/scapy/
+[7] UMPA trac site - http://trac.umitproject.org/browser/branch/UMPA

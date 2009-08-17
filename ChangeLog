@@ -42,7 +42,7 @@
     * MANIFEST.in:
         - Include missing pixmaps.
 
-    - Freeze for upcoming release.
+    - End user Audits framework documentation added.
 
 2009-08-15 Francesco Piccinno <stack.box@gmail.com>
     * audits/passive/tcp/sources/main.py:

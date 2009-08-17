@@ -1,9 +1,9 @@
-Welcome to PacketManipulator's documentation!
-================================
+PacketManipulator Documentation
+===============================
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   capture.rst
+   audits.rst
