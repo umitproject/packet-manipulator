@@ -23,7 +23,9 @@ This module contains the MainWindow class
 """
 
 import gtk
+
 import os
+import random
 
 from PM import Backend
 from PM.Core.Logger import log
@@ -81,15 +83,18 @@ from PM.Gui.Sessions.AuditSession import AuditSession
 from PM.Gui.Sessions import SessionType
 
 from PM.Core.I18N import _
-from PM.Core.Const import PM_DEVELOPMENT, PM_SVN_REVISION
-from PM.Core.Const import PIXMAPS_DIR, PM_VERSION, PM_SITE
+from PM.Core.Const import PM_DEVELOPMENT, PM_SVN_REVISION, \
+                          PIXMAPS_DIR, PM_VERSION, PM_SITE, \
+                          PM_CODENAME, PM_SLOGANS
 
 class MainWindow(gtk.Window):
     def __init__(self):
         gtk.Window.__init__(self)
 
-        self.set_title("Packet Manipulator")
-        self.set_icon_from_file(os.path.join(PIXMAPS_DIR, 'pm-logo.png'))
+        self.set_title("Packet Manipulator - " + str(PM_VERSION))
+        self.set_icon_list(gtk.gdk.pixbuf_new_from_file(
+            os.path.join(PIXMAPS_DIR, 'pm-logo.png'))
+        )
         self.set_default_size(600, 400)
 
         self.registered_tabs = {}
@@ -670,6 +675,7 @@ class MainWindow(gtk.Window):
 
     def __on_routing(self, action):
         dialog = RoutesDialog(self)
+        dialog.set_transient_for(self)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             dialog.save()
@@ -682,6 +688,7 @@ class MainWindow(gtk.Window):
 
     def __on_preferences(self, action):
         dialog = PreferenceDialog(self)
+        dialog.set_transient_for(self)
         dialog.show()
 
     def __on_about(self, action):
@@ -691,17 +698,20 @@ class MainWindow(gtk.Window):
             gtk.gdk.pixbuf_new_from_file(os.path.join(PIXMAPS_DIR,
                                                       'pm-logo.png'))
         )
+        dialog.set_transient_for(self)
         dialog.set_name("PacketManipulator")
-        dialog.set_version(PM_VERSION)
+        dialog.set_version(PM_VERSION + (PM_CODENAME \
+                                         and ' (%s)' % PM_CODENAME \
+                                         or ''))
 
         dialog.set_website(PM_SITE)
         dialog.set_website_label(PM_SITE)
 
         dialog.set_comments(_("Packet manipulation made easy%s\n%s") % \
-                            ((PM_DEVELOPMENT) and \
-                                (' (SVN revision %s)' % PM_SVN_REVISION) or \
-                                (''),
-                             "«Intelligenti pauca»"))
+                             ((PM_DEVELOPMENT \
+                               and ' (SVN revision %s)' % PM_SVN_REVISION \
+                               or ''),
+                             "«%s»" % random.choice(PM_SLOGANS)))
 
         dialog.set_authors(['Francesco Piccinno <stack.box@gmail.com>'])
 
@@ -720,6 +730,7 @@ class MainWindow(gtk.Window):
 
     def __on_select_iface(self, action):
         dialog = InterfaceDialog(self)
+        dialog.set_transient_for(self)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             iface = dialog.get_selected()
@@ -741,6 +752,7 @@ class MainWindow(gtk.Window):
 
     def __on_new_audit(self, action):
         dialog = NewAuditDialog(self)
+        dialog.set_transient_for(self)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             inputs = dialog.get_inputs()
@@ -766,6 +778,7 @@ class MainWindow(gtk.Window):
         dialog = gtk.FileChooserDialog(_("Select a session"), self,
                                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                         gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+        dialog.set_transient_for(self)
 
         filterall = gtk.FileFilter()
         filterall.set_name(_('All supported files'))
@@ -800,6 +813,7 @@ class MainWindow(gtk.Window):
                     secondary_text=_("PacketManipulator is unable to guess the "
                                      "file type. Try to modify the extension "
                                      "and to reopen the file."))
+                d.set_transient_for(self)
                 d.run()
                 d.destroy()
             else:

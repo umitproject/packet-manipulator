@@ -1,17 +1,17 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR ORGANIZATION
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# PacketManipulator catalog.
+# Copyright (C) 2009 Adriano Montero Marques
+# Francesco Piccinno <stack.box@gmail.com>, 2009
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2009-08-16 18:31+CEST\n"
+"Project-Id-Version: PacketManipulator 0.3\n"
+"POT-Creation-Date: 2009-08-17 14:27+CEST\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
-"Content-Transfer-Encoding: ENCODING\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
 
@@ -275,142 +275,142 @@ msgstr ""
 msgid "PM was unable to open your default web browser to show the bug tracker page with the report status. Try visiting Umit's bug tracker page to see if your bug was reported."
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:114
+#: PM/Gui/Core/MainWindow.py:119
 msgid "Ready."
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:122
+#: PM/Gui/Core/MainWindow.py:127
 msgid "File"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:124
+#: PM/Gui/Core/MainWindow.py:129
 msgid "New A_udit"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:125
+#: PM/Gui/Core/MainWindow.py:130
 msgid "Create a new audit"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:127
+#: PM/Gui/Core/MainWindow.py:132
 msgid "_New sequence"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:128
+#: PM/Gui/Core/MainWindow.py:133
 msgid "Create a new sequence"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:130
+#: PM/Gui/Core/MainWindow.py:135
 msgid "_Open"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:131
+#: PM/Gui/Core/MainWindow.py:136
 msgid "Open session"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:133
+#: PM/Gui/Core/MainWindow.py:138
 msgid "_Save"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:134
+#: PM/Gui/Core/MainWindow.py:139
 msgid "Save session"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:136
+#: PM/Gui/Core/MainWindow.py:141
 msgid "_Save as"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:137
+#: PM/Gui/Core/MainWindow.py:142
 msgid "Save session as"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:139
+#: PM/Gui/Core/MainWindow.py:144
 msgid "_Quit"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:140
+#: PM/Gui/Core/MainWindow.py:145
 msgid "Quit from application"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:142
+#: PM/Gui/Core/MainWindow.py:147
 msgid "Capture"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:144
+#: PM/Gui/Core/MainWindow.py:149
 msgid "_Interface"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:145
+#: PM/Gui/Core/MainWindow.py:150
 msgid "Capture from interface"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:147 PM/Gui/Dialogs/Preferences.py:328
+#: PM/Gui/Core/MainWindow.py:152 PM/Gui/Dialogs/Preferences.py:328
 #: PM/Gui/Pages/AuditPage.py:82 PM/Gui/Plugins/Window.py:88
 msgid "Audits"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:149
+#: PM/Gui/Core/MainWindow.py:154
 msgid "Options"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:151
+#: PM/Gui/Core/MainWindow.py:156
 msgid "Routing table"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:152
+#: PM/Gui/Core/MainWindow.py:157
 msgid "Routes editor"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:154
+#: PM/Gui/Core/MainWindow.py:159
 msgid "Plugins"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:155
+#: PM/Gui/Core/MainWindow.py:160
 msgid "Plugin manager"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:157
+#: PM/Gui/Core/MainWindow.py:162
 msgid "_Preferences"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:158
+#: PM/Gui/Core/MainWindow.py:163
 msgid "Preferences"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:160
+#: PM/Gui/Core/MainWindow.py:165
 msgid "Views"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:162
+#: PM/Gui/Core/MainWindow.py:167
 msgid "Help"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:164
+#: PM/Gui/Core/MainWindow.py:169
 msgid "About"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:700
+#: PM/Gui/Core/MainWindow.py:710
 msgid ""
 "Packet manipulation made easy%s\n"
 "%s"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:714
+#: PM/Gui/Core/MainWindow.py:724
 msgid "This program is relased under the terms of GPLv2"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:766
+#: PM/Gui/Core/MainWindow.py:778
 msgid "Select a session"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:771
+#: PM/Gui/Core/MainWindow.py:784
 msgid "All supported files"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:799
+#: PM/Gui/Core/MainWindow.py:812
 msgid "Unable to open selected session"
 msgstr ""
 
-#: PM/Gui/Core/MainWindow.py:800
+#: PM/Gui/Core/MainWindow.py:813
 msgid "PacketManipulator is unable to guess the file type. Try to modify the extension and to reopen the file."
 msgstr ""
 

@@ -306,11 +306,22 @@ setup(name         = 'PacketManipulator',
                       'PM.Gui.Plugins',
                       'PM.higwidgets'
                      ],
-      data_files   = [('share/pixmaps/pm',
-                       glob.glob("PM/share/pixmaps/pm/*")),
-                      (BASE_DOCS_DIR, glob.glob(DOCS_DIR + "/*/*")),
+      data_files   = [
+                      (os.path.join('share', 'pixmaps', 'pm'),
+                       glob.glob(os.path.join('PM', 'share', 'pixmaps',
+                                              'pm', '*'))),
+                      (BASE_DOCS_DIR,
+                          glob.glob(os.path.join(DOCS_DIR, '*.html')) + \
+                          glob.glob(os.path.join(DOCS_DIR, '*.js')) +   \
+                          glob.glob(os.path.join(DOCS_DIR, '*.inv'))),
+                      (os.path.join(BASE_DOCS_DIR, '_images'),
+                          glob.glob(os.path.join(DOCS_DIR, '_images', '*'))),
+                      (os.path.join(BASE_DOCS_DIR, '_sources'),
+                          glob.glob(os.path.join(DOCS_DIR, '_sources', '*'))),
+                      (os.path.join(BASE_DOCS_DIR, '_static'),
+                          glob.glob(os.path.join(DOCS_DIR, '_static', '*'))),
                      ] + mo_files,
-      scripts      = ['PM/PacketManipulator'],
+      scripts      = [os.path.join('PM', 'PacketManipulator')],
       ext_modules  = modules,
       cmdclass     = {'install' : pm_install,
                       'build' : pm_build}

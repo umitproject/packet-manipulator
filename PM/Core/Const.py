@@ -37,7 +37,9 @@ except:
     PM_SVN_REVISION = 'N/A'
 
 PM_SITE = 'http://manipulator.umitproject.org'
-PM_VERSION = '0.2'
+PM_VERSION = '0.3'
+PM_CODENAME = ''
+PM_SLOGANS = ['Audaces fortuna adiuvat', 'Intelligenti pauca']
 PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 
 PLATFORM = sys.platform

@@ -21,6 +21,7 @@
 from PM.Core.Logger import log
 from SniffSession import SniffSession
 from SequenceSession import SequenceSession
+from AuditSession import AuditSession
 
 class SessionType:
     types = {}
@@ -51,9 +52,10 @@ class SessionType:
         del SessionType.types[session.session_id]
         del SessionType.types[session]
 
-        log.debug("Deregistering %s (%d, %s)" % (session, 
+        log.debug("Deregistering %s (%d, %s)" % (session,
                                                  session.session_id,
                                                  session.session_name))
 
 SessionType.add_session(SequenceSession)
 SessionType.add_session(SniffSession)
+SessionType.add_session(AuditSession)

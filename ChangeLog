@@ -26,7 +26,7 @@
     * PM/share/locale/it/it.po
       PM/share/locale/packetmanipulator.pot
       PM/share/locale/it/LC_MESSAGES/packetmanipulator.mo:
-        - Updated catalog and it translation.
+        - Updated catalog and its translation.
     * PM/Gui/Core/MainWindow.py:
         - Codename changed.
     * PM/Backend/Scapy/translator.py:
@@ -34,6 +34,12 @@
     * setup.py
       scripts/windows/setup.py:
         - Including generation and building of plugins.
+        - Fixing documentation inclusion.
+    * scripts/i18n/pygettext.py:
+        - Fixing the POT header generation.
+    * PM/Gui/Core/MainWindow.py:
+        - Setting transiet for all dialogs opened.
+        - Fixing AboutDialog
     * PM/Backend/Scapy/wrapper.py:
         - Using more reasonable message to warng of scapy missing.
         - Patch select only on posix systems.
@@ -41,8 +47,11 @@
         - Fixing launcher.
     * MANIFEST.in:
         - Include missing pixmaps.
+    * PM/Core/Const.py:
+        - Constants fixed.
 
     - End user Audits framework documentation added.
+    - PacketManipulator 0.3 released - codename
 
 2009-08-15 Francesco Piccinno <stack.box@gmail.com>
     * audits/passive/tcp/sources/main.py:
