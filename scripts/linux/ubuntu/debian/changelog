@@ -1,0 +1,5 @@
+packet-manipulator (0.3-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Francesco Piccinno <stack.box@gmail.com>  Mon, 17 Aug 2009 14:53:30 +0200

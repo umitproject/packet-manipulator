@@ -49,6 +49,22 @@
         - Include missing pixmaps.
     * PM/Core/Const.py:
         - Constants fixed.
+    * ubuntu
+      ubuntu/debian
+      ubuntu/debian/packet-manipulator.1
+      ubuntu/debian/control
+      ubuntu/debian/files
+      ubuntu/debian/compat
+      ubuntu/debian/menu
+      ubuntu/debian/install
+      ubuntu/debian/changelog
+      ubuntu/debian/packet-manipulator.desktop
+      ubuntu/debian/copyright
+      ubuntu/debian/docs
+      ubuntu/debian/rules
+      ubuntu/debian/pycompat
+      ubuntu/generate_deb.sh:
+        - Scripts to generate DEB package for debian and ubuntu.
 
     - End user Audits framework documentation added.
     - PacketManipulator 0.3 released - codename
