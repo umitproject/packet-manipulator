@@ -10,6 +10,7 @@ Standards-Version: 3.8.0
 Homepage: http://manipulator.umitproject.org
 
 Package: packet-manipulator
+Architecture: any
 Depends: ${python:Depends}, python-gtk2, python-gobject
 XB-Python-Version: ${python:Versions}
 Recommends: python-psyco,  python-gnome2-extras, python-webkit, python-gtkhex
