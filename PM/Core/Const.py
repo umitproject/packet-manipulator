@@ -38,7 +38,7 @@ except:
 
 PM_SITE = 'http://manipulator.umitproject.org'
 PM_VERSION = '0.3'
-PM_CODENAME = ''
+PM_CODENAME = 'sneaky whisper'
 PM_SLOGANS = ['Audaces fortuna adiuvat', 'Intelligenti pauca']
 PM_DEVELOPMENT = os.environ.get('PM_DEVELOPMENT', False)
 

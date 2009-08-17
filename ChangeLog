@@ -69,7 +69,7 @@
         - Script to generate RPM file.
 
     - End user Audits framework documentation added.
-    - PacketManipulator 0.3 released - codename
+    - PacketManipulator 0.3 released - codename sneaky whisper
 
 2009-08-15 Francesco Piccinno <stack.box@gmail.com>
     * audits/passive/tcp/sources/main.py:
