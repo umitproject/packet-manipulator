@@ -15,8 +15,7 @@ Depends: ${python:Depends}, python-gtk2, python-gobject
 XB-Python-Version: ${python:Versions}
 Recommends: python-psyco,  python-gnome2-extras, python-webkit, python-gtkhex
 Description: PacketManipulator
-   graphical frontend that is really useful for
-   advanced users and easy to be used by newbies. With PacketManipulator,
-   network admin can forge custom packets and send them over the wire
-   to analyze the network, sniff on a selected interface or simply edit
-   a pcap file for further replay.
+   is a graphical frontend really useful foradvanced users and easy to use
+   for newbies. With PacketManipulator, network admin can forge custom
+   packets and send them over the wire to analyze the network, sniff on a
+   selected interface or simply edit a pcap file for further replay.
