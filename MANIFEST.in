@@ -25,6 +25,7 @@ include PM/moo/dsutils.py
 
 recursive-include PM/share/pixmaps/pm *.png *.ico
 recursive-include PM/share/locale/it/LC_MESSAGES/ *.mo
+recursive-include PM/share/doc *
 
 recursive-include plugins *
 recursive-include audits *
