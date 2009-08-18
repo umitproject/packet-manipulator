@@ -57,7 +57,6 @@ class UmitPaned(BigPaned):
             self.add_child(view.get_toplevel())
         else:
             POS = POS_MAP[view.tab_position]
-            print view.icon_name, view.label_text
             lab = PaneLabel(view.icon_name, None, view.label_text)
             view.get_toplevel()
             pane = self.insert_pane(view.get_toplevel(), lab, POS, POS)
