@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python2.6
 # -*- coding: utf-8 -*-
 # Copyright (C) 2008 Adriano Monteiro Marques
 #
@@ -65,7 +65,7 @@ if gtk.pygtk_version[1] < 10:
 class PMExceptionHook(object):
     def __call__(self, etype, emsg, etb):
         import warnings
-        warnings.filterwarnings("error", module = "gtk")
+        warnings.filterwarnings("error", module="gtk")
 
         try:
             import gtk
@@ -88,20 +88,6 @@ class PMExceptionHook(object):
                      "PyGTK: %s\nHIGWidgets: %s\nPython: %s") % \
                 (gtk_version, pygtk_version, higwidgets_version, python_version)
 
-        if etype == ImportError:
-            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, \
-                               message_format=_("Import error"),
-                               secondary_text=_("\nA required module was not " \
-                                                "found.\n\nError: %s" % emsg))
-
-            d.run()
-            d.destroy()
-
-            if gtk.main_level() > 0:
-                gtk.main_quit()
-
-            return
-
         if etype == PMErrorException:
             d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, \
                                message_format=_("PM General Error"),
@@ -116,18 +102,21 @@ class PMExceptionHook(object):
             return
 
         crash_text = cgitb.text((etype, emsg, etb))
-        crash_text= "{{{\n%s\n%s\n}}}" % (versions, crash_text)
+        crash_text = "{{{\n%s\n%s\n}}}" % (versions, crash_text)
 
         extrainfo_dialog = "%-17s %s\n%-17s %s\n%-17s %s\n" % (
             "sys.platform", sys.platform, "os.name", os.name,
             "PacketManipulator", PM_VERSION)
-        crashmsg_dialog = "Crash Report\n%s\n%s\nDescription\n%s\n" % \
-                        ('=' * 10, extrainfo_dialog, '-' * 20)
+        crashmsg_dialog = "Crash Report\n%s\n%s\n" \
+                          "Description\n%s\nDescribe what are you doing.\n\n" \
+                          "Traceback\n%s\n%s" % \
+                          ('=' * 12, extrainfo_dialog,
+                           '-' * 11, '-' * 9, crash_text)
 
         try:
             try:
                 cwin = BugReport("PacketManipulator Crash - '%s'" % emsg,\
-                                 crashmsg_dialog, crash_text)
+                                 crashmsg_dialog)
                 cwin.show_all()
                 while True:
                     # keeping running while bug report is not sent successfully,

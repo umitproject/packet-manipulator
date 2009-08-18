@@ -435,7 +435,7 @@ class MainWindow(gtk.Window):
 
         for page in maintab.session_notebook:
             if isinstance(page, klass):
-                self.apply_bindings(page, ptype)
+                self.apply_bindings(page, ptype, persp_klass)
 
     def unbind_session(self, ptype, persp_klass):
         try:
@@ -468,9 +468,10 @@ class MainWindow(gtk.Window):
 
         return False
 
-    def apply_bindings(self, page, ptype):
+    def apply_bindings(self, page, ptype, klass=None):
         for persp_klass, show, resize, shrink in self.session_binder[ptype]:
-            page.add_perspective(persp_klass, show, resize, shrink)
+            if not klass or (klass and persp_klass is klass):
+                page.add_perspective(persp_klass, show, resize, shrink)
 
     def bind_perspective(self, ptype, callback):
         """

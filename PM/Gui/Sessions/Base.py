@@ -77,7 +77,7 @@ class Session(gtk.VBox):
             if isinstance(persp, klass):
                 widget = persp
 
-                while self.paned != widget.get_parent():
+                while not isinstance(widget.get_parent(), gtk.Paned):
                     widget = widget.get_parent()
 
                 widget.hide()

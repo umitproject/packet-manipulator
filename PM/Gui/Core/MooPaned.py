@@ -23,19 +23,15 @@ Docking windows module (it needs moo_stub module)
 """
 
 import gtk
-from PM.Gui.moo_stub import BigPaned, PaneLabel, PaneParams
-
-PANE_CENTER = 'Center'
-PANE_RIGHT = 'Rigth'
-PANE_LEFT = 'Left'
-PANE_TOP = 'Top'
-PANE_BOTTOM = 'Bottom'
+from PM.Gui.moo_stub import BigPaned, PaneLabel, PaneParams, \
+                            PANE_POS_RIGHT, PANE_POS_LEFT, \
+                            PANE_POS_TOP, PANE_POS_BOTTOM
 
 POS_MAP = {
-        PANE_RIGHT  : gtk.POS_RIGHT,
-        PANE_LEFT   : gtk.POS_LEFT,
-        PANE_TOP    : gtk.POS_TOP,
-        PANE_BOTTOM : gtk.POS_BOTTOM
+        gtk.POS_RIGHT  : PANE_POS_RIGHT,
+        gtk.POS_LEFT   : PANE_POS_LEFT,
+        gtk.POS_TOP    : PANE_POS_TOP,
+        gtk.POS_BOTTOM : PANE_POS_BOTTOM
 }
 
 class UmitPaned(BigPaned):
@@ -47,6 +43,7 @@ class UmitPaned(BigPaned):
         for pane in self.get_all_paneds():
             pane.set_pane_size(200)
             #pane.set_sticky_pane(True)
+        self.show()
 
     def get_all_pos(self):
         return [gtk.POS_TOP, gtk.POS_BOTTOM, gtk.POS_LEFT, gtk.POS_RIGHT]
@@ -59,7 +56,7 @@ class UmitPaned(BigPaned):
         if not view.tab_position:
             self.add_child(view.get_toplevel())
         else:
-            POS = view.tab_position
+            POS = POS_MAP[view.tab_position]
             lab = PaneLabel(view.icon_name, None, view.label_text)
             pane = self.insert_pane(view.get_toplevel(), lab, POS, POS)
             if not removable:

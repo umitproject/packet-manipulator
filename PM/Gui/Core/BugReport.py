@@ -33,7 +33,7 @@ from PM.Core.Const import PM_VERSION
 from PM.Core.BugRegister import BugRegister
 
 class BugReport(HIGDialog):
-    def __init__(self, title=_('Bug Report'), description='', traceback=''):
+    def __init__(self, title=_('Bug Report'), description=''):
 
         HIGDialog.__init__(self, title=title,
                            buttons=(gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
@@ -46,7 +46,6 @@ class BugReport(HIGDialog):
         self._connect_widgets()
 
         self.description = description
-        self.traceback = traceback
 
     def _create_widgets(self):
         self.email_label = HIGHintSectionLabel(_("Email"),
@@ -147,16 +146,13 @@ class BugReport(HIGDialog):
         bug_register = BugRegister()
 
         bug_register.reporter = self.email
-        bug_register.details = "%s\n[[BR]]\n[[BR]]\nGenerated traceback:\n[[BR]]\n%s" % \
-                               (self.description.replace("\n", "[[BR]]"), self.traceback)
+        bug_register.details = self.description.replace("\n", "[[BR]]")
 
         bug_page = None
         try:
             bug_page = bug_register.report()
             assert bug_page
         except Exception, err:
-            print err
-
             cancel_dialog = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
                 message_format=_("Bug not reported!"),
                 secondary_text=_("The bug description could not be "

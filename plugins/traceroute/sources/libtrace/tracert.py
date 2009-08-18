@@ -25,7 +25,7 @@ def get_my_ip():
     url = urllib.URLopener()
     resp = url.open('http://myip.dk')
     html = resp.read(256)
-    
+
     end = html.find("</title>")
     start = html.find("address is: ") + 12
 
@@ -76,7 +76,7 @@ function initialize() {
   if (GBrowserIsCompatible()) {
     var map = new GMap2(document.getElementById("map_canvas"));
     map.setCenter(new GLatLng("""
-    
+
     head += "%s,%s%s" % (points[0][1][1], points[0][1][0], "), 0);")
     head += "var polyline = new GPolyline(["
     head += ",".join(html)
@@ -102,13 +102,13 @@ function initialize() {
         head += "map.addOverlay(createMarker(%s, \"%s\"));" % (point, points.pop(0)[0])
 
     head += """
-        if (window.attachEvent) { 
-          window.attachEvent("onresize", function() {this.map.onResize()} ); 
-        } else { 
+        if (window.attachEvent) {
+          window.attachEvent("onresize", function() {this.map.onResize()} );
+        } else {
           window.addEventListener("resize", function() {this.map.onResize()} , false);
-        } 
+        }
     }
-}  
+}
 </script>
 </head>
 
@@ -118,7 +118,7 @@ function initialize() {
 </body>
 </html>"""
 
-    return head 
+    return head
 
 def create_map(ans, locator):
     log.debug("Creating map")
@@ -127,6 +127,10 @@ def create_map(ans, locator):
 
     if not dct.keys():
         return ""
+
+    if not locator:
+        return "<pre>Locator is not available.<br/>" \
+               "Probably the geoip database is not present.</pre>"
 
     key = dct.keys()[0]
     routes = dct[key].items()

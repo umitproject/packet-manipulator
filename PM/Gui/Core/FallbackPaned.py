@@ -24,12 +24,6 @@ A simple docking windows fallback replacement based on gtk.Notebook
 
 import gtk
 
-PANE_CENTER = 'Center'
-PANE_RIGHT = 'Rigth'
-PANE_LEFT = 'Left'
-PANE_TOP = 'Top'
-PANE_BOTTOM = 'Bottom'
-
 class UmitPaned(gtk.VBox):
     """Fallback UmitPaned based on gtk.Paned
     """
@@ -42,15 +36,15 @@ class UmitPaned(gtk.VBox):
 
         self.hnotebook = gtk.Notebook()
         self.vnotebook = gtk.Notebook()
-        
+
         self.vnotebook.set_tab_pos(gtk.POS_BOTTOM)
 
         self.pack_start(self.vpaned)
         self.vpaned.pack2(self.vnotebook, False, True) # bottom
-        
+
         self.vpaned.add1(self.hpaned)
         self.hpaned.pack1(self.hnotebook, False, True) # left
-        
+
         self.show_all()
 
     def add_view(self, tab, unused=False):

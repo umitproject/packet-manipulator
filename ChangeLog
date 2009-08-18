@@ -43,6 +43,20 @@
     * PM/Backend/Scapy/wrapper.py:
         - Using more reasonable message to warng of scapy missing.
         - Patch select only on posix systems.
+    * plugins/geoip/sources/main.py
+      plugins/traceroute/sources/libtrace/tracert.py
+      plugins/traceroute/sources/main.py:
+        - Plugins now are working again.
+    * PM/Gui/Sessions/Base.py
+      PM/Gui/Widgets/MultiPaneds.py:
+        - Fixing bug in removing and adding perspectives.
+    * PM/Gui/Core/BugReport.py
+      PM/Gui/Core/BugRegister.py:
+        - Including traceback in the textview.
+        - Fixing version and milestone.
+    * PM/Gui/Core/MooPaned.py
+      PM/Gui/Core/FallbackPaned.py:
+        - Fixing docking libraries.
     * PM/PacketManipulator:
         - Fixing launcher.
     * MANIFEST.in:

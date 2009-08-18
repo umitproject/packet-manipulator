@@ -48,8 +48,6 @@ class GeoTab(UmitView):
     def create_ui(self):
         self.locator = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
 
-        vbox = gtk.VBox(False, 2)
-
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
@@ -66,10 +64,8 @@ class GeoTab(UmitView):
         btn = gtk.Button(stock=gtk.STOCK_REFRESH)
         btn.connect('clicked', self.__on_refresh)
 
-        vbox.pack_start(sw)
-        vbox.pack_start(btn, False, False)
-
-        self._main_widget.add(vbox)
+        #self._main_widget.pack_start(sw)
+        #self._main_widget.pack_end(btn, False, False)
         self._main_widget.show_all()
 
         tab = PMApp().main_window.get_tab("MainTab")
@@ -119,11 +115,12 @@ class GeoTab(UmitView):
 
 class GeoStats(Plugin):
     def start(self, reader):
-        catalog = reader.bind_translation("geostats")
+        if reader:
+            catalog = reader.bind_translation("geostats")
 
-        if catalog:
-            global _
-            _ = catalog.gettext
+            if catalog:
+                global _
+                _ = catalog.gettext
 
         self.geo_tab = GeoTab()
         PMApp().main_window.register_tab(self.geo_tab, True)

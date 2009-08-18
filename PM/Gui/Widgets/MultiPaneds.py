@@ -126,9 +126,11 @@ class VMultiPaned(gtk.VPaned, MultiPaned):
 
     def add_child(self, widget, resize=False, shrink=True):
         new_paned = gtk.VPaned()
+        new_paned.show()
 
         self.current.pack1(widget, resize, shrink)
         self.current.pack2(new_paned, False, False)
+        self.current.show()
 
         self.current = new_paned
         self.paneds.append(new_paned)
@@ -145,10 +147,13 @@ class HMultiPaned(gtk.HPaned, MultiPaned):
 
     def add_child(self, widget, resize=False, shrink=True):
         new_paned = gtk.HPaned()
+
         self.current.pack1(widget, resize, shrink)
         self.current.pack2(new_paned, False, False)
+        self.current.show()
 
         self.current = new_paned
+        self.paneds.append(new_paned)
 
         MultiPaned.add_child(self, widget, resize, shrink)
 

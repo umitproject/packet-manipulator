@@ -212,6 +212,7 @@ class HostListTab(UmitView):
         bb.pack_end(self.btn_info, False, False)
 
         self._main_widget.pack_end(bb, False, False)
+        self._main_widget.show_all()
 
         self.btn_scan.set_sensitive(False)
         self.btn_info.set_sensitive(False)

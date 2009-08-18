@@ -22,6 +22,8 @@ import urllib
 import urllib2
 from urllib2 import Request, urlopen, URLError, HTTPError
 
+from PM.Core.Const import PM_VERSION
+
 from tempfile import mktemp
 import re
 
@@ -42,8 +44,8 @@ class BugRegister(object):
         self.cc = ""
         self.reporter = "user"
         self.keywords = "user crash"
-        self.milestore = "Umit 1.0beta"
-        self.version = "current svn"
+        self.milestore = ""
+        self.version = "PacketManipulator " + str(PM_VERSION)
         self.assigned_to = "nopper"
         self.component = "PacketManipulator"
         self.type = "defect"
@@ -55,7 +57,7 @@ class BugRegister(object):
         Returns the value or None if not found
         """
         try:
-            pattern = r".*%s=([^;]+)[;]{0,1}.*" % name 
+            pattern = r".*%s=([^;]+)[;]{0,1}.*" % name
             return re.findall(pattern, header['Set-cookie'])[0]
         except Exception, ex:
             return None
@@ -65,12 +67,12 @@ class BugRegister(object):
     def report(self):
         f = urllib2.urlopen(trac_new_ticket)
 
-        # Get cookie trac_session 
+        # Get cookie trac_session
         trac_session = self.__get_cookie(f.headers, "trac_session")
         # Get value of __FORM_TOKEN
         trac_form = self.__get_cookie(f.headers, "trac_form_token")
         if (trac_form == None or trac_session == None ):
-            return None 
+            return None
 
         data = urllib.urlencode({"field_summary":self.summary,
                                  "__FORM_TOKEN":trac_form,
