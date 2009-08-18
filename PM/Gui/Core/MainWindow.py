@@ -203,9 +203,11 @@ class MainWindow(gtk.Window):
                 <separator/>
                 <toolitem action='Open'/>
                 <toolitem action='Save'/>
-                <toolitem action='Interface'/>
                 <separator/>
+                <toolitem action='Interface'/>
                 <toolitem action='Routes'/>
+                <separator/>
+                <toolitem action='Plugins'/>
                 <toolitem action='Preferences'/>
                 <separator/>
             </toolbar>
@@ -623,6 +625,7 @@ class MainWindow(gtk.Window):
                                          self.__on_maintab_page_removed)
         maintab.session_notebook.connect('switch-page',
                                          self.__on_maintab_page_switched)
+        self.__on_maintab_page_switched(maintab.session_notebook, None, 0)
 
     def connect_tabs_signals(self):
         "Used to connect signals between tabs"
@@ -659,6 +662,14 @@ class MainWindow(gtk.Window):
     def __on_maintab_page_switched(self, notebook, page, pagenum):
         page = notebook.get_nth_page(pagenum)
         item = self.ui_manager.get_widget('/menubar/Audits')
+
+        if isinstance(page, Session) and getattr(page, 'context', None):
+            enabled = (page.context.file_types and True or False)
+        else:
+            enabled = False
+
+        for act in ('Save', 'SaveAs'):
+            self.main_action_group.get_action(act).set_sensitive(enabled)
 
         if not isinstance(page, AuditSession):
             item.set_sensitive(False)

@@ -578,7 +578,11 @@ class PreferenceDialog(gtk.Dialog):
                 break
 
     def save_changes(self):
-        Prefs().write_options()
+        try:
+            Prefs().write_options()
+        except Exception, err:
+            # It will be handled on MainWindow before quit
+            pass
 
     def __on_response(self, dialog, id):
         if id == gtk.RESPONSE_CLOSE:
