@@ -309,8 +309,7 @@ class AuditManager(Singleton):
 
             self._configurations.update(handler.opt_dict)
         except Exception, err:
-            log.warning('Error while loading audits-conf.xml')
-            log.warning(generate_traceback())
+            log.warning('Error while loading audits-conf.xml. Using default options')
 
     def write_configurations(self):
         log.debug('Writing configurations to audits-conf.xml')

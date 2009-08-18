@@ -904,10 +904,33 @@ class MainWindow(gtk.Window):
         #for ctx in lst:
         #    ctx.join()
 
-        log.debug('Saving options before exiting')
-        Prefs().write_options()
+        errs = []
 
-        log.debug('Saving audit configurations')
-        AuditManager().write_configurations()
+        try:
+            log.debug('Saving options before exiting')
+            Prefs().write_options()
+        except IOError, err:
+            errs.append(err)
+
+        try:
+            log.debug('Saving audit configurations')
+            AuditManager().write_configurations()
+        except IOError, err:
+            errs.append(err)
+
+        if errs:
+            errstr = '\n'.join(
+                map(lambda x: 'on %s (%s)' % (x.filename, x.strerror),
+                errs)
+            )
+
+            dialog = HIGAlertDialog(
+                type=gtk.MESSAGE_ERROR,
+                message_format=_('Error while saving configurations'),
+                secondary_text=errstr + '\n\n' + _('Be sure to have ' \
+                                 'read and write permission.'))
+            dialog.set_transient_for(self)
+            dialog.run()
+            dialog.destroy()
 
         gtk.main_quit()

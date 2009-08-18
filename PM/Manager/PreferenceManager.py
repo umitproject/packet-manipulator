@@ -236,14 +236,13 @@ class Prefs(Singleton):
     }
 
     def __init__(self):
-        need_save = True
         self.fname = os.path.join(PM_HOME, 'pm-prefs.xml')
 
         try:
             opts = self.load_options()
             self.options.update(self.load_options())
-        except Exception:
-            need_save = True
+        except Exception, err:
+            log.warning('Error reading pm-prefs.xml. Loading default options')
 
         diff_dict = {}
         for name, opt in self.options.items():
@@ -251,9 +250,6 @@ class Prefs(Singleton):
                 diff_dict[name] = Option(opt)
 
         self.options.update(diff_dict)
-
-        if need_save:
-            self.write_options()
 
     def load_options(self):
         handler = PreferenceLoader(sys.stdout)
