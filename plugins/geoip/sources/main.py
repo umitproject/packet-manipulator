@@ -64,8 +64,8 @@ class GeoTab(UmitView):
         btn = gtk.Button(stock=gtk.STOCK_REFRESH)
         btn.connect('clicked', self.__on_refresh)
 
-        #self._main_widget.pack_start(sw)
-        #self._main_widget.pack_end(btn, False, False)
+        self._main_widget.pack_start(sw)
+        self._main_widget.pack_end(btn, False, False)
         self._main_widget.show_all()
 
         tab = PMApp().main_window.get_tab("MainTab")

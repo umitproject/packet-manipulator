@@ -50,14 +50,16 @@ class UmitPaned(BigPaned):
 
     def get_all_paneds(self):
         for pos in self.get_all_pos():
-            yield self.get_paned(pos)
+            yield self.get_paned(POS_MAP[pos])
 
     def add_view(self, view, removable=True):
-        if not view.tab_position:
+        if view.tab_position is None:
             self.add_child(view.get_toplevel())
         else:
             POS = POS_MAP[view.tab_position]
+            print view.icon_name, view.label_text
             lab = PaneLabel(view.icon_name, None, view.label_text)
+            view.get_toplevel()
             pane = self.insert_pane(view.get_toplevel(), lab, POS, POS)
             if not removable:
                 pane.set_property('removable', False)
