@@ -1,0 +1,6 @@
+debian/tmp/usr/lib/python*
+debian/tmp/usr/bin/*
+debian/tmp/usr/share/locale/*
+debian/tmp/usr/share/doc/*
+debian/tmp/usr/share/pixmaps/*
+debian/tmp/usr/share/PacketManipulator/audits

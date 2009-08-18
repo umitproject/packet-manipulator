@@ -2,7 +2,8 @@ Source: packet-manipulator
 Section: net
 Priority: optional
 Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
-Build-Depends: debhelper (>= 5), python, cdbs (>= 0.4.49), gcc, python-dev, libgtk2.0-bin, python-sphinx
+Build-Depends: debhelper (>= 5), python, cdbs (>= 0.4.49), gcc, python-dev,
+               libgtk2.0-bin, python-sphinx, python-scapy
 Build-Depends-Indep: python-central (>= 0.6.1)
 XSBC-Original-Maintainer: Francesco Piccinno <stack.box@gmail.com>
 XS-Python-Version: current
@@ -11,11 +12,18 @@ Homepage: http://manipulator.umitproject.org
 
 Package: packet-manipulator
 Architecture: any
-Depends: ${python:Depends}, python-gtk2, python-gobject
+Depends: ${python:Depends}, python-gtk2, python-gobject, python-scapy
 XB-Python-Version: ${python:Versions}
-Recommends: python-psyco,  python-gnome2-extras, python-webkit, python-gtkhex
+Recommends: python-psyco, python-gtkhex, packet-manipulator-plugins
 Description: PacketManipulator
    is a graphical frontend really useful for advanced users and easy to use
    for newbies. With PacketManipulator, network admin can forge custom
    packets and send them over the wire to analyze the network, sniff on a
    selected interface or simply edit a pcap file for further replay.
+
+Package: packet-manipulator-plugins
+Architecture: any
+Depends: ${python:Depends}, python-gtk2, python-gobject, packet-manipulator,
+         python-webkit, python-geoip
+XB-Python-Version: ${python:Versions}
+Description: PacketManipulator plugins collection

@@ -188,7 +188,7 @@ class pm_install(install):
         print
 
         dir = self.install_data
-        dirs = ['share', 'PacketManipulator', 'plugins']
+        dirs = ['share', 'PacketManipulator', 'audits']
 
         while dirs:
             dir = os.path.join(dir, dirs.pop(0))

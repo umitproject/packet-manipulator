@@ -32,7 +32,7 @@ from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
 
 from PM.Core.Logger import log
-from PM.Core.Const import PM_HOME, PM_PLUGINS_DIR, PLUGINS_DIR
+from PM.Core.Const import PM_HOME, PM_PLUGINS_DIR, PLUGINS_DIR, AUDITS_DIR
 from PM.Core.Atoms import Singleton
 
 TYPES = {
@@ -228,7 +228,9 @@ class Prefs(Singleton):
         'backend.tcpdump' : '/usr/sbin/tcpdump',
         'backend.dumpcap' : '/usr/bin/dumpcap',
 
-        'plugins.paths' : os.pathsep.join((PM_PLUGINS_DIR, PLUGINS_DIR)),
+        'plugins.paths' : os.pathsep.join((PM_PLUGINS_DIR,
+                                           AUDITS_DIR,
+                                           PLUGINS_DIR)),
         'plugins.enabled' : '',
 
         'system.check_pyver' : True,

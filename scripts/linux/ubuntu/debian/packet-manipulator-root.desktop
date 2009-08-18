@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Packet Manipulator (as root)
+GenericName=Packet Manipulator
+Comment=Create send or receive packets, sniff or test your network
+Icon=/usr/share/pixmaps/pm/pm-logo.png
+Terminal=false
+Type=Application
+Categories=Network;
+TryExec=su-to-root
+Exec=su-to-root -X -c PacketManipulator

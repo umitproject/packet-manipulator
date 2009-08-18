@@ -34,6 +34,7 @@
     * setup.py
       scripts/windows/setup.py:
         - Including generation and building of plugins.
+        - Audits are built under share/PacketManipulator/audits.
         - Fixing documentation inclusion.
     * scripts/i18n/pygettext.py:
         - Fixing the POT header generation.
@@ -65,7 +66,9 @@
         - Constants fixed.
     * ubuntu
       ubuntu/debian
-      ubuntu/debian/packet-manipulator.1
+      ubuntu/debian/PacketManipulator.1
+      scripts/linux/ubuntu/debian/packet-manipulator-plugins.install
+      scripts/linux/ubuntu/debian/packet-manipulator.install
       ubuntu/debian/control
       ubuntu/debian/files
       ubuntu/debian/compat
@@ -73,12 +76,14 @@
       ubuntu/debian/install
       ubuntu/debian/changelog
       ubuntu/debian/packet-manipulator.desktop
+      ubuntu/debian/packet-manipulator-root.desktop
       ubuntu/debian/copyright
       ubuntu/debian/docs
       ubuntu/debian/rules
       ubuntu/debian/pycompat
       ubuntu/generate_deb.sh:
         - Scripts to generate DEB package for debian and ubuntu.
+        - Plugins are now in a separate package.
     * scripts/linux/fedora/generate_rpm.sh:
         - Script to generate RPM file.
 

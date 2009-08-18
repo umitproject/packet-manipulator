@@ -6,7 +6,7 @@ include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/python-distutils.mk
 include /usr/share/cdbs/1/rules/simple-patchsys.mk
 
-DEB_INSTALL_MANPAGES_umit = debian/umit.1
+DEB_INSTALL_MANPAGES_packet-manipulator += debian/PacketManipulator.1
 DEB_PYTHON_INSTALL_ARGS_ALL = --prefix=/usr
 
 build: build_setflags
