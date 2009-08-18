@@ -33,7 +33,7 @@ from PM.Core.Const import PM_VERSION
 from PM.Core.BugRegister import BugRegister
 
 class BugReport(HIGDialog):
-    def __init__(self, title=_('Bug Report'), description=''):
+    def __init__(self, title=_('Bug Report'), description='', emsg=None):
 
         HIGDialog.__init__(self, title=title,
                            buttons=(gtk.STOCK_OK, gtk.RESPONSE_ACCEPT,
@@ -46,6 +46,7 @@ class BugReport(HIGDialog):
         self._connect_widgets()
 
         self.description = description
+        self.emsg = emsg
 
     def _create_widgets(self):
         self.email_label = HIGHintSectionLabel(_("Email"),
@@ -143,10 +144,17 @@ class BugReport(HIGDialog):
             cancel_dialog.destroy()
             return self.restore_state()
 
-        bug_register = BugRegister()
-
+        bug_register = BugRegister(self.emsg)
         bug_register.reporter = self.email
-        bug_register.details = self.description.replace("\n", "[[BR]]")
+
+        idx = self.description.find('\n{{{\n')
+
+        if idx > 0:
+            bug_register.details = \
+                self.description[:idx + 1].replace("\n", "[[BR]]") + \
+                self.description[idx:]
+        else:
+            bug_register.details = self.description.replace("\n", "[[BR]]")
 
         bug_page = None
         try:

@@ -33,10 +33,14 @@ trac_submit=trac_new_ticket
 
 
 class BugRegister(object):
-    def __init__(self):
+    def __init__(self, emsg):
         urllib.urlopen(trac_new_ticket)
 
-        self.summary = "Exception caught by crash reporter"
+        if emsg:
+            self.summary = "CrashReporter: %s" % emsg
+        else:
+            self.summary = "CrashReporter: Unknown exception"
+
         self.details = ""
         self.input_file = ""
         self.file_description = ""
@@ -89,7 +93,6 @@ class BugRegister(object):
                                  "field_status":"new",
                                  "action":"create",
                                  "submit":self.submit})
-
         request = urllib2.Request(trac_new_ticket, data)
         request.add_header("Cookie", "trac_session=%s; \
                            trac_form_token=%s" % (trac_session, trac_form))

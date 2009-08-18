@@ -116,7 +116,7 @@ class PMExceptionHook(object):
         try:
             try:
                 cwin = BugReport("PacketManipulator Crash - '%s'" % emsg,\
-                                 crashmsg_dialog)
+                                 crashmsg_dialog, emsg)
                 cwin.show_all()
                 while True:
                     # keeping running while bug report is not sent successfully,
