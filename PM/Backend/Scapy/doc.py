@@ -1,6 +1,6 @@
-#!/usr/bin/env python                                                   
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2008 Adriano Monteiro Marques
+# Copyright (C) 2008, 2009 Adriano Monteiro Marques
 #
 # Author: Francesco Piccinno <stack.box@gmail.com>
 #
@@ -233,7 +233,7 @@ class DocLoader(handler.ContentHandler):
 
         except Exception:
             pass
-    
+
     def characters(self, chars):
         if self.in_proto and self.in_attr:
             self.attribute_doc += chars
