@@ -50,6 +50,8 @@ xcopy %WinInstallDir%\setup.py %PMDir% /Y
 
 echo [6] Compiling PacketManipulator using py2exe...
 cd %PMDir%
+rem Py2exe seems to not handle ext_modules
+%PythonEXE% setup.py build_ext -i -cmingw32
 %PythonEXE% setup.py build -cmingw32 py2exe
 
 echo [7] Copying some more GTK files to dist directory...
