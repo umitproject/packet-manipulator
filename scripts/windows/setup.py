@@ -215,7 +215,8 @@ class pm_install(BuildExe):
         print "#" * 80
         print
 
-        dir = self.install_data
+        # Use dist_dir on windows
+        dir = self.dist_dir
         dirs = ['share', 'PacketManipulator', 'audits']
 
         while dirs:
@@ -261,7 +262,8 @@ class pm_install(BuildExe):
         print "#" * 80
         print
 
-        dir = self.install_data
+        # Use dist_dir on windows
+        dir = self.dist_dir
         dirs = ['share', 'PacketManipulator', 'plugins']
 
         while dirs:
@@ -303,6 +305,19 @@ class pm_install(BuildExe):
             dest = os.path.join(dest_dir, os.path.basename(plugin))
             os.rename(plugin, dest)
 
+uac_manifest = \
+"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"> 
+ <assemblyIdentity version="1.0.0.0" processorArchitecture="X86" name="IsUserAdmin" type="win32"/> 
+ <description>Packet Manipulator</description> 
+ <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+  <security>
+   <requestedPrivileges>
+    <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+   </requestedPrivileges>
+  </security>
+ </trustInfo>
+</assembly>"""
 
 setup(name         = 'PacketManipulator',
       version      = PM_VERSION,
@@ -350,12 +365,13 @@ setup(name         = 'PacketManipulator',
                           glob.glob(os.path.join(DOCS_DIR, '_static', '*'))),
                      ] + mo_files,
       scripts      = [os.path.join('PM', 'PacketManipulator')],
-      windows      = [{'script' : 'PM/PacketManipulator',
-                       'icon_resources' : [(1, 'PM/share/pixmaps/pm/pm-icon48.ico')]}],
+      windows      = [{'script' : r'PM\PacketManipulator',
+                       'icon_resources' : [(1, r'PM\share\pixmaps\pm\pm-icon48.ico')],
+                       'other_resources' : [(24, 1, uac_manifest)]}],
       options      = {'py2exe' : {
                           'compressed' : 1,
                           'packages' : 'encodings, scapy',
-                          'includes' : 'gtk.keysyms,gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk'},
+                          'includes' : 'gtk.keysyms,gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk,gtkhex'},
                       'build': {'compiler' : 'mingw32'}},
       ext_modules  = modules,
       cmdclass     = {'py2exe' : pm_install,
