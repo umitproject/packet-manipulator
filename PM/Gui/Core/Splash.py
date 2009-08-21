@@ -34,42 +34,42 @@ class SplashScreen(gtk.Window):
     def __init__(self):
         gtk.Window.__init__(self, gtk.WINDOW_POPUP)
         self.set_position(gtk.WIN_POS_CENTER)
-        
+
         vbox = gtk.VBox()
         vbox.set_border_width(4)
-        
+
         self.add(vbox)
-        
+
         self.image = gtk.image_new_from_file(
                                os.path.join(PIXMAPS_DIR, "pm-logo.png"))
         self.label = gtk.Label("<span size='x-large'><b>" \
                                "PacketManipulator %s" \
                                "</b></span>" % PM_VERSION)
         self.label.set_use_markup(True)
-        
+
         hbox = gtk.HBox()
         hbox.set_spacing(20)
         hbox.pack_start(self.image, False, False)
         hbox.pack_start(self.label)
-        
+
         self.progress = gtk.ProgressBar()
         self.progress.set_text("Loading modules ...")
-        
+
         vbox.pack_start(hbox)
         vbox.pack_start(self.progress, False, False)
-        
+
         self.finished = False
-        
+
         gobject.timeout_add(200, self.__pulse_bar)
 
     def __pulse_bar(self):
         self.progress.pulse()
-        
+
         return not self.finished
-    
+
     def get_text(self): return self.progress.get_text()
     def set_text(self, txt): self.progress.set_text(txt)
-    
+
     text = property(get_text, set_text)
 
 if __name__ == "__main__":
