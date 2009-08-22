@@ -23,15 +23,15 @@ import gobject
 
 import time
 
-from PM.Core.I18N import _
-from PM.Core.NetConst import INJ_FORWARDED
-from PM.Core.Const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
-from PM.Core.AuditUtils import AuditOperation, is_ip
+from umit.pm.core.i18n import _
+from umit.pm.core.netconst import INJ_FORWARDED
+from umit.pm.core.const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
+from umit.pm.core.auditutils import AuditOperation, is_ip
 
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import *
 
-from PM.Backend import MetaPacket
+from umit.pm.backend import MetaPacket
 
 AUDIT_NAME = 'icmp-redirect'
 AUDIT_MSG = '<tt><b>' + AUDIT_NAME + ':</b> %s</tt>'

@@ -22,10 +22,10 @@
 Ethernet protocol decoder
 """
 
-from PM.Core.Logger import log
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
-from PM.Core.NetConst import *
+from umit.pm.core.logger import log
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import *
+from umit.pm.core.netconst import *
 
 def eth_decoder(mpkt):
     return NET_LAYER, mpkt.get_field('eth.type')

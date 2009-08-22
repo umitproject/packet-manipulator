@@ -21,17 +21,17 @@
 """
 ICMP decoder
 
->>> from PM.Core.AuditUtils import audit_unittest
+>>> from pm.core.audiutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,icmp', 'wrong-checksum-icmp.pcap')
 decoder.icmp.notice Invalid ICMP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0x29a instead of 0xfde3
 decoder.icmp.notice Invalid ICMP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0x7a69 instead of 0x5e4
 """
 
 from struct import unpack
-from PM.Core.I18N import _
-from PM.Core.AuditUtils import checksum
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import AuditManager, PassiveAudit, \
+from umit.pm.core.i18n import _
+from umit.pm.core.auditutils import checksum
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import AuditManager, PassiveAudit, \
                                        PROTO_LAYER, NL_TYPE_ICMP
 def icmp_decoder():
     manager = AuditManager()

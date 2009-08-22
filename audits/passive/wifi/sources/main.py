@@ -23,14 +23,14 @@ Wifi protocol decoder
 """
 
 # Leaves commented for now.
-#>>> from PM.Core.NetConst import IL_TYPE_WIFI
-#>>> from PM.Core.AuditUtils import audit_unittest
+#>>> from pm.core.netconst import IL_TYPE_WIFI
+#>>> from pm.core.audiutils import audit_unittest
 #>>> audit_unittest('-fwifi', 'wifi.pcap', IL_TYPE_WIFI)
 
-from PM.Core.Logger import log
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
-from PM.Core.NetConst import *
+from umit.pm.core.logger import log
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import *
+from umit.pm.core.netconst import *
 
 def wifi_decoder(mpkt):
     if not mpkt.get_field('wifi', None):

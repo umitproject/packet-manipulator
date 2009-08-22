@@ -1,0 +1,183 @@
+#!/usr/bin/python2.6
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008, 2009 Adriano Monteiro Marques
+#
+# Author: Francesco Piccinno <stack.box@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+import os
+import sys
+import signal
+
+try:
+    if os.getenv('PM_NOPSYCO', False):
+        raise ImportError
+
+    import psyco
+    psyco.profile()
+
+    print "Hurray! psyco enabled!"
+except ImportError:
+    print "No psyco no party! :("
+
+import pygtk
+pygtk.require("2.0")
+
+import gtk
+import cgitb
+import tempfile
+
+from umit.pm.core.i18n import _
+from umit.pm.core.errors import PMErrorException
+from umit.pm.core.const import PM_DEVELOPMENT, PM_VERSION
+
+if gtk.pygtk_version[1] < 10:
+    try:
+        import umit.pm.higwidgets
+        from umit.pm.higwidgets.higdialogs import HIGAlertDialog
+    except Warning, e:
+        print e.message
+        sys.exit(-2)
+
+    d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+        message_format=_("PyGTK version unsupported"),
+        secondary_text=_("I need PyGTK 2.14 or above to work while your is %s."
+                         "\n\nUpgrade and then restart PM.") % \
+                        ".".join(map(str, gtk.pygtk_version)))
+    d.run()
+    sys.exit(-1)
+
+#########################
+
+class PMExceptionHook(object):
+    def __call__(self, etype, emsg, etb):
+        import warnings
+        warnings.filterwarnings("error", module="gtk")
+
+        try:
+            import gtk
+            import umit.pm.higwidgets
+
+            from umit.pm.gui.core.bugreport import BugReport
+            from umit.pm.higwidgets.higdialogs import HIGAlertDialog
+        except Warning, e:
+            print e.message
+            sys.exit(-1)
+
+        warnings.resetwarnings()
+
+        gtk_version = "%s.%s.%s" % gtk.gtk_version
+        pygtk_version = "%s.%s.%s" % gtk.ver
+        higwidgets_version = getattr(umit.pm.higwidgets, "__version__", "< 0.9.5")
+        python_version = sys.version
+
+        versions = _("Versions:\nGTK: %s\n"
+                     "PyGTK: %s\nHIGWidgets: %s\nPython: %s") % \
+                (gtk_version, pygtk_version, higwidgets_version, python_version)
+
+        if etype == PMErrorException:
+            d = HIGAlertDialog(type=gtk.MESSAGE_ERROR, \
+                               message_format=_("PM General Error"),
+                               secondary_text=str(emsg))
+
+            d.run()
+            d.destroy()
+
+            if gtk.main_level() > 0:
+                gtk.main_quit()
+
+            return
+
+        crash_text = cgitb.text((etype, emsg, etb))
+        crash_text = "{{{\n%s\n%s\n}}}" % (versions, crash_text)
+
+        extrainfo_dialog = "%-17s %s\n%-17s %s\n%-17s %s\n" % (
+            "sys.platform", sys.platform, "os.name", os.name,
+            "PacketManipulator", PM_VERSION)
+        crashmsg_dialog = "Crash Report\n%s\n%s\n" \
+                          "Description\n%s\nDescribe what are you doing.\n\n" \
+                          "Traceback\n%s\n%s" % \
+                          ('=' * 12, extrainfo_dialog,
+                           '-' * 11, '-' * 9, crash_text)
+
+        try:
+            try:
+                cwin = BugReport("PacketManipulator Crash - '%s'" % emsg,\
+                                 crashmsg_dialog, emsg)
+                cwin.show_all()
+                while True:
+                    # keeping running while bug report is not sent successfully,
+                    # or until the user closes the window.
+                    result = cwin.run()
+                    if result in (gtk.RESPONSE_CANCEL,
+                        gtk.RESPONSE_DELETE_EVENT,
+                        gtk.RESPONSE_NONE):
+
+                        cwin.destroy()
+                        break
+            except Exception, err:
+                tempfd, tempname = tempfile.mkstemp()
+                os.write(tempfd, crashmsg_dialog)
+                d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+                    message_format=_("Bug not reported"),
+                    secondary_text=_("A critical error occourried during "
+                        "PacketManipulator execution, \nand it was not properly"
+                        " reported to our bug tracker. The crash description "
+                        "was saved to: %s, so you can still report it on our "
+                        "bug tracker.") % tempname)
+                os.close(tempfd)
+                d.run()
+                d.destroy()
+        finally:
+            if gtk.main_level() > 0:
+                gtk.main_quit()
+
+if not PM_DEVELOPMENT:
+    sys.excepthook = PMExceptionHook()
+
+def main(args):
+    from umit.pm.gui.core.app import PMApp
+    from umit.pm.core.errors import PMErrorException
+    from umit.pm.higwidgets.higdialogs import HIGAlertDialog
+
+    try:
+        if '--profile' in sys.argv:
+            import hotshot, hotshot.stats
+            prof = hotshot.Profile("pm.prof")
+            args = sys.argv[1:]
+            args.remove('--profile')
+            app = PMApp(args)
+            prof.runcall(app.run)
+            prof.close()
+
+            stats = hotshot.stats.load("pm.prof")
+            stats.strip_dirs()
+            stats.sort_stats('time').print_stats(100)
+            sys.exit(0)
+
+        app = PMApp(sys.argv[1:])
+        app.run()
+    except PMErrorException, err:
+        d = HIGAlertDialog(type=gtk.MESSAGE_WARNING,
+                           message_format=_("General Error"),
+                           secondary_text=_(str(err)))
+        d.run()
+        d.destroy()
+    except KeyboardInterrupt:
+        sys.exit(signal.SIGINT)
+
+if __name__ == "__main__":
+    main(sys.argv)

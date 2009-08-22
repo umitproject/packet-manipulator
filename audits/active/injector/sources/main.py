@@ -24,18 +24,18 @@ import gobject
 import string
 import threading
 
-from PM.Core.I18N import _
-from PM.Core.NetConst import *
-from PM.Core.Atoms import defaultdict
+from umit.pm.core.i18n import _
+from umit.pm.core.netconst import *
+from umit.pm.core.atoms import defaultdict
 
-from PM.Gui.Core.App import PMApp
+from umit.pm.gui.core.app import PMApp
 
-from PM.Gui.Plugins.Core import Core
-from PM.Gui.Plugins.Engine import Plugin
+from umit.pm.gui.plugins.core import Core
+from umit.pm.gui.plugins.engine import Plugin
 
-from PM.Manager.AuditManager import *
+from umit.pm.manager.auditmanager import *
 
-from PM.Backend import MetaPacket
+from umit.pm.backend import MetaPacket
 
 COLUMN_SRC,    \
 COLUMN_PSRC,   \

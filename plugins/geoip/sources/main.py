@@ -23,13 +23,13 @@ import sys
 
 from collections import defaultdict
 
-from PM.Core.Logger import log
-from PM.Backend import TimedContext
+from umit.pm.core.logger import log
+from umit.pm.backend import TimedContext
 
-from PM.Gui.Core.App import PMApp
-from PM.Gui.Core.Views import UmitView
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Gui.Sessions.SniffSession import SniffSession
+from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.core.views import UmitView
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.gui.sessions.sniffsession import SniffSession
 
 _ = str
 

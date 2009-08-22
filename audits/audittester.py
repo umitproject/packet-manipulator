@@ -32,11 +32,11 @@ import os
 import sys
 import optparse
 
-from PM.Gui.Plugins.Tree import *
-from PM.Gui.Plugins.Engine import *
-from PM.Manager.AuditManager import *
-from PM.Core.NetConst import IL_TYPE_ETH
-from PM.Core.Atoms import generate_traceback
+from umit.pm.gui.plugins.tree import *
+from umit.pm.gui.plugins.engine import *
+from umit.pm.manager.auditmanager import *
+from umit.pm.core.netconst import IL_TYPE_ETH
+from umit.pm.core.atoms import generate_traceback
 
 class Tester(object):
     def __init__(self, options, args):

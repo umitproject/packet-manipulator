@@ -1,3 +1,7 @@
+2009-08-22 Francesco Piccinno <stack.box@gmail.com>
+    - Readapting existing code to the new structure as explained at:
+        http://trac.umitproject.org/wiki/devguide#Namespaces
+
 2009-08-16 Francesco Piccinno <stack.box@gmail.com>
     * PM/Core/AuditUtils.py
       audits/audittester.py

@@ -21,7 +21,7 @@
 """
 Passive OS fingerprint module
 
->>> from PM.Core.AuditUtils import audit_unittest
+>>> from pm.core.audiutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp,fingerprint -sdecoder.ip.checksum_check=0,decoder.tcp.checksum_check=0', 'wrong-checksum.pcap')
 fingerprint.notice 127.0.0.1 is running Novell NetWare 3.12 - 5.00 (nearest)
 """
@@ -31,16 +31,16 @@ import os.path
 from socket import ntohs
 from struct import unpack
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Gui.Plugins.Core import Core
-from PM.Manager.AuditManager import PassiveAudit, AuditManager
-from PM.Core.Atoms import defaultdict, odict, generate_traceback
-from PM.Core.NetConst import *
-from PM.Core.Const import PM_TYPE_STR, PM_TYPE_LIST
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.gui.plugins.core import Core
+from umit.pm.manager.auditmanager import PassiveAudit, AuditManager
+from umit.pm.core.atoms import defaultdict, odict, generate_traceback
+from umit.pm.core.netconst import *
+from umit.pm.core.const import PM_TYPE_STR, PM_TYPE_LIST
 
 from socket import ntohs
-from PM.Core.AuditUtils import BIG_ENDIAN
+from umit.pm.core.auditutils import BIG_ENDIAN
 
 if not BIG_ENDIAN:
     pntos = ntohs

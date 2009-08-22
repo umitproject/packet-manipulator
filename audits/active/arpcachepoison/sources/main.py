@@ -23,16 +23,16 @@ import gtk
 import time
 from socket import gethostbyname
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Core.AuditUtils import is_ip, is_mac
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.core.auditutils import is_ip, is_mac
 
-from PM.Gui.Core.App import PMApp
-from PM.Gui.Plugins.Core import Core
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
+from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.plugins.core import Core
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import *
 
-from PM.Backend import MetaPacket
+from umit.pm.backend import MetaPacket
 
 class ARPCachePoison(Plugin, ActiveAudit):
     __inputs__ = (

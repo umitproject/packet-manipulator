@@ -21,15 +21,15 @@
 import gtk
 import pango
 
-from PM.Core.Logger import log
+from umit.pm.core.logger import log
 
-from PM.Gui.Core.App import PMApp
-from PM.Gui.Plugins.Engine import Plugin
+from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.plugins.engine import Plugin
 
-from PM.Gui.Sessions import SessionType
-from PM.Gui.Pages.Base import Perspective
+from umit.pm.gui.sessions import SessionType
+from umit.pm.gui.pages.base import Perspective
 
-from PM.Core.Errors import PMErrorException
+from umit.pm.core.errors import PMErrorException
 
 class Explorer(Perspective):
     icon = gtk.STOCK_INFO

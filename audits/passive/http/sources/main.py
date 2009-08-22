@@ -30,14 +30,14 @@ from socket import inet_ntoa
 
 from urllib import unquote
 
-from PM.Core.Atoms import defaultdict
-from PM.Core.Logger import log
-from PM.Core.Errors import PMErrorException
-from PM.Gui.Plugins.Core import Core
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
-from PM.Manager.SessionManager import SessionManager
-from PM.Core.Const import PM_TYPE_STR, PM_TYPE_DICT, PM_TYPE_BOOLEAN
+from umit.pm.core.atoms import defaultdict
+from umit.pm.core.logger import log
+from umit.pm.core.errors import PMErrorException
+from umit.pm.gui.plugins.core import Core
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import *
+from umit.pm.manager.sessionmanager import SessionManager
+from umit.pm.core.const import PM_TYPE_STR, PM_TYPE_DICT, PM_TYPE_BOOLEAN
 
 HTTP_NAME = 'dissector.http'
 HTTP_PORTS = (80, 8080)

@@ -29,19 +29,19 @@ from libtrace import tracert
 
 from threading import Thread
 
-from PM.Backend import StaticContext, traceroute
-from PM.Core.Logger import log
-from PM.Core.Atoms import generate_traceback
+from umit.pm.backend import StaticContext, traceroute
+from umit.pm.core.logger import log
+from umit.pm.core.atoms import generate_traceback
 
-from PM.Gui.Core.App import PMApp
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Gui.Sessions.Base import Session
+from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.gui.sessions.base import Session
 
-from PM.Gui.Sessions import SessionType
-from PM.Gui.Pages.Base import Perspective
+from umit.pm.gui.sessions import SessionType
+from umit.pm.gui.pages.base import Perspective
 
-from PM.Core.Errors import PMErrorException
-from PM.Manager.PreferenceManager import Prefs
+from umit.pm.core.errors import PMErrorException
+from umit.pm.manager.preferencemanager import Prefs
 
 try:
     import webkit

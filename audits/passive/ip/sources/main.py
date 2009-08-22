@@ -23,7 +23,7 @@ IP protocol decoder.
 
 These are only doctest strings:
 
->>> from PM.Core.AuditUtils import audit_unittest
+>>> from pm.core.audiutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip', 'wrong-checksum.pcap')
 decoder.ip.notice Invalid IP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0xdead instead of 0x7bce
 
@@ -47,14 +47,14 @@ decoder.ip.debug Dropping out the sequence with ID: 14303 due reassemble_max_fra
 
 from time import time
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import AuditManager, PassiveAudit
-from PM.Core.NetConst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP, INJ_FORWARD
-from PM.Core.AuditUtils import checksum
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import AuditManager, PassiveAudit
+from umit.pm.core.netconst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP, INJ_FORWARD
+from umit.pm.core.auditutils import checksum
 
-from PM.Backend import MetaPacket
+from umit.pm.backend import MetaPacket
 
 def ip_decoder():
     manager = AuditManager()

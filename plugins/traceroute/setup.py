@@ -19,7 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import os.path
-from PM.Gui.Plugins.Containers import setup
+from umit.pm.gui.plugins.containers import setup
 
 if not os.path.exists("dist/GeoLiteCity.dat"):
     os.system("wget http://www.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz -O - | gzip -d > dist/GeoLiteCity.dat")

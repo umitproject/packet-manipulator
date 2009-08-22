@@ -21,7 +21,7 @@
 """
 A traffic profiler and collector module.
 
->>> from PM.Core.AuditUtils import audit_unittest
+>>> from pm.core.audiutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp,ftp,profiler', 'ftp-login.pcap')
 MAC: 06:05:04:03:02:01 (UNKNW) IP: 127.0.0.1 1 service(s) (0 accounts for port 21)
 dissector.ftp.info FTP : 127.0.0.1:21 -> USER: anonymous PASS: guest@example.com
@@ -38,13 +38,13 @@ MAC: 06:05:04:03:02:01 (UNKNW) IP: 127.0.0.1 OS: Novell NetWare 3.12 - 5.00 (nea
 
 import os.path
 
-from PM.Core.I18N import _
-from PM.Gui.Core.App import PMApp
-from PM.Core.Atoms import defaultdict
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
+from umit.pm.core.i18n import _
+from umit.pm.gui.core.app import PMApp
+from umit.pm.core.atoms import defaultdict
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import *
 
-from PM.Core.Providers import AccountProvider, PortProvider, ProfileProvider, \
+from umit.pm.core.providers import AccountProvider, PortProvider, ProfileProvider, \
      UNKNOWN_TYPE, HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
      GATEWAY_TYPE, ROUTER_TYPE
 

@@ -19,7 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import urllib
-from PM.Core.Logger import log
+from umit.pm.core.logger import log
 
 def get_my_ip():
     url = urllib.URLopener()

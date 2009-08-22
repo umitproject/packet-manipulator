@@ -25,18 +25,18 @@ from time import sleep
 from random import randint
 from threading import Thread
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Core.Atoms import generate_traceback
-from PM.Core.AuditUtils import is_ip, random_ip, AuditOperation
-from PM.Core.Const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.core.atoms import generate_traceback
+from umit.pm.core.auditutils import is_ip, random_ip, AuditOperation
+from umit.pm.core.const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
 
-from PM.Gui.Core.App import PMApp
-from PM.Gui.Plugins.Core import Core
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import *
+from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.plugins.core import Core
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import *
 
-from PM.Backend import MetaPacket
+from umit.pm.backend import MetaPacket
 
 AUDIT_NAME = 'tcp-synflood'
 AUDIT_MSG = '<tt><b>' + AUDIT_NAME + ':</b> %s</tt>'

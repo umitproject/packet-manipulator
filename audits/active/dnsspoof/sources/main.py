@@ -34,14 +34,14 @@ from struct import pack
 from fnmatch import fnmatch
 from socket import inet_aton
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Core.AuditUtils import is_ip, AuditOperation
-from PM.Core.Const import STATUS_INFO
-from PM.Core.NetConst import INJ_FORWARDED
-from PM.Manager.AuditManager import *
-from PM.Manager.SessionManager import SessionManager
-from PM.Backend import MetaPacket
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.core.auditutils import is_ip, AuditOperation
+from umit.pm.core.const import STATUS_INFO
+from umit.pm.core.netconst import INJ_FORWARDED
+from umit.pm.manager.auditmanager import *
+from umit.pm.manager.sessionmanager import SessionManager
+from umit.pm.backend import MetaPacket
 
 AUDIT_NAME = 'dns-spoof'
 AUDIT_MSG = '<tt><b>' + AUDIT_NAME + ':</b> %s</tt>'

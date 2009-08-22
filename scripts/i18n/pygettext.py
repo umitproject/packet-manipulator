@@ -165,7 +165,7 @@ import token
 import tokenize
 import operator
 
-from PM.Core.Const import PM_VERSION
+from umit.pm.core.const import PM_VERSION
 
 __version__ = '1.5'
 

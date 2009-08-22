@@ -25,17 +25,17 @@ from threading import Thread
 from struct import pack, unpack
 from socket import gethostbyname, inet_aton, inet_ntoa
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Core.AuditUtils import is_ip, is_mac
-from PM.Core.Const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.core.auditutils import is_ip, is_mac
+from umit.pm.core.const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
 
-from PM.Gui.Core.App import PMApp
-from PM.higwidgets.higdialogs import HIGAlertDialog
+from umit.pm.gui.core.app import PMApp
+from umit.pm.higwidgets.higdialogs import HIGAlertDialog
 
-from PM.Manager.AuditManager import *
+from umit.pm.manager.auditmanager import *
 
-from PM.Backend import MetaPacket
+from umit.pm.backend import MetaPacket
 
 AUDIT_NAME = 'arp-ping'
 AUDIT_MSG = '<tt><b>' + AUDIT_NAME + ':</b> %s</tt>'

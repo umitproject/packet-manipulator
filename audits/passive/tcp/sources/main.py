@@ -21,7 +21,7 @@
 """
 TCP protocol dissector
 
->>> from PM.Core.AuditUtils import audit_unittest
+>>> from pm.core.audiutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp', 'wrong-checksum.pcap')
 decoder.ip.notice Invalid IP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0xdead instead of 0x7bce
 decoder.tcp.notice Invalid TCP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0x29a instead of 0xc86
@@ -31,17 +31,17 @@ from datetime import datetime
 from struct import pack, unpack
 from socket import inet_aton, ntohl, inet_ntoa
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Core.Tracing import trace
-from PM.Gui.Plugins.Core import Core
-from PM.Core.Atoms import defaultdict
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Manager.AuditManager import AuditManager, PassiveAudit
-from PM.Core.NetConst import *
-from PM.Core.AuditUtils import checksum
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.core.tracing import trace
+from umit.pm.gui.plugins.core import Core
+from umit.pm.core.atoms import defaultdict
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.manager.auditmanager import AuditManager, PassiveAudit
+from umit.pm.core.netconst import *
+from umit.pm.core.auditutils import checksum
 
-from PM.Backend import MetaPacket
+from umit.pm.backend import MetaPacket
 
 TCP_ESTABLISHED = 1
 TCP_SYN_SENT    = 2

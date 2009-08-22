@@ -25,17 +25,17 @@ import tempfile
 
 from Cookie import SimpleCookie
 
-from PM.Core.I18N import _
-from PM.Core.Logger import log
-from PM.Core.Atoms import defaultdict
+from umit.pm.core.i18n import _
+from umit.pm.core.logger import log
+from umit.pm.core.atoms import defaultdict
 
-from PM.Gui.Core.App import PMApp
-from PM.Gui.Plugins.Engine import Plugin
+from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.plugins.engine import Plugin
 
-from PM.Gui.Sessions import SessionType
-from PM.Gui.Pages.Base import Perspective
+from umit.pm.gui.sessions import SessionType
+from umit.pm.gui.pages.base import Perspective
 
-from PM.Core.Errors import PMErrorException
+from umit.pm.core.errors import PMErrorException
 
 try:
     import webkit
