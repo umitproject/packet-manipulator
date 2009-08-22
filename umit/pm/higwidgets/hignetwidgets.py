@@ -191,6 +191,12 @@ gobject.type_register(HIGGenericEntry)
 
 HIGIpEntry = HIGGenericEntry
 
+class HIGIpv6Entry(HIGGenericEntry):
+    regex = re.compile('^[A-f0-9]{1,4}([:]{1,2}[A-f0-9]{1,4})+$')
+    groups = 8
+    maxlength = 4
+    separator = ':'
+
 class HIGMacEntry(HIGGenericEntry):
     regex = re.compile('([0-9a-fA-F]{2}([:-]|$)){6}')
     groups = 6

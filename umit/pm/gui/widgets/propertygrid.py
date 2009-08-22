@@ -28,7 +28,7 @@ from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
 
 from umit.pm.higwidgets.higbuttons import MiniButton
-from umit.pm.higwidgets.hignetwidgets import HIGIpEntry, HIGMacEntry
+from umit.pm.higwidgets.hignetwidgets import HIGIpEntry, HIGIpv6Entry, HIGMacEntry
 
 from umit.pm.gui.core.icons import get_pixbuf
 from umit.pm.gui.widgets.expander import ToolBox
@@ -352,6 +352,13 @@ class IPv4Editor(Editor):
     def __on_changed(self, entry):
         self.value = self.entry.get_text()
 
+class IPv6Editor(IPv4Editor):
+    def create_widgets(self):
+        self.entry = HIGIpv6Entry()
+
+        if self.value:
+            self.entry.set_text(self.value)
+
 class MACEditor(IPv4Editor):
     def create_widgets(self):
         self.entry = HIGMacEntry()
@@ -372,6 +379,7 @@ def get_editor(field):
     # We use a list because order is important here
     table = [(backend.PMMACField, MACEditor),
              (backend.PMStrField, StrEditor),
+             (backend.PMIP6Field, IPv6Editor),
              (backend.PMIPField, IPv4Editor),
              (backend.PMEnumField, EnumEditor),
              (backend.PMByteField, IntEditor),

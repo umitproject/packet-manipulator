@@ -1,4 +1,9 @@
 2009-08-22 Francesco Piccinno <stack.box@gmail.com>
+    * umit/pm/gui/widgets/propertygrid.py
+      umit/pm/backend/scapy/__init__.py
+      umit/pm/higwidgets/hignetwidgets.py:
+      - Adding IPv6 editor.
+
     - Readapting existing code to the new structure as explained at:
         http://trac.umitproject.org/wiki/devguide#Namespaces
 
