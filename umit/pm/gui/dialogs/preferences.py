@@ -295,7 +295,7 @@ class ViewsPage(Page):
         ))
         ]
 
-class backendPage(Page):
+class BackendPage(Page):
     title = _("Backend")
     icon = gtk.STOCK_CONNECT
 
@@ -537,7 +537,7 @@ class PreferenceDialog(gtk.Dialog):
         self.connect('response', self.__on_response)
 
     def __populate(self):
-        for page in (GUIPage(), ViewsPage(), SniffPage(), backendPage(), \
+        for page in (GUIPage(), ViewsPage(), SniffPage(), BackendPage(), \
                      SystemPage()):
             self.store.append([page.icon, page.title])
             self.notebook.append_page(page)

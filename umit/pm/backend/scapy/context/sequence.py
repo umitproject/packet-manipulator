@@ -128,7 +128,7 @@ def register_sequence_context(BaseSequenceContext):
                     self.data.append(node.data.packet)
 
                 import umit.pm.backend
-                ret = umit.pm.backendStaticContext.save(self, operation)
+                ret = umit.pm.backend.StaticContext.save(self, operation)
 
                 old, self.data = self.data, old
 
