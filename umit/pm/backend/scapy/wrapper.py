@@ -241,7 +241,11 @@ def get_field_enumeration_s2i(field):
     return field.s2i.items()
 
 def get_field_enumeration_i2s(field):
-    return field.i2s.items()
+    try:
+        return field.i2s.items()
+    except AttributeError:
+        # Triggered on fields like ICMP.code
+        return map(lambda x: (x[1], x[0]), field.s2i_all.items())
 
 def is_field_autofilled(field):
     # If the field is setted to None it's calculated

@@ -179,6 +179,10 @@ class EnumEditor(Editor):
         pix = gtk.CellRendererPixbuf()
         txt = gtk.CellRendererText()
 
+        txt.set_property('font',
+                         Prefs()['gui.views.property_tab.font'].value \
+                         or 'Monospace 8')
+
         self.combo.pack_start(pix, False)
         self.combo.pack_start(txt)
 
@@ -413,8 +417,11 @@ class HackEntry(gtk.Entry):
         gtk.Entry.__init__(self)
 
         self.box = gtk.EventBox()
-        self.box.modify_bg(gtk.STATE_NORMAL, self.style.white)
+        self.box.set_border_width(0)
         self.connect('parent-set', self.__on_parent_set)
+
+    def do_realize(self):
+        self.box.modify_bg(gtk.STATE_NORMAL, self.style.base[gtk.STATE_SELECTED])
 
     def do_button_press_event(self, event):
         return True
@@ -444,12 +451,16 @@ class HackEntry(gtk.Entry):
         gtk.Entry.do_size_allocate(self, alloc)
 
         # Reserving space for borders
-        alloc.height -= 1
-        alloc.width -= 1
-        alloc.x -= 1
-        alloc.y -= 1
+        #alloc.height -= 1
+        #alloc.width -= 1
+        #alloc.x -= 1
+        #alloc.y -= 1
+
+        alloc.x -= 2
+        alloc.y -= 2
 
         self.box.size_request()
+        self.box.set_size_request(alloc.width, alloc.height)
         self.box.size_allocate(alloc)
 
 gobject.type_register(HackEntry)
@@ -472,6 +483,11 @@ class CellRendererGroup(gtk.CellRendererText):
 
         dummy_entry = gtk.Entry()
         dummy_entry.set_has_frame(False)
+
+        font_desc = Prefs()['gui.views.property_tab.font'].value \
+                    or 'Monospace 8'
+        dummy_entry.modify_font(pango.FontDescription(font_desc))
+
         self.row_height = dummy_entry.size_request()[1] + 2
 
     def do_get_size(self, widget, area):
@@ -549,7 +565,15 @@ class CellRendererProperty(CellRendererGroup):
         if self.editor != None and self.field != None:
             entry = HackEntry()
 
-            entry.box.add(self.editor(self.field))
+            font_desc = Prefs()['gui.views.property_tab.font'].value \
+                        or 'Monospace 8'
+
+            editor = self.editor(self.field)
+
+            for wid in editor:
+                wid.modify_font(pango.FontDescription(font_desc))
+
+            entry.box.add(editor)
             entry.box.show_all()
 
             entry.connect('finish-edit', self.tree.finish_callback)
@@ -655,9 +679,9 @@ class PropertyGridTree(gtk.ScrolledWindow):
         col.pack_start(pix, False)
         col.pack_start(crt, True)
         col.set_resizable(True)
-        col.set_expand(True)
-        #col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
-        col.set_fixed_width(180)
+        col.set_expand(False)
+        col.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+        col.set_fixed_width(120)
 
         col.set_cell_data_func(crt, self.__group_cell_func)
         col.set_cell_data_func(pix, self.__pixbuf_cell_func)
@@ -676,6 +700,8 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.tree.append_column(col)
 
         #self.tree.set_headers_visible(False)
+        self.tree.set_search_column(0)
+        self.tree.set_search_equal_func(self.__search_func)
         self.tree.set_enable_tree_lines(True) # This don't work with cell back
 
         self.add(self.tree)
@@ -686,6 +712,19 @@ class PropertyGridTree(gtk.ScrolledWindow):
         self.tree.get_selection().connect('changed',
                                           self.__on_selection_changed)
         self.tree.connect('button-release-event', self.__on_button_release)
+
+    def __search_func(self, model, col, key, iter):
+        field = model.get_value(iter, 0)
+
+        if not field or backend.is_proto(field):
+            return True
+
+        if isinstance(field, TFlag):
+            return not key in field.ref
+
+        name = backend.get_field_name(field.ref)
+
+        return not key in name
 
     def get_selected_field(self):
         """

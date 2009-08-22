@@ -204,7 +204,10 @@ class Prefs(Singleton):
         'gui.operationstab.updatetimeout' : 500,
 
         'gui.views.protocol_selector_tab' : True,
+
         'gui.views.property_tab' : True,
+        'gui.views.property_tab.font' : 'Monospace 8',
+
         'gui.views.status_tab' : True,
         'gui.views.operations_tab' : True,
         'gui.views.vte_tab' : False,

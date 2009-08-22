@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import pango
 
 from umit.pm import backend
 from umit.pm.core.i18n import _
@@ -28,6 +29,7 @@ from umit.pm.gui.core.app import PMApp
 from umit.pm.gui.core.views import UmitView
 from umit.pm.gui.widgets.propertygrid import PropertyGrid
 from umit.pm.gui.sessions.base import Session
+from umit.pm.manager.preferencemanager import Prefs
 
 class PropertyTab(UmitView):
     label_text = _('Properties')
@@ -39,6 +41,11 @@ class PropertyTab(UmitView):
         self.grid = PropertyGrid()
         self.grid.tree.connect('finish-edit', self.__redraw_hex_view)
         self.grid.tree.connect('field-selected', self.__on_field_selected)
+
+        font_desc = Prefs()['gui.views.property_tab.font'].value or 'Monospace 8'
+        font_desc = pango.FontDescription(font_desc)
+
+        self.grid.tree.tree.modify_font(font_desc)
 
         self._main_widget.add(self.grid)
         self._main_widget.show_all()

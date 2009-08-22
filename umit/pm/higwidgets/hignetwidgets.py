@@ -58,8 +58,13 @@ class HIGGenericEntry(gtk.HBox):
             entry.connect('focus-out-event', redraw, self)
             entry.connect('key-press-event', self.__on_key_press)
             entry.connect('key-release-event', self.__on_key_release)
+            entry.set_width_chars(self.maxlength)
 
         self.__pack_widgets()
+
+    def modify_font(self, font_desc):
+        for entry in self._entries:
+            entry.modify_font(font_desc)
 
     def __pack_widgets(self):
         self.set_border_width(4)
