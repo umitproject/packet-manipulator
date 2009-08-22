@@ -21,7 +21,7 @@
 """
 A traffic profiler and collector module.
 
->>> from pm.core.audiutils import audit_unittest
+>>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp,ftp,profiler', 'ftp-login.pcap')
 MAC: 06:05:04:03:02:01 (UNKNW) IP: 127.0.0.1 1 service(s) (0 accounts for port 21)
 dissector.ftp.info FTP : 127.0.0.1:21 -> USER: anonymous PASS: guest@example.com

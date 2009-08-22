@@ -21,7 +21,7 @@
 """
 UDP protocol decoder.
 
->>> from pm.core.audiutils import audit_unittest
+>>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,udp', 'wrong-checksum-udp.pcap')
 decoder.udp.notice Invalid UDP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0x29a instead of 0x172
 """

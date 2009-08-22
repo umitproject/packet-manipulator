@@ -21,7 +21,7 @@
 """
 Passive OS fingerprint module
 
->>> from pm.core.audiutils import audit_unittest
+>>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp,fingerprint -sdecoder.ip.checksum_check=0,decoder.tcp.checksum_check=0', 'wrong-checksum.pcap')
 fingerprint.notice 127.0.0.1 is running Novell NetWare 3.12 - 5.00 (nearest)
 """

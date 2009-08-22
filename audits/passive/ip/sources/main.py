@@ -23,7 +23,7 @@ IP protocol decoder.
 
 These are only doctest strings:
 
->>> from pm.core.audiutils import audit_unittest
+>>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip', 'wrong-checksum.pcap')
 decoder.ip.notice Invalid IP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0xdead instead of 0x7bce
 

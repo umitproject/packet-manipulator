@@ -24,7 +24,7 @@ Wifi protocol decoder
 
 # Leaves commented for now.
 #>>> from pm.core.netconst import IL_TYPE_WIFI
-#>>> from pm.core.audiutils import audit_unittest
+#>>> from umit.pm.core.auditutils import audit_unittest
 #>>> audit_unittest('-fwifi', 'wifi.pcap', IL_TYPE_WIFI)
 
 from umit.pm.core.logger import log

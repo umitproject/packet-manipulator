@@ -21,7 +21,7 @@
 """
 ICMP decoder
 
->>> from pm.core.audiutils import audit_unittest
+>>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,icmp', 'wrong-checksum-icmp.pcap')
 decoder.icmp.notice Invalid ICMP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0x29a instead of 0xfde3
 decoder.icmp.notice Invalid ICMP packet from 127.0.0.1 to 127.0.0.1 : wrong checksum 0x7a69 instead of 0x5e4

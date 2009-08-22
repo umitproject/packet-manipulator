@@ -811,9 +811,9 @@ class AuditTester(object):
         import umit.pm.backend
 
         self.dispatcher = AuditDispatcher(datalink)
-        self.ctx = umit.pm.backendSniffContext(None, capfile=pcapfile, capmethod=1,
-                                           callback=self.dispatcher.feed,
-                                           audits=False)
+        self.ctx = umit.pm.backend.SniffContext(None, capfile=pcapfile, capmethod=1,
+                                                callback=self.dispatcher.feed,
+                                                audits=False)
 
     def start(self):
         log.debug('Starting context for test')

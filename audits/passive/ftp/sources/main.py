@@ -21,7 +21,7 @@
 """
 FTP protocol dissector (Passive audit)
 
->>> from pm.core.audiutils import audit_unittest
+>>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp,ftp', 'ftp-login.pcap')
 dissector.ftp.info FTP : 127.0.0.1:21 -> USER: anonymous PASS: guest@example.com
 """
