@@ -27,25 +27,23 @@ import pango
 import gobject
 import pangocairo
 
-from PM import Backend
-from PM.Core.Atoms import defaultdict
+from umit.pm import backend
+from umit.pm.core.atoms import defaultdict
 
-from PM.Backend import StaticContext, traceroute
-from PM.Core.Logger import log
-from PM.Core.Atoms import generate_traceback
+from umit.pm.backend import StaticContext, traceroute
+from umit.pm.core.logger import log
+from umit.pm.core.atoms import generate_traceback
 
-from PM.Gui.Core.App import PMApp
-from PM.Gui.Plugins.Engine import Plugin
-from PM.Gui.Sessions.Base import Session
-from PM.Gui.Widgets.Interfaces import InterfacesCombo
+from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.plugins.engine import Plugin
+from umit.pm.gui.sessions.base import Session
+from umit.pm.gui.widgets.interfaces import InterfacesCombo
 
-from PM.Gui.Sessions import SessionType
-from PM.Gui.Pages.Base import Perspective
+from umit.pm.gui.sessions import SessionType
+from umit.pm.gui.pages.base import Perspective
 
-from PM.Core.Errors import PMErrorException
-from PM.Manager.PreferenceManager import Prefs
-
-from PM.Backend.Scapy.Context import Sniff
+from umit.pm.core.errors import PMErrorException
+from umit.pm.manager.preferencemanager import Prefs
 
 from math import pi
 
@@ -62,8 +60,6 @@ class MSC(Perspective):
     def create_ui(self):
         
         self.chart = Chart()
-        
-        
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
         
@@ -92,6 +88,8 @@ class MSC(Perspective):
         self.sniff_button.connect('activate', self.__on_run)
         self.reload_button.connect('activate', self.__on_reload)
         
+
+        
         self.pack_start(self.toolbar, False, False)
         self.pack_start(self.chart)  
 
@@ -108,7 +106,8 @@ class MSC(Perspective):
         self.chart.redraw(self.intf_combo.get_interface())
         
     def __on_reload(self, action):
-        self.chart.update_drawing_clbk(None, None)
+        self.chart.redraw(self.intf_combo.get_interface())
+    
         
 
 class MSCContext(StaticContext):
@@ -177,40 +176,76 @@ class Chart(gtk.DrawingArea):
     Creates the Message Sequence Chart
     """
     __gtype_name__ = "Chart"
+    
 
     def __init__(self):
+        self.IPs = []
         super(Chart, self).__init__()
-        
-        
-    def do_expose_event(self, evt):
-        cr = self.window.cairo_create()
-        self.__cairo_draw(cr)
-        return True
+        self.connect('expose_event', self.do_expose_event)
+   
+    def do_expose_event(self, widget, evt):
+        self.cr = self.window.cairo_create()
+        self.__cairo_draw()
+        return gtk.DrawingArea.do_expose_event
 
-    def __cairo_draw(self, cr):
-        cr.save()
-        cr.set_source_rgb(1.0 , 1.0, 1.0)
-        cr.rectangle(0, 0, *self.window.get_size())
-        cr.fill()
-        cr.restore()
+    def __cairo_draw(self):
+        self.cr.save()
         
+        #set background
+        self.cr.set_source_rgb(1, 1, 1)
+        self.cr.rectangle(0, 0, *self.window.get_size())
+        print self.window.get_size()
+        self.cr.fill()
+        
+        #draw IPs
+        
+        self.cr.set_source_rgb(0.0, 0.0, 0.0)
+        self.cr.select_font_face("Georgia",
+                cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        self.cr.set_font_size(12)
+        i=0
+        margin=0
+        for ip in self.IPs:
+            x_bearing, y_bearing, width, height = self.cr.text_extents(ip)[:4]
+            print ip
+            #print self.IPs.index("100.34.56.78")
+            self.cr.move_to(margin, 100)
+            margin = margin+width+20
+            self.cr.show_text(ip)        
+            i=i+1
+        self.cr.restore()
+
+
+
     def redraw(self, iface):
-        self.sniff_context = Backend.SniffContext(iface, None, 0, 0, None, 0, 0, 0, \
+        self.IPs = []
+        self.sniff_context = backend.SniffContext(iface, None, 0, 0, None, 0, 0, 0, \
                                       True, True, True, False, True, True, \
-                                      False, 0, True, self.__update_drawing_clbk, None)
+                                      False, 0, True, self.update_drawing_clbk, None)
         self.timeout = gobject.timeout_add(300, self.__check_for_packets)
         self.sniff_context._start()
-        
-    def __update_drawing_clbk(self, packet, udata):
-        
-        print packet
-        # packet is the MetaPacket or may be a list of it 
-        
     
+    def __on_run_or_reload(self, action):
+        self.redraw(self.intf_combo.get_interface())
+    
+    def update_drawing_clbk(self, packet, udata):
+        #print packet.get_source() + "-->" + packet.get_dest()
+        self.__add_packet_to_list(packet.get_source())
+        self.__add_packet_to_list(packet.get_dest())        
         
+    def __add_packet_to_list(self, address):
+        #Add only IP addresses
+        if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= 4):
+            return None
+        try:
+            x = self.IPs.index(address)
+        except ValueError:
+            self.IPs.append(address)   
+            print "(NEW): " + address
+
+
     def __check_for_packets(self):
         self.sniff_context.check_finished()
+        self.queue_draw()
         return True
-
-        
 
