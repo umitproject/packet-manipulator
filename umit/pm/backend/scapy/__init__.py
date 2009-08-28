@@ -30,7 +30,9 @@ PMFlagsField        = FlagsField
 
 PMBitField          = None
 PMIPField           = IPField
-PMIP6Field          = IP6Field
+
+# Check out for presence of IPv6 support
+PMIP6Field          = getattr(scapy, "IP6Field", None)
 PMMACField          = MACField
 PMByteField         = ByteField
 PMShortField        = ShortField
