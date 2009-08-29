@@ -47,26 +47,31 @@ class Chart(gtk.DrawingArea):
     
 
     def __init__(self):
+        
+        super(Chart, self).__init__()
+        self.connect('expose_event', self.do_expose_event)
+        
         self.IPs = []
+        self.Packets = []
         self.start_time = datetime.now()
         self.sniffing_frozen = False
         self.scalingfactor = 10
-        self.max_nodes = 5
-        self.max_packets = 10
+        self.max_nodes = 6
+        self.max_packets = 50
         self.left_margin = 180
         self.time_margin = 30
         self.right_margin = 100
         self.bottom_margin = 50
         self.top_margin = 50
-        self.set_size_request(600, 1000)
+        self.set_size_request(600, 1500)
+        
         #add host IP
         #TODO: Need to find a way of finding the IP without using scapy
         for x in scapy.all.conf.route.routes:
             if x[2] != '0.0.0.0':
                 self.IPs.append(x[4])
-        self.Packets = []
-        super(Chart, self).__init__()
-        self.connect('expose_event', self.do_expose_event)
+              
+        
    
     def do_expose_event(self, widget, evt):
         self.cr = self.window.cairo_create()
@@ -75,6 +80,8 @@ class Chart(gtk.DrawingArea):
 
     def __cairo_draw(self):
         self.cr.save()
+                
+        vline_positions = []
         
         #set background
         self.cr.set_source_rgb(1, 1, 1)
@@ -98,6 +105,7 @@ class Chart(gtk.DrawingArea):
             self.cr.show_text(ip)
             self.cr.move_to(margin+width/2, self.top_margin)
             self.cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
+            vline_positions.append(margin+width/2)
             self.cr.stroke()
             margin = margin+width+20
             i=i+1
@@ -124,8 +132,23 @@ class Chart(gtk.DrawingArea):
                 self.cr.line_to(self.left_margin-7, cur_packet_ypos-height/2)                
                 prev_timestamp_lower = cur_packet_ypos
                 self.cr.stroke()
-            else:
+                
+                #Draw the arrow from source to destination
+                self.cr.select_font_face("Arial",\
+                    cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+                self.cr.set_font_size(14)
+                self.cr.move_to(vline_positions[self.IPs.index(packet.get_source())], cur_packet_ypos-height/2)
+                self.cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2)
+                if self.IPs.index(packet.get_source()) > self.IPs.index(packet.get_dest()):
+                    self.cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2+self.cr.text_extents("<")[3]/2)
+                    self.cr.show_text("<")
+                else:
+                    self.cr.line_to(vline_positions[self.IPs.index(packet.get_dest())] - self.cr.text_extents("<")[2], cur_packet_ypos-height/2+self.cr.text_extents("<")[3]/2)
+                    self.cr.show_text(">")
+                self.cr.stroke()
+            elif not self.sniffing_frozen:
                 self.sniffing_frozen =True
+                print "Area overflow"
                 break
             
         self.cr.restore()
@@ -151,7 +174,8 @@ class Chart(gtk.DrawingArea):
             self.Packets.append(packet)
             print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
                 packet.get_source() + "-->" + packet.get_dest()
-        if len(self.Packets) > self.max_packets:
+        if len(self.Packets) > self.max_packets and not self.sniffing_frozen:
+            print "Packets exceded"
             self.sniffing_frozen = True
         
     def __add_node_to_list(self, address):
