@@ -53,8 +53,8 @@ class MSC(Perspective):
         
 
         self.pcap_button = gtk.Action(None, None, _('Open Pcap'), gtk.STOCK_OPEN)
-        self.jpg_button = gtk.Action(None, None, _('Save as svg'), gtk.STOCK_SAVE)
-        self.svg_button= gtk.Action(None, None, _('Save as png'), gtk.STOCK_SAVE_AS)
+        self.png_button = gtk.Action(None, None, _('Save as png'), gtk.STOCK_SAVE)
+        self.svg_button= gtk.Action(None, None, _('Save as svg'), gtk.STOCK_SAVE_AS)
         self.reload_button= gtk.Action(None, None, _('Reload'), gtk.STOCK_REFRESH)
         self.stop_button= gtk.Action(None, None, _('Stop'), gtk.STOCK_MEDIA_STOP)
         self.sniff_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_MEDIA_PLAY)
@@ -68,7 +68,7 @@ class MSC(Perspective):
 
 
         self.toolbar.insert(self.pcap_button.create_tool_item(), -1)
-        self.toolbar.insert(self.jpg_button.create_tool_item(), -1)
+        self.toolbar.insert(self.png_button.create_tool_item(), -1)
         self.toolbar.insert(self.svg_button.create_tool_item(), -1)
         self.toolbar.insert(self.reload_button.create_tool_item(), -1)
         self.toolbar.insert(self.stop_button.create_tool_item(), -1)
@@ -82,12 +82,13 @@ class MSC(Perspective):
         self.stop_button.connect('activate', self.__on_stop)
         self.zoom_in_button.connect('activate', self.__zoom_in)
         self.zoom_out_button.connect('activate', self.__zoom_out)
+        self.png_button.connect('activate', self.__save_as_png)        
         
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_ALWAYS, gtk.POLICY_ALWAYS)
         sw.set_shadow_type(gtk.SHADOW_NONE)
         sw.add_with_viewport(self.chart)
-        self.chart.connect('focus_in_event', self.__focus_in, sw.get_vadjustment())
+        #self.chart.connect('focus_in_event', self.__focus_in, sw.get_vadjustment())
         
         self.pack_start(self.toolbar, False, False)
         self.pack_start(sw)
@@ -101,6 +102,28 @@ class MSC(Perspective):
             lambda: self.toolbar.set_sensitive(True)
     
 
+    def __save_as_png(self, action):
+        dialog = gtk.FileChooserDialog(_('Save as png'), PMApp().main_window,
+                                       gtk.FILE_CHOOSER_ACTION_SAVE,
+                                       (gtk.STOCK_SAVE, gtk.RESPONSE_ACCEPT,
+                                        gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL))
+
+        xfilter = gtk.FileFilter()
+        xfilter.add_pattern('*.png')
+        xfilter.add_mime_type('image/png')
+        xfilter.set_name('PNG Image')
+
+        dialog.add_filter(xfilter)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            filename = dialog.get_filename()
+            print filename
+            self.chart.save_as(filename)
+        else:
+            print "No file selected"
+        dialog.hide()
+        dialog.destroy()
+        
     def __on_stop(self, action):
         self.chart.stop_sniffing()
         

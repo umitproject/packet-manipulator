@@ -63,7 +63,10 @@ class Chart(gtk.DrawingArea):
         self.right_margin = 100
         self.bottom_margin = 50
         self.top_margin = 50
-        self.set_size_request(600, 1500)
+        self.hsize = 1000
+        self.vsize = 1500
+        self.set_size_request(self.hsize, self.vsize)
+
         
         #add host IP
         #TODO: Need to find a way of finding the IP without using scapy
@@ -78,85 +81,86 @@ class Chart(gtk.DrawingArea):
         self.__cairo_draw()
         return gtk.DrawingArea.do_expose_event
 
-    def __cairo_draw(self):
-
-        self.cr.save()
+    def __cairo_draw(self, cr = None):
+        if cr == None :
+            cr = self.cr
+        cr.save()
                 
         vline_positions = []
         
         #set background
-        self.cr.set_source_rgb(1, 1, 1)
-        self.cr.rectangle(0, 0, *self.window.get_size())
-        self.cr.fill()
+        cr.set_source_rgb(1, 1, 1)
+        cr.rectangle(0, 0, *self.window.get_size())
+        cr.fill()
         
         if len(self.IPs) == 1 :
-            self.cr.restore()
+            cr.restore()
             return
         
         #draw IPs
-        self.cr.select_font_face("Arial",
+        cr.select_font_face("Arial",
                 cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        self.cr.set_font_size(14)
+        cr.set_font_size(14)
         i=0
         margin = self.left_margin
-        self.cr.set_source_rgb(0.5, 0.5, 0.5)
-        self.cr.move_to(margin-10, self.top_margin)
-        self.cr.line_to(margin-10, self.window.get_size()[1]-self.bottom_margin)
-        self.cr.stroke()
+        cr.set_source_rgb(0.5, 0.5, 0.5)
+        cr.move_to(margin-10, self.top_margin)
+        cr.line_to(margin-10, self.window.get_size()[1]-self.bottom_margin)
+        cr.stroke()
         for ip in self.IPs:
-            self.cr.set_source_rgb(0.0, 0.0, 0.0)
-            x_bearing, y_bearing, width, height = self.cr.text_extents(ip)[:4]
-            self.cr.move_to(margin, self.top_margin-height)
-            self.cr.show_text(ip)
-            self.cr.move_to(margin+width/2, self.top_margin)
-            self.cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
+            cr.set_source_rgb(0.0, 0.0, 0.0)
+            x_bearing, y_bearing, width, height = cr.text_extents(ip)[:4]
+            cr.move_to(margin, self.top_margin-height)
+            cr.show_text(ip)
+            cr.move_to(margin+width/2, self.top_margin)
+            cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
             vline_positions.append(margin+width/2)
-            self.cr.stroke()
+            cr.stroke()
             margin = margin+width+20
             i=i+1
             
         
         #draw packets   
         prev_timestamp_lower = 0
-        self.cr.set_source_rgb(0.5, 0.5, 0.5)
+        cr.set_source_rgb(0.5, 0.5, 0.5)
         for packet in self.Packets:
             time_passed = self.__get_time_passed(packet.get_datetime())
             cur_packet_ypos = self.__get_time_passed(packet.get_datetime())/self.scalingfactor\
                             + self.top_margin
             #Draw if the packet drawing does not cross the lower bound of the drawingArea
             if cur_packet_ypos < self.window.get_size()[1]-self.bottom_margin :
-                x_bearing, y_bearing, width, height = self.cr.text_extents(str(time_passed) + "ms")[:4]  
+                x_bearing, y_bearing, width, height = cr.text_extents(str(time_passed) + "ms")[:4]  
                 
                 #Draw the text if it doesnt clash with the previous timestamp text
                 if prev_timestamp_lower < cur_packet_ypos - height:
-                    self.cr.move_to(self.time_margin, cur_packet_ypos)
-                    self.cr.show_text(str(self.__get_time_passed(packet.get_datetime())) + "ms")
+                    cr.move_to(self.time_margin, cur_packet_ypos)
+                    cr.show_text(str(self.__get_time_passed(packet.get_datetime())) + "ms")
                 
                 #Draw a small marker on the time axis
-                self.cr.move_to(self.left_margin-13, cur_packet_ypos-height/2)
-                self.cr.line_to(self.left_margin-7, cur_packet_ypos-height/2)                
+                cr.move_to(self.left_margin-13, cur_packet_ypos-height/2)
+                cr.line_to(self.left_margin-7, cur_packet_ypos-height/2)                
                 prev_timestamp_lower = cur_packet_ypos
-                self.cr.stroke()
+                cr.stroke()
                 
                 #Draw the arrow from source to destination
-                self.cr.select_font_face("Arial",\
+                cr.select_font_face("Arial",\
                     cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-                self.cr.set_font_size(14)
-                self.cr.move_to(vline_positions[self.IPs.index(packet.get_source())], cur_packet_ypos-height/2)
-                self.cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2)
+                cr.set_font_size(14)
+                cr.move_to(vline_positions[self.IPs.index(packet.get_source())], cur_packet_ypos-height/2)
+                cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2)
                 if self.IPs.index(packet.get_source()) > self.IPs.index(packet.get_dest()):
-                    self.cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2+self.cr.text_extents("<")[3]/2)
-                    self.cr.show_text("<")
+                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
+                    cr.show_text("<")
                 else:
-                    self.cr.line_to(vline_positions[self.IPs.index(packet.get_dest())] - self.cr.text_extents("<")[2], cur_packet_ypos-height/2+self.cr.text_extents("<")[3]/2)
-                    self.cr.show_text(">")
-                self.cr.stroke()
+                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())] - cr.text_extents("<")[2], cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
+                    cr.show_text(">")
+                cr.stroke()
             elif not self.sniffing_frozen:
                 self.sniffing_frozen =True
                 print "Area overflow"
                 break
             
-        self.cr.restore()
+        cr.restore()
 
 
 
@@ -212,11 +216,17 @@ class Chart(gtk.DrawingArea):
     
     def zoom_in (self):
         if self.scalingfactor == 1:
-            self.scalingfactor = self.scalingfactor/2
+            self.scalingfactor = float(self.scalingfactor/2)
         else:
             self.scalingfactor = self.scalingfactor - 1
         self.queue_draw()
-    
+        
+    def save_as (self, filename):
+        surface = cairo.ImageSurface(cairo.FORMAT_RGB24, *self.window.get_size()) 
+        cr = cairo.Context(surface)
+        self.__cairo_draw(cr)
+        surface.write_to_png(filename)
+
     def zoom_out (self):
         self.scalingfactor = self.scalingfactor + 1
         self.queue_draw()
