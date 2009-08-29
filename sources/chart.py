@@ -79,6 +79,7 @@ class Chart(gtk.DrawingArea):
         return gtk.DrawingArea.do_expose_event
 
     def __cairo_draw(self):
+
         self.cr.save()
                 
         vline_positions = []
@@ -87,6 +88,10 @@ class Chart(gtk.DrawingArea):
         self.cr.set_source_rgb(1, 1, 1)
         self.cr.rectangle(0, 0, *self.window.get_size())
         self.cr.fill()
+        
+        if len(self.IPs) == 1 :
+            self.cr.restore()
+            return
         
         #draw IPs
         self.cr.select_font_face("Arial",
@@ -204,3 +209,14 @@ class Chart(gtk.DrawingArea):
         return (float((this_time.microsecond - self.start_time.microsecond)) + \
                 (this_time.second - self.start_time.second)*1000000 + \
                 (this_time.minute - self.start_time.minute)*60*1000000)/1000
+    
+    def zoom_in (self):
+        if self.scalingfactor == 1:
+            self.scalingfactor = self.scalingfactor/2
+        else:
+            self.scalingfactor = self.scalingfactor - 1
+        self.queue_draw()
+    
+    def zoom_out (self):
+        self.scalingfactor = self.scalingfactor + 1
+        self.queue_draw()

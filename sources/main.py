@@ -58,6 +58,8 @@ class MSC(Perspective):
         self.reload_button= gtk.Action(None, None, _('Reload'), gtk.STOCK_REFRESH)
         self.stop_button= gtk.Action(None, None, _('Stop'), gtk.STOCK_MEDIA_STOP)
         self.sniff_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_MEDIA_PLAY)
+        self.zoom_in_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_ZOOM_IN)        
+        self.zoom_out_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_ZOOM_OUT)
         self.filter_pack = gtk.Entry()
         
         self.intf_combo = InterfacesCombo()
@@ -72,13 +74,16 @@ class MSC(Perspective):
         self.toolbar.insert(self.stop_button.create_tool_item(), -1)
         self.toolbar.insert(self.item, -1)
         self.toolbar.insert(self.sniff_button.create_tool_item(), -1)
+        self.toolbar.insert(self.zoom_out_button.create_tool_item(), -1)
+        self.toolbar.insert(self.zoom_in_button.create_tool_item(), -1)        
 
         self.sniff_button.connect('activate', self.__on_run)
         self.reload_button.connect('activate', self.__on_reload)
         self.stop_button.connect('activate', self.__on_stop)
+        self.zoom_in_button.connect('activate', self.__zoom_in)
+        self.zoom_out_button.connect('activate', self.__zoom_out)
         
         sw = gtk.ScrolledWindow()
-        sw.set_size_request(200,200)
         sw.set_policy(gtk.POLICY_ALWAYS, gtk.POLICY_ALWAYS)
         sw.set_shadow_type(gtk.SHADOW_NONE)
         sw.add_with_viewport(self.chart)
@@ -104,6 +109,12 @@ class MSC(Perspective):
         
     def __on_reload(self, action):
         self.chart.redraw(self.intf_combo.get_interface())
+    
+    def __zoom_in(self, action):
+        self.chart.zoom_in()
+        
+    def __zoom_out(self, action):
+        self.chart.zoom_out()
     
     def __focus_in(widget, event, adj):
         alloc = widget.get_allocation()        
