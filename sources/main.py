@@ -26,6 +26,7 @@ import cairo
 import pango
 import gobject
 import pangocairo
+from datetime import datetime
 
 from umit.pm import backend
 from umit.pm.core.atoms import defaultdict
@@ -46,6 +47,8 @@ from umit.pm.core.errors import PMErrorException
 from umit.pm.manager.preferencemanager import Prefs
 
 from math import pi
+
+import scapy.all
 
 if Prefs()['backend.system'].value.lower() != 'scapy':
     raise PMErrorException("I need scapy to work!")
@@ -87,7 +90,7 @@ class MSC(Perspective):
 
         self.sniff_button.connect('activate', self.__on_run)
         self.reload_button.connect('activate', self.__on_reload)
-        
+        self.stop_button.connect('activate', self.__on_stop)
 
         
         self.pack_start(self.toolbar, False, False)
@@ -102,6 +105,10 @@ class MSC(Perspective):
         self.session.context.unlock_callback = \
             lambda: self.toolbar.set_sensitive(True)
     
+
+    def __on_stop(self, action):
+        self.chart.stop_sniffing()
+        
     def __on_run(self, action):
         self.chart.redraw(self.intf_combo.get_interface())
         
@@ -180,6 +187,13 @@ class Chart(gtk.DrawingArea):
 
     def __init__(self):
         self.IPs = []
+        self.start_time = datetime.now()
+        self.sniffing_frozen = False
+        #add host IP
+        for x in scapy.all.conf.route.routes:
+            if x[2] != '0.0.0.0':
+                self.IPs.append(x[4])
+        self.Packets = []
         super(Chart, self).__init__()
         self.connect('expose_event', self.do_expose_event)
    
@@ -194,48 +208,54 @@ class Chart(gtk.DrawingArea):
         #set background
         self.cr.set_source_rgb(1, 1, 1)
         self.cr.rectangle(0, 0, *self.window.get_size())
-        print self.window.get_size()
         self.cr.fill()
         
         #draw IPs
-        
-        self.cr.set_source_rgb(0.0, 0.0, 0.0)
         self.cr.select_font_face("Georgia",
                 cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        self.cr.set_font_size(12)
+        self.cr.set_font_size(14)
         i=0
-        margin=0
+        margin=100
+        self.cr.set_source_rgb(0.5, 0.5, 0.5)
+        self.cr.move_to(margin-10, 100)
+        self.cr.line_to(margin-10, self.window.get_size()[1]-50)
+        self.cr.stroke()
         for ip in self.IPs:
+            self.cr.set_source_rgb(0.0, 0.0, 0.0)
             x_bearing, y_bearing, width, height = self.cr.text_extents(ip)[:4]
-            print ip
-            #print self.IPs.index("100.34.56.78")
             self.cr.move_to(margin, 100)
+            self.cr.show_text(ip)
+            self.cr.move_to(margin+width/2, 100+height)
+            self.cr.line_to(margin+width/2, self.window.get_size()[1]-50)
+            self.cr.stroke()
             margin = margin+width+20
-            self.cr.show_text(ip)        
             i=i+1
         self.cr.restore()
 
 
 
     def redraw(self, iface):
-        self.IPs = []
+        self.__init__()
         self.sniff_context = backend.SniffContext(iface, None, 0, 0, None, 0, 0, 0, \
                                       True, True, True, False, True, True, \
                                       False, 0, True, self.update_drawing_clbk, None)
         self.timeout = gobject.timeout_add(300, self.__check_for_packets)
         self.sniff_context._start()
-    
-    def __on_run_or_reload(self, action):
-        self.redraw(self.intf_combo.get_interface())
+        
+    def stop_sniffing(self):
+        self.sniffing_frozen = True
     
     def update_drawing_clbk(self, packet, udata):
-        #print packet.get_source() + "-->" + packet.get_dest()
         self.__add_packet_to_list(packet.get_source())
-        self.__add_packet_to_list(packet.get_dest())        
+        self.__add_packet_to_list(packet.get_dest())   
+        if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1):
+            self.Packets.append(packet)
+            print str(self.__get_time_passed(packet.get_datetime())) + "ms"
+            packet.get_source() + "-->" + packet.get_dest()
         
     def __add_packet_to_list(self, address):
         #Add only IP addresses
-        if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= 4):
+        if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= 5):
             return None
         try:
             x = self.IPs.index(address)
@@ -247,5 +267,12 @@ class Chart(gtk.DrawingArea):
     def __check_for_packets(self):
         self.sniff_context.check_finished()
         self.queue_draw()
+        if self.sniffing_frozen :
+            print "Sniffing Stopped"
+            return False
         return True
 
+
+    def __get_time_passed(self, this_time):
+        #print (str((this_time.microsecond - self.start_time.microsecond)) + ":" +str((this_time.second-self.start_time.second)*1000000)  +":" +str((this_time.minute-self.start_time.minute)*60*1000000))
+        return (float((this_time.microsecond - self.start_time.microsecond)) + (this_time.second - self.start_time.second)*1000000 + (this_time.minute - self.start_time.minute)*60*1000000)/1000
