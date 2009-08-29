@@ -27,11 +27,11 @@ setup(
     author=['Abhiram Kasina', 'Luís A. Bastião Silva'],
     license=['GPL'],
     copyright=['2009 Adriano Monteiro Marques'],
-    url='http://www.umitproject.org',
-    scripts=['sources/main.py'],
-    start_file="main",
+    url='http://trac.umitproject.org/wiki/AbhiramKasina',
+    scripts=['sources/main.py', 'sources/chart.py'],
+    start_file="main", 
     data_files=[('data', ['dist/logo.png'])],
     provide=['=MSC-0.1'],
-    description='Message Sequece Flowchart',
+    description='Message Sequence Flowchart',
     output='msc.ump'
 )
