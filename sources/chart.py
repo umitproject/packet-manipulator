@@ -50,6 +50,15 @@ class Chart(gtk.DrawingArea):
         self.IPs = []
         self.start_time = datetime.now()
         self.sniffing_frozen = False
+        self.scalingfactor = 15
+        self.max_nodes = 5
+        self.max_packets = 10
+        self.left_margin = 180
+        self.time_margin = 30
+        self.right_margin = 100
+        self.bottom_margin = 50
+        self.top_margin = 50
+        self.set_size_request(600, 1000)
         #add host IP
         #TODO: Need to find a way of finding the IP without using scapy
         for x in scapy.all.conf.route.routes:
@@ -73,25 +82,35 @@ class Chart(gtk.DrawingArea):
         self.cr.fill()
         
         #draw IPs
-        self.cr.select_font_face("Georgia",
+        self.cr.select_font_face("Arial",
                 cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         self.cr.set_font_size(14)
         i=0
-        margin=100
+        margin = self.left_margin
         self.cr.set_source_rgb(0.5, 0.5, 0.5)
-        self.cr.move_to(margin-10, 100)
-        self.cr.line_to(margin-10, self.window.get_size()[1]-50)
+        self.cr.move_to(margin-10, self.top_margin)
+        self.cr.line_to(margin-10, self.window.get_size()[1]-self.bottom_margin)
         self.cr.stroke()
         for ip in self.IPs:
             self.cr.set_source_rgb(0.0, 0.0, 0.0)
             x_bearing, y_bearing, width, height = self.cr.text_extents(ip)[:4]
-            self.cr.move_to(margin, 100)
+            self.cr.move_to(margin, self.top_margin-height)
             self.cr.show_text(ip)
-            self.cr.move_to(margin+width/2, 100+height)
-            self.cr.line_to(margin+width/2, self.window.get_size()[1]-50)
+            self.cr.move_to(margin+width/2, self.top_margin)
+            self.cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
             self.cr.stroke()
             margin = margin+width+20
             i=i+1
+            
+        #draw packets    
+        self.cr.set_source_rgb(0.5, 0.5, 0.5)
+        for packet in self.Packets:
+            x_bearing, y_bearing, width, height = self.cr.text_extents(\
+                str(self.__get_time_passed(packet.get_datetime())) + "ms")[:4]            
+            
+            if self.__get_time_passed(packet.get_datetime())/self.scalingfactor + 100 < self.window.get_size()[1]-self.bottom_margin :
+                self.cr.move_to(self.time_margin, self.__get_time_passed(packet.get_datetime())/self.scalingfactor + 100)
+                self.cr.show_text(str(self.__get_time_passed(packet.get_datetime())) + "ms")
         self.cr.restore()
 
 
@@ -110,14 +129,16 @@ class Chart(gtk.DrawingArea):
     def update_drawing_clbk(self, packet, udata):
         self.__add_packet_to_list(packet.get_source())
         self.__add_packet_to_list(packet.get_dest())   
-        if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1):
+        if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1 \
+           and len(self.Packets) <= self.max_packets):
             self.Packets.append(packet)
             print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
                 packet.get_source() + "-->" + packet.get_dest()
         
     def __add_packet_to_list(self, address):
         #Add only IP addresses
-        if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= 5):
+        if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= self.max_nodes):
+            #TODO: Find a better way instead of hard-coding the bound on the number of nodes
             return None
         try:
             x = self.IPs.index(address)

@@ -76,11 +76,16 @@ class MSC(Perspective):
         self.sniff_button.connect('activate', self.__on_run)
         self.reload_button.connect('activate', self.__on_reload)
         self.stop_button.connect('activate', self.__on_stop)
-
+        
+        sw = gtk.ScrolledWindow()
+        sw.set_size_request(200,200)
+        sw.set_policy(gtk.POLICY_ALWAYS, gtk.POLICY_ALWAYS)
+        sw.set_shadow_type(gtk.SHADOW_NONE)
+        sw.add_with_viewport(self.chart)
+        self.chart.connect('focus_in_event', self.__focus_in, sw.get_vadjustment())
         
         self.pack_start(self.toolbar, False, False)
-        self.pack_start(self.chart)  
-
+        self.pack_start(sw)
      
         self.show_all()
 
@@ -100,7 +105,11 @@ class MSC(Perspective):
     def __on_reload(self, action):
         self.chart.redraw(self.intf_combo.get_interface())
     
-        
+    def __focus_in(widget, event, adj):
+        alloc = widget.get_allocation()        
+        if alloc.y < adj.value or alloc.y > adj.value + adj.page_size:
+            adj.set_value(min(alloc.y, adj.upper-adj.page_size))
+
 
 class MSCContext(StaticContext):
     def __init__(self, fname=None):
