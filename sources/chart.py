@@ -50,7 +50,7 @@ class Chart(gtk.DrawingArea):
         self.IPs = []
         self.start_time = datetime.now()
         self.sniffing_frozen = False
-        self.scalingfactor = 15
+        self.scalingfactor = 10
         self.max_nodes = 5
         self.max_packets = 10
         self.left_margin = 180
@@ -102,15 +102,32 @@ class Chart(gtk.DrawingArea):
             margin = margin+width+20
             i=i+1
             
-        #draw packets    
+        
+        #draw packets   
+        prev_timestamp_lower = 0
         self.cr.set_source_rgb(0.5, 0.5, 0.5)
         for packet in self.Packets:
-            x_bearing, y_bearing, width, height = self.cr.text_extents(\
-                str(self.__get_time_passed(packet.get_datetime())) + "ms")[:4]            
+            time_passed = self.__get_time_passed(packet.get_datetime())
+            cur_packet_ypos = self.__get_time_passed(packet.get_datetime())/self.scalingfactor\
+                            + self.top_margin
+            #Draw if the packet drawing does not cross the lower bound of the drawingArea
+            if cur_packet_ypos < self.window.get_size()[1]-self.bottom_margin :
+                x_bearing, y_bearing, width, height = self.cr.text_extents(str(time_passed) + "ms")[:4]  
+                
+                #Draw the text if it doesnt clash with the previous timestamp text
+                if prev_timestamp_lower < cur_packet_ypos - height:
+                    self.cr.move_to(self.time_margin, cur_packet_ypos)
+                    self.cr.show_text(str(self.__get_time_passed(packet.get_datetime())) + "ms")
+                
+                #Draw a small marker on the time axis
+                self.cr.move_to(self.left_margin-13, cur_packet_ypos-height/2)
+                self.cr.line_to(self.left_margin-7, cur_packet_ypos-height/2)                
+                prev_timestamp_lower = cur_packet_ypos
+                self.cr.stroke()
+            else:
+                self.sniffing_frozen =True
+                break
             
-            if self.__get_time_passed(packet.get_datetime())/self.scalingfactor + 100 < self.window.get_size()[1]-self.bottom_margin :
-                self.cr.move_to(self.time_margin, self.__get_time_passed(packet.get_datetime())/self.scalingfactor + 100)
-                self.cr.show_text(str(self.__get_time_passed(packet.get_datetime())) + "ms")
         self.cr.restore()
 
 
@@ -127,15 +144,17 @@ class Chart(gtk.DrawingArea):
         self.sniffing_frozen = True
     
     def update_drawing_clbk(self, packet, udata):
-        self.__add_packet_to_list(packet.get_source())
-        self.__add_packet_to_list(packet.get_dest())   
+        self.__add_node_to_list(packet.get_source())
+        self.__add_node_to_list(packet.get_dest())   
         if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1 \
            and len(self.Packets) <= self.max_packets):
             self.Packets.append(packet)
             print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
                 packet.get_source() + "-->" + packet.get_dest()
+        if len(self.Packets) > self.max_packets:
+            self.sniffing_frozen = True
         
-    def __add_packet_to_list(self, address):
+    def __add_node_to_list(self, address):
         #Add only IP addresses
         if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= self.max_nodes):
             #TODO: Find a better way instead of hard-coding the bound on the number of nodes
