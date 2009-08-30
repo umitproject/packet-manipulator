@@ -20,6 +20,7 @@
 
 import os
 import sys
+import shutil
 
 from glob import glob
 from optparse import OptionParser
@@ -88,7 +89,7 @@ class Autogen(object):
             if os.path.isfile(dest):
                 os.remove(dest)
 
-            os.rename(plugin, dest)
+            shutil.move(plugin, dest)
 
         os.chdir(self.cwd)
 

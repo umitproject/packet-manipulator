@@ -24,6 +24,7 @@ import glob
 
 import os
 import os.path
+import shutil
 
 from distutils.core import setup, Extension
 from distutils.command.install import install
@@ -273,7 +274,9 @@ class pm_install(install):
 
         for plugin in glob.glob("*.ump"):
             dest = os.path.join(dest_dir, os.path.basename(plugin))
-            os.rename(plugin, dest)
+            shutil.move(plugin, dest)
+
+
 
 
 setup(name         = 'PacketManipulator',
