@@ -32,6 +32,7 @@ from umit.pm.gui.widgets.interfaces import InterfacesCombo
 from umit.pm.gui.pages.base import Perspective
 from umit.pm.core.errors import PMErrorException
 from umit.pm.manager.preferencemanager import Prefs
+from umit.pm.higwidgets.higdialogs import HIGAlertDialog
 
 from chart import Chart
 
@@ -82,7 +83,8 @@ class MSC(Perspective):
         self.stop_button.connect('activate', self.__on_stop)
         self.zoom_in_button.connect('activate', self.__zoom_in)
         self.zoom_out_button.connect('activate', self.__zoom_out)
-        self.png_button.connect('activate', self.__save_as_png)        
+        self.png_button.connect('activate', self.__save_as_png)  
+        self.pcap_button.connect('activate', self.__open_pcap)  
         
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_ALWAYS, gtk.POLICY_ALWAYS)
@@ -100,6 +102,66 @@ class MSC(Perspective):
             lambda: self.toolbar.set_sensitive(False)
         self.session.context.unlock_callback = \
             lambda: self.toolbar.set_sensitive(True)
+        
+    def __open_pcap(self, action):
+        types = {}
+        sessions = (backend.StaticContext,
+                    backend.SequenceContext,
+                    backend.SniffContext)
+
+        for ctx in sessions:
+            for name, pattern in ctx.file_types:
+                types[pattern] = (name, ctx)
+
+        dialog = gtk.FileChooserDialog(_("Select a session"), PMApp().main_window,
+                               buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                        gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+        #dialog.set_transient_for(self)
+
+        filterall = gtk.FileFilter()
+        filterall.set_name(_('All supported files'))
+        [filterall.add_pattern(k) for k in types]
+        dialog.add_filter(filterall)
+
+        for pattern, (name, ctx) in types.items():
+            filter = gtk.FileFilter()
+            filter.set_name(name)
+            filter.add_pattern(pattern)
+            dialog.add_filter(filter)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            ctx = None
+            fname = dialog.get_filename()
+
+            try:
+                find = fname.split('.')[-1]
+
+                for pattern in types:
+                    if pattern.split('.')[-1] == find:
+                        ctx = types[pattern][1]
+            except:
+                pass
+            if ctx is not backend.SequenceContext and \
+               ctx is not backend.SniffContext and \
+               ctx is not backend.StaticContext:
+
+                d = HIGAlertDialog(type=gtk.MESSAGE_ERROR,
+                    message_format=_("Unable to open selected session"),
+                    secondary_text=_("PacketManipulator is unable to guess the "
+                                     "file type. Try to modify the extension "
+                                     "and to reopen the file."))
+                d.set_transient_for(self)
+                d.run()
+                d.destroy()
+            else:
+                #self.open_generic_file_async(fname)
+                s =  StaticContext("Load Pcap", fname, False);
+                s.load()
+                self.chart.scan_from_list(s.data)
+                
+        dialog.hide()
+        dialog.destroy()
+        
     
 
     def __save_as_png(self, action):

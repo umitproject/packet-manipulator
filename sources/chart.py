@@ -75,6 +75,14 @@ class Chart(gtk.DrawingArea):
                 self.IPs.append(x[4])
               
         
+    def scan_from_list(self, list):
+        self.IPs = []
+        self.Packets = []
+        self.start_time = list[0].get_datetime()
+        for packet in list:
+            self.update_drawing_clbk(packet)
+        self.queue_draw()
+            
    
     def do_expose_event(self, widget, evt):
         self.cr = self.window.cairo_create()
@@ -175,7 +183,7 @@ class Chart(gtk.DrawingArea):
     def stop_sniffing(self):
         self.sniffing_frozen = True
     
-    def update_drawing_clbk(self, packet, udata):
+    def update_drawing_clbk(self, packet, udata= None):
         self.__add_node_to_list(packet.get_source())
         self.__add_node_to_list(packet.get_dest())   
         if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1 \
