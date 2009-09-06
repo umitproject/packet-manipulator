@@ -479,8 +479,19 @@ class PluginsTree(object):
 
                 for plug in lst:
                     try:
+                        if issubclass(plug, PassiveAudit):
+                            is_audit = 1
+                        elif issubclass(plug, ActiveAudit):
+                            is_audit = 2
+                        else:
+                            is_audit = 0
+
                         inst = plug()
                         inst.start(None)
+
+                        if is_audit:
+                            inst.register_decoders()
+                            inst.register_hooks()
 
                         ret.append(inst)
                     except Exception, err:
