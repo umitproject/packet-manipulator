@@ -1,155 +1,135 @@
-import sniff
-from sniffcommon import *
-import handlers
-import struct
+import struct, re
 
-# TODO: State machine for sniffing. To control threads (e.g. running of pincracking, we
-# should not resync the sniffer)
+import btlayers
+
+from btsniff import * 
+from sniffcommon import *
+from handlers import CollectHandler
+
+# Additional data types
+
+class LMP(btlayers.BtLayerUnit):
+    
+    def __init__(self, header, payload = None):
+        super(LMP, self).__init__(header, payload)
+
+
+class L2CAP(btlayers.BtLayerUnit):
+    
+    def __init__(self, header, payload = None):
+        super(L2CAP, self).__init__(header, payload)
+
 
 ####     Classes for the backend     #### 
 
 import threading
 
-_runnerthread = None
-
-class SniffRunner(object):
+class BtSniffRunner(object):
+    """
+        This class has the following responsibilities:
+        1. Access handler for packets received
+        2. Start/stop the thread for sniffing
+        3. Additional roles delegated by application
+        
+        To use run the sync first, then run start_capture 
+        
+    """
+    __FILTER_PARAM_ALL = 7
     
-    def __init__(self, session, handler, synctime = 30.0):
-        # super(threading.Thread, self).__init__()
-        self._session, self._handler = session, handler
-        self._synctime = synctime
-
-    def sync(self):
+    def __init__(self, device_name, handler = None):
         """
-            Every _synctime seconds we are to sync to  compensate for DC-offset.
+            @param device_name: name of capturing HCI device (e.g. hci0)
+            @param coll_handler: CollectingHandler object 
         """
-        self._session.state.cont_sniff = 0
-        try:
-            print 'Stopping'
-            sniff.stop_sniff(self._session.state, self._session.device)
-            print 'Set filter'
-            sniff.set_filter(self._session.state, self._session.device, 
-                             self._session.filter)
-            print 'Starting'
-            sniff.start_sniff(self._session.state, self._session.device,
-                              self._session.master, self._session.slave)
-            self._session.state.cont_sniff = 1
-            # Continue sniffing
-            print 'Continue sniff'
-            sniff.sniff(self._session.state, self._session.device, self._session.dump,
-                        self._handler)
+        self._dev_name = device_name
+        self._handler = handler
+        self._capstate = CaptureState()
+        self._dev = open_device(self._dev_name)
+        self._thread = None
+    
+    def stop_capture(self):
+        self._capstate.resume_sniff = False
+        # Forcefully close the device socket
+        self.__stop_sniff()
+    
+    def __stop_sniff(self):
+        stop_sniff(self._dev_name)
+        try: 
+            close_device(self._dev)
         except:
-            print 'General exception'
-            import sys
-            print sys.exc_info()        
-            self._session.state.cont_sniff = 0
-            exit()
-            if _runnerthread and _runnerthead.isAlive():
-                print 'Cancelling running thread'
-                _runnerthread.cancel()
-#        except sniff.SniffError: 
-#            self._session.state.cont_sniff = 0
-#            if _runnerthread:
-#                _runnerthread.cancel()
-#        except KeyboardInterrupt:
-#            print "Keyboard Interrupt"
-#            if _runnerthread:
-#                _runnerthread.cancel()
-        
+            pass
+
+    
+    def start_sniff(self, master_add, slave_add):
+        start_sniff(self._capstate, self._dev_name, master_add, slave_add)
+    
+    def sync(self, master_add, slave_add):
+        try:
+            stop_sniff(self._dev_name)
+        except: 
+            # stop_sniff sometimes throws an error on the first try
+            # we do a second time 
+            stop_sniff(self._dev_name)
+        finally:
+            # if still throws error, we know there is a problem
+            try:
+                stop_sniff(self._dev_name)
+            except:
+                raise
             
+        set_filter(self._dev_name, self.__FILTER_PARAM_ALL)
+        self.start_sniff(master_add, slave_add)
+    
+    
+    def start_capture(self, master_add, slave_add):
+        self._capstate.resume_sniff = True
+        self._thread = threading.Thread(target = start_capture, args = \
+                                         (self._capstate, self._dev_name, self._handler))
+        self._thread.daemon = True
+        self._thread.start()
+        return self._thread
+    
+    def step_through(self):
+        """
+            Primarily used for debugging.
+        """
+        self._thread.join()
         
-    def sniff(self):
-        sniff.sniff(self._session.state, self._session.device, self._session.dump,
-                    self._handler)
-#        _runnerthread = threading.Timer(self._synctime, self.sync)
-#        _runnerthread.start()
-#        try:
-#            self.sync()
-#        except KeyboardInterrupt:
-#            _runnerthread.cancel()
-#            exit()
-        
-    def run(self):
-        print "Start sniffing"
-#        self.sniff()
-        self.sync()
 
-###############################################
-#    Data structures for Bluetooth packets    #
-###############################################
+class BtCollectRunner(BtSniffRunner):
+    """
+        This subclass collects and allows access to packets
+        collected
+    """
+    
+    def __init__(self, device_name):
+        super(BtCollectRunner, self).__init__(device_name)
+        self._handler = CollectHandler()
+    
+    def start_sniff(self, master_add, slave_add):
+        self._handler.clear_data()
+        super(BtCollectRunner, self).start_sniff(master_add, slave_add)
+    
+    def get_data(self):
+        # Return shalllow copy. Original should remain intact
+        return self._handler.data[:]
+    
+    data = property(get_data, None, "Gets collected BtSniffUnits")
 
-## This class is not used at all in the program.
-## Mark for removal.
-class L2CAPPacket(object):
+class BtCollectPinCrackRunner(BtCollectRunner):
     
-    def __init__(self, packet = None):
-        if (not packet):
-            packet = sniff._GenericPacket()
-        self._packet = packet
-    
-    def getdata(self):
-        return self._packet.data
-    
-    def __repr__(self):
-        return str(self)
-    
-    def __str__(self):
-        pstr = 'L2CAP: '
-        payloadstr = (len(self.getdata()) * '%.2X ' % tuple(self.getdata())) if len(self.getdata()) else None
-        return ' '.join([pstr, payloadstr if payloadstr else ''])
-    
-    data = property(getdata, None)
-
-class LMPPacket(object):
-    """Wrapper for _LMPPacket. Allows processing to be done on the data payload. 
-        Read-only attributes."""
-    def __init__(self, packet = None):
-        if(not packet):
-            packet = sniff._LMPPacket()
-        self._packet = packet
-    
-    def getop1(self):
-        return self._packet.op1
-    
-    def getop2(self):
-        if(self.getop1() >= 124 and self.getop1() <= 127):
-            return self._packet.op2
-        return None
-    
-    def gettid(self):
-        return self._packet.tid
-    
-    def getdata(self):
-        return self._packet.data
-        
-    def __str__(self):
-        pstr = 'LMP Tid %d Op1 %d' % (self.gettid(), self.getop1())
-        if self.getop2() >= 0:
-            pstr = ' '.join([pstr, 'Op2 %d' % self.getop2(), ':'])
-        else:
-            pstr = ''.join([pstr, ':'])
-        
-        payloadstr = (len(self.getdata()) * '%.2X ' % tuple(self.getdata())) if len(self.getdata()) else None
-        return ' '.join([pstr, payloadstr if payloadstr else ''])
-    
-    def __repr__(self):
-        return str(self)
-        
-    op1 = property(getop1, None)
-    op2 = property(getop2, None)
-    tid = property(gettid, None)
-    data = property(getdata, None)
-
-
+    def __init__(self, device_name, master_add, slave_add):
+        super(BtCollectPinCrackRunner, self).__init__(device_name)
+        self._master_add, self._slave_add = master_add, slave_add
+        self._handler =  PinCrackCollectHandler(self._master_add, 
+                                                self._slave_add)
 
 def parse_macs(mac_add):
     """
-        Returns a list of integers representing that MAC address (len = 6)
-        Parameters:
+        @return A list of integers composed of the elements of the MAC address.
+        @param mac_add: String representation of a Bluetooth MAC address -- XX:XX:XX:XX:XX:XX
         
-        - `mac_add`: string representation of a Bluetooth MAC address
     """
-    import re
     p = re.compile(r'([0-9a-fA-F]{2}):'
                    '([0-9a-fA-F]{2}):'
                    '([0-9a-fA-F]{2}):'
@@ -202,7 +182,7 @@ def run(handler = None, state = None):
     if not handler:
         handler = handlers.BTSniffHandler()
     if not state:
-        state = sniff.State()
+        state = btsniff.CaptureState()
 
     (options, args) = getcmdoptions()
 
@@ -216,13 +196,13 @@ def run(handler = None, state = None):
         exit("Did not specify device")
     
     if options.timer:
-        print "Timer: %x" % sniff.get_timer(state, options.device)
+        print "Timer: %x" % btsniff.get_timer(state, options.device)
     
     if options.filter and options.filter >  -1:
-        sniff.set_filter(state, options.device, options.filter)
+        btsniff.set_filter(state, options.device, options.filter)
     
     if options.stop:
-        sniff.stop_sniff(state, options.device)
+        btsniff.stop_sniff(state, options.device)
     
     if options.start:
         at_ind = options.start.find('@')
@@ -230,14 +210,12 @@ def run(handler = None, state = None):
             master_add = parse_macs(options.start[0:at_ind])
             slave_add = parse_macs(options.start[at_ind + 1:])
             #print 'master = ', master_add, " slave = ", slave_add
-            sniff.start_sniff(state, options.device, master_add, slave_add)
+            btsniff.start_sniff(state, options.device, master_add, slave_add)
     
     if options.snif:
-        sniff.sniff(state, options.device, options.dump, handler)
+        btsniff.start_capture(state, options.device, options.dump, handler)
 
 
-
-  
 if __name__=='__main__':
     run()
    

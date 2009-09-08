@@ -4,80 +4,91 @@ Created on Jul 22, 2009
 @author: qsy
 '''
 
-import sniff
+import  btsniff
 import sniffer
 import crack
-import sniff_fileio as sfio
+import btlayers
 
 from sniffcommon import * 
 
-class BTSniffHandler(sniff.SniffHandler):
-    """
-        Subclassed SniffHandler can be wired to handle recvpacket events
-    """
-    def __init__(self):
-        super(sniff.SniffHandler, self).__init__()
-    
-    def recvgenevt(self, packet):
-        """
-            Parameters:
-            packet    -    sniff.SniffPacket
-        """
-        master = not (packet.clock & FP_SLAVE_MASK)
-        header_len = packet.hlen
-        channel = packet.chan
-        clock = packet.clock & FP_CLOCK_MASK
-        status = packet.clock >> FP_STATUS_SHIFT
-        hdr0 = packet.hdr0
-        type = (hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK       
-        address = hdr0 & FP_ADDR_MASK
-        llid = (packet.len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK
-        length = packet.len >> FP_LEN_SHIFT
-        print 'PL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X [type: %d addr: %d] LLID %d Len %d' \
-                        % (header_len, 
-                            channel,
-                            'M' if master else 'S',
-                            clock, 
-                            status,
-                            hdr0,
-                            type,
-                            address,
-                            llid,
-                            length),
-    
-    def recvdv(self, packet):
-        pass
-    def recvl2cap(self, packet):
-        self.recvdv(packet)
-        
-    def recvlmp(self, packet):
-        """
-            Do duplicate printing as to the original frontline tool. Used to manually diff the 2 outputs
-            This can be modified to do anything we wish with the received packet.
-        """
-        self.recvgenevt(packet)
-        # Process payload. We watch for LMPs
-        if packet.payload:
-            paypkt = sniffer.LMPPacket(packet.payload)
-            print str(paypkt)
-        else: print 
-    
 
-class FrontlineHandler(sniff.SniffHandler):
+## This code for taking out of PM, so we do not need to change any code
+try:
+    from packet import BtMetaPacket
+except ImportError:
+    class BtMetaPacket(object):
+        
+        def _init__(self, unit):
+            self.pkt = unit 
+
+        def __getattr__(self, name):
+            return getattr(self.pkt, name)
+
+class CollectHandler(btsniff.SniffHandler):
+    
+    def __init__(self):
+        self.data = []
+
+    def recvgenevt(self, unit):
+        self.data.append(BtMetaPacket(unit))
+    
+    def recvlmp(self, unit):
+        self.recvgenevt(unit)
+    
+    def recvdv(self, unit):
+        self.recvgenevt(unit)
+    
+    def recvl2cap(self, unit):
+        self.recvgenevt(unit)
+
+    def clear_data(self):
+        self.data = []
+
+
+class PinCrackCollectHandler(CollectHandler):
+    
+    def __init__(self, master_add, slave_add):
+        super(PinCrackCollectHandler, self).__init__()
+        self._capstate = btsniff.CaptureState()
+        self._pcr = crack.PinCrackRunner(master_add, slave_add, self._capstate)
+        self._pin = None
+    
+    def recvlmp(self, unit):
+         super(PinCrackCollectHandler, self).recvlmp(unit)
+         # Optimize for more speed
+         lmp = unit.payload
+         if lmp.header.op1 in crack.LMP_PINCRACK_OPCODES \
+            and self._pcr.try_crack(lmp):
+             self._pin = self._pcr.getpin()
+        
+
+class TextHandler(btsniff.SniffHandler):
     '''
-        This handler duplicates the functionality of Frontline.    
+        This handler duplicates the functionality of Frontline. 
+        Allows the calculation of a pin   
     '''
-    def __init__(self, session, writer = None):
-        super(sniff.SniffHandler, self).__init__()
-        if not writer:
-            writer = sfio.HCIWriter()
-        self._writer = writer
-        if session:
-            self._session = session
-            self._write_file = session.dump
+    def __init__(self, do_pin = False, 
+                 master_add = None, slave_add = None, writer = None):
+        
+        super(TextHandler, self).__init__()
+        self._state = btsniff.CaptureState()
+        if do_pin:
+            print 'do_pin'
+            self._state.pinstate = 1
+            self._pcr = crack.PinCrackRunner(master_add, slave_add)
+            if master_add is None or slave_add is None:
+                raise Exception('Error: cannot do_pin without master/slave addresses')
         else:
-            raise sniff.SniffError("FrontlineHandler: Session not given. session is %s" 
-                                   % session)
+            self._pcr = None
+#        if not writer:
+#            writer = sfio.HCIWriter()
+        self._writer = writer
+#        if session:
+#            self._session = session
+#            self._write_file = session.dump
+#        else:
+#            raise sniff.SniffError("FrontlineHandler: Session not given. session is %s" 
+#                                   % session)
          
 
     def _writetofile(self, type, packet):
@@ -91,61 +102,63 @@ class FrontlineHandler(sniff.SniffHandler):
             packet    -    sniff.SniffPacket
         """
         master = not (packet.clock & FP_SLAVE_MASK)
-        header_len = packet.hlen
+        header_len = packet.header_len
         channel = packet.chan
-        clock = packet.clock & FP_CLOCK_MASK
-        status = packet.clock >> FP_STATUS_SHIFT
-        hdr0 = packet.hdr0
-        type = (hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK
-        address = hdr0 & FP_ADDR_MASK
-        llid = (packet.len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK
-        length = packet.len >> FP_LEN_SHIFT
+        clock = packet.clock
+        status = packet.status
+        hdr0 = packet.header_byte0
+        type = packet.type
+        address = packet.address
+        llid = packet.llid
+        length = packet.payload_len
         
         print 'PL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X [type: %d addr: %d] LLID %d Len %d' \
                         % (header_len, 
                             channel,
                             'M' if master else 'S',
                             clock, 
-                            status,
+                            status, 
                             hdr0,
                             type,
                             address,
                             llid,
                             length),
-                            
-    def _printgenpkt(self, genpkt):
-        pstr = ''
-        payloadstr = (len(genpkt.data) * '%.2X ' % tuple(genpkt.data)) if len(genpkt.data) else None
-        print ' '.join([pstr, payloadstr if payloadstr else ''])
 
+    def _printpayload(self, payload):
+        print ' '.join(['%.2x' % d for d in payload.rawdata])
     
     def recvlmp(self, packet):
         self._printpktdetails(packet)
-        paypkt = None
-        if packet.payload:
-            paypkt = sniffer.LMPPacket(packet.payload)
-            print str(paypkt)
+        lmp = packet.payload
+        if lmp:
+            print 'LMP Tid %d, Op1 %d' % (lmp.header.tid, lmp.header.op1),
+            if lmp.header.op1 >= 124 and lmp.header.op1 <= 127:
+                print ', Op2 %d' % (lmp.header.op2),
+            print ' '.join(['%.2x' % d for d in lmp.payload.rawdata])
+            
+            if self._pcr and self._pcr.try_crack(lmp):
+                print 19 * '='
+                print 'Pin: ', self._pcr.getpin()
+                print 19 * '='
+            
         else:
             print
-            
-        if self._session.state.pinstate:
-            print 'do pin'
-            pcd = crack._gen_pincrackdata(self._session.state, paypkt.op1, paypkt.data,
-                                 self._session.master, self._session.slave)
+        
+#            pcd = crack._gen_pincrackdata(self._state, lmp.header.op1, lmp.payload.rawdata,
+#                                 self._session.master, self._session.slave)
 #            print '============== pindata state ============'
 #            print self._session.state.pindata
 #            print '========================================='
-            if pcd:
-                if pcd.ready_to_crack():
-                    print 'Pin: ', self.getpin(pcd)
-                else:
-                    raise StandardError('recvlmp: dopin: pairing process complete but no pin crack.')
-        self._writetofile(sniff.HCI_EVENT_PKT, packet)
+#            if pcd:
+#                if pcd.ready_to_crack():
+#                    print 'Pin: ', self.getpin(pcd)
+#                else:
+#                    raise StandardError('recvlmp: dopin: pairing process complete but no pin crack.')
     
     def getpin(self, pincrackdata):
         import tempfile
         tmpfile = tempfile.TemporaryFile()
-        pcr = crack.PinCrackRunner() # This is a thread. runcrack is actually thread.start()
+        pcr = crack._pincrackrunner() # This is a thread. runcrack is actually thread.start()
         evt = pcr.runcrack(pincrackdata, self._session.master, 
                            self._session.slave, tmpfile)
         evt.wait()
@@ -155,8 +168,8 @@ class FrontlineHandler(sniff.SniffHandler):
     def recvl2cap(self, packet):
         self._printpktdetails(packet)
         print "L2CAP:",
-        self._printgenpkt(packet.payload)
-        self._writetofile(sniff.HCI_ACLDATA_PKT, packet)
+#        self._printgenpkt(packet.payload)
+        self._printpayload(packet.payload)
     
     def recvdv(self, packet):
         self._printpktdetails(packet)
@@ -168,30 +181,5 @@ class FrontlineHandler(sniff.SniffHandler):
         self._printpktdetails(packet)
 
 
-
-class SimpleHandler(sniff.SniffHandler):
-    '''
-        This handler duplicates the functionality of Frontline.    
-    '''
-    def __init__(self, session):
-        super(sniff.SniffHandler, self).__init__()
-        self._session = session
-
-    
-    def recvlmp(self, packet):
-        print 'SimpleHandler::recvlmp::',
-        if self._session.state.pinstate:
-            print 'Will do pin' 
-        
-    
-    def recvl2cap(self, packet):
-        print 'SimpleHandler::recvl2cap::'
-    
-    def recvdv(self, packet):
-        print "SimpleHandler::recvdv"
-        
-    
-    def recvgenevt(self, packet):
-        print "SimpleHandler::recvgenevt"
 
 
