@@ -1,26 +1,42 @@
 
-#include "basesniffmodule.h"
-#include "bthandler.h"
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/hci_lib.h>
+
 #include <stdio.h>
 #include <err.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
 
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/hci_lib.h>
+
+
+#include "basesniffmodule.h"
+#include "btconstants.h"
+#include "layers.h"
+#include "bthandler.h"
 #include "structmember.h"
 
-static PyTypeObject PySniffPacketType;
-static void setup_PySniffPacket(PySniffPacket *self, struct frontline_packet *fp);
+#ifdef DEBUG
+
+#include "harness.h"
+
+#endif
+
 
 //General sniffing exception
 PyObject *SniffError;
 
+static PyObject *EMPTY_TUPLE;
+static PyObject *EMPTY_DICT;
+static PyTypeObject PyHCIDeviceType;
+
+
 static PyObject *
-send_debug(PyState *s, struct dbg_packet *dp, void *rp,
+send_debug(int socket_fd, struct dbg_packet *dp, void *rp,
 		       int rplen)
 {
 	unsigned char cp[254];
@@ -28,11 +44,13 @@ send_debug(PyState *s, struct dbg_packet *dp, void *rp,
 	unsigned char *p = cp;
 	int errnum;
 
+
+	Py_BEGIN_ALLOW_THREADS
 	memset(&rq, 0, sizeof(rq));
 	memset(cp, 0, sizeof(cp));
 
 	/* payload descriptor */
-        *p++ = FRAG_FIRST | FRAG_LAST | CHAN_DEBUG;
+    *p++ = FRAG_FIRST | FRAG_LAST | CHAN_DEBUG;
 	memcpy(p, dp, sizeof(*dp));
 	p += sizeof(*dp);
 
@@ -44,8 +62,8 @@ send_debug(PyState *s, struct dbg_packet *dp, void *rp,
         rq.rparam = rp;
         rq.rlen   = rplen;
 
-    Py_BEGIN_ALLOW_THREADS
-	errnum = hci_send_req(s->s_fd, &rq, 2000);
+
+	errnum = hci_send_req(socket_fd, &rq, 2000);
     Py_END_ALLOW_THREADS
 
     if (errnum < 0){
@@ -57,40 +75,176 @@ send_debug(PyState *s, struct dbg_packet *dp, void *rp,
 }
 
 static PyObject *
-send_debug_no_rp(PyState *s, struct dbg_packet *dp)
+send_debug_no_rp(int socket_fd, struct dbg_packet *dp)
 {
 	unsigned char rp[254];
-	return send_debug(s, dp, rp, sizeof(rp));
+	return send_debug(socket_fd, dp, rp, sizeof(rp));
+}
+
+/**
+ * getctl, get_dev_list
+ * Functions for getting of list of HCI devices connected. With code adapted from
+ * the BlueZ hciconfig tool
+ */
+
+static int getctl(void)  {
+
+	int ctl = -1;
+	if ((ctl = socket(AF_BLUETOOTH, SOCK_RAW, BTPROTO_HCI)) < 0){
+
+		perror("Can't open HCI socket");
+		return -1;
+	}
+	return ctl;
+}
+
+
+static struct hci_dev_info *di;
+static int di_num;
+
+static void get_dev_list(int ctl)  {
+
+	struct hci_dev_list_req *dl;
+	struct hci_dev_info *ptmp;
+	struct hci_dev_req *dr;
+	int num = 0, i = 0;
+
+
+	di = (struct hci_dev_info *) malloc(HCI_MAX_DEV * sizeof(struct hci_dev_info));
+	memset(di, 0, HCI_MAX_DEV);
+	ptmp = di;
+
+	if (!(dl = malloc(HCI_MAX_DEV * sizeof(struct hci_dev_req) + sizeof(uint16_t)))) {
+		perror("Can't allocate memory");
+		return;
+	}
+
+	dl->dev_num = HCI_MAX_DEV;
+	dr = dl->dev_req;
+
+	if(ioctl(ctl, HCIGETDEVLIST, (void *) dl) < 0) {
+		perror("Can't get device list");
+		return;
+	}
+
+	for (i = 0; i < dl->dev_num; i++)  {
+		ptmp->dev_id = (dr+i)->dev_id;
+		if(ioctl(ctl, HCIGETDEVINFO, (void *) ptmp) < 0)
+			continue;
+		num++;
+		if(hci_test_bit(HCI_RAW, &ptmp->flags) &&
+				!bacmp(&ptmp->bdaddr, BDADDR_ANY)) {
+			int dd = hci_open_dev(ptmp->dev_id);
+			hci_read_bd_addr(dd, &ptmp->bdaddr, 1000);
+			hci_close_dev(dd);
+		}
+		ptmp++;
+	}
+
+	di_num = num;
 }
 
 static PyObject *
-populateGenPkt(PySniffPacket *pkt, void *buf, int len)
+basesniff_getdevlist(PyObject *dummy)
 {
-	PyGenericPacket *gp;
-	int tmplen = len;
-	uint8_t *data = (uint8_t *) buf;
-	//Create L2CAP packet -- generic packet
-	gp = (PyGenericPacket *)PyGenericPacketType.tp_new(&PyGenericPacketType, NULL, NULL);
-	if(PyGenericPacketType.tp_init((PyObject *) gp, NULL, NULL) < 0)
+	PyObject *retlist = PyList_New(0);
+	PyHCIDevice *tmpdev = NULL;
+	struct hci_dev_info *tmpDi;
+
+	int ctl = -1, i = 0, namelen = 0;
+	if((ctl = getctl()) < 0)
 	{
-		PyErr_SetString(SniffError, "process_l2cap: error creating l2cap packet.");
+		err(1, "Error getting ctl");
 		return NULL;
 	}
 
-	while(tmplen--) {
-		if(PyList_Append((PyObject *)gp->data, PyInt_FromLong((long) *data++)) < 0)
+
+	get_dev_list(ctl);
+	printf("Number of devices detected = %d\n", di_num);
+
+	tmpDi = di;
+	for (; i < di_num; i++)
+	{
+
+		tmpdev = (PyHCIDevice *) PyHCIDeviceType.tp_new(&PyHCIDeviceType, EMPTY_TUPLE, EMPTY_DICT);
+		if ( PyHCIDeviceType.tp_init((PyObject *)tmpdev, EMPTY_TUPLE, EMPTY_DICT) < 0) {
+			err(1, "Error initializing HCIDevice");
+			return NULL;
+		}
+
+		//Allocate memory for ba2str string
+		//tmpdev->dev.name = tmpDi->name;
+		namelen = strlen(tmpDi->name);
+		tmpdev->dev.name = (char *) calloc(namelen, sizeof(char));
+		memcpy(tmpdev->dev.name, tmpDi->name, namelen );
+
+		tmpdev->dev.bt_add = (char *) malloc(19 * sizeof(char));
+		ba2str(&tmpDi->bdaddr, tmpdev->dev.bt_add);
+		tmpdev->devid = tmpDi->dev_id;
+
+		//Append to list
+		PyList_Append(retlist, (PyObject *) tmpdev);
+		tmpDi++;
+	}
+
+	//Free di to prevent memory leak
+	free(di);
+	return retlist;
+}
+
+/**
+ *
+ *	Utility functions for creation of SniffUnits
+ *
+ */
+static PyObject *
+set_unit_payload(PyLayerUnit *raw, void *buf, int len)
+{
+	PyRawObject *payload;
+	int tmplen = len;
+	uint8_t *data = (uint8_t *) buf;
+
+	payload = (PyRawObject *) PyRawObjectType.tp_new(&PyRawObjectType, NULL, NULL);
+	if(PyRawObjectType.tp_init((PyObject *) payload, NULL, NULL) < 0)
+	{
+		PyErr_SetString(SniffError, "set_unit_payload: error creating payload.");
+		return NULL;
+	}
+
+	while(tmplen--){
+		if(PyList_Append((PyObject *)payload->rawdata, PyInt_FromLong((long) *data++)) < 0)
 		{
-			PyErr_SetString(SniffError, "populateGenPkt: error append");
+			PyErr_SetString(SniffError, "set_unit_payload: error append");
 			return NULL;
 		}
 	}
 
-	pkt->_payloadpkt = (PyObject *) gp;
+	raw->payload = payload;
 	RETURN_VOID
 }
 
+static void
+set_sniffhdr_fields(PySniffHdr *hdr, struct frontline_packet *fp)
+{
+	memcpy(&hdr->hlen, fp, sizeof(struct frontline_packet));
+
+}
+
+static int
+get_sniffraw_type(PySniffUnit *sniffraw)
+{
+	PySniffHdr *hdr = (PySniffHdr *)sniffraw->raw.hdr;
+	return (hdr->hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK;
+}
+
+static int
+get_sniffraw_llid(PySniffUnit *sniffraw)
+{
+	return (((PySniffHdr *) sniffraw->raw.hdr)->dlen >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
+}
+
 /*
- * Returns the file descriptor (int) of the stated hci device
+ * Returns the file descriptor (int) of the specified hci device
  */
 static int get_dev_fd(char *devname)
 {
@@ -117,8 +271,62 @@ static void close_dev(int fd)
 
 
 /*
- * Module functions that are imported.
- * */
+ * ****************************
+ * Exposed module functions.  *
+ *                            *
+ * ****************************/
+
+
+static PyObject *
+basesniff_close_hcidev(PyObject *dummy, PyObject *args)
+{
+	PyHCIDevice *dev;
+
+	if (! PyArg_ParseTuple(args, "O", (PyObject *)&dev)
+			|| ! PyObject_HasAttrString((PyObject *)dev, "hcidevid")) {
+		return NULL;
+	}
+	close_dev((int)dev->devid);
+	RETURN_VOID
+}
+
+/*
+ * @return HCIDevice instance
+ */
+static PyObject *
+basesniff_open_hcidev(PyObject *dummy, PyObject *args)
+{
+	char *devname = NULL;
+	int devid, namelen;
+	PyHCIDevice *dev;
+
+	if (!PyArg_ParseTuple(args, "s", &devname))
+		return NULL;
+
+	devid = get_dev_fd(devname);
+
+	dev = (PyHCIDevice *)PyHCIDeviceType.tp_new(&PyHCIDeviceType, args, EMPTY_DICT);
+	if (PyHCIDeviceType.tp_init((PyObject *)dev, args, EMPTY_DICT) < 0)
+		return NULL;
+
+	Py_BEGIN_ALLOW_THREADS
+
+	dev->devid = (uint16_t) devid;
+	namelen = strlen(devname);
+	dev->dev.name = (char *) calloc(namelen, sizeof(char));
+	memcpy(dev->dev.name, devname, namelen);
+
+	Py_END_ALLOW_THREADS
+
+	return (PyObject *)dev;
+}
+
+
+/**
+ * @param state PyState object
+ * @param devname Device name.
+ * @return Timer vaue as Python integer.
+ */
 static PyObject *
 basesniff_get_timer(PyObject *dummy, PyObject *args)
 {
@@ -138,7 +346,7 @@ basesniff_get_timer(PyObject *dummy, PyObject *args)
 	//get the device fd
 	state->s_fd = get_dev_fd(devname);
 
-	send_debug(state, &pkt, rp, sizeof(rp));
+	send_debug(state->s_fd, &pkt, rp, sizeof(rp));
 	close_dev(state->s_fd);
 	//return a Python integer object
 	return Py_BuildValue("i", *((unsigned int *)&rp[2]));
@@ -149,48 +357,56 @@ static PyObject *
 basesniff_set_filter(PyObject *dummy, PyObject *args)
 {
 	struct dbg_packet pkt;
-	PyState *state;
 	char *devname;
 	unsigned int val;
+	int sniff_fd;
 
 	memset(&pkt, 0, sizeof(pkt));
 
 	pkt.dp_type = CMD_FILTER;
-	if(!PyArg_ParseTuple(args, "OsI", &state, &devname, &val))
+	if(!PyArg_ParseTuple(args, "sI", &devname, &val))
 		return NULL;
 
-	state->s_fd = get_dev_fd(devname);
+	sniff_fd = get_dev_fd(devname);
 
 	pkt.dp_data[0] = (unsigned char) val;
-	send_debug_no_rp(state, &pkt);
-	close_dev(state->s_fd);
+	send_debug_no_rp(sniff_fd, &pkt);
+	close_dev(sniff_fd);
 
 	RETURN_VOID
 }
 
-
+/*
+ * @param devname The name of the sniffing device (e.g. hci0)
+ */
 static PyObject *
 basesniff_sniff_stop(PyObject *dummy, PyObject *args)
 {
 	struct dbg_packet pkt;
-	PyState *state = NULL;
 	char *devname;
+	int sniff_fd;
 	memset(&pkt, 0, sizeof(pkt));
 
 	pkt.dp_type = CMD_STOP;
-	if(! PyArg_ParseTuple(args, "Os", &state, &devname ))
+	if(! PyArg_ParseTuple(args, "s", &devname ))
 		return NULL;
 
-	state->s_fd = get_dev_fd(devname);
-
-	send_debug_no_rp(state, &pkt);
-	close_dev(state->s_fd);
+	sniff_fd = get_dev_fd(devname);
+	send_debug_no_rp(sniff_fd, &pkt);
+	close_dev(sniff_fd);
 
 	RETURN_VOID
 }
 
-//	args should consist of a PyState object, a string containing the device name
-//	and 2 lists, each with 6 integers.
+
+/**
+ * @param state 		PyState object
+ * @param devname 		Name of the device (e.g. hci0)
+ * @param master_list	List of 6 integers representing the Bluetooth address
+ * 						of the master device.
+ * @param slave_list	List of 6 integers representing the Bluetooth address
+ * 						of the slave device.
+ */
 static PyObject *
 basesniff_sniff_start(PyObject *dummy, PyObject *args)
 {
@@ -198,20 +414,23 @@ basesniff_sniff_start(PyObject *dummy, PyObject *args)
 	PyState *state;
 	PyObject *master_list, *slave_list, *item;
 	char *devname;
-	int i;
+	int i, sniff_fd;
 	unsigned char peek;
+	struct start_packet *sp;
 
-	struct start_packet *sp = (struct start_packet *) &pkt.dp_data;
-
+	Py_BEGIN_ALLOW_THREADS
+	sp = (struct start_packet *) &pkt.dp_data;
 	memset(&pkt, 0, sizeof(pkt));
 	pkt.dp_type = CMD_START;
+	Py_END_ALLOW_THREADS
 
 	if(!PyArg_ParseTuple(args, "OsOO", &state, &devname,
 			&master_list, &slave_list ))
 		return NULL;
 
-	state->s_fd = get_dev_fd(devname);
+	sniff_fd = get_dev_fd(devname);
 
+	Py_BEGIN_ALLOW_THREADS
 	if(PyList_Check(master_list) && PyList_Check(slave_list)) {
 
 		assert(PyList_Size(master_list) == 6 && PyList_Size(slave_list) == 6);
@@ -242,174 +461,126 @@ basesniff_sniff_start(PyObject *dummy, PyObject *args)
 	}
 	else
 		return NULL;
+	Py_END_ALLOW_THREADS
 
-	send_debug_no_rp(state, &pkt);
-	close_dev(state->s_fd);
+	send_debug_no_rp(sniff_fd, &pkt);
+	close_dev(sniff_fd);
 
 	RETURN_VOID
 }
 
 /* End Module Functions */
 
-//Mark for removal soon
-/*
-static void hexdump(void *buf, int len)
-{
-	unsigned char *p = buf;
-
-	while (len--)
-		printf("%.2X ", *p++);
-	printf("\n");
-}
-*/
-
 static PyObject *
 process_l2cap(PyState *s, void *buf, int len,
-		PySniffPacket *pkt, PyObject *handler )
+		PySniffUnit *pkt, PyObject *handler )
 {
-//	struct hcidump_hdr dh;
-//	uint8_t type = HCI_ACLDATA_PKT;
-//	hci_acl_hdr acl;
-	PyGenericPacket *gp;
-//	int totlen = sizeof(type) + sizeof(acl) + len;
+	uint16_t *hdr = buf, hlen = 0, chanid = 0;
+	int tmplen = len, field_len = sizeof(uint16_t);
+	PyL2CAPHdr *l2caphdr;
+	PyL2CAP *l2cap;
 
-//	printf("L2CAP: ");
-//	hexdump(buf, len);
-	if (s->s_dump == -1)
-		RETURN_VOID
+#ifdef DEBUG
+	printf("L2CAP: ");
+	hexdump(buf, len);
+	dump_l2cap(s->s_dump, buf, len);
+#endif
 
-	populateGenPkt(pkt, buf, len);
-	if(PyErr_Occurred())
+	//set_unit_payload(&pkt->raw, buf, len);
+	hlen = *hdr;
+	tmplen -= field_len;
+	hdr += field_len;
+	chanid = *hdr;
+	tmplen -= field_len;
+	hdr += field_len;
+
+	assert(tmplen >= 0);
+
+	l2caphdr = (PyL2CAPHdr *) PyL2CAPHdrType.tp_new(&PyL2CAPHdrType, NULL, NULL);
+	if (PyL2CAPHdrType.tp_init((PyObject *) l2caphdr, EMPTY_TUPLE, EMPTY_DICT) < 0)
+		err(1, "Error creating L2CAPHdr");
+
+	l2cap = (PyL2CAP *) PyLayerUnitType.tp_new(&PyLayerUnitType, NULL, NULL);
+	if(PyLayerUnitType.tp_init((PyObject *)l2cap, EMPTY_TUPLE, EMPTY_DICT) < 0)
 		return NULL;
 
-	pkt->_payloadpkt = (PyObject *)gp;
+	l2caphdr->chan_id = chanid;
+	l2caphdr->length = hlen;
+	l2cap->hdr = (PyLayerHeader *) l2caphdr;
+	set_unit_payload(l2cap, hdr, tmplen);
+
+	pkt->raw.payload = (PyRawObject *) l2cap;
+
+	if(PyErr_Occurred())
+		return NULL;
 
 	if (! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvl2cap"), pkt, NULL ))
 	{
 		PyErr_SetString(SniffError, "process_l2cap: recvl2cap failed");
 		return NULL;
 	}
-/*
-	memset(&dh, 0, sizeof(dh));
-	dh.len		= totlen;
-	dh.in		= 1;
-	dh.ts_sec	= 0;
-	dh.ts_usec	= 0;
-
-	Py_BEGIN_ALLOW_THREADS
-	if (write(s->s_dump, &dh, sizeof(dh)) != sizeof(dh))
-		err(1, "write()");
-	if (write(s->s_dump, &type, sizeof(type)) != sizeof(type))
-		err(1, "write()");
-	memset(&acl, 0, sizeof(acl));
-	acl.dlen	= len;
-	acl.handle	= acl_handle_pack(0, s->s_llid);
-	if (write(s->s_dump, &acl, sizeof(acl)) != sizeof(acl))
-		err(1, "write()");
-
-	if (write(s->s_dump, buf, len) != len)
-		err(1, "write()");
-	Py_END_ALLOW_THREADS
-*/
 	RETURN_VOID
 }
 
-
-/**
- * Mark for removal
- */
-/*
-static void dump_lmp(PyState *s, void *buf, int len)
-{
-	struct hcidump_hdr dh;
-	uint8_t type = HCI_EVENT_PKT;
-	hci_event_hdr evt;
-	unsigned char csr_lmp[1+1+17+1];
-	int totlen = sizeof(type) + sizeof(evt) + sizeof(csr_lmp);
-	unsigned char *p = csr_lmp;
-
-	assert(len <= 17);
-
-	/* hcidump header
-	memset(&dh, 0, sizeof(dh));
-	dh.len		= totlen;
-	dh.in		= 1;
-	dh.ts_sec	= 0;
-	dh.ts_usec	= 0;
-
-	Py_BEGIN_ALLOW_THREADS
-	if (write(s->s_dump, &dh, sizeof(dh)) != sizeof(dh))
-		err(1, "write()");
-
-	if (write(s->s_dump, &type, sizeof(type)) != sizeof(type))
-		err(1, "write()");
-	Py_END_ALLOW_THREADS
-
-	/* event header
-	memset(&evt, 0, sizeof(evt));
-	evt.evt		= EVT_VENDOR;
-	evt.plen	= sizeof(csr_lmp);
-	Py_BEGIN_ALLOW_THREADS
-	if (write(s->s_dump, &evt, sizeof(evt)) != sizeof(evt))
-		err(1, "write()");
-	Py_END_ALLOW_THREADS
-	/* CSRized LMP packet
-	memset(csr_lmp, 0, sizeof(csr_lmp));
-	*p++ = 20; /* channel ID
-	*p++ = s->s_master ? 0x10 : 0x0f;
-	memcpy(p, buf, len);
-	p += 17;
-	*p = 0; /* connection handle
-	assert(((unsigned long) p - (unsigned long) csr_lmp)< sizeof(csr_lmp));
-	Py_BEGIN_ALLOW_THREADS
-	if (write(s->s_dump, csr_lmp, sizeof(csr_lmp)) != sizeof(csr_lmp))
-		err(1, "write()");
-	Py_END_ALLOW_THREADS
-}
-*/
-
-
-
 static PyObject *
 process_lmp(PyState *s, void *buf, int len,
-		PySniffPacket *sniffpkt, PyObject *handler)
+		PySniffUnit *sniffpkt, PyObject *handler)
 {
-	PyLMPPacket *lmppkt;
-	uint8_t *data = buf;
+
+	PyLMP *lmp;
+	PyLMPHdr *hdr;
+	uint8_t *data = buf, op1, tid;
 	int tmplen;
 
 	//Build LMPPacket
 	assert(sniffpkt != NULL);
-	lmppkt = (PyLMPPacket *) PyLMPPacketType.tp_new(&PyLMPPacketType, NULL, NULL);
-	if(PyLMPPacketType.tp_init((PyObject *) lmppkt, NULL, NULL) < 0)
-		err(1, "Error creating PyLMPPacket.");
-	assert(len <= 17); //LMP PDU should be less than or equal to 17 bytes long
-	assert(lmppkt != NULL);
-	sniffpkt->_payloadpkt = (PyObject *) lmppkt;
 
-	//Populate LMPPacket
+	//////////////// Step 1. Build the LMPHeader /////////////////////
+	hdr = (PyLMPHdr *) PyLMPHdrType.tp_new(&PyLMPHdrType, NULL, NULL);
+	if(PyLMPHdrType.tp_init((PyObject *) hdr, EMPTY_TUPLE, EMPTY_DICT) < 0) //Possible errors here
+		err(1, "Error creating LMPHdr"); //TODO: Formal error indication?
+
+	/////////// LMP PDU should be less than or equal to 17 bytes long
+	assert(len <= 17);
+
+	lmp = (PyLMP *) PyLayerUnitType.tp_new(&PyLayerUnitType, NULL, NULL);
+	if(PyLayerUnitType.tp_init((PyObject *)lmp, EMPTY_TUPLE, EMPTY_DICT) < 0)
+		return NULL;
+
+	lmp->hdr = (PyLayerHeader *) hdr;
+
 	tmplen = len;
-	lmppkt->op1 = *data++;
+	op1 = *data++;
 	tmplen--;
-	lmppkt->tid = lmppkt->op1 & LMP_TID_MASK;
-	lmppkt->op1 >>= LMP_OP1_SHIFT;
-	if(lmppkt->op1 >= 124 && lmppkt->op1 <= 127)
+	tid = op1 & LMP_TID_MASK;
+	((PyLMPHdr *) lmp->hdr)->tid = tid;
+	op1 =  op1 >> LMP_OP1_SHIFT;
+	if(op1 >= 124 && op1 <= 127)
 	{
-		lmppkt->op2 = *data++;
+		((PyLMPHdr *)lmp->hdr)->op2 = *data++;
 		tmplen--;
 		assert(tmplen >= 0);
 	}
+	((PyLMPHdr *) lmp->hdr)->op1 = op1;
 
-	while(tmplen--)
+	////////////////////// Step 2. Populate LMP payload ///////////////////////
+	if(set_unit_payload(lmp, data, tmplen) == NULL)
+		return NULL;
+
+	//////////////////// Step 3. Set LMP as SniffUnit payload ////////////////
+	sniffpkt->raw.payload= (PyRawObject *)lmp;
+
+#ifdef DEBUG
+
+	//Place the debug code before the handler code
+	//because the bugs may occur in the handler
+
+	hexdump(buf, len);
+	if (s->s_dump != -1)
 	{
-		if (PyList_Append(lmppkt->payload_list, PyInt_FromLong((long) *data++)) < 0)
-		{
-			PyErr_SetString(SniffError, "process_lmp: Error reading payload");
-			return NULL;
-		}
+		dump_lmp(s->s_dump, s->s_master, buf, len);
 	}
-
-	/* run do_pin if s->s_pin */
+#endif
 
 	// Python code for callback.
 	assert(handler != NULL);
@@ -419,22 +590,17 @@ process_lmp(PyState *s, void *buf, int len,
 		return PyErr_SetFromErrno(SniffError);
 	}
 
-	/* Do in callback handler as well*/
-/*	if (s->s_dump != -1)
-	{
-		dump_lmp(s, buf, len);
-	}
-*/
-
 	RETURN_VOID
 }
 
 
 static PyObject *
-process_dv(PyState *s, void *buf, int len, PySniffPacket *sniffpkt,
+process_dv(PyState *s, void *buf, int len, PySniffUnit *sniffpkt,
 		PyObject *handler)
 {
-	populateGenPkt(sniffpkt, buf, len);
+	if(!set_unit_payload(&sniffpkt->raw, buf, len))
+		return NULL;
+
 	if(!PyObject_CallMethodObjArgs(handler, PyString_FromString("recvdv"), sniffpkt, NULL))
 	{
 		fprintf(stderr, "process_dv: error with callback\n");
@@ -445,16 +611,16 @@ process_dv(PyState *s, void *buf, int len, PySniffPacket *sniffpkt,
 
 static PyObject *
 process_payload(PyState *s, void *buf, int len,
-		PySniffPacket *sniffpkt, PyObject *handler)
+		PySniffUnit *sniffpkt, PyObject *handler)
 {
 	PyObject *procresult;
-	switch (sniffpkt->type) {
+	switch (get_sniffraw_type(sniffpkt)) {
 		case TYPE_DV:
 			procresult = process_dv(s, buf, len, sniffpkt, handler);
 			return procresult;
 	}
 
-	if (sniffpkt->llid == LLID_LMP)
+	if (get_sniffraw_llid(sniffpkt) == LLID_LMP)
 		procresult = process_lmp(s, buf, len, sniffpkt, handler);
 	else
 		procresult = process_l2cap(s, buf, len, sniffpkt, handler);
@@ -465,15 +631,17 @@ process_payload(PyState *s, void *buf, int len,
 static PyObject *
 process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 {
-	PySniffPacket *sniffpkt;
+	PySniffUnit *sniffunit;
+	PySniffHdr *hdr;
 	struct frontline_packet *fp = buf;
-	int type = (fp->fp_hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK;
 	int plen = fp->fp_len >> FP_LEN_SHIFT;
 	uint8_t *start = (uint8_t*) fp;
-	int status = fp->fp_hdr0 & FP_ADDR_MASK;
-	int i;
-	int hlen = fp->fp_hlen;
+	int hlen = fp->fp_hlen, i;
+	int type = (fp->fp_hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK;
 
+#ifdef DEBUG
+	int status = fp->fp_hdr0 & FP_ADDR_MASK;
+#endif
 
 	switch (hlen) {
 	case HLEN_BC2:
@@ -485,8 +653,17 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 		RETURN_VOID
 		break;
 	}
-	start += hlen;
 
+	start += hlen;
+	hdr = (PySniffHdr *) PySniffHdrType.tp_new(&PySniffHdrType, NULL, NULL);
+	if(PySniffHdrType.tp_init((PyObject *)hdr, EMPTY_TUPLE, EMPTY_DICT) < 0)
+		return NULL;
+
+	set_sniffhdr_fields(hdr, fp);
+
+#ifdef DEBUG
+	print_sniff_hdr(hdr, fp);
+#endif
 
 	if(PyList_Check(s->s_ignore_list))
 	{
@@ -506,38 +683,41 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 		return Py_None;
 	}
 
-	//Create a new PySniffPacket and assign the relevant
-	sniffpkt = (PySniffPacket *) PySniffPacketType.tp_new(&PySniffPacketType, NULL, NULL);
-	sniffpkt->_csrpkt = fp;
-	setup_PySniffPacket(sniffpkt, fp);
+	sniffunit = (PySniffUnit *) PySniffRawType.tp_new(&PySniffRawType, NULL, NULL);
+	if(PySniffRawType.tp_init((PyObject *)sniffunit, EMPTY_TUPLE, EMPTY_DICT) < 0)
+			return NULL;
 
-	/*
+	sniffunit->raw.hdr = (PyLayerHeader *) hdr;
+
+#ifdef DEBUG
+
+	//For comparison of printouts with the Python implementation
 	s->s_llid	= (fp->fp_len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
 	s->s_master	= !(fp->fp_clock & FP_SLAVE_MASK); //this must be kept
 	s->s_type	= type;
-	*/
 
-/* // this can be handled in the handler
+
 	printf("HL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X"
 	       " [type: %d addr: %d] LLID %d Len %d\n",
 	       fp->fp_hlen, fp->fp_chan, s->s_master ? 'M' : 'S',
 	       fp->fp_clock & FP_CLOCK_MASK,
 	       fp->fp_clock >> FP_STATUS_SHIFT, fp->fp_hdr0,
 	       type, status, s->s_llid, plen);
-*/
+#endif
+
 	len -= hlen;
 	assert(len >= 0);
 	assert(len >= plen);
 
 	if (plen) {
 		printf(" ");
-		if (!process_payload(s, start, plen, sniffpkt, handler))
+		if (!process_payload(s, start, plen, sniffunit, handler))
 			return NULL;
 	} else {
 
 		//Do a callback
 		assert(handler != NULL);
-		if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvgenevt"), sniffpkt, NULL)){
+		if(! PyObject_CallMethodObjArgs(handler, PyString_FromString("recvgenevt"), sniffunit, NULL)){
 			fprintf(stderr, "process_frontline: error with callback\n");
 			return PyErr_SetFromErrno(SniffError);
 		}
@@ -564,7 +744,6 @@ process(PyState *state, void *buf, int len, PyObject *handler)
 		Py_INCREF(Py_None);
 		return Py_None;
 	}
-
 	acl = (hci_acl_hdr*) (type+1);
 	assert(acl->dlen == (len - sizeof(*acl) - 1));
 	return process_frontline(state, acl+1, acl->dlen, handler);
@@ -576,37 +755,39 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 {
 	PyState *state = NULL;
 	PyObject *handler = NULL;
-	char *hcidev, *dump, proceed;
+	PyObject *resume = Py_True;
+	char *hcidev, *dump;
 	struct hci_filter flt;
-	int errnum;
+	int errnum, len, fd;
 
 	char *kwlist[]= {
 			"state",
 			"device",
-			"dump",
 			"handler",
 			NULL
 	};
 
-	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OssO", kwlist,
-			&state, &hcidev, &dump, &handler))
+
+	if (!PyArg_ParseTupleAndKeywords(args, kwds, "OsO", kwlist,
+			&state, &hcidev, &handler))
 		return NULL;
 
-	state->s_dump = open(dump, O_APPEND | O_WRONLY | O_CREAT, 0644);
-	if(state->s_dump == -1)
-	{
-		PyErr_SetString(SniffError, "sniff: error opening file");
-		return NULL;
-	}
+//	state->s_dump = open(dump, O_APPEND | O_WRONLY | O_CREAT, 0644);
+//	if(state->s_dump == -1)
+//	{
+//		PyErr_SetString(SniffError, "sniff: error opening file");
+//		return NULL;
+//	}
 
-	state->s_fd = get_dev_fd(hcidev);
+	printf("hcidev to open: %s\n", hcidev);
+	fd = get_dev_fd(hcidev);
 
+	Py_BEGIN_ALLOW_THREADS
 	hci_filter_clear(&flt);
 	hci_filter_all_ptypes(&flt);
 	hci_filter_all_events(&flt);
 
-	Py_BEGIN_ALLOW_THREADS
-	errnum = setsockopt(state->s_fd, SOL_HCI, HCI_FILTER, &flt, sizeof(flt));
+	errnum = setsockopt(fd, SOL_HCI, HCI_FILTER, &flt, sizeof(flt));
 	Py_END_ALLOW_THREADS
 
 	if (errnum < 0){
@@ -614,41 +795,34 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
-	/**
-	 * Ensures atomicity of assignment
-	 */
-	Py_BEGIN_ALLOW_THREADS
-	proceed = state->s_continue;
-	Py_END_ALLOW_THREADS
-
-	//while(1){
-	if(state->s_continue) {
-		printf("continue =  %d\n", proceed);
-	}
-
-	while(proceed){
+	while(resume == Py_True){
 
 		Py_BEGIN_ALLOW_THREADS
-		state->s_len = read(state->s_fd, state->s_buf, sizeof(state->s_buf));
+		len = read(fd, state->s_buf, sizeof(state->s_buf));
 		Py_END_ALLOW_THREADS
-
-		if (state->s_len == -1)
+		if (len == -1)
 		{
 			PyErr_SetString(SniffError, "sniff: read() error");
 			return NULL;
 		}
-		if(process(state, state->s_buf, state->s_len, handler) == NULL)
+
+		//Hopefully there's enough time slices apportioned
+		//in process and its sub-calls to allow for changes
+		//in resume
+		if(process(state, state->s_buf, len, handler) == NULL)
 			return NULL;
+		resume = state->bool_resume;
 
-	}
-
-	printf("continue = 0\n");
-	close_dev(state->s_fd);
-	if(state->s_dump != -1){
+		//Mark for deletion
 		Py_BEGIN_ALLOW_THREADS
-		close(state->s_dump);
+
+		if(resume == Py_False)
+			printf("Yes! we detect a change");
+
 		Py_END_ALLOW_THREADS
 	}
+
+	close_dev(fd);
 
 	RETURN_VOID
 }
@@ -661,6 +835,7 @@ PyState_traverse(PyState *self, visitproc visit, void *arg)
 {
 	Py_VISIT(self->s_ignore_list);
 	Py_VISIT(self->s_pindata);
+	Py_VISIT(self->bool_resume);
 	return 0;
 }
 
@@ -676,16 +851,27 @@ PyState_clear(PyState *self)
 	self->s_pindata = NULL;
 	Py_XDECREF(tmp);
 
+	tmp = self->bool_resume;
+	self->bool_resume = NULL;
+	Py_XDECREF(tmp);
+
 	return 0;
 }
 
 static PyMemberDef PyState_members[] = {
-		{"pinstate", T_UBYTE, offsetof(PyState, s_pin), 0, "Indicates whether pin cracking should be done"},
-		{"cont_sniff", T_BYTE, offsetof(PyState, s_continue), 0, "Signals end of sniffing if false."},
-		{"ignore_types", T_OBJECT_EX, offsetof(PyState, s_ignore_list), 0, "List of types to ignore"},
-		{"pindata", T_OBJECT_EX, offsetof(PyState, s_pindata), 0, "Pin data (used for cracking)"},
-		{"pinmaster", T_INT, offsetof(PyState, s_pin_master), 0, "Is pin master. Used in pincracking"},
-		{"ignore_zero", T_INT, offsetof(PyState, s_ignore_zero), 0, "Ignore zero"},
+		{"pinstate", T_UBYTE, offsetof(PyState, s_pin), 0,
+				"Indicates whether pin cracking should be done"},
+		{"resume_sniff", T_OBJECT, offsetof(PyState, bool_resume), 0,
+				"Controls state of sniffing. \
+						True to resume, false otherwise"},
+		{"ignore_types", T_OBJECT_EX, offsetof(PyState, s_ignore_list), 0,
+				"List of types to ignore"},
+		{"pindata", T_OBJECT_EX, offsetof(PyState, s_pindata), 0,
+				"Pin data (used for cracking)"},
+		{"pinmaster", T_INT, offsetof(PyState, s_pin_master), 0,
+				"Is pin master. Used in pincracking"},
+		{"ignore_zero", T_INT, offsetof(PyState, s_ignore_zero), 0,
+				"Ignore zero"},
 		{NULL}
 };
 
@@ -708,6 +894,7 @@ PyState_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	PyObject *tmp;
 	unsigned char *p;
 	int i;
+
 
 	self = (PyState *) type->tp_alloc(type, 0);
 	p = (unsigned char *) &(self->s_fd);
@@ -740,6 +927,9 @@ PyState_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		PyList_SetItem(self->s_pindata, i, PyList_New(16));
 		Py_XDECREF(tmp);
 	}
+
+	self->bool_resume = Py_True;
+
 	self->s_pin = 0;
 
 	return (PyObject *) self;
@@ -755,7 +945,7 @@ PyState_init(PyState *self, PyObject  *args, PyObject *kwds)
 static PyTypeObject PyStateType =  {
 	   PyObject_HEAD_INIT(NULL)
 		0,                         /*ob_size*/
-		"sniff.State",             /*tp_name*/
+		"btsniff.CaptureState",             /*tp_name*/
 		sizeof(PyState),             /*tp_basicsize*/
 		0,                         /*tp_itemsize*/
 		(destructor)PyState_dealloc, /*tp_dealloc*/
@@ -795,109 +985,51 @@ static PyTypeObject PyStateType =  {
 };
 
 
-
-/*
- * Definiton for PySniffPacket. Garbage collection is important for this object,
- *
- */
-
 /**
- *  Populate the SniffPacket fields
+ * Abstractions for Bluetooth devices
  */
-static void
-setup_PySniffPacket(PySniffPacket *self, struct frontline_packet *fp)
-{
-
-	self->llid  = (fp->fp_len >> FP_LEN_LLID_SHIFT) & FP_LEN_LLID_MASK;
-	self->bool_isFromMaster = PyBool_FromLong((long) !( fp->fp_clock & FP_SLAVE_MASK));
-	self->type = (fp->fp_hdr0 >> FP_TYPE_SHIFT) & FP_TYPE_MASK;
-	self->status = fp->fp_clock >> FP_STATUS_SHIFT;
-	self->chan = fp->fp_chan;
-	self->dlen = fp->fp_len >> FP_LEN_SHIFT;
-	self->seq = fp->fp_seq;
-	self->clock = fp->fp_clock & FP_CLOCK_MASK;
-}
 
 static int
-PySniffPacket_traverse(PySniffPacket *self, visitproc visit, void *arg)
+PyBtDevice_init(PyBtDevice *self, PyObject *args, PyObject *kwds)
 {
-	Py_VISIT(self->_payloadpkt);
-	return 0;
-}
+	char *name = "", *add="";
+	char *kwlist[] =  {
+			"name",
+			"add",
+			NULL
+	};
 
-static int
-PySniffPacket_clear(PySniffPacket *self)
-{
-	PyObject *tmp;
-	tmp = self->_payloadpkt;
-	self->_payloadpkt = NULL;
-	Py_XDECREF(tmp);
-	return 0;
-}
-
-static PyObject *
-PySniffPacket_new(PyTypeObject *type, PyObject *args, PyObject *kwlist)
-{
-	PySniffPacket *self;
-	self = (PySniffPacket *) type->tp_alloc(type, 0);
-	if(self != NULL)
+	if (! PyArg_ParseTupleAndKeywords(args, kwds, "|ss", kwlist, &name, &add ))
 	{
-		self->_csrpkt = NULL;
-		Py_INCREF(Py_None);
-		self->_payloadpkt = Py_None;
+		return -1;
 	}
-	else
-		return NULL;
 
-	return (PyObject *)self;
+	self->name  = name;
+	self->bt_add = add;
+	return 0;
 }
 
 static void
-PySniffPacket_dealloc(PySniffPacket *self)
+PyBtDevice_dealloc(PyBtDevice *self)
 {
-
-	PySniffPacket_clear(self);
-	if(self->_csrpkt)
-		free(self->_csrpkt);
-
-	self->ob_type->tp_free((PyObject *) self);
+	return;
 }
 
-
-static PyMemberDef PySniffPacket_members[] = {
-
-		{"llid", T_INT, offsetof(PySniffPacket, llid), 0, "LLID."},
-
-		{"fromMaster", T_OBJECT, offsetof(PySniffPacket, bool_isFromMaster),
-				0, "Indicates if packet is sent from master device."},
-
-		{"type", T_INT, offsetof(PySniffPacket, type), 0, "Type of packet."},
-
-		{"clock", T_UINT, offsetof(PySniffPacket, clock), 0, "Clock."},
-
-		// Status needs to be figured out first.
-		//{"status", T_INT, offsetof(PySniffPacket, status), 0, "Status. 0 is successful."},
-
-		{"plen", T_USHORT, offsetof(PySniffPacket, dlen), 0, "Payload length."},
-
-		//Not useful
-		//{"seq", T_UBYTE, offsetof(PySniffPacket, seq), 0, "Sequence number"},
-		{"channel", T_UBYTE, offsetof(PySniffPacket, chan), 0, "Channel number."},
-
-		{"payload", T_OBJECT, offsetof(PySniffPacket, _payloadpkt), 0, "Payload packet."},
-
-		{NULL}
-
+static PyMemberDef PyBtDevice_members[] =  {
+		{"name", T_STRING, offsetof(PyBtDevice, name), 0,
+				"Name of the device"},
+		{"btadd", T_STRING, offsetof(PyBtDevice, bt_add), 0,
+				"Bluetooth adress of the device"},
+		{ NULL }
 };
 
-
-static PyTypeObject PySniffPacketType =  {
+static PyTypeObject PyBtDeviceType =  {
 	   PyObject_HEAD_INIT(NULL)
 		0,                         /*ob_size*/
-		"sniff.SniffPacket",        /*tp_name*/
-		sizeof(PySniffPacket),      /*tp_basicsize*/
+		"btsniff.BtDevice",             /*tp_name*/
+		sizeof(PyBtDevice),             /*tp_basicsize*/
 		0,                         /*tp_itemsize*/
-		(destructor)PySniffPacket_dealloc, /*tp_dealloc*/
+		(destructor)PyBtDevice_dealloc, /*tp_dealloc*/
 		0,                         /*tp_print*/
 		0,                         /*tp_getattr*/
 		0,                         /*tp_setattr*/
@@ -912,25 +1044,103 @@ static PyTypeObject PySniffPacketType =  {
 		0,                         /*tp_getattro*/
 		0,                         /*tp_setattro*/
 		0,                         /*tp_as_buffer*/
-		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
-		"PyState object will ultimately be converted into a SniffSession. This is struct state from the original code",           /* tp_doc */
-		(traverseproc) PySniffPacket_traverse,                          /* tp_traverse */
-		(inquiry) PySniffPacket_clear,                          /* tp_clear */
+		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE , /*tp_flags*/
+		"Abstraction for a Bluetooth device",      /* tp_doc */
+		0,                          /* tp_traverse */
+		0,                          /* tp_clear */
 		0,                          /* tp_richcompare */
 		0,                          /* tp_weaklistoffset */
 		0,                          /* tp_iter */
 		0,                          /* tp_iternext */
-		0,             				/* tp_methods */
-		PySniffPacket_members,      /* tp_members */
-		0 ,     					/* tp_getset */
+		0,             /* tp_methods */
+		PyBtDevice_members,             /* tp_members */
+		0,                         /* tp_getset */
 		0,                         /* tp_base */
 		0,                         /* tp_dict */
 		0,                         /* tp_descr_get */
 		0,                         /* tp_descr_set */
 		0,                         /* tp_dictoffset */
-	    0,				      		/* tp_init */
+	   (initproc)PyBtDevice_init,      /* tp_init */
 		0,                         /* tp_alloc */
-		PySniffPacket_new,                 	/* tp_new use GenericNew*/
+		0,                 /* tp_new */
+};
+
+
+static int
+PyHCIDevice_init(PyHCIDevice *self, PyObject *args, PyObject *kwds)
+{
+	char *name, *add;
+	char *kwlist[] =  {
+			"name",
+			"add",
+			NULL
+	};
+
+	if (PyBtDeviceType.tp_init((PyObject *) self, args, kwds) < 0){
+		return -1;
+	}
+
+	if(! PyArg_ParseTupleAndKeywords(args, kwds, "|ss", kwlist, &name, &add) )  {
+		return -1;
+	}
+
+	self->devid  = 0;
+	return 0;
+}
+
+
+static void
+PyHCIDevice_dealloc(PyHCIDevice *self)
+{
+	PyBtDeviceType.tp_dealloc((PyObject *)self);
+}
+
+static PyMemberDef PyHCIDevice_members[] =  {
+		{"hcidevid", T_USHORT, offsetof(PyHCIDevice, devid), 0,
+				"Device ID"},
+		{ NULL }
+};
+
+static PyTypeObject PyHCIDeviceType =  {
+	   PyObject_HEAD_INIT(NULL)
+		0,                         /*ob_size*/
+		"btsniff.HCIDevice",             /*tp_name*/
+		sizeof(PyHCIDevice),             /*tp_basicsize*/
+		0,                         /*tp_itemsize*/
+		(destructor)PyHCIDevice_dealloc, /*tp_dealloc*/
+		0,                         /*tp_print*/
+		0,                         /*tp_getattr*/
+		0,                         /*tp_setattr*/
+		0,                         /*tp_compare*/
+		0,                         /*tp_repr*/
+		0,                         /*tp_as_number*/
+		0,                         /*tp_as_sequence*/
+		0,                         /*tp_as_mapping*/
+		0,                         /*tp_hash */
+		0,                         /*tp_call*/
+		0,                         /*tp_str*/
+		0,                         /*tp_getattro*/
+		0,                         /*tp_setattro*/
+		0,                         /*tp_as_buffer*/
+		Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE , /*tp_flags*/
+		"Abstraction for a Bluetooth device",      /* tp_doc */
+		0,                          /* tp_traverse */
+		0,                          /* tp_clear */
+		0,                          /* tp_richcompare */
+		0,                          /* tp_weaklistoffset */
+		0,                          /* tp_iter */
+		0,                          /* tp_iternext */
+		0,             /* tp_methods */
+		PyHCIDevice_members,             /* tp_members */
+		0,                         /* tp_getset */
+		0,                         /* tp_base */
+		0,                         /* tp_dict */
+		0,                         /* tp_descr_get */
+		0,                         /* tp_descr_set */
+		0,                         /* tp_dictoffset */
+	   (initproc)PyHCIDevice_init,      /* tp_init */
+		0,                         /* tp_alloc */
+		0,                 /* tp_new */
 };
 
 
@@ -941,41 +1151,54 @@ static PyMethodDef BaseSniffMethods[] =
 		{"set_filter", (PyCFunction)basesniff_set_filter, METH_VARARGS, "sets filters. called with -f option" },
 		{"stop_sniff", (PyCFunction)basesniff_sniff_stop, METH_VARARGS, "stops sniffing"},
 		{"start_sniff", (PyCFunction)basesniff_sniff_start, METH_VARARGS, "starts the sniffing" },
-		{"sniff", (PyCFunction)basesniff_sniff, METH_VARARGS | METH_KEYWORDS, "when sniffing is started, this prints data and dumps to file" },
+		{"start_capture", (PyCFunction)basesniff_sniff, METH_VARARGS | METH_KEYWORDS, "when sniffing is started, this prints data and dumps to file" },
+		{"close_device", (PyCFunction)basesniff_close_hcidev, METH_VARARGS, "Close a HCI device"},
+		{"open_device", (PyCFunction)basesniff_open_hcidev, METH_VARARGS, "Open a HCI device"},
+		{"get_device_list", (PyCFunction) basesniff_getdevlist, METH_NOARGS, "Get a list of connected HCI devices"},
 		{NULL, NULL, 0, NULL}
 };
 
 /* Initialize the module */
 PyMODINIT_FUNC
-initsniff(void)
+initbtsniff(void)
 {
 	PyObject *m;
 
-	PySniffHandlerType.tp_new = PyType_GenericNew;
-	SniffError = PyErr_NewException("sniff.SniffError", NULL, NULL);
+	// These constant objects are used to initialize layer objects in
+	// the above function
+	EMPTY_TUPLE = PyTuple_New(0);
+	EMPTY_DICT  = PyDict_New();
 
-	if(PyType_Ready(&PyStateType) < 0 ||
-			PyType_Ready(&PyLMPPacketType) < 0 ||
-			PyType_Ready(&PySniffPacketType) < 0 ||
-			PyType_Ready(&PySniffHandlerType) < 0 ||
-			PyType_Ready(&PyGenericPacketType))
+	PySniffHandlerType.tp_new = PyType_GenericNew;
+	PyBtDeviceType.tp_new = PyType_GenericNew;
+
+	PyHCIDeviceType.tp_base = &PyBtDeviceType;
+	PyHCIDeviceType.tp_new = PyType_GenericNew;
+
+	SniffError = PyErr_NewException("btsniff.SniffError", NULL, NULL);
+
+	if(PyType_Ready(&PyStateType) < 0
+		|| PyType_Ready(&PySniffHandlerType) < 0
+		|| PyType_Ready(&PyBtDeviceType) < 0
+		|| PyType_Ready(&PyHCIDeviceType) < 0 )
 		return;
-	m = Py_InitModule3("sniff", BaseSniffMethods, "Main sniffing module");
+
+	//Initialize layer types. Will be used in the above functions.
+	//Take note, initialized but their reference counts are not incremented
+	setup_layer_types();
+
+	m = Py_InitModule3("btsniff", BaseSniffMethods, "Main sniffing module");
 
 	if( m == NULL)
 		return;
 
 	Py_INCREF(&PyStateType);
-	Py_INCREF(&PyLMPPacketType);
-	Py_INCREF(&PyGenericPacketType);
-	Py_INCREF(&PySniffPacketType);
 	Py_INCREF(&PySniffHandlerType);
 	Py_INCREF(SniffError);
 
-	PyModule_AddObject(m, "State", (PyObject *)&PyStateType);
-	PyModule_AddObject(m, "_LMPPacket", (PyObject *) &PyLMPPacketType);
-	PyModule_AddObject(m, "_GenericPacket", (PyObject *) &PyGenericPacketType);
-	PyModule_AddObject(m, "SniffPacket", (PyObject *)&PySniffPacketType);
+	PyModule_AddObject(m, "BtDevice", (PyObject *)&PyBtDeviceType);
+	PyModule_AddObject(m, "HCIDevice", (PyObject *)&PyHCIDeviceType);
+	PyModule_AddObject(m, "CaptureState", (PyObject *)&PyStateType);
 	PyModule_AddObject(m, "SniffHandler", (PyObject *) &PySniffHandlerType);
 	PyModule_AddObject(m, "SniffError", SniffError);
 

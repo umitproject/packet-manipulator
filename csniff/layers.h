@@ -3,11 +3,13 @@
  * in a layered fashion.
  *
  */
+#ifndef LAYERS_H_
+#define LAYERS_H_
+
 
 #include <Python.h>
 
-
-#define __packed __attribute__((__packed__))
+#include "btconstants.h"
 
 /**
  * Constants for LMP header manipulation
@@ -20,14 +22,25 @@
  * Constants for L2CAP header manipulation
  */
 #define HEADER_L2CAP_LEN 4
+#define MAX_UINT8 255
 #define MAX_UINT16 65535
+#define MAX_UINT32 4294967295
 #define BYTE_BITLEN 8
+
+struct hcidump_hdr {
+	    uint16_t        len;
+        uint8_t         in;
+        uint8_t         pad;
+        uint32_t        ts_sec;
+        uint32_t        ts_usec;
+
+}__packed;
 
 
 typedef struct  {
 
 	PyObject_HEAD
-	PyObject *data;
+	PyObject *rawdata;
 
 } __packed PyRawObject ;
 
@@ -72,3 +85,46 @@ typedef struct {
 } __packed PyL2CAPHdr;
 
 
+/**
+ * PyRawObject specific for the frontline tool
+ */
+struct frontline_packet {
+	uint8_t		fp_hlen;
+	uint32_t	fp_clock;
+	uint8_t		fp_hdr0;
+	uint16_t	fp_len;
+	uint32_t	fp_timer;
+	uint8_t		fp_chan;
+	uint8_t		fp_seq;
+} __packed;
+
+typedef struct  {
+	PyLayerHeader raw;
+	uint8_t hlen;
+	uint32_t clock;
+	uint8_t hdr0;
+	uint16_t dlen;
+	uint32_t timer;
+	uint8_t chan;
+	uint8_t seq;
+
+} __packed PySniffHdr;
+
+/**
+ * This type is implemented so that additional helper
+ * methods can be exposed.
+ */
+typedef struct {
+	PyLayerUnit raw;
+}__packed PySniffRaw;
+
+
+extern PyTypeObject PyRawObjectType;
+extern PyTypeObject PyLayerHeaderType;
+extern PyTypeObject PyLayerUnitType;
+extern PyTypeObject PyLMPHdrType;
+extern PyTypeObject PyL2CAPHdrType;
+extern PyTypeObject PySniffHdrType;
+extern PyTypeObject PySniffRawType;
+extern int setup_layer_types(void);
+#endif
