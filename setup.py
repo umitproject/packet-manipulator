@@ -14,13 +14,14 @@ INCLUDE_DIRS = [SNIFFMODDIR]
 mods = []
 if sys.platform == 'linux2':
 	# print 'linux'
-	mod = Extension(PARENT_PKG + '.sniff',
+	mod = Extension(PARENT_PKG + '.btsniff',
 			libraries = BTLIBRARIES,
 			include_dirs = INCLUDE_DIRS,
 		sources = [SNIFFMODDIR + os.sep + 'basesniffmodule.c', 
-				   SNIFFMODDIR + os.sep + 'bthandler.c'])
+				   SNIFFMODDIR + os.sep + 'bthandler.c',
+				   SNIFFMODDIR + os.sep + 'layers.c'])
 	
-	mod2 = Extension(PARENT_PKG + '.sniff_fileio',
+	mod2 = Extension(PARENT_PKG + '.btsniff_fileio',
 			libraries = BTLIBRARIES,
 			include_dirs = INCLUDE_DIRS,
 		sources = [ SNIFFMODDIR  + os.sep + 'sniffio.c'])
@@ -30,7 +31,23 @@ if sys.platform == 'linux2':
 			include_dirs = INCLUDE_DIRS,
 		sources = [ SNIFFMODDIR + os.sep + 'sniffcrack.c'])
 	
-	mods = [mod, mod2, mod3]
+	mod4 = Extension(PARENT_PKG + '.btlayers',
+					 libraries = BTLIBRARIES,
+					 include_dirs = INCLUDE_DIRS,
+					 sources = [SNIFFMODDIR + os.sep + 'layers.c'])
+	testmod = Extension(PARENT_PKG + '.harness', 
+					    libraries = BTLIBRARIES,
+					    include_dirs = INCLUDE_DIRS,
+					    sources = [SNIFFMODDIR + os.sep + 'harness.c',
+								   SNIFFMODDIR + os.sep + 'layers.c'])
+	
+	mods = [
+		    mod4, 
+		    mod3,
+		    mod2,
+		    mod,
+		    testmod
+		    ]
 
 setup( name = 'UmitBluetoothSniffer',
 	version = '0.1',

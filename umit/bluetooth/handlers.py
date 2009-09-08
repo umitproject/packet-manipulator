@@ -60,7 +60,18 @@ class PinCrackCollectHandler(CollectHandler):
          if lmp.header.op1 in crack.LMP_PINCRACK_OPCODES \
             and self._pcr.try_crack(lmp):
              self._pin = self._pcr.getpin()
-        
+    
+    def is_done(self):
+        return self._pcr.is_done()
+    
+    def close(self):
+        self._pcr.terminate()
+    
+    def getpin(self):
+        """
+            @return Pin as a string
+        """
+        return self._pcr.getpin()
 
 class TextHandler(btsniff.SniffHandler):
     '''

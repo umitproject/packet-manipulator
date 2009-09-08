@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema elementFormDefault="qualified" targetNamespace="http://www.umitproject.org" xmlns="http://www.umitproject.org" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:include schemaLocation="UmitPlugins.xsd"/>
+	<!-- Extended types -->
+	<xs:complexType name="boolOption">
+		<xs:simpleContent>
+			<xs:extension base="xs:boolean">
+				<xs:attribute name="description" type="xs:string"/>
+				<xs:attribute name="id" type="xs:string" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="intOption">
+		<xs:simpleContent>
+			<xs:extension base="xs:integer">
+				<xs:attribute name="description" type="xs:string"/>
+				<xs:attribute name="id" type="xs:string" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="floatOption">
+		<xs:simpleContent>
+			<xs:extension base="xs:float">
+				<xs:attribute name="description" type="xs:string"/>
+				<xs:attribute name="id" type="xs:string" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="strOption">
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:attribute name="description" type="xs:string"/>
+				<xs:attribute name="id" type="xs:string" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<!-- This is for attribute -->
+	<xs:simpleType name="attributeAuditType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="passive"/>
+			<xs:enumeration value="active"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<!-- This is our audit type both for offline and online audits -->
+	<xs:complexType name="auditType">
+		<xs:sequence>
+			<xs:element minOccurs="0" name="configurations">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="configuration">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="bool" type="boolOption"/>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="int" type="intOption"/>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="float" type="floatOption"/>
+									<xs:element minOccurs="0" maxOccurs="unbounded" name="str" type="strOption"/>
+								</xs:sequence>
+								<xs:attribute name="name" type="xs:string"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<!--
+				Here We could pass something like:
+					<protocols>
+						<protocol name="tcp" port="25"/>
+						<protocol name="smtp"/>
+					</protocols>
+				In order to have an alias like syntax.
+			-->
+			<xs:element name="protocols">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="protocol">
+							<xs:complexType>
+								<xs:attribute name="name" type="xs:string" use="required"/>
+								<xs:attribute name="port" type="xs:integer"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element minOccurs="0" name="vulnerabilities">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="vulnerability">
+							<xs:complexType>
+								<xs:all>
+									<!-- General description of the vulnerability -->
+									<xs:element minOccurs="0" name="description" type="xs:string"/>
+									<!--
+										This is to collect information regarding the class of the vulnerabilty.
+										We could have several class like Design Error, Buffer Overflow, etc...
+									-->
+									<xs:element minOccurs="0" name="classes">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="class" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<!--
+										A list of systems affected and non goes here. Something like:
+										 - Ubuntu Linux 9.04
+										 - Slackware 11.0
+									-->
+									<xs:element minOccurs="0" name="systems">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="affected" type="xs:string"/>
+												<xs:element maxOccurs="unbounded" minOccurs="0" name="notaffected" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<!--
+										If we are talking about a general software would be nice to list also the version
+										of the software that are affected to this vulnerability. The list will be something like:
+										- samba 3.0
+										- samba 2.5
+									-->
+									<xs:element minOccurs="0" name="versions">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="affected" type="xs:string"/>
+												<xs:element maxOccurs="unbounded" minOccurs="0" name="notaffected" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element minOccurs="0" name="credits">
+										<xs:complexType>
+											<xs:sequence>
+												<!-- The date indicating when the vulnerability was pubblished -->
+												<xs:element name="pubblished" type="xs:date"/>
+												<!-- The name of the author who discovered this vulnerability -->
+												<xs:element maxOccurs="unbounded" name="discovered" type="xs:string"/>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<!--
+										References could contain generic URI to solutions, CVEs, etc..
+										We could have something like <url type="CVE-2004-0803" href=".../> or
+										<url type="OSVDB.." /> or <url type="SOLUTION" .. etc...
+									-->
+									<xs:element minOccurs="0" name="references">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="url">
+													<xs:complexType>
+														<xs:attribute name="type" type="xs:string" use="optional"/>
+														<xs:attribute name="href" type="xs:anyURI" use="required"/>
+													</xs:complexType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+									<xs:element minOccurs="0" name="platforms">
+										<xs:complexType>
+											<xs:sequence>
+												<xs:element maxOccurs="unbounded" name="platform">
+													<xs:complexType>
+														<!-- Platforms includes 'linux', 'macos', 'freebsd', etc.. -->
+														<xs:attribute name="name" type="xs:string" use="required"/>
+														<!-- Obviously the architecture that's afflicted 'x86' 'x86_64' 'ppc'-->
+														<xs:attribute name="arch" type="xs:string" use="required"/>
+													</xs:complexType>
+												</xs:element>
+											</xs:sequence>
+										</xs:complexType>
+									</xs:element>
+								</xs:all>
+								<!-- A vuln must have a name -->
+								<xs:attribute name="name" type="xs:string" use="required"/>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="type" type="attributeAttackType" use="required"/>
+	</xs:complexType>
+	<xs:element name="audit" type="auditType"/>
+</xs:schema>

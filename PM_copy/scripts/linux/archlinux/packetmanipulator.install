@@ -1,0 +1,10 @@
+post_install() {
+	cat << _EOF
+>>> You should install psyco module from community
+>>> for additional speed up
+_EOF
+}
+
+op=$1
+shift
+$op $*

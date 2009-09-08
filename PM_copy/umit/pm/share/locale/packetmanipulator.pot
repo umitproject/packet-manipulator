@@ -1,0 +1,1804 @@
+# PacketManipulator catalog.
+# Copyright (C) 2009 Adriano Montero Marques
+# Francesco Piccinno <stack.box@gmail.com>, 2009
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PacketManipulator 0.3\n"
+"POT-Creation-Date: 2009-08-17 14:27+CEST\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: PM/Backend/Abstract/BaseContext/Sequence.py:74
+msgid "Unsaved sequence"
+msgstr ""
+
+#: PM/Backend/Abstract/BaseContext/Static.py:29
+msgid "Pcap files"
+msgstr ""
+
+#: PM/Backend/Abstract/BaseContext/Static.py:30
+msgid "Pcap gz files"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Audit.py:141
+msgid "Audit on %s:%s"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Audit.py:143
+msgid "Audit on %s"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Audit.py:246
+msgid " (stopping)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Audit.py:262
+msgid " (stopped)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Send.py:89 PM/Backend/UMPA/Context/Send.py:73
+msgid "%d packet(s) sent."
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Send.py:91
+#: PM/Backend/Scapy/Context/SendReceive.py:120
+#: PM/Backend/UMPA/Context/Send.py:75
+msgid "Sending packet %d of %d"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Send.py:96
+#: PM/Backend/Scapy/Context/SendReceive.py:123
+#: PM/Backend/Scapy/Context/Sequence.py:292
+msgid "Sending packet %s"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/SendReceive.py:42
+msgid "Send/receive %s"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/SendReceive.py:142
+msgid "%d of %d replie(s) received"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/SendReceive.py:146
+msgid "Received/Answered/Remaining %d/%d/%d"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:32
+msgid "Scapy sequence"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:33
+msgid "Flat sequence (pcap)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:34
+msgid "Flat sequence (pcap + gz)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:50
+msgid "Executing sequence (%d packets %d times)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:53
+msgid "Looping sequence (%d packets)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:80
+msgid "Loading sequence %s - %d packets (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:96
+msgid "Sequence %s loaded - %d packets (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:162
+msgid "Saving sequence to %s - %d packets (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:175
+msgid "Sequence %s saved - %d packets (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:280
+msgid "Running sequence %d of %d times"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:283
+msgid "Sequence runned for %d times"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:289
+msgid "Sending packet %s and waiting a reply"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:331
+msgid "Sequence finished with %d packets sent and %d received"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:335
+msgid "Looping sequence"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sequence.py:338
+msgid "Received %s"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sniff.py:52 PM/Backend/UMPA/Context/Sniff.py:41
+msgid "%s capture"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sniff.py:53
+msgid "Sniffing on %s"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sniff.py:361
+msgid "Error: %s (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Sniff.py:363
+msgid "Finished sniffing on %s (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:58
+msgid "Writing %s - %d packets (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:103
+msgid "Loading %s - %d packets (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:128
+msgid "Loaded %s - %d packets (%s)"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:143 PM/Backend/UMPA/Context/Static.py:48
+msgid "%d packets loaded."
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:158 PM/Backend/UMPA/Context/Static.py:63
+msgid "No packets to save"
+msgstr ""
+
+#: PM/Backend/Scapy/Context/Static.py:179 PM/Backend/UMPA/Context/Static.py:74
+msgid "%d packets written."
+msgstr ""
+
+#: PM/Backend/Scapy/wrapper.py:191
+msgid "No description"
+msgstr ""
+
+#: PM/Backend/UMPA/Context/SendReceive.py:37
+msgid "Send/Receive %s"
+msgstr ""
+
+#: PM/Backend/UMPA/Context/SendReceive.py:40
+msgid "Send/Receive is not avaiable with this backend"
+msgstr ""
+
+#: PM/Backend/UMPA/Context/Sniff.py:47
+msgid "Sniff is not avaiable with this backend"
+msgstr ""
+
+#: PM/Backend/UMPA/Context/Static.py:27
+msgid "UMPA XML capture"
+msgstr ""
+
+#: PM/Gui/Core/App.py:67
+msgid ""
+"Packet Manipulator requires at least 2.6 version of Python but you've %s installed. We not guarantee that all functionalities works properly.\n"
+"\n"
+"Do you want to continue?"
+msgstr ""
+
+#: PM/Gui/Core/App.py:85
+msgid ""
+"You are running Packet Manipulator as non-root user!\n"
+"Some functionalities need root privileges to work\n"
+"\n"
+"Do you want to continue?"
+msgstr ""
+
+#: PM/Gui/Core/App.py:102
+msgid "Registering icons ..."
+msgstr ""
+
+#: PM/Gui/Core/App.py:107
+msgid "Loading preferences ..."
+msgstr ""
+
+#: PM/Gui/Core/App.py:112
+msgid "Creating main window ..."
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:36
+msgid "Bug Report"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:52
+msgid "Email"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:53
+msgid "Please inform a valid e-mail address from where you can be reached to be notified when the bug gets fixed. Not used for other purposes."
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:58 PM/Gui/Dialogs/Interface.py:341
+#: PM/Gui/Tabs/HostListTab.py:185
+msgid "Description"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:59
+msgid "This is where you should write about the bug, describing it as clear as possible and giving as many informations as you can along with your system informations, like: Which operating system are you using?"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:67
+msgid "This Bug Report dialog allows you to easily tell us about a problem that you may have found on PM. Doing so, you help us to help you, by fixing and improving PM faster than usual."
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:138
+msgid "Bug report is incomplete!"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:139
+msgid "The bug report is incomplete. You must inform a description that explains clearly what is happening and a valid e-mail, so you can be contacted when the bug gets fixed."
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:161
+msgid "Bug not reported!"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:162
+msgid "The bug description could not be reported. This problem may be caused by the lack of Internet access or indisponibility of the bug tracker server. Please, verify your internet access, and then try to report the bug once again."
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:172
+msgid "Bug sucessfully reported!"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:173
+msgid "The bug description was sucessfully reported. A web page with detailed description about this report will be opened in your default web browser now."
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:185
+msgid "Could not open default Web Browser"
+msgstr ""
+
+#: PM/Gui/Core/BugReport.py:186
+msgid "PM was unable to open your default web browser to show the bug tracker page with the report status. Try visiting Umit's bug tracker page to see if your bug was reported."
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:119
+msgid "Ready."
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:127
+msgid "File"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:129
+msgid "New A_udit"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:130
+msgid "Create a new audit"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:132
+msgid "_New sequence"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:133
+msgid "Create a new sequence"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:135
+msgid "_Open"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:136
+msgid "Open session"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:138
+msgid "_Save"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:139
+msgid "Save session"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:141
+msgid "_Save as"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:142
+msgid "Save session as"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:144
+msgid "_Quit"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:145
+msgid "Quit from application"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:147
+msgid "Capture"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:149
+msgid "_Interface"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:150
+msgid "Capture from interface"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:152 PM/Gui/Dialogs/Preferences.py:328
+#: PM/Gui/Pages/AuditPage.py:82 PM/Gui/Plugins/Window.py:88
+msgid "Audits"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:154
+msgid "Options"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:156
+msgid "Routing table"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:157
+msgid "Routes editor"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:159
+msgid "Plugins"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:160
+msgid "Plugin manager"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:162
+msgid "_Preferences"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:163
+msgid "Preferences"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:165
+msgid "Views"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:167
+msgid "Help"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:169
+msgid "About"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:710
+msgid ""
+"Packet manipulation made easy%s\n"
+"%s"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:724
+msgid "This program is relased under the terms of GPLv2"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:778
+msgid "Select a session"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:784
+msgid "All supported files"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:812
+msgid "Unable to open selected session"
+msgstr ""
+
+#: PM/Gui/Core/MainWindow.py:813
+msgid "PacketManipulator is unable to guess the file type. Try to modify the extension and to reopen the file."
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:43
+msgid "<b>Options</b>"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:49
+msgid "Filter:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:52
+msgid "Capture file:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:55
+msgid "Capture method:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:58
+msgid "Min packet size:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:61
+msgid "Max packet size:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:64 PM/Gui/Dialogs/Interface.py:67
+#: PM/Gui/Dialogs/Interface.py:70
+msgid "Stop after:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:78
+msgid ""
+"Enter a pcap filter expression here.\n"
+"See also <span foreground=\"blue\">http://www.cs.ucr.edu/~marios/ethereal-tcpdump.pdf</span>"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:102
+msgid "Native"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:103
+msgid "Virtual interface"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:104
+msgid "tcpdump helper"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:105
+msgid "dumpcap helper"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:112 PM/Gui/Dialogs/Interface.py:115
+msgid "byte(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:118
+msgid "packet(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:121
+msgid "GB"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:121
+msgid "KB"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:121
+msgid "MB"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:125
+msgid "hour(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:125
+msgid "minute(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:125
+msgid "second(s)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:142
+msgid "Enable MAC name resolution"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:143
+msgid "Enable network name resolution"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:144
+msgid "Enable transport name resolution"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:147
+msgid "Update view in real mode"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:148
+msgid "Automatic view scrolling"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:150
+msgid "Capture in promiscuous mode"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:152
+msgid "Start in background mode"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:154
+msgid "Enable audits"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:213
+msgid "Select a capture file"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:319
+msgid "<b>Avaiable Interfaces:</b>"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:331
+msgid "Name"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:341 PM/Gui/Tabs/HostListTab.py:183
+msgid "IP"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:370
+msgid "Interfaces - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:468
+msgid "Some options are missing"
+msgstr ""
+
+#: PM/Gui/Dialogs/Interface.py:469
+msgid "You've selected Virtual interface as capture method. You need to specify a file source to read from"
+msgstr ""
+
+#: PM/Gui/Dialogs/NewAudit.py:29
+msgid "New audit - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Dialogs/NewAudit.py:35 PM/Gui/Dialogs/NewAudit.py:38
+msgid "Interface:"
+msgstr ""
+
+#: PM/Gui/Dialogs/NewAudit.py:41
+msgid "Pcap filter:"
+msgstr ""
+
+#: PM/Gui/Dialogs/NewAudit.py:46
+msgid "Use bridged sniffing"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:187
+msgid "GUI"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:193
+msgid "General"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:195
+msgid "Docking library:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:198
+msgid "Use standard expanders"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:202
+msgid "Sessions"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:205
+msgid "Ask on unsaved changes"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:207
+msgid "Automatically stop sessions on close"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:211 PM/Gui/Dialogs/Preferences.py:364
+#: PM/Gui/Pages/SniffPage.py:56
+msgid "Sniff perspective"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:213
+msgid "Sniff view font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:216 PM/Gui/Dialogs/Preferences.py:225
+msgid "Colorize rows"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:220 PM/Gui/Pages/SequencePage.py:118
+msgid "Sequence perspective"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:222
+msgid "Sequence view font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:229
+msgid "Audit output perspective"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:232
+msgid "Audit output font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:234
+msgid "Audit output time column str format (strftime):"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:237
+msgid "Autoscroll for Audit output"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:241
+msgid "Hex view window"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:243
+msgid "HexView font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:245
+msgid "Bytes per line or group type:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:250
+msgid "Status tab"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:252
+msgid "Status tab font:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:256
+msgid "Operations tab"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:259
+msgid "Use a unique function to update progress of operations (CPU saving - Restart required)"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:262
+msgid "Update timeout interval"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:274
+msgid "Show views at startup"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:276
+msgid "Protocol selector"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:279
+msgid "Protocol properties"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:282
+msgid "Status view"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:285 PM/Gui/Tabs/OperationsTab.py:677
+msgid "Operations"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:288 PM/Gui/Tabs/VteTab.py:75
+msgid "Terminal"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:291
+msgid "Payload Hack tab"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:294
+msgid "Python shell"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:299
+msgid "Backend"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:304
+msgid "Backend system:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:307
+msgid "Default interface"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:311
+msgid "Capture method for sniffing:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:315
+msgid "Capture method for SendReceive:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:319
+msgid "Capture method for Sequence:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:323
+msgid "Capture method for Audit:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:331
+msgid "Enable passive audits on sniff"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:333
+msgid "Enable passive audits on loaded files"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:337
+msgid "Helpers"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:339
+msgid "tcpdump path:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:340
+msgid "dumpcap path:"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:347
+msgid "System"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:352
+msgid "Checks"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:355
+msgid "Check for root privileges at startup"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:357
+msgid "Check for compatible Python version"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:378
+msgid "Column size"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:378
+msgid "Column title"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:378
+msgid "Function/cfield"
+msgstr ""
+
+#: PM/Gui/Dialogs/Preferences.py:494
+msgid "Preferences - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:40
+msgid "<b>Routing table:</b>"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:70
+msgid "Network"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:83
+msgid "Interface"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:83
+msgid "Netmask"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:83 PM/Gui/Tabs/HostListTab.py:111
+msgid "Gateway"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:84
+msgid "Output IP"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:152
+msgid "Add new route"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:152
+msgid "Remove selected route"
+msgstr ""
+
+#: PM/Gui/Dialogs/Routes.py:206
+msgid "Routes - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:72
+msgid "Time"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:74
+msgid "Facility"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:76
+msgid "Record"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:103
+msgid "Copy selected rows"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:104
+msgid "Copy selected rows into the clipboard"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:106
+msgid "Save selected rows"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:107
+msgid "Save selected rows into a log file"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:191
+msgid "Save log file"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:219
+msgid "A file named %s already exists. Do want overwrite it?"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:267
+msgid "Error while saving log file to %s"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:359
+msgid "Save log"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:360
+msgid "Save log to file"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:382
+msgid "Audit status"
+msgstr ""
+
+#: PM/Gui/Pages/AuditOutputPage.py:386
+msgid "<tt>New audit session started.</tt>"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:101 PM/Gui/Tabs/OperationsTab.py:468
+#: PM/Gui/Tabs/StatusTab.py:137
+msgid "Status"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:117 PM/Gui/Tabs/OperationsTab.py:562
+msgid "Open"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:118 PM/Gui/Tabs/OperationsTab.py:563
+msgid "Resume operation"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:119 PM/Gui/Tabs/OperationsTab.py:564
+msgid "Pause operation"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:120 PM/Gui/Tabs/OperationsTab.py:565
+msgid "Stop operation"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:121 PM/Gui/Tabs/OperationsTab.py:566
+msgid "Restart operation"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:122
+msgid "Reconfigure audit"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:123 PM/Gui/Tabs/OperationsTab.py:567
+msgid "Remove finished"
+msgstr ""
+
+#: PM/Gui/Pages/AuditPage.py:319
+msgid "Audit perspective"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:92
+msgid "Protocol"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:202
+msgid "Packet perspective"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:220
+msgid "Complete layers"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:221
+msgid "Remove selected layer"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:222
+msgid "Reset layer to default"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:223
+msgid "Graph packet"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:340
+msgid "Graph for %s"
+msgstr ""
+
+#: PM/Gui/Pages/PacketPage.py:355
+msgid "Save graph to"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:77
+msgid "No filter"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:132
+msgid "Run the sequence"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:140
+msgid "Send packet"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:140
+msgid "Send/receive packet"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:156
+msgid "Interval (ms):"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:156
+msgid "No:"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:174
+msgid "Use strict checking for the replies"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:175
+msgid "Report also received packets"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:176
+msgid "Report also sent packets"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:201
+msgid "Merge selection"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:220
+msgid "Packet sequence"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:256
+msgid "&Remove selected"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:257
+msgid "&Copy selected"
+msgstr ""
+
+#: PM/Gui/Pages/SequencePage.py:258
+msgid "&Paste selected"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:117
+msgid "Restart capturing"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:118
+msgid "Stop capturing"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:119
+msgid "Reorder flow"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:350
+msgid "Create a sequence"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:350
+msgid "Save selected"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:418
+msgid "<b>%d selected packets saved to %s</b>"
+msgstr ""
+
+#: PM/Gui/Pages/SniffPage.py:435
+msgid "<b>Cannot reorganize the flow while sniffing</b>"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:77
+msgid "Select a date"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:105
+msgid "Protocol name contains"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:107
+msgid "Protocol port equal to"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:108
+msgid "Protocol port is not"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:109
+msgid "Protocol port lesser than"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:110
+msgid "Protocol port greater than"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:112
+msgid "Vulnerability name contains"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:113
+msgid "Vulnerability description contains"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:114
+msgid "Vulnerability class contains"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:116
+msgid "Systems affected includes"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:117
+msgid "Systems not-affected includes"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:119
+msgid "Versions affected includes"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:120
+msgid "Versions not-affected includes"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:122
+msgid "Pubblished on"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:123
+msgid "Pubblished after"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:124
+msgid "Pubblished before"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:125
+msgid "Discovered by"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:127
+msgid "Vulnerability classification (CVE/OSVDB/etc)"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:128
+msgid "URI's references contains"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:130
+msgid "Platform is"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:131
+msgid "Architecture is"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:142
+msgid "Name contains:"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:173
+msgid "More options"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:176
+msgid "Available options:"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:452
+msgid "<span size='large'><b>No options defined.</b></span>"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:488 PM/Gui/Plugins/AuditPage.py:527
+#: PM/Manager/AuditManager.py:713 PM/Manager/AuditManager.py:717
+msgid "Enabled"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:490 PM/Gui/Plugins/AuditPage.py:529
+#: PM/Manager/AuditManager.py:714 PM/Manager/AuditManager.py:717
+msgid "Disabled"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:646
+msgid "<span size='large'><b>No plugin selected.</b></span>"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:725
+msgid ""
+"Protocols:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:740
+msgid ""
+"\n"
+"Classes:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:749
+msgid ""
+"\n"
+"Affected systems:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:755
+msgid ""
+"\n"
+"Not-affected systems:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:764
+msgid ""
+"\n"
+"Affected versions:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:770
+msgid ""
+"\n"
+"Not-affected versions:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:779
+msgid ""
+"\n"
+"Platforms:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:787
+msgid "Pubblished on: "
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:800
+msgid ""
+"\n"
+"References:\n"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:885
+msgid "Show plugins"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:886
+msgid "Information"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:887
+msgid "Find plugins"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:888
+msgid "Configure plugins"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:1035
+msgid "Passive audits"
+msgstr ""
+
+#: PM/Gui/Plugins/AuditPage.py:1038
+msgid "Active audits"
+msgstr ""
+
+#: PM/Gui/Plugins/Network.py:49
+msgid ">>> safecall(): Ignoring exception %s -> %s (%s, %s)"
+msgstr ""
+
+#: PM/Gui/Plugins/Network.py:113
+msgid ">>> Calling get_url() for %s"
+msgstr ""
+
+#: PM/Gui/Plugins/PathPage.py:156
+msgid "Select a Plugin path"
+msgstr ""
+
+#: PM/Gui/Plugins/PathPage.py:201
+msgid "Remember that you have to restart PacketManipulator to changes makes. Plugins disable pending."
+msgstr ""
+
+#: PM/Gui/Plugins/PathPage.py:208
+msgid "Need PacketManipulator restart to disable."
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:61
+msgid "Find updates"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:63
+msgid "Install updates"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:65 PM/Gui/Plugins/PluginPage.py:464
+msgid "Skip"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:67
+msgid "Restart PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:142
+msgid "Remember that you have to restart PacketManipulator to make new version of plugins to be loaded correctly."
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:165
+msgid "Rembember to restart PacketManipulator to use new version of plugins."
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:170
+msgid "Update skipped"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:212
+msgid "<b>Downloading updates ...</b>"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:256
+msgid "Update phase complete%s. Now restart PacketManipulator to changes make effects."
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:328
+msgid "Waiting ..."
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:341
+msgid "No plugins provide an update URL. Cannot proceed."
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:356
+msgid "<b>Looking for %d updates ...</b>"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:423
+msgid "<b>No updates found</b>"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:435
+msgid "<b>Updates found: %d</b>"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:440
+msgid "<b>Updates found: %d with %d errors</b>"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:473
+msgid "Update to %s"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:478
+msgid "Reinstall %s"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:483
+msgid "Downgrade to %s"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:518
+msgid "<b>Preferences</b>"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:519
+msgid "Visit homepage"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:520
+msgid "About %s"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:522 PM/higwidgets/higrichlists.py:250
+msgid "Disable"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:522 PM/higwidgets/higrichlists.py:257
+msgid "Enable"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:523 PM/higwidgets/higrichlists.py:185
+msgid "Uninstall"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:593
+msgid "Disabling Plugin"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:594
+msgid "Do you want to disable %s plugin?"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:606
+msgid "Can not disable Plugin"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:607
+msgid ""
+"%s\n"
+"Do you want to force the unload phase for %s plugin?"
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:637
+msgid "Unable to uninstall %s plugin."
+msgstr ""
+
+#: PM/Gui/Plugins/PluginPage.py:645
+msgid "No preferences for %s"
+msgstr ""
+
+#: PM/Gui/Plugins/Tree.py:97
+msgid "Unable to load %s"
+msgstr ""
+
+#: PM/Gui/Plugins/Tree.py:292
+msgid "Plugin already loaded."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:241 PM/Gui/Plugins/Update.py:374
+#: PM/Gui/Plugins/Update.py:395
+msgid "Cycling to next update url. Waiting..."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:244
+msgid "Download failed: %s"
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:262
+msgid "Checking validity ..."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:287 PM/Gui/Plugins/Update.py:299
+msgid "Updated. Restart to take effect"
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:290
+msgid "Corrupted file."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:335
+msgid "Downloading ..."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:354
+msgid "Downloading update information..."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:379 PM/Gui/Plugins/Update.py:400
+msgid "Cannot find newer version (%s)"
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:434
+msgid "Various versions available but require manual intervention."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:436
+msgid "Version %s available but need manual update."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:438
+msgid "Version %s available but need manual downgrade."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:442
+msgid "Various versions available"
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:444
+msgid "Version %s available."
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:450
+msgid "Unable to parse latest.xml"
+msgstr ""
+
+#: PM/Gui/Plugins/Update.py:452
+msgid "No applicable updates found"
+msgstr ""
+
+#: PM/Gui/Plugins/Window.py:49
+msgid "Plugin Manager"
+msgstr ""
+
+#: PM/Gui/Plugins/Window.py:88
+msgid "Extensions"
+msgstr ""
+
+#: PM/Gui/Plugins/Window.py:88
+msgid "Paths"
+msgstr ""
+
+#: PM/Gui/Sessions/Base.py:194
+msgid "Save session file to"
+msgstr ""
+
+#: PM/Gui/Tabs/ConsoleTab.py:30
+msgid "Python Shell"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:76
+msgid "Transformation"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:84
+msgid "Lower"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:84
+msgid "Upper"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:98
+msgid "Encryption"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:125
+msgid "Encoding"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:132
+msgid "Base64 Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:132
+msgid "Base64 Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:132
+msgid "URL Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:133
+msgid "URL Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:148
+msgid "Database"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:155
+msgid "MsSQL Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:155
+msgid "MySQL Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:155
+msgid "MySQL Encode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:156
+msgid "MsSQL Decode"
+msgstr ""
+
+#: PM/Gui/Tabs/HackTab.py:279
+msgid "Hack Tab"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:97 PM/Gui/Tabs/HostListTab.py:142
+msgid "IP address:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:98
+msgid "Hostname:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:99
+msgid "Remote OS:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:101
+msgid "MAC address:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:102
+msgid "MAC Vendor:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:105
+msgid "Unknown"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:107
+msgid "Local (LAN)"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:109
+msgid "Remote"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:113
+msgid "Router"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:115
+msgid "Type:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:116
+msgid "Distance:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:118
+msgid "Services:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:121
+msgid "Port:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:130
+msgid "Protocol:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:131
+msgid "Banner:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:133
+msgid "Accounts:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:137
+msgid "Username:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:138
+msgid "Password:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:139
+msgid "Information:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:141
+msgid "Failed:"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:159
+msgid "HostList"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:184
+msgid "MAC"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:200
+msgid "Refresh the list"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:203
+msgid "Scan for new hosts"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:207
+msgid "Information for selected host"
+msgstr ""
+
+#: PM/Gui/Tabs/HostListTab.py:242
+msgid "Informations for %s - PacketManipulator"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:216
+msgid ""
+"The session is running.\n"
+"Do you want stop it?"
+msgstr ""
+
+#: PM/Gui/Tabs/MainTab.py:236
+msgid ""
+"The session has unsaved changes.\n"
+"Do you want to save them?"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:111
+msgid "Loading of %s pending."
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:113
+msgid "Saving to %s pending."
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:122
+msgid "Loading %s"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:125
+msgid "Saving to %s"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:147
+msgid "Saving packets to %s"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:149
+msgid "Saving sequence to %s"
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:177
+msgid "Unable to recognize file type."
+msgstr ""
+
+#: PM/Gui/Tabs/OperationsTab.py:449
+msgid "Operation"
+msgstr ""
+
+#: PM/Gui/Tabs/PropertyTab.py:33
+msgid "Properties"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:52
+msgid "Sort ascending"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:53
+msgid "Sort descending"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:54
+msgid "Sort by layer"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:70
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:305
+msgid "Protocols"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:114
+msgid "Add to a new sequence"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:115
+msgid "Append to the sequence"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:116
+msgid "Append to the sequence selection"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:117
+msgid "Append to the hierarchy"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:118
+msgid "Append to the hierarchy selection"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:195
+msgid "Layer %d"
+msgstr ""
+
+#: PM/Gui/Tabs/ProtocolSelectorTab.py:204
+msgid "Unknown layer"
+msgstr ""
+
+#: PM/Gui/Tabs/StatusTab.py:143
+msgid "PacketManipulator %s started on %s"
+msgstr ""
+
+#: PM/Gui/Tabs/StatusTab.py:145
+msgid "Using %s as backend"
+msgstr ""
+
+#: PM/Gui/Tabs/StatusTab.py:148
+msgid "What do you wanna pwn today?"
+msgstr ""
+
+#: PM/Gui/Tabs/VteTab.py:52
+msgid ""
+"<b>Loser!</b> You don't have vte python bindings installed.\n"
+"Download it from <tt>http://ftp.acc.umu.se/pub/GNOME/sources/vte/</tt>"
+msgstr ""
+
+#: PM/Gui/Tabs/console.py:416
+msgid ""
+"Welcome to PacketManipulator Python Shell (running on %s)\n"
+msgstr ""
+
+#: PM/Gui/Tabs/console.py:421
+msgid ""
+"Please be carefull becouse you are in the PM main loop\n"
+msgstr ""
+
+#: PM/Gui/Widgets/Interfaces.py:43
+msgid "<b>Auto</b>"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:207
+msgid "Set manually"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:279
+msgid ""
+"Cannot edit this field because I can't convert it to utf8.\n"
+"Try to edit the field with python shell or simply install pygtkhex that provides a nice HexView to edit raw fields"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:289
+msgid "Editing string field"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:761
+msgid "Reset selected field"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:762
+msgid "Reset fields in this protocol"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:763
+msgid "Reset fields in above protocols"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:764
+msgid "Reset all the packet fields"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:823
+msgid "<tt>N/A</tt>"
+msgstr ""
+
+#: PM/Gui/Widgets/PropertyGrid.py:845
+msgid "N/A"
+msgstr ""
+
+#: PM/Gui/Widgets/PyGtkHexView.py:144
+msgid "Copy from _both"
+msgstr ""
+
+#: PM/Gui/Widgets/PyGtkHexView.py:144
+msgid "Cu_t"
+msgstr ""
+
+#: PM/Gui/Widgets/PyGtkHexView.py:144
+msgid "_Copy"
+msgstr ""
+
+#: PM/Gui/Widgets/PyGtkHexView.py:144
+msgid "_Paste"
+msgstr ""
+
+#: PM/Manager/AuditManager.py:686
+msgid "Inputs for %s - PacketManipulator"
+msgstr ""
+
+#: PM/higwidgets/higrichlists.py:177
+msgid "Include update"
+msgstr ""
+
+#: PM/higwidgets/higtooltips.py:19
+msgid "<span size=\"medium\"><b>Information</b></span>"
+msgstr ""
+

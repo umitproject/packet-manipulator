@@ -1,10 +1,18 @@
 
 
-import unittest
+import unittest,sys,time
 
-import umit.bluetooth.sniff as sniff
+import umit.bluetooth.btsniff as btsniff
 import umit.bluetooth.crack as crack
 import umit.bluetooth.sniffcommon as sniffcommon
+
+from umit.bluetooth.btlayers import LMPHeader, BtRaw, BtLayerUnit
+
+LMP = BtLayerUnit
+
+def _show(string):
+    sys.stderr.write(str(string))
+    sys.stderr.write('\n')
 
 class CrackTest(unittest.TestCase):
     '''Test internal functions of crack'''
@@ -25,11 +33,11 @@ class CrackTest(unittest.TestCase):
     S_SRES = [0xa6, 0x78, 0xdf, 0x62]
 
     def setUp(self):
-        self.session = sniffcommon.SniffSession(sniff.State(), 
-                                                self.MASTER_ADD, 
-                                                self.SLAVE_ADD, 
-                                                'hci0', None) 
-        self.pincrackdata = sniffcommon.PinCrackData()
+#        self.session = sniffcommon.SniffSession(sniff.State(), 
+#                                                self.MASTER_ADD, 
+#                                                self.SLAVE_ADD, 
+#                                                'hci0', None) 
+        self.pincrackdata = crack.PinCrackData()
         self.pincrackdata.in_rand  = self.IN_RAND
         self.pincrackdata.m_comb_key = self.M_COMB_KEY
         self.pincrackdata.s_comb_key = self.S_COMB_KEY
@@ -39,20 +47,111 @@ class CrackTest(unittest.TestCase):
         self.pincrackdata.s_sres = self.S_SRES
         
     def tearDown(self):
-        del self.session
+        del self.pincrackdata
+
+class pincrackrunnerInternalTest(CrackTest):
+    
+#    pcr = crack._pincrackrunner(self.pincrackdata, self.MASTER_ADD, self.SLAVE_ADD)
+    
+    def testRuncrack(self):
+        
+        import tempfile
+        tmpfile = tempfile.TemporaryFile()
+#        self.pcr.runcrack(self.pincrackdata, self.MASTER_ADD, self.SLAVE_ADD, 
+#                          tmpfile)
+        self.pcr = crack._pincrackrunner(self.pincrackdata, self.MASTER_ADD, self.SLAVE_ADD)
+        self.pcr.run()
+        i = 0
+        while not self.pcr.is_done():
+            i += 1
+            if i < 3:
+                _show("Sleep")
+                import time
+                time.sleep(5)
+        pin = self.pcr.getpin()
+        _show("testRuncrack: pin: %s" % pin)
+        self.assertEqual(pin, '1234')
+
 
 class PinCrackRunnerTest(CrackTest):
     
-    pcr = crack.PinCrackRunner()
-    
-    def testRuncrack(self):
-        import tempfile
-        tmpfile = tempfile.TemporaryFile()
-        self.pcr.runcrack(self.pincrackdata, self.session.master, self.session.slave, 
-                          tmpfile).wait()
-        self.assertEqual(self.pcr.getpin(), '1234')
+    def setUp(self):
+        super(PinCrackRunnerTest, self).setUp()
+        self.pcr = crack.PinCrackRunner(self.MASTER_ADD, self.SLAVE_ADD)
+        lp1 = BtRaw()
+        lp1.rawdata = self.IN_RAND
+        lp2 = BtRaw()
+        lp2.rawdata = self.M_COMB_KEY
+        lp3 = BtRaw()
+        lp3.rawdata = self.S_COMB_KEY
+        lp4 = BtRaw()
+        lp4.rawdata = self.M_AU_RAND
+        lp5 = BtRaw()
+        lp5.rawdata = self.S_AU_RAND
+        lp6 = BtRaw()
+        lp6.rawdata = self.M_SRES
+        lp7 = BtRaw()
+        lp7.rawdata = self.S_SRES
+        self.payloads = [lp1, lp2, lp3, lp4, lp5, lp7, lp6]
+ 
+        lh1 = LMPHeader(tid=1, op1=8)
+        lh2 = LMPHeader(tid=1, op1=9)
+        lh3 = LMPHeader(tid=1, op1=9)
+        lh4 = LMPHeader(tid=1, op1=11)
+        lh5 = LMPHeader(tid=1, op1=11)
+        lh6 = LMPHeader(tid=1, op1=12)
+        lh7 = LMPHeader(tid=1, op1=12)
+        
+        self.headers = [lh1, lh2, lh3, lh4, lh5, lh7, lh6]
+        self.sources = ['M', 'M', 'S', 'M', 'S', 'S', 'M']
+        self.lmps = []
+        for header, payload in zip(self.headers, self.payloads):
+            self.lmps.append(LMP(header = header, payload = payload))
 
+    
+    def test_try_crack(self):
+        for i, lmp in zip(range(len(self.lmps)), self.lmps):
+            _show('LMP %d' % i)
+            if self.pcr.try_crack(lmp, True if self.sources[i] == 'M' else False):
+                pin = self.pcr.getpin()
+                _show('try_crack_test: Done! Pin: %s' % pin)
+                self.assertEqual(pin, '1234')
+            else:
+                time.sleep(1)
+        # First time failed
+        # Keep trying for 30 seconds
+        if self.pcr.pincrackdata is not None:
+            _show("test_try_crack: pincrackdata ready")
+            self.assertEqual(self.pincrackdata.in_rand, self.pcr.pincrackdata.in_rand)
+            self.assertEqual(self.pincrackdata.s_comb_key, self.pcr.pincrackdata.s_comb_key)
+            self.assertEqual(self.pincrackdata.m_comb_key, self.pcr.pincrackdata.m_comb_key)
+            self.assertEqual(self.pincrackdata.s_au_rand, self.pcr.pincrackdata.s_au_rand)
+            self.assertEqual(self.pincrackdata.m_au_rand, self.pcr.pincrackdata.m_au_rand)
+            self.assertEqual(self.pincrackdata.m_sres, self.pcr.pincrackdata.m_sres)
+            self.assertEqual(self.pincrackdata.s_sres, self.pcr.pincrackdata.s_sres)
+
+        else:
+            _show("test_try_crack: pincrackdata not ready")
+            assert False
+            
+        while not self.pcr.try_crack(None, None):
+            _show('Sleep')
+            time.sleep(3)
+        
+        pin = self.pcr.getpin()
+        _show("PIN! %s" % pin)
+        self.pcr.terminate()
+        self.assertEqual(pin, '1234')
+        self.assertTrue(self.pcr.pincrackdata is not None, 'PCD is None')
+            
+    
+    def tearDown(self):
+        super(PinCrackRunnerTest, self).tearDown()
+        del self.lmps
+        del self.payloads
+        del self.headers
 
 
 if __name__ == "__main__":
+    print 'running testcrack'
     unittest.main()

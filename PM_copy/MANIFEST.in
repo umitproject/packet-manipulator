@@ -1,0 +1,31 @@
+include README AUTHORS COPYING COPYING_HIGWIDGETS ChangeLog
+
+include umit/pm/moo/moopane.c
+include umit/pm/moo/moopaned.override
+include umit/pm/moo/moopaned.defs
+include umit/pm/moo/moopaned.c
+include umit/pm/moo/moopane.h
+include umit/pm/moo/moo-stub.c
+include umit/pm/moo/__init__.py
+include umit/pm/moo/keepontop.png
+include umit/pm/moo/attach.png
+include umit/pm/moo/close.png
+include umit/pm/moo/moopaned.h
+include umit/pm/moo/sticky.png
+include umit/pm/moo/hide.png
+include umit/pm/moo/moomarshals.list
+include umit/pm/moo/test.c
+include umit/pm/moo/moobigpaned.c
+include umit/pm/moo/moo.override
+include umit/pm/moo/moobigpaned.h
+include umit/pm/moo/moo.defs
+include umit/pm/moo/detach.png
+include umit/pm/moo/Makefile
+include umit/pm/moo/dsutils.py
+
+recursive-include umit/pm/share/pixmaps/pm *.png *.ico
+recursive-include umit/pm/share/locale/it/LC_MESSAGES/ *.mo
+recursive-include umit/pm/share/doc *
+
+recursive-include plugins *
+recursive-include audits *

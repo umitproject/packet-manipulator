@@ -1,0 +1,67 @@
+Introduction
+
+   PacketManipulator is a network scanning frontend.
+
+   PacketManipulator is developed in the Python programming language, and
+   its interface is built with the GTK Toolkit.
+
+   The project goal is to develop a frontend that is really useful for
+   advanced users and easy to be used by newbies. With PacketManipulator,
+   network admin can forge custom packets and send them over the wire
+   to analyze the network, sniff on a selected interface or simply edit
+   a pcap file for further replay.
+
+   For bugs/suggestions please contact the author or create a ticket on
+     http://trac.umitproject.org
+
+Portability
+
+   PacketManipulator is available for multiple platforms. It has been
+   (successfully?) tested on the following platforms/flavors:
+
+     * Archlinux
+     * Gentoo Linux
+     * Ubuntu
+     * Microsoft Windows XP
+
+Installation
+
+   Use the distutils compatible setup.py file provided. If you want to
+   enable the moo docking library prepend a PM_DOCKING=1 as environ
+   before building:
+
+     $ PM_DOCKING=1 python setup.py install --prefix=/usr
+
+Dependencies
+
+     * [1] Python 2.6 or higher
+     * [2] GTK+ 2.6 or higher
+     * [3] PyGTK 2.6 or higher
+     * [4] Psyco (optional)
+     * [5] PyGtkHex (optional)
+
+Supported Backends
+
+     * [6] Scapy/Scapy-win32
+     * [7] UMPA (not in this version)
+
+Authors
+
+   PacketManipulator is developed and maintained by:
+
+     *  Francesco Piccinno (stack.box@gmail.com)
+
+Homepage
+
+   http://manipulator.umitproject.org
+
+Links
+
+[1] Python official website - http://www.python.org
+[2] GTK official website - http://www.gtk.org
+[3] PyGTK official website - http://www.pygtk.org
+[4] Pysco website - http://psyco.sourceforge.net
+[5] PyGtkHex website - http://code.google.com/p/pygtkhex/
+
+[6] Scapy official website - http://www.secdev.org/projects/scapy/
+[7] UMPA trac site - http://trac.umitproject.org/browser/branch/UMPA

@@ -1,3 +1,25 @@
+2009-09-08 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Solved bugs in layers.c
+	* Refactored btsniff_fileio as a result of changes in layers.c
+	* Added experimental methods for reading from hcidump files. 
+		- sniffio.c
+		- sniffio.h
+	* Pincracker runs in separate process.  Refactored for integration with PM.
+	   Rewrote some of the method documentation.
+		- crack.py
+	* Added LMP and L2CAP BtLayerUnit objects for convenient representation.
+		- sniffer.py
+	
+
+
+2009-08-07 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added an svncopy of PacketManipulator for integration purposes.
+	* Refactoring of Bluetooth packet data structures. Better formal definitions.
+		- layers.c
+		- layers.h
+
 2009-07-30 Quek Shu Yang (quekshuy@gmail.com)
 ==============================================
 	* Added simple testing harness; makes use of nosetests. Tests PinCrackRunner in module crack

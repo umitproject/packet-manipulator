@@ -1,7 +1,13 @@
+
+
+from umit.bluetooth.sniffer import LMP
+
+
 import umit.bluetooth.sniff_fileio as sfio
 import umit.bluetooth.sniff as sniff
 import umit.bluetooth.sniffer as sniffer
 import umit.bluetooth.handlers as handlers
+
 
 class HCIDumpHandler(sniff.SniffHandler):
     

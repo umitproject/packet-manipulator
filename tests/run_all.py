@@ -67,4 +67,7 @@ os.system('nosetests')
 print 'Cleaning up...'
 for f in testfiles:
     os.remove(f)
+    pycfile = ''.join([f, 'c'])
+    if os.path.exists(pycfile):
+        os.remove(pycfile)
 

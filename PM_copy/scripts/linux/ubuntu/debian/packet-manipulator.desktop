@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Packet Manipulator
+GenericName=Packet Manipulator
+Comment=Create send or receive packets, sniff or test your network
+Icon=/usr/share/pixmaps/pm/pm-logo.png
+Exec=PacketManipulator
+Terminal=false
+Type=Application
+Categories=Network;

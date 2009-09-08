@@ -1,0 +1,3 @@
+?package(packet-manipulator): needs="X11" section="Applications/Network" \
+  title="PacketManipulator" command="/usr/bin/PacketManipulator" \
+  icon="/usr/share/pixmaps/pm/pm-logo.png"
