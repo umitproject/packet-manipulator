@@ -1,0 +1,18 @@
+/**/
+%%
+headers
+#include <Python.h>
+#define NO_IMPORT_PYGOBJECT
+#include <pygobject.h>
+#include <pygtk/pygtk.h>
+#include "moobigpaned.h"
+%%
+modulename moo_stub
+%%
+import gtk.Object as PyGtkObject_Type
+import gtk.Widget as PyGtkWidget_Type
+import gtk.Frame as PyGtkFrame_Type
+import gtk.Bin as PyGtkBin_Type
+import gtk.gdk.Pixbuf as PyGdkPixbuf_Type
+%%
+include moopaned.override

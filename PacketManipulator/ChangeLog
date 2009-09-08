@@ -1,0 +1,731 @@
+2009-08-04 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/online/injector/sources/main.py:
+        - Removing unused ConnectionsList (forgot to remove it in the first
+          commit).
+    * PM/Manager/AttackManager.py:
+        - Adding injectors and various methods like add_injector(),
+          remove_injector() and get_injector() to manage injection of the
+          packets in active sessions.
+        - Now AttackDispatcher accepts an AttackContext as argument in the
+          constructor.
+        - Adding a primitive way to inject packets in feed() method. We make
+          use of cfields to control the send. So I've added inj::l4proto,
+          inj::flags, inj::payload, inj::data cfields to control and manage
+          the injection. The code is still buggy and incomplete. I need more
+          time to tune the TCP decoder. At this point we're able only to inject
+          various packets and then lose the total control over the TCP flow.
+    * PM/Core/NetConst.py:
+        - Add INJ_FORWARDED to check that the packet sniffed on the wire is
+          one of ours injected set.
+    * PM/Backend/Scapy/packet.py:
+        - Add reset_field() method to reset the value of a field in a packet.
+          Used to recompute checksum in various plugins.
+    * PM/Backend/Scapy/Context/Attack.py:
+        - Add get_mtu(), get_ip1(), get_mac1() method in order to obtain the
+          MTU, the IP address and the MAC address of the first NIC.
+        - Packets with equal MAC address and different source IP are marked as
+          INJ_FORWARDED before passing them to feed().
+        - Fixing a bug with negative repeat argument.
+    * attacks/online/arpcachepoison/sources/main.py:
+        - ARP cache poison attack added.
+    * attacks/online/injector/sources/main.py:
+        - Now injector plugin could see data in transit between TCP sessions
+          without CPU burning.
+        - Active connections could be killed or we could inject data within.
+        - The data could be taken from a file or typed with keyboard in a
+          TextView.
+        - The file contains debug code and need to be cleaned up. The unused code
+          should be remove when the injection will be complete and fully working.
+     * attacks/offline/ip/sources/main.py:
+        - Now IP decoder provides an injector routine that recompute checksum or
+          create a new IP MetaPacket that will held injected data.
+     * attacks/offline/tcp/sources/main.py:
+        - Various bug fixed due to wrong Buffer usage.
+        - The inject_cb is dropped leaving space to the new injection
+          infrastructure.
+        - Add _inject_tcp() method to manage injection of TCP fragments in an
+          active connection.
+
+    - Bug fixing.
+    - First draft of injection.
+    - ARP cache poison plugin added.
+
+2009-07-27 Francesco Piccinno <stack.box@gmail.com>
+    * attacks/offline/tcp/sources/main.py:
+        - Moving connection enumeration in NetConst module.
+        - Adding get_source(), get_dest(), get_bytes() method to TCPStream
+          objects.
+        - Reassembler now makes use of an inject callback to manage packet
+          injection and modification.
+    * attacks/online/arpping/sources/main.py:
+        - Add simple ARP ping online plugin that show how the online
+          infrastructure is organized. It simply send who-has arp packet
+          and wait for the reply by using deferred style callback provided
+          by the new AttackContext.
+    * attacks/online/injector/sources/main.py:
+        - Add general purpose injector online plugin.
+        - It provides a tree view where you could view active connections
+          and kill a selected for the moment. The entire part relative to
+          the real injection is missing but is going to be implemented soon.
+    * README:
+        - Fixing trailing spaces and correcting the site.
+    * PM/Gui/Core/MainWindow.py:
+        - The attack menu is set sensitive only if the active page is an
+          AttackSession.
+        - Add new public function start_new_attack() used by App.py.
+    * PM/Gui/Core/App.py:
+        - Now we have an '-a' command line option to launch an attack.
+    * PM/Backend/Scapy/translator.py:
+        - Adding 'arp' alias for ARP protocol.
+    * PM/Backend/Scapy/Context/Attack.py:
+        - Add a SendWorker class to manage the send of the packets trough
+          the thread pool.
+        - Now we have si_l{2,3,b}, s_l{2,3,b} and sr_l{2,3,b} to send packets
+          trough the sockets opened for the attack.
+        - s_* and sr_* functions accept deferred style callbacks.
+        - Everything is consumed in a thread pool so make sure to isolate your
+          code with mutexes if necessary.
+    * PM/Backend/Scapy/packet.py:
+        - Add missing __div__ operator to concatenate various packets together.
+        - Add hashret() and answers() method to manage the replies.
+        - Add new() classmethod to create new packets.
+        - Implemented set_field() method.
+    * PM/Core/NetConst.py:
+        - Rearranging INJ_* constants and adding CONN_* from tcpdecoder plugin.
+    * PM/Manager/AttackManager.py:
+        - Adding attack_sess parameter to execute_attack()
+        - Various fix.
+
+    - Online infrastructure finished.
+    - ARPPing plugin added.
+    - Injector plugin added but still incomplete.
+
+2009-07-24 Francesco Piccinno <stack.box@gmail.com>
+
+    * PacketManipulator
+        - Setting PM_NOPSYCO to avoid using psyco module while developing.
+    * PM/Gui/Sessions/AttackSession.py:
+        - First draft of AttackSession that uses the AttackPage explained below.
+    * PM/Gui/Pages/AttackPage.py:
+        - First draft of the AttackPage. We use the OperationsTree to organize
+          the various attacks that could run on AttackContext.
+    * PM/Gui/Dialogs/Preferences.py:
+        - Add the capmethod option also for the AttackContext.
+    * PM/Gui/Dialogs/NewAttack.py:
+        - Avoid to return the second interface if the gtk.ComboBox is not
+          sensitive.
+    * PM/Gui/Sessions/SniffSession.py
+      PM/Gui/Sessions/SequenceSession.py:
+        - Removing unused class attribute.
+    * PM/Gui/Widgets/Interfaces.py:
+        - Fixed a regression introduced by the addition of add_auto parameter.
+    * PM/Gui/Widgets/MultiPaneds.py:
+        - Implemented automatic resize of the paned's children. Really useful.
+    * PM/Gui/Widgets/Expander.py:
+        - Fixed indentation problems and introduce activate signal used in
+          MultiPaneds.py file (described above).
+    * PM/Gui/Core/MainWindow.py:
+        - Fixed a bug due to __on_disconnect_proxy.
+        - New attack menu entry is not dummy anymore.
+    * PM/Gui/Core/Views.py:
+        - Leaving a reasonable amount of free pixels as borders.
+    * PM/Gui/Tabs/OperationsTab.py:
+        - Implemented AttackOperation.
+    * PM/Gui/Tabs/MainTab.py:
+        - Introduced create_attack_session() method.
+    * PM/Backend/Scapy/Context/Sniff.py:
+        - Fixed ''_socketobject has no attribute datalink' bug.
+    * PM/Manager/PreferenceManager.py
+      PM/Backend/Abstract/BaseContext/Attack.py:
+        - Introduced capmethod in AttackContext.
+    * PM/Backend/Scapy/Context/Attack.py:
+        - First implementation of Scapy AttackContext.
+
+    - General bug fixing.
+    - First implemenntation of AttackContext
+
+2009-07-23 Francesco Piccinno <stack.box@gmail.com>
+
+    * PM/Gui/Tabs/MainTab.py:
+        - Fixing the background color of gtk.EventBox to avoid wrong colors
+          on dark color gtk themes.
+    * attacks/offline/http/sources/main.py:
+        - Fixed a bug related to username cfield not correctly exposed.
+    * attacks/offline/profiler/sources/main.py:
+        - Moved out Account, Port, Profile interfaces to Providers.py file
+          to have a clear way to communicate with PM GUI.
+        - Implemented various functions like info_cb and populate_cb used
+          to communicate with the new HostListTab.
+        - Fixed various bugs.
+    * attacks/offline/tcp/sources/main.py:
+        - Preparing TCPDecoder plugin for injection purpose.
+        - Dropped out unused code.
+        - Added a new paramater to the listener callback (used to pass the
+          receiving HalfStream if there's data to add).
+        - Avoid to mantain unused data if it's not collected.
+    * PM/Core/NetConst.py:
+        - Add specific constants used to implement injection on decoders.
+    * attacks/attacktester.py:
+        - Now it works also with online directory.
+    * PM/Gui/Dialogs/Routes.py
+      PM/Backend/Scapy/Context/__init__.py:
+        - Indentation and column wraps fixes.
+    * PM/Gui/Core/MainWindow.py:
+        - Add a specific menu for the attacks.
+        - Add a menu entry to create an AttackContext.
+        - Add the HostListTab to the MainWindow interface.
+        - Tooltips of the various menuitem are now showed in the statusbar.
+        - Implemented register_attack_item and deregister_attack_item to add and
+          remove attack menu entries.
+    * PM/Manager/PreferenceManager.py:
+        - Add a new element to the preferences to manage the HostListTab
+          visibility.
+    * PM/Gui/Tabs/HostListTab.py:
+        - This is a tab to collect a list of active hosts in a sniffing session.
+          - The hosts are grouped by interfaces.
+          - There are 3 buttons: a scan button to send probe packets to a
+            specific interface and collect active hosts, a refresh button to
+            refresh the list, and a information button to see additional
+            information related to the selected hosts like active services,
+            account collected, remote OS, MAC vendor, distance in hop, etc.
+    * PM/Core/Providers.py:
+        - Simple module that holds interfaces used by attack plugins to
+          communicate with PM GUI and viceversa.
+    * PM/Manager/AttackManager.py:
+        - Add a simple Forwarder class to manage reinjection of frames on
+          a target interface (Not used now. It's only a draft).
+        - Now we use __inputs__ to deal with GUI inputs for online attacks. The
+          input dialog is created on demand by looking at __inputs__, in order
+          to simplify the development phase.
+        - The developer now has remove_menu_entry(), add_menu_entry() to place
+          menu entries in the PM GUI.
+        - The interaction with the GUI is documented in the docstring and the
+          start point to launch the attack is execute_attack().
+    * PM/Gui/Plugins/Containers.py:
+        - Now we produce also offline attacks Manifest.xml.
+    * PM/Gui/Dialogs/NewAttack.py:
+        - Add a new dialog to create a new AttackContext, letting the user chose
+          the interfaces where the attack will take place.
+    * PM/Gui/Widgets/StatusBar.py:
+        - Fixed a bug and implemented the missing pop() method.
+    * PM/Gui/Widgets/Interfaces.py:
+        - Now the 'Auto' entry could be inserted at discretion by using add_auto
+          bool parameter.
+    * PM/Backend/__init__.py
+      PM/Backend/Abstract/Context/__init__.py
+      PM/Backend/Abstract/BaseContext/Attack.py:
+        - Add a new AttackContext.
+    * PM/Core/AttackUtils.py:
+        - Add new string utilities functions like is_ip() and is_mac() that
+          could be used by various plugins.
+
+    - Various bug fixes.
+    - Introducing HostListTab.
+    - Preparing the environment for the online attacks.
+
+2009-07-13 Francesco Piccinno <stack.box@gmail.com>
+
+    * plugins/http-analyzer/sources/main.py:
+        - Now HTTP analyzer can plot numeric cookies for further analysis.
+          This is useful when the user needs to check if the next cookie is
+          predictable.
+        - All the plotting is done in webkit webview using protovis library
+          that generates an SVG image starting from javascript code. The
+          library could be found at http://vis.stanford.edu/protovis/
+    * plugins/schemas/AttackPlugins.xsd:
+        - Better reorganization of the various elements.
+        - Merge offline and online attacks into a single one.
+        - Added configurations element so we can easilly expose attack options.
+        - Dropped out list element to simplify the schema structure.
+    * attacks/offline/tcp/sources/main.py:
+        - Fixed 'No mem' bug reported by luis.
+    * attacks/offline/http/sources/main.py
+      attacks/offline/ip/sources/main.py
+      attacks/offline/ftp/sources/main.py
+      attacks/offline/tcp/sources/main.py
+      attacks/offline/icmp/sources/main.py
+      attacks/offline/ethernet/sources/main.py
+      attacks/offline/profiler/sources/main.py
+      attacks/offline/fingerprint/sources/main.py:
+        - Removed register_options methods. Now options are exposed at module
+          level. This makes possible to autogenerate the setup.py in a simple
+          way and expose options also to the GUI without having to load the
+          plugins.
+    * attacks/setup-autogen.py:
+        - Autogeneration process now takes care of attacks attribute to generate
+          a setup.py that could be used to create in a simple way a
+          understandable attack's Manifest.xml file as we have defined in the
+          schema.
+    * PM/Gui/Plugins/Containers.py:
+        - Implemented the capability to save and load Manifest.xml for attacks.
+    * PM/Gui/Plugins/AttackPage.py:
+        - First implementation of attack plugins GUI.
+    * PM/Gui/Plugins/Engine.py:
+        - Fixed a stupid bug.
+    * PM/Gui/Plugins/AttackPage.py:
+        - Now we have an attack tab where the user could load, find and
+          configures various attacks with a friendly UI.
+    * PM/Gui/Plugins/PluginPage.py:
+        - Plugin are now hidden in the plugin page and only showed in update
+          process.
+    * scripts/windows/setup.py
+      PM/Core/Const.py
+      setup.py:
+        - Renamed pixmaps directory from 'umit' to 'pm'.
+    * PM/Gui/Dialogs/Preferences.py:
+        - Now there's a gtk.CellRendererCombo to show up the available cfields
+          permitting to the user a more easier configuration of the sniff
+          columns. Implemented also a tooltip showing the description of the
+          cfield.
+    * PM/Core/Const.py
+      PM/Manager/AttackManager.py:
+        - Exposing cfields type and description to the GUI of PM.
+    * nose-tests.sh
+      run-tester.sh:
+        - Adding trap check to bash.
+    * offline/http/sources/main.py:
+        - Now HTTP dissector could work also without TCP reassembler.
+    * offline/fingerprint/sources/main.py:
+        - Fixing a regression.
+    * PM/Gui/Core/MainWindow.py
+      PM/Manager/AttackManager.py:
+        - Now attack configurations are loaded and saved to attacks-conf.xml
+          file in PM_HOME. To do that I've implemented two classes that make
+          use of xml SAX parser: ConfigurationsLoader and ConfigurationsWriter.
+    * PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/Context/Static.py:
+        - Now SniffContext and StaticContext understands linktype.
+
+    - Bug fixing.
+    - GUI improvements.
+    - CFields are now globally organized and exposed to the GUI.
+    - Attacks configurations are now stored to attacks-conf.xml file.
+
+2009-07-07 Francesco Piccinno <stack.box@gmail.com>
+
+    * plugins/http-analyzer/sources/main.py:
+        - Add HTTP analyzer plugin that exploits cfields setted from
+          http dissector attack. Cookie analyzer is not implemented yet.
+        - It could show HTTP pages in transit like also images and flash
+          videos, etc.
+    * attacks/offline/http/sources/main.py:
+        - HTTP dissector is finished. It lacks only of passport sniffing.
+        - It uses the new shiny TCP flow reassembler.
+        - Fully support to the HTTP request/responses and chunked transfers.
+        - NTLM / Basic / Digest sniffing is implemented.
+        - Form extraction of username/password is implemented and uses
+          username_fields and password_fields variable to have the maximum
+          flexibility.
+        - UserAgent, language and others information captured are exposed
+          in cfields.
+    * attacks/offline/profiler/sources/main.py
+      attacks/offline/fingerprint/sources/main.py
+      attacks/offline/ip/sources/main.py
+      attacks/setup-autogen.py
+      PM/Gui/Pages/SniffPage.py
+      PM/Gui/Plugins/Core.py
+      PM/Gui/Core/MainWindow.py:
+        - Minor bugfix.
+    * attacks/offline/tcp/sources/main.py:
+        - Fully working TCP reassembler. It's a pure userland TCP/IP stack
+          implementation written entirely in python. It performs better and
+          can handle TCP fragmentation. It's a libnids port with minor
+          improvements.
+        - We support also ICMP messages parsing.
+    * PM/Backend/Scapy/packet.py:
+        - Add another method get_datetime() to the MetaPacket object used by
+          TCP reassembler module.
+    * PM/Gui/Dialogs/Interface.py
+      PM/Gui/Tabs/OperationsTab.py
+      PM/Gui/Dialogs/Preferences.py
+      PM/Manager/PreferenceManager.py
+      PM/Backend/Scapy/Context/Static.py:
+        - Added the possibility to use offline attacks also on pcap files.
+    * PM/Gui/Sessions/Base.py
+      PM/Gui/Sessions/SniffSession.py
+      PM/Gui/Sessions/SequenceSession.py
+      PM/Backend/Abstract/BaseContext/Static.py:
+        - Now we could have several editors and containers. This is really
+          usefull while developing plugins.
+
+    - Bug fixes.
+    - HTTP dissector complete.
+    - TCP reassembler complete.
+    - HTTP analyzer plugin started.
+
+2009-06-29 Francesco Piccinno <stack.box@gmail.com>
+
+    * attacks/offline/http/sources/main.py:
+        - First implementation of HTTP decoder/dissector.
+    * attacks/offline/profiler/sources/main.py:
+        - This is a traffic profiler and collector offline attack. This
+          includes:
+            - MAC fingerprint with the help of a db file.
+            - Service banner collector.
+            - Account collector.
+            - Hop collector.
+            - Host type identification (router / local / remote).
+    * attacks/offline/profiler/data/finger.mac.db:
+        - MAC database file derived from manuf of wireshark.
+    * attacks/offline/tcp/sources/main.py:
+        - Fixed a bug showing wrong checksum message on truncated packets.
+        - Add a reassembler class. Only a skeleton the implementation is
+          missing and should be add soon.
+        - Enabled dissectors running from this stage trought a configuration
+          variable.
+    * attacks/offline/icmp/sources/main.py:
+        - Add ICMP decoder that uses IP reassembling exposed in IP decoder
+          trough cfields.
+    * attacks/offline/ftp/sources/main.py:
+        - Finished FTP dissector implementation (but we don't use reassembly
+          so bogus or fragmented packets can not be handled).
+    * attacks/pcap-tests/ftp-login.pcap
+      attacks/pcap-tests/wrong-checksum-icmp.pcap
+      attacks/pcap-tests/fragmented-ping.pcap:
+        - Add pcap test files used by various plugins for testing.
+    * PM/Manager/SessionManager.py:
+        - Implement a simple SessionManager used by FTP plugin.
+
+    - Bug fixing.
+    - FTP dissector.
+    - ICMP decoder.
+    - Profiler attack.
+    - Initial work on HTTP dissector and TCP stream reassembling.
+
+2009-06-22 Francesco Piccinno <stack.box@gmail.com>
+
+    * attacks/offline/fingerprint/sources/main.py:
+        - Now we use a remote_os cfield to set the fingerprint on a packet.
+        - Renamed various classes.
+    * attacks/offline/ip/sources/main.py:
+        - Now fragmented IP packets could be reassembled.
+        - The results of payload reassemble phase it's available as
+          reassemble_payload cfield.
+        - Added various tests for fragmentation as doctest strings.
+        - Introduced reassemble_max_fraglist and reassemble_max_fragments to
+          control the behaviour and limits of reassemble phase.
+        - No further checks if we have truncated packets due to low snaplen.
+    * attacks/setup-autogen.py:
+        - Add a simple setup.py autogenerator for attacks. This script could
+          also build automatically attacks. I've used to build attacks as
+          plugin and then test them directly into PM.
+    * PM/Gui/Pages/SniffPage.py
+      PM/Manager/PreferenceManager.py:
+        - Now sniff page could have custom columns. Columns are defined in
+          gui.maintab.sniffview.columns variable as list of strings separated
+          by a comma. The structure is pretty simple:
+                              <name>|<size>|<getter>
+          Where `name` is the name of the column, `size` the pixel size as
+          integer and getter is a string representing a cfield or a method
+          of MetaPacket (that could have `get_` as prefix or not).
+    * PM/Gui/Dialogs/Preferences.py:
+        - Add a page to customize columns trough a comfortable treeview like
+          wireshark does.
+    * PM/Gui/Pages/PacketPage.py
+      PM/Gui/Pages/SequencePage.py:
+        - Introduced append_packet() method used by callbacks of the context
+          menu of ProtocolSelector tab.
+    * PM/Gui/Tabs/ProtocolSelectorTab.py:
+        - Add a context menu with classical actions to avoid using the drag
+          and drop if the user doesn't like it. Everything is implemented
+          with AccelGroup giving to the users the possibility to use also
+          keyboard shourtcuts to speed up the things.
+    * PM/Gui/Plugins/PluginPage.py:
+        - Backport from UmitPlugins (fixed a typo)
+        - 80 columns line wrap fixed.
+    * PM/Gui/Plugins/Tree.py
+      PM/Gui/Plugins/Engine.py
+      PM/Gui/Core/Views.py
+      PM/Gui/Tabs/HackTab.py:
+        - 80 columns line wrap fixed.
+    * PM/Gui/Dialogs/Interface.py:
+        - Add `Enable attacks` check button to the dialog.
+    * PM/Backend/Scapy/Context/Sniff.py:
+        - Now we could run attacks with AttackDispatcher inside a SniffContext.
+    * PM/Gui/Sessions/SequenceSession.py
+      PM/Backend/Scapy/Context/Sequence.py:
+        - Add the possibility to save the sequence as flatten one (pcap dump)
+
+    - GUI improvements.
+    - General bug fixing.
+
+2009-06-13 Francesco Piccinno <stack.box@gmail.com>
+
+    * attacks/run-tester.sh:
+        - Simple attacktester.py runner to avoid setting PYTHONPATH at every
+          run.
+    * attacks/nose-tests.sh:
+        - Simple launcher of nosetests to test the attacks by testing the
+          doctest strings in main.py files.
+    * attacks/attacktester.py:
+        - Add interaction with PluginEngine().tree to let the plugin tested
+          with the attacktester.py to have Core().get_need() fully working
+          without having the mess to define a setup.py. Really usefull while
+          developing and testing.
+        - Add the possibility to change the configuration by passing set
+          expressions separated with ',' on the command line prefixed with -s.
+        - Add a --quiet options to avoid printing useless messages.
+        - Add a --profile option that uses hotshot module to profile the code.
+    * PM/Core/AttackUtils.py:
+        - Add a module to holds utilities functions used in various attacks.
+        - Add attack_unittest() function used by doctest of various attacks.
+    * attacks/offline/ethernet/sources/main.py
+      attacks/offline/ip/sources/main.py:
+        - Switching from coroutine to classic approach.
+    * attacks/offline/tcp/sources/main.py:
+        - Switching from coroutine to classic approach.
+        - Add checksum checking.
+    * attacks/offline/fingerprint/sources/main.py:
+        - Add passive fingerprint attack that uses the same approach and db of
+          ettercap.
+    * attacks/pcap-tests/wrong-checksum.pcap:
+        - Create a pcap-test/ file to holds pcap files used for testing
+          purposes.
+        - Add a wrong-checksum.pcap file used by tcp, ip and fingerprint
+          attacks.
+    * PM/Manager/AttackManager.py:
+        - Dropped coroutine approach for evident limitation on threaded context
+          and poor performance. Now we use tradition callable.
+        - Add Configuration object to centralize and made easier task to manage
+          configurations from a plugin and his relative methods to the manager.
+        - Add user_msg() function for communicating message to the user with
+          the same approach of syslog (severity and facility).
+        - Add add_decoder_hook() method to the manager to provide a pre/post
+          hook set mechanism for decoders functions. This is used for example
+          in the fingerprint offline attack.
+        - Now AttackPlugin class has 2 additional methods register_options()
+          and register_hooks().
+    * PM/Core/Atoms.py:
+        - Add ordered dict (odict) implementation to the Atoms module.
+    * PM/Backend/Abstract/BaseContext/Timed.py:
+        - print replaced with log.debug()
+    * PM/Backend/Scapy/packet.py:
+        - Add a cfields attribute to metapacket for managing custom fields
+          created by attacks.
+        - Add get_field(), set_cfield(), unset_cfield() functions.
+
+    - General bug fixing.
+    - Implemented custom fields by using a private dictionary.
+    - Added nosetest architecture to test attacks by using doctest strings to
+      speed up the development phase.
+
+2009-06-07 Francesco Piccinno <stack.box@gmail.com>
+
+    * PM/Gui/Pages/SniffPage.py:
+        - Fixing a bug due to check_finished() called on context that doesn't
+          provide, like Sequence.
+    * PM/Gui/Pages/PacketPage.py:
+        - Using get_raw() method instead of get_packet_raw()
+    * PM/Gui/Pages/SequencePage.py:
+        - 80 columns line wrap fix.
+        - Switching to standard tooltip scheme instead of HIGTooltip.
+        - Implemented a context menu to copy, delete and paste selected packet.
+        - Fixed text label.
+    * PM/Gui/Tabs/OperationsTab.py:
+        - Fixing a bug due to not checking for the load()/save() correctness.
+    * PM/Backend/Scapy/Context/Sequence.py:
+        - Various bug fix. Fixing a regression that doesn't set the title
+          after the file is saved.
+    * PM/Backend/Scapy/Context/Sniff.py:
+        - Fixing "9, Bad file descriptor" bug showed when the sniff session
+          is stopped.
+    * PM/Backend/Scapy/wrapper.py
+      PM/Backend/Scapy/serialize.py:
+        - Various fix.
+        - Avoid to save not edited properties.
+        - Using base64 to serialize field values.
+    * PM/Core/Logger.py:
+        - Adding a PM_NOCOLORTERM environment variable to avoid the use of
+          colors on terminal.
+    * PM/Backend/Scapy/utils.py:
+        - Now the SendReceiveConsumer and SequenceConsumer could use the
+          helpers.
+    * PM/Manager/PreferenceManager.py
+      PM/Gui/Dialogs/Preferences.py:
+        - Introducing enumerator variables.
+        - Add variables to manage the various capmethods.
+    * PM/Backend/Scapy/packet.py:
+        - Added a copy() function to MetaPacket.
+    * PM/Gui/Tabs/ProtocolSelectorTab.py:
+        - Fix wrong colorized rows when the packets are organized per layer.
+    * PM/Gui/Core/MainWindow.py:
+        - Fixing the size of the application by suggesting a default_size
+        - Various fix to avoid exceptions if page remove are not a Session.
+    * PM/Gui/Tabs/MainTab.py:
+        - Sexy stuff like IntroPage introduced.
+
+    - Bug fixing.
+    - UI improvements.
+    - Helper methods for SendReceiveContext and SequenceContext.
+
+2009-06-02 Francesco Piccinno <stack.box@gmail.com>
+
+    * attacks/offline/wifi/sources/main.py:
+        - First (dummy) implementation of Wifi decoder module.
+    * attacks/offline/ethernet/sources/main.py:
+        - First implementation of Ethernet decoder module.
+    * attacks/offline/ip/sources/main.py:
+        - First implementation of IP decoder module.
+    * attacks/offline/tcp/sources/main.py:
+        - First implementation of TCP decoder module.
+    * attacks/attacktester.py:
+        - Simple script to test the decoders/dissectors/attacks from command
+          line.
+    * PM/Backend/Scapy/translator.py:
+        - Global translator script for fields that does not respect wireshark
+          visible filters nomenclature. (Used in get_field of MetaPacket)
+    * PM/Backend/Scapy/wrapper.py:
+        - Fixing a bug related to the wrong implementation of get_field_size.
+    * PM/Backend/Scapy/packet.py:
+        - Add get_raw_layer function.
+        - Add get_field function that should respect wireshark filters.
+        - Add get_datalink function to return the correct datalink for the
+          selected packet.
+    * PM/Core/NetConst.py:
+        - Module that contains constants used in AttackFramework implementation.
+    * PM/Manager/AttackManager.py:
+        - Real code for AttackFramework idea.
+        - Add coroutine decorator to create more performant filters, decoders
+          or dissectors.
+        - Add Decoder class if the OOP design is preferred.
+        - Add AttackManager singleton class that contains all the references
+          to decoders and filters used in PM.
+        - Add AttackDispatcher class to separate the feed behaviour from the
+          Singleton class. This lets you call various dispatcher without
+          having the mess to create a single AttackManager for every invocation.
+        - Add AttackPlugin as base class and the derived one OfflineAttack,
+          OnlineAttack.
+        - Add AttackTester class used for testing purpose.
+
+     - Scapy bugfixing.
+     - First approach of AttackFramework idea.
+
+2009-05-24  Francesco Piccinno  <stack.box@gmail.com>
+
+    * PM/Gui/Widgets/Plotter.py
+      PM/Gui/Widgets/PropertyGrid.py:
+        - Fixing various bugs due to ConditionalField used by Scapy.
+    * PM/Backend/Scapy/wrapper.py:
+        - Added a new function is_showable_field() to manage this situation.
+        - Various fix for ConditionalField.
+    * PM/Backend/Scapy/packet.py:
+        - Added rebuild_from_raw_payload() to MetaPacket.
+    * PM/Gui/Pages/PacketPage.py:
+        - Add the possibility to edit the packet directly from the HexView.
+    * PM/Gui/Widgets/PyGtkHexView.py:
+        - Added a popup menu for common actions like cut/copy/paste.
+    * PM/Gui/Plugins/Network.py
+      PM/Gui/Plugins/PathPage.py
+      PM/Gui/Plugins/PluginPage.py
+      PM/Gui/Plugins/Tree.py
+      PM/Gui/Plugins/Update.py
+      PM/Gui/Plugins/Containers.py
+      PM/Gui/Plugins/Engine.py
+      PM/Gui/Plugins/Window.py
+      PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/utils.py:
+        - Switch to new plugin schema.
+    * plugins/geoip/setup.py
+      plugins/traceroute/setup.py:
+        - Fix the setup.py to fit schema change.
+
+    - Insert mode for HexView implemented.
+    - 80 columns line wrap fixed in various files and general bug fixing.
+
+2009-05-19 Francesco Piccinno <stack.box@gmail.com>
+
+    * PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/utils.py:
+        - Moving helper related code to utils.
+        - Various fix for win32. Now the dumpcap helper should work great.
+          Windump seems to not print the packets captured on the stderr
+          so not works as excepted.
+    * PM/Gui/Dialogs/Interface.py:
+        - Repopulate the store on capmethod changes. This is required for
+          windows because tcpdump/dumpcap doesn't understand the interface
+          nomenclature used by libdnet python binding.
+    * PM/PacketManipulator:
+        - Reverting to pygtk >= 2.10 requirement. 2.14 seems to be not
+          available yet on windows.
+
+    - Win32 fixes.
+
+2009-05-18 Francesco Piccinno <stack.box@gmail.com>
+
+    * PM/Backend/Scapy/Context/Sniff.py
+      PM/Backend/Scapy/utils.py:
+        - Moving all helper related code to utils.py to make SendReceive and
+          SequenceConsumer benefit of it.
+2009-05-17 Francesco Piccinno <stack.box@gmail.com>
+    * PM/Gui/Dialogs/Preferences.py
+      PM/Gui/Core/App.py
+      PM/Gui/Manager/PreferenceManager.py:
+        - Added a check for python version (that should be >= 2.6)
+        - Making checks for root/correct python version optional by
+          adding it in pm-prefs.xml file, and in SectionPage of
+          Preference dialog.
+    * PM/Gui/Core/MainWindow.py
+      PM/Gui/Core/GdlPaned.py:
+        - Added a gdl paned implementation. You need gnome-python-extra
+          package to use that implementation.
+    * TODO: Cleaned up
+    * PM/Gui/pages/PacketPage.py
+      PM/Gui/Widgets/PyGtkHexView.py:
+        - Added a new implementation of read/write hex view.
+    * PM/Backend/Scapy/packet.py:
+        - Added new method get_protocol_bounds() to MetaPacket class.
+    * PM/Backend/Scapy/wrapper.py:
+        - Added new function get_proto_size() used by MetaPacket.
+    * PM/Gui/Tabs/PropertyTab.py:
+        - Now if the user select a protocol in the ProtocolHierarchy the
+          selection will be propagated to the hexview with the same behaviour
+          of field selection but for the entire protocol. See also wireshark.
+    * PM/Gui/Widgets/PropertyGrid.py:
+        - Added the possibility to use PyGtkHexView class to edit string fields
+          that can't be converted to utf-8 string. This should close all bugs
+          related to the missing read/write hexview implementation.
+
+    - Fixed various bug and regression.
+    - 80 columns line wrap fixed in various files.
+
+2009-05-16 Francesco Piccinno <stack.box@gmail.com>
+
+    * PacketManipulator:
+        - Added --debug option to spawn a gdb session when the launcher is
+          started.
+    * PM/PacketManipulator:
+        - now we require pygtk >= 2.14
+    * PM/Gui/Pages/SniffPage.py:
+        - 80 columns line wrap fixed.
+        - Created two differents treemode to store informations (gtk.ListStore
+          to improve the performance while sniffing, and gtk.TreeStore to have
+          the possibility to use the flow organizer)
+    * PM/Gui/Dialogs/Interface.py:
+        - 80 columns line wrap fixed.
+        - Added a new ComboBox to select the method to use for the SniffSession
+        - Set a tooltip to the pcap filter info button
+        - Fixed various alignment bugs.
+    * PM/Gui/Dialogs/Preferences.py:
+        - Adding a new 'Helpers' section letting the user choose the correct
+          path for tcpdump and dumpcap programs.
+    * PM/Backend/Scapy/Context/Sniff.py:
+        - Adding the possibility to use tcpdump/pcap or virtual interface for
+          sniffing to avoid performance problems or CPU burning as reported.
+
+          These methods (tcpdump/dumpcap) should remove the risk of packet
+          loss also, but uses a temporary file created with tempfile.mktemp()
+
+          In this case we use fcntl to set O_NONBLOCK to stderr pipe created
+          by the subprocess module. This code works on *NIX and *BSD systems
+          that offers select() over simple file descriptor. I should implement
+          the missing code for Windows system and use PeekNamedPipe.
+        - Implemented error propagation trough exit_from_thread() method
+    * PM/Backend/Scapy/Context/Static.py:
+        - Avoid a cumulative call to PacketList constructor to reduce memory
+          usage.
+
+    - Various bugfix.
+
+2009-05-11 Francesco Piccinno <stack.box@gmail.com>
+
+    - Init ChangeLog.
