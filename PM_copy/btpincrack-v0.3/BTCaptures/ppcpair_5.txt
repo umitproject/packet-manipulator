@@ -1,0 +1,41 @@
+  From LMP #22 to LMP #31.
+
+Packet#
+_______|_______________________________________________________________________
+LMP(22) Addr(0x1) C1(M) LMP Len(17) TID(M) Opcode(in_rand) 
+_______| random number(7B CA 76 34 97 B3 33 A3 60 38 06 A2 DA CA 76 89 ) 
+_______| TimeDelta(  2.318 sec) Time(16.927s) 
+_______|_______________________________________________________________________
+LMP(23) Addr(0x1) C1(M) LMP Len(2) TID(M) Opcode(decr_power) future use(0x00) 
+_______| TimeDelta(  9.009 sec) Time(19.244s) 
+_______|_______________________________________________________________________
+LMP(24) Addr(0x1) C1(M) LMP Len(2) TID(M) Opcode(decr_power) future use(0x00) 
+_______| TimeDelta(  5.851 sec) Time(28.253s) 
+_______|_______________________________________________________________________
+LMP(25) Addr(0x1) C1(S) LMP Len(2) TID(M) Opcode(accept) 
+_______| accepted opcode(in_rand) TimeDelta( 19.375 ms) Time(34.104s) 
+_______|_______________________________________________________________________
+LMP(26) Addr(0x1) C1(M) LMP Len(17) TID(M) Opcode(comb_key) 
+_______| random number(86 E4 EA 6B 05 BA 92 10 41 AC 11 3D EF F6 C5 81 ) 
+_______| TimeDelta( 28.126 ms) Time(34.123s) 
+_______|_______________________________________________________________________
+LMP(27) Addr(0x1) C1(S) LMP Len(17) TID(M) Opcode(comb_key) 
+_______| random number(53 26 B7 8F CB 62 09 85 38 45 C6 6B F0 43 9A 02 ) 
+_______| TimeDelta( 25.624 ms) Time(34.151s) 
+_______|_______________________________________________________________________
+LMP(28) Addr(0x1) C1(M) LMP Len(17) TID(M) Opcode(au_rand) 
+_______| random number(62 A7 E3 9D C7 80 10 BF CA 68 4E C8 82 1E C0 1B ) 
+_______| TimeDelta( 25.626 ms) Time(34.177s) 
+_______|_______________________________________________________________________
+LMP(29) Addr(0x1) C1(S) LMP Len(5) TID(M) Opcode(sres) 
+_______| authentication response(57 7B 44 DF ) TimeDelta(  7.500 ms) 
+_______| Time(34.203s) 
+_______|_______________________________________________________________________
+LMP(30) Addr(0x1) C1(S) LMP Len(17) TID(M) Opcode(au_rand) 
+_______| random number(4F 72 67 3D 07 C0 81 52 E2 35 66 44 83 AB 5B 12 ) 
+_______| TimeDelta( 15.624 ms) Time(34.210s) 
+_______|_______________________________________________________________________
+LMP(31) Addr(0x1) C1(M) LMP Len(5) TID(M) Opcode(sres) 
+_______| authentication response(EB 36 F1 C7 ) TimeDelta( 10.000 ms) 
+_______| Time(34.226s) 
+_______|_______________________________________________________________________

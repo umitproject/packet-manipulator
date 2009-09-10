@@ -67,9 +67,10 @@ from umit.pm.gui.tabs.hostlisttab import HostListTab
 from umit.pm.gui.tabs.operationstab import FileOperation
 from umit.pm.gui.tabs.protocolselectortab import ProtocolSelectorTab
 from umit.pm.gui.tabs.operationstab import OperationsTab, SniffOperation, \
-     AuditOperation
+     AuditOperation, BtSniffOperation
 
 from umit.pm.gui.dialogs.interface import InterfaceDialog
+from umit.pm.gui.dialogs.btinterface import BtInterfaceDialog
 from umit.pm.gui.dialogs.preferences import PreferenceDialog
 from umit.pm.gui.dialogs.newaudit import NewAuditDialog
 from umit.pm.gui.dialogs.routes import RoutesDialog
@@ -149,6 +150,9 @@ class MainWindow(gtk.Window):
             ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i',
                 _('Capture from interface'), self.__on_select_iface),
 
+            ('Bluetooth', gtk.STOCK_CONNECT, _('Bluetooth'), None,
+            _('Capture from Bluetooth interface'), self.__on_select_btiface),
+
             ('Audits', None, _('Audits'), None),
 
             ('Options', None, _('Options'), None),
@@ -182,6 +186,7 @@ class MainWindow(gtk.Window):
             </menu>
             <menu action='Capture'>
                 <menuitem action='Interface'/>
+                <menuitem action='Bluetooth'/>
             </menu>
             <menu action='Audits'/>
             <menu action='Options'>
@@ -754,6 +759,24 @@ class MainWindow(gtk.Window):
 
         dialog.hide()
         dialog.destroy()
+        
+    def __on_select_btiface(self, action):
+        log.debug('On_select_btiface')
+        dialog = BtInterfaceDialog(self)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            
+            
+            iface = dialog.get_selected()
+            args = dialog.get_options()
+            
+            if iface:
+                log.debug('MainWindow: BtSniff: %s selected' % iface)
+                tab = self.get_tab('OperationsTab')
+                tab.tree.append_operation(BtSniffOperation(iface, **args))
+        
+        dialog.hide()
+        dialog.destroy()    
 
     def start_new_audit(self, dev1, dev2, bpf_filter):
         log.debug('Creating a new AuditOperation using %s %s %s' \

@@ -385,6 +385,39 @@ class SniffOperation(backend.SniffContext, Operation):
             self.notify_parent()
 
 
+class BtSniffOperation(backend.BtSniffContext, Operation):
+    
+    def __init__(self, iface, capfile = None, scount = 0, stime = 0, 
+                 master_add = None, slave_add = None, crack_pin = False, 
+                 set_timeout = 30):
+        
+        Operation.__init__(self)
+        backend.BtSniffContext.__init__(self, iface, capfile, scount, stime,
+                                      master_add, slave_add, crack_pin, 
+                                      set_timeout)
+        
+        nb = PMApp().main_window.get_tab('MainTab').session_notebook
+        self.session = nb.create_btsniff_session(self)
+        log.debug('BtSniffOperation__init__: isinstance BtSniffContext? %s' % 
+                  str(isinstance(self.session.context, Backend.BtSniffContext)))
+    
+    def _start(self):
+        log.debug('BtSniffOperation.start')
+        backend.BtSniffContext._start(self)
+        
+        if self.session:
+            self.session.sniff_page.clear()
+            self.session.sniff_page.reload()
+    
+    def activate(self):
+        if not self.session:
+            nb = PMApp().main_window.get_tab('MainTab').session_notebook
+            self.session = nb.create_btsniff_session(self)
+        
+    def __recv_callback(self, packet, udata):
+        if not self.SKIP_UPDATE:
+            self.notify_parent()
+            
 class SequenceOperation(backend.SequenceContext, Operation):
     def __init__(self, seq, count, inter, iface=None, strict=True, \
                  report_recv=False, report_sent=True):

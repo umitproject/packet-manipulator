@@ -38,8 +38,11 @@ from abstract.basecontext.sendreceive import SendReceiveContext
 from abstract.basecontext.sniff import SniffContext
 from abstract.basecontext.sequence import SequenceContext
 from abstract.basecontext.audit import AuditContext
+from abstract.basecontext.btsniff import BtSniffContext
 
 from umit.pm.manager.preferencemanager import Prefs
+
+from bt_sniffer import *
 
 if Prefs()['backend.system'].value.lower() == 'umpa':
     from umpa import *
