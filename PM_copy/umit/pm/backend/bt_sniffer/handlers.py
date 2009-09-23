@@ -10,19 +10,7 @@ import crack
 import btlayers
 
 from sniffcommon import * 
-
-
-## This code for taking out of PM, so we do not need to change any code
-try:
-    from packet import BtMetaPacket
-except ImportError:
-    class BtMetaPacket(object):
-        
-        def _init__(self, unit):
-            self.pkt = unit 
-
-        def __getattr__(self, name):
-            return getattr(self.pkt, name)
+from packet import BtMetaPacket
 
 class CollectHandler(btsniff.SniffHandler):
     
@@ -54,12 +42,12 @@ class PinCrackCollectHandler(CollectHandler):
         self._pin = None
     
     def recvlmp(self, unit):
-         super(PinCrackCollectHandler, self).recvlmp(unit)
-         # Optimize for more speed
-         lmp = unit.payload
-         if lmp.header.op1 in crack.LMP_PINCRACK_OPCODES \
-            and self._pcr.try_crack(lmp):
-             self._pin = self._pcr.getpin()
+        super(PinCrackCollectHandler, self).recvlmp(unit)
+        lmp = unit.payload
+        log.debug('PinCrackCollectHandler: op1 = %s' % str(lmp.header.op1))
+        if lmp.header.op1 in crack.LMP_PINCRACK_OPCODES \
+            and self._pcr.try_crack(lmp, unit.is_src_master):
+            self._pin = self._pcr.getpin()
     
     def is_done(self):
         return self._pcr.is_done()
@@ -84,7 +72,7 @@ class TextHandler(btsniff.SniffHandler):
         super(TextHandler, self).__init__()
         self._state = btsniff.CaptureState()
         if do_pin:
-            print 'do_pin'
+            log.debug('do_pin')
             self._state.pinstate = 1
             self._pcr = crack.PinCrackRunner(master_add, slave_add)
             if master_add is None or slave_add is None:
@@ -123,7 +111,7 @@ class TextHandler(btsniff.SniffHandler):
         llid = packet.llid
         length = packet.payload_len
         
-        print 'PL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X [type: %d addr: %d] LLID %d Len %d' \
+        log.debug('PL 0x%.2X Ch %.2d %c Clk 0x%.7X Status 0x%.1X Hdr0 0x%.2X [type: %d addr: %d] LLID %d Len %d' \
                         % (header_len, 
                             channel,
                             'M' if master else 'S',
@@ -133,38 +121,27 @@ class TextHandler(btsniff.SniffHandler):
                             type,
                             address,
                             llid,
-                            length),
+                            length))
 
     def _printpayload(self, payload):
-        print ' '.join(['%.2x' % d for d in payload.rawdata])
+        log.debug(' '.join(['%.2x' % d for d in payload.rawdata]))
     
     def recvlmp(self, packet):
         self._printpktdetails(packet)
         lmp = packet.payload
         if lmp:
-            print 'LMP Tid %d, Op1 %d' % (lmp.header.tid, lmp.header.op1),
+            log.debug('LMP Tid %d, Op1 %d' % (lmp.header.tid, lmp.header.op1))
             if lmp.header.op1 >= 124 and lmp.header.op1 <= 127:
-                print ', Op2 %d' % (lmp.header.op2),
-            print ' '.join(['%.2x' % d for d in lmp.payload.rawdata])
+                log.debug(', Op2 %d' % (lmp.header.op2))
+            log.debug(' '.join(['%.2x' % d for d in lmp.payload.rawdata]))
             
             if self._pcr and self._pcr.try_crack(lmp):
-                print 19 * '='
-                print 'Pin: ', self._pcr.getpin()
-                print 19 * '='
+                log.debug(19 * '=')
+                log.debug('Pin: ', self._pcr.getpin())
+                log.debug(19 * '=')
             
         else:
-            print
-        
-#            pcd = crack._gen_pincrackdata(self._state, lmp.header.op1, lmp.payload.rawdata,
-#                                 self._session.master, self._session.slave)
-#            print '============== pindata state ============'
-#            print self._session.state.pindata
-#            print '========================================='
-#            if pcd:
-#                if pcd.ready_to_crack():
-#                    print 'Pin: ', self.getpin(pcd)
-#                else:
-#                    raise StandardError('recvlmp: dopin: pairing process complete but no pin crack.')
+            log.debug('')
     
     def getpin(self, pincrackdata):
         import tempfile
@@ -178,13 +155,13 @@ class TextHandler(btsniff.SniffHandler):
     
     def recvl2cap(self, packet):
         self._printpktdetails(packet)
-        print "L2CAP:",
+        log.debug("L2CAP:")
 #        self._printgenpkt(packet.payload)
         self._printpayload(packet.payload)
     
     def recvdv(self, packet):
         self._printpktdetails(packet)
-        print 'DV:',
+        log.debug('DV:')
         self._printgenpkt(packet.payload)
         
     

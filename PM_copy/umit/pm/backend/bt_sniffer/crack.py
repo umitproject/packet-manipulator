@@ -7,7 +7,6 @@ import _crack
 from sniffcommon import log
 from btsniff import CaptureState
 
-## BIG CRACK CHANGES
 
 BTPINCRACKDIR = 'btpincrack-v0.3'
 CRACKPROG = 'btpincrack'
@@ -76,13 +75,13 @@ class PinCrackRunner(object):
         if lmppkt is not None and \
             not self._is_started and not self._pcd:
             
-            log.debug("Gencrack\n")
+            log.debug("Gencrack")
             self._pcd = _gen_pincrackdata(self._capstate, 
                               lmppkt.header.op1, 
                               lmppkt.payload.rawdata, 
                               self._master_add, 
                               self._slave_add, isPktFromMaster)
-            
+        log.debug("PinCrackRunner: checking that self_pcd is not None")
         if self._pcd and not self._is_started:
             log.debug("Running crack!!!\n")
             self._is_started = True
@@ -98,7 +97,8 @@ class PinCrackRunner(object):
         return self._pcr is not None and self._pcr.is_done()
     
     def terminate(self):
-        self._pcr.terminate()
+        if self._pcr:
+            self._pcr.terminate()
     
     def get_pcd(self):
         return self._pcd
@@ -151,7 +151,9 @@ class _pincrackrunner(object):
         #self._pcd = self._master = self._slave = None
         self._pcd = pincrackdata
         self._master, self._slave = master_add, slave_add
-        print '_pincrackrunner: master', self._master, 'slave: ', self._slave
+        log.debug('_pincrackrunner: master: %s\tslave: %s'\
+                   % (str(self._master), str(self._slave)))
+        
         if not tmpfile:
             import tempfile
             tmpfile = tempfile.TemporaryFile()
@@ -252,18 +254,34 @@ class _pincrackrunner(object):
 #     Internal methods                #
 #######################################
 
-__au_rand_from_master = True
+__originates_master = True
+
+def _create_pincrackdata(state, is_pin_master):
+    log.debug('1')
+    pcd = PinCrackData(is_pin_master)
+    log.debug('2')
+    type_d = {0:'in_rand', 1:'m_comb_key', 2:'s_comb_key', 3:'m_au_rand', 4:
+              's_au_rand', 5:'m_sres', 6:'s_sres'}
+    log.debug('3')
+    for i in range(7):
+        length = 4 if i >= 5 else 16
+        keyintlist = []
+        for j in range(length):
+            keyintlist.append(state.pindata[i][j])
+        pcd.__setattr__(type_d[i], keyintlist)
+    log.debug('create_pincrackdata: %s' % str(pcd))
+    return pcd
 
 def _gen_pincrackdata(state, op, data_list, master_add, slave_add, from_master):
     """
         Returns None when pin not ready. Otherwise return a PinCrackData
         object, that stores info relevant for pin cracking.
         
-        @param state     State object
-        @param op        LMP op1 code
-        @data_list       List of integers representing LMP payload
-        @master_add      Master device address
-        @slave_add       Slave device address
+        @param state           State object
+        @param op              LMP op1 code
+        @param data_list       List of integers representing LMP payload
+        @param master_add      Master device address
+        @param slave_add       Slave device address
     """
     
      ## Check for first cracking packet and remember its source.
@@ -272,26 +290,14 @@ def _gen_pincrackdata(state, op, data_list, master_add, slave_add, from_master):
      ## implementation.
     
     if op == LMP_OP1_IN_RAND:
-        __au_rand_from_master = from_master    
-        
+        state.pinmaster = from_master
+            
     _crack._setpindata(state, op, data_list, from_master)
-    
     if not state.pinstate == 0xff:
         return None
     else:
         state.pinstate = 1
-        return _create_pincrackdata(state, __au_rand_from_master)
+        return _create_pincrackdata(state, state.pinmaster)
 
-def _create_pincrackdata(state, is_pin_master):
-    pcd = PinCrackData(is_pin_master)
-    type_d = {0:'in_rand', 1:'m_comb_key', 2:'s_comb_key', 3:'m_au_rand', 4:
-              's_au_rand', 5:'m_sres', 6:'s_sres'}
-    for i in range(7):
-        length = 4 if i >= 5 else 16
-        keyintlist = []
-        for j in range(length):
-            keyintlist.append(state.pindata[i][j])
-        pcd.__setattr__(type_d[i], keyintlist)
-    # print 'create_pincrackdata:\n', str(pcd)
-    return pcd
+
 

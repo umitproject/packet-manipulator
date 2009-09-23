@@ -1,10 +1,11 @@
 import struct, re
+from threading import Timer
 
 import btlayers
 
 from btsniff import * 
 from sniffcommon import *
-from handlers import CollectHandler
+from handlers import CollectHandler, PinCrackCollectHandler
 
 # Additional data types
 
@@ -118,11 +119,42 @@ class BtCollectRunner(BtSniffRunner):
 
 class BtCollectPinCrackRunner(BtCollectRunner):
     
-    def __init__(self, device_name, master_add, slave_add):
+    def __init__(self, device_name, master_add, slave_add, check_interval = 5):
         super(BtCollectPinCrackRunner, self).__init__(device_name)
         self._master_add, self._slave_add = master_add, slave_add
+        
         self._handler =  PinCrackCollectHandler(self._master_add, 
                                                 self._slave_add)
+        # This handler should be run every check_interval seconds to check if 
+        # pin crack is done. 
+        self._callback = None
+        self._timer, self._interval = None, check_interval
+        
+    
+    def register_pincrack_handler(self, handler):
+        '''
+           @param handler Handler signature should be func(str)
+        '''
+        self._callback = handler
+        self.__set_interval_actions()
+    
+    def __set_interval_actions(self):
+        log.debug('__set_interval: _handler is %s' % str(self._handler.is_done()))
+        if self._handler.is_done():
+            self._callback(self._handler.getpin())
+        else:
+            self._timer = Timer(self._interval, self.__set_interval_actions)
+            self._timer.start()
+    
+    def stop_capture(self):
+        super(BtCollectPinCrackRunner, self).stop_capture()
+        self.terminate()
+    
+    def terminate(self):
+        if self._timer is not None: self._timer.cancel()
+        self._handler.close()
+    
+## UTILITY FUNCTIONS
 
 def parse_macs(mac_add):
     """
@@ -178,7 +210,7 @@ def getcmdoptions():
     
 
 def run(handler = None, state = None):
-    print "Sniffer run"
+    log.debug("Sniffer run")
     if not handler:
         handler = handlers.BTSniffHandler()
     if not state:
@@ -196,7 +228,7 @@ def run(handler = None, state = None):
         exit("Did not specify device")
     
     if options.timer:
-        print "Timer: %x" % btsniff.get_timer(state, options.device)
+        log.debug("Timer: %x" % btsniff.get_timer(state, options.device))
     
     if options.filter and options.filter >  -1:
         btsniff.set_filter(state, options.device, options.filter)
