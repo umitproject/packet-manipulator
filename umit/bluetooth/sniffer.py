@@ -1,10 +1,31 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008, 2009 Adriano Monteiro Marques
+#
+# Author: Quek Shu Yang <quekshuy@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
 import struct, re
+from threading import Timer
 
 import btlayers
 
 from btsniff import * 
 from sniffcommon import *
-from handlers import CollectHandler
+from handlers import CollectHandler, PinCrackCollectHandler
 
 # Additional data types
 
@@ -118,11 +139,45 @@ class BtCollectRunner(BtSniffRunner):
 
 class BtCollectPinCrackRunner(BtCollectRunner):
     
-    def __init__(self, device_name, master_add, slave_add):
+    def __init__(self, device_name, master_add, slave_add, check_interval = 5):
         super(BtCollectPinCrackRunner, self).__init__(device_name)
         self._master_add, self._slave_add = master_add, slave_add
+        
         self._handler =  PinCrackCollectHandler(self._master_add, 
                                                 self._slave_add)
+        # This handler should be run every check_interval seconds to check if 
+        # pin crack is done. 
+        self._callback = None
+        self._timer, self._interval = None, check_interval
+        
+    
+    def register_pincrack_handler(self, handler):
+        '''
+           @param handler Handler signature should be func(str)
+        '''
+        self._callback = handler
+        self.__set_interval_actions()
+    
+    def __set_interval_actions(self):
+        log.debug('__set_interval: _handler is %s' % str(self._handler.is_done()))
+        if self._handler.is_done():
+            self._callback(self._handler.getpin())
+        else:
+            self._timer = Timer(self._interval, self.__set_interval_actions)
+            self._timer.start()
+    
+    def stop_capture(self):
+        super(BtCollectPinCrackRunner, self).stop_capture()
+        self.terminate()
+    
+    def is_done(self):
+        return self._handler.is_done()
+    
+    def terminate(self):
+        if self._timer is not None: self._timer.cancel()
+        self._handler.close()
+    
+## UTILITY FUNCTIONS
 
 def parse_macs(mac_add):
     """
@@ -178,7 +233,7 @@ def getcmdoptions():
     
 
 def run(handler = None, state = None):
-    print "Sniffer run"
+    log.debug("Sniffer run")
     if not handler:
         handler = handlers.BTSniffHandler()
     if not state:
@@ -196,7 +251,7 @@ def run(handler = None, state = None):
         exit("Did not specify device")
     
     if options.timer:
-        print "Timer: %x" % btsniff.get_timer(state, options.device)
+        log.debug("Timer: %x" % btsniff.get_timer(state, options.device))
     
     if options.filter and options.filter >  -1:
         btsniff.set_filter(state, options.device, options.filter)
