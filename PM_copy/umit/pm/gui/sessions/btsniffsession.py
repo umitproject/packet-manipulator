@@ -28,7 +28,7 @@ class BtSniffSession(SniffSession):
 
     def reload_container(self, packet=None):
         # FIXME: check packet and emit a row-changed
-        if not isinstance(self.context, Backend.TimedContext):
+        if not isinstance(self.context, backend.TimedContext):
             self.sniff_page.clear()
         self.sniff_page.reload()
 

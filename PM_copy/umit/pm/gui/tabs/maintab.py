@@ -31,6 +31,7 @@ from umit.pm.gui.sessions.base import Session
 from umit.pm.gui.sessions.sniffsession import SniffSession
 from umit.pm.gui.sessions.auditsession import AuditSession
 from umit.pm.gui.sessions.sequencesession import SequenceSession
+from umit.pm.gui.sessions.btsniffsession import BtSniffSession
 
 from umit.pm.manager.preferencemanager import Prefs
 
@@ -127,6 +128,10 @@ class SessionNotebook(gtk.Notebook):
 
     def create_sniff_session(self, ctx):
         session = SniffSession(ctx)
+        return self.__append_session(session)
+
+    def create_btsniff_session(self, ctx):
+        session = BtSniffSession(ctx)
         return self.__append_session(session)
 
     def create_audit_session(self, ctx):

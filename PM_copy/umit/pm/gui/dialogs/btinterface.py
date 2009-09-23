@@ -28,8 +28,9 @@ from umit.pm.core.logger import log
 
 from umit.pm.manager.preferencemanager import Prefs
 from umit.pm.higwidgets.higdialogs import HIGAlertDialog
-
 from umit.pm.gui.dialogs.interface import CaptureOptions, InterfaceList, InterfaceDialog
+
+from umit.pm.backend.abstract.basecontext.btsniff import BT_OPTIONS_PINCRACK
 
 class BtCaptureOptions(CaptureOptions):
     
@@ -67,14 +68,7 @@ class BtCaptureOptions(CaptureOptions):
 
         self.master_entries = self.__new_add_entry()
         self.slave_entries = self.__new_add_entry() 
-#        btn = gtk.Button()
-#        btn.add(gtk.image_new_from_stock(gtk.STOCK_INFO, gtk.ICON_SIZE_BUTTON))
-#        btn.set_relief(gtk.RELIEF_NONE)
-#        btn.set_tooltip_markup(_('7 to capture all'))
 
-#        hbox = gtk.HBox(0, False)
-#        hbox.pack_start(btn, False, False)
-#        tbl.attach(hbox, 2, 3, 0, 1, yoptions=gtk.SHRINK)
         tbl.attach(self.master_entries, 1, 2, 0, 1, yoptions=gtk.SHRINK)
         tbl.attach(self.slave_entries, 1, 2, 1, 2, yoptions=gtk.SHRINK)
 
@@ -91,13 +85,6 @@ class BtCaptureOptions(CaptureOptions):
         tbl.attach(self.file, 1, 2, 2, 3, yoptions=gtk.SHRINK)
         tbl.attach(hbox, 2, 3, 2, 3, yoptions=gtk.SHRINK)
 
-#        self.method = gtk.combo_box_new_text()
-#        self.method.append_text(_('hcidump helper'))
-#        
-#        self.method.set_active(0)
-#
-#        tbl.attach(self.method, 1, 2, 2, 3, yoptions=gtk.SHRINK)
-
         self.stop_packets, self.stop_packets_lbl = \
             self.new_combo(0, maxint, [_("packet(s)")])
 
@@ -112,9 +99,10 @@ class BtCaptureOptions(CaptureOptions):
         tbl.attach(self.stop_time_lbl, 2, 3, 4, 5, yoptions=gtk.SHRINK)
 
         self.pinmethod = gtk.combo_box_new_text()
-        self.pinmethod.append_text(_('Never'))
-        self.pinmethod.append_text(_('Post-sniffing'))
-        self.pinmethod.append_text(_('On the fly'))
+        
+        # Set options for pincracking        
+        for p_method in BT_OPTIONS_PINCRACK:
+            self.pinmethod.append_text(_(p_method))
         
         self.pinmethod.set_active(0)
         

@@ -300,17 +300,17 @@ class BtSniffPage(SniffPage):
         if self.timeout_id:
             gobject.source_remove(self.timeout_id)
         
-        log.debug('isinstance(self.session.context, Backend.TimedContext): %s, context.state != NOT_RUNNING: %s' % (str(isinstance(self.session.context, Backend.TimedContext)), 
-                                                                        str(self.session.context.state != self.session.context.NOT_RUNNING)))
-        log.debug('type: type(self.session.context): %s' % str(type(self.session.context)))
-        log.debug('BtSniffSession type(self.session): %s' % str(type(self.session)))
-        log.debug('isinstance(self.session.context, Backend.BtSniffContext): %s, state = %s' % 
-                  (isinstance(self.session.context, Backend.BtSniffContext),
-                   str(self.session.context.state)))
-        
-        if isinstance(self.session.context, Backend.TimedContext) and \
+#        log.debug('isinstance(self.session.context, backend.TimedContext): %s, context.state != NOT_RUNNING: %s' % (str(isinstance(self.session.context, backend.TimedContext)), 
+#                                                                        str(self.session.context.state != self.session.context.NOT_RUNNING)))
+#        log.debug('type: type(self.session.context): %s' % str(type(self.session.context)))
+#        log.debug('BtSniffSession type(self.session): %s' % str(type(self.session)))
+#        log.debug('isinstance(self.session.context, backend.BtSniffContext): %s, state = %s' % 
+#                  (isinstance(self.session.context, backend.BtSniffContext),
+#                   str(self.session.context.state)))
+#        
+        if isinstance(self.session.context, backend.TimedContext) and \
            self.session.context.state != self.session.context.NOT_RUNNING:
-            log.debug("Set the update")
+#            log.debug("Set the update")
             self.timeout_id = gobject.timeout_add(300, self.__update_tree)
 
     # Signals callbacks
@@ -378,7 +378,7 @@ class BtSniffPage(SniffPage):
             self.tree.get_selection().selected_foreach(add_to_tree, node)
 
             for child in node:
-                child.data = Backend.SequencePacket(child.data)
+                child.data = backend.SequencePacket(child.data)
 
             return node
         else:
@@ -400,7 +400,7 @@ class BtSniffPage(SniffPage):
         dialog = self.__create_save_dialog()
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
-            ctx = Backend.StaticContext('', dialog.get_filename())
+            ctx = backend.StaticContext('', dialog.get_filename())
             ctx.data = self.get_selected_packets()
 
             if ctx.save():
@@ -418,7 +418,7 @@ class BtSniffPage(SniffPage):
         dialog.destroy()
 
     def __on_reorder(self, action):
-        if isinstance(self.session.context, Backend.TimedContext):
+        if isinstance(self.session.context, backend.TimedContext):
             if self.session.context.state == self.session.context.NOT_RUNNING:
                 packets = self.session.context.get_all_data()
             else:
@@ -427,66 +427,11 @@ class BtSniffPage(SniffPage):
                 self.statusbar.start_animation(True)
                 return
 
-        elif isinstance(self.session.context, Backend.StaticContext):
+        elif isinstance(self.session.context, backend.StaticContext):
             packets = self.session.context.get_data()
         else:
             return
 
-#        tree = Backend.analyze_connections(packets)
-#
-#        if tree:
-#            self.tree_store.clear()
-#
-#            for (root, lst) in tree:
-#                iter = self.tree_store.append(None, [root])
-#
-#                for child in lst:
-#                    self.tree_store.append(iter, [child])
-#
-#            self._switch_model(self.tree_store)
-
-#    def _switch_model(self, model):
-#        """
-#        Switch to the new model and reset the filter
-#        """
-#
-#        if self.active_model is not model:
-#            self.active_model = model
-#            self.model_filter = model.filter_new()
-#            self.model_filter.set_visible_func(self.__filter_func)
-#
-#        if self.active_filter:
-#            self.model_filter.refilter()
-#            self.tree.set_model(self.model_filter)
-#        elif self.tree.get_model() is not model:
-#            self.tree.set_model(model)
-
-
-#    def __filter_func(self, model, iter):
-#        if not self.active_filter:
-#            return True
-#
-#        packet = model.get_value(iter, 0)
-#
-#        if not packet:
-#            return False
-#
-#        strs = (
-#            str(model.get_path(iter)[0] + 1),
-#            packet.get_time(),
-#            packet.get_source(),
-#            packet.get_dest(),
-#            packet.get_protocol_str(),
-#            packet.summary()
-#        )
-#
-#        # TODO: implement a search engine like num: summary: ?
-#
-#        for pattern in strs:
-#            if self.active_filter in pattern:
-#                return True
-#
-#        return False
 
     def __on_stop(self, action):
         self.session.context.stop()

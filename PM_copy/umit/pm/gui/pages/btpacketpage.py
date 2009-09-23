@@ -49,7 +49,6 @@ except ImportError:
                 'http://code.google.com/p/pygtkhex/')
 
 
-## TODO: Change this to suit our needs
 class BtLayerHierarchy(gtk.ScrolledWindow):
     def __init__(self, parent):
         gtk.ScrolledWindow.__init__(self)
@@ -69,8 +68,8 @@ class BtLayerHierarchy(gtk.ScrolledWindow):
             log.debug("BtPacketPage.reload(): self.session.packet is None")
             return
 
-        log.debug('Reloading BtLayerHierarchy with %s' % \
-                  self.session.packet.summary())
+#        log.debug('Reloading BtLayerHierarchy with %s' % \
+#                  self.session.packet.summary())
         
         self.add_unit(self.session.packet)
 
@@ -141,68 +140,6 @@ class BtLayerHierarchy(gtk.ScrolledWindow):
             
             self.store.append(parent_row_iter, (None, 'Raw: %s' % metapkt.rawdata, metapkt))
             
-
-#    def append_packet(self, packet, coords=None):
-#        """
-#        Append a packet (or better a protocol) to the current packet
-#        @param packet a MetaPacket or a str
-#        @param coords a tuple (x, y) or
-#                      True for appending after selection or None
-#        @return True if the packet is appended
-#        """
-#
-#        assert isinstance(packet, (basestring, Backend.BtMetaPacket)), \
-#            "A string or MetaPacket instance is required"
-#
-#        if isinstance(packet, basestring):
-#            packet = Backend.get_proto(packet)
-#
-#            if not packet:
-#                return False
-#
-#            packet = Backend.MetaPacket(packet())
-#
-#        ret = None
-#        where = -1 # append as default
-#
-#        if isinstance(coords, tuple) and len(coords) == 2:
-#            ret = self.tree.get_dest_row_at_pos(*coords)
-#
-#        if ret:
-#            path, pos = ret
-#
-#            # because it's a treeview with only one child for row
-#            where = len(path)
-#
-#            if pos == gtk.TREE_VIEW_DROP_BEFORE or \
-#               pos == gtk.TREE_VIEW_DROP_INTO_OR_BEFORE:
-#                where -= 1
-#
-#        elif not ret and coords == True:
-#            model, iter = self.tree.get_selection().get_selected()
-#            path = self.store.get_path(iter)
-#
-#            where = len(path)
-#
-#        # Now try to insert this stuff into the packet
-#
-#        if self.session.packet.insert(packet, where):
-#            self.session.reload_container(self.session.packet)
-#            self.session.reload_editor()
-#
-#            return True
-#
-#        return False
-
-#    def __on_drag_data(self, widget, ctx, x, y, data, info, time):
-#        if not self.session.packet or not data:
-#            ctx.finish(False, False, time)
-#
-#        if self.append_packet(data.data, (x, y)):
-#            ctx.finish(True, False, time)
-#        else:
-#            ctx.finish(False, False, time)
-
     def get_active_layer(self):
         """
         Return the selected layer
@@ -225,6 +162,7 @@ class BtPacketPage(Perspective):
     title = _('Packet perspective')
 
     def create_ui(self):
+        
         self.hbox = gtk.HBox(False, 2)
 
         # Create the toolbar for sending selected packet

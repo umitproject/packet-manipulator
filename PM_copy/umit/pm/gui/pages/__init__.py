@@ -28,6 +28,8 @@ This module contains perspectives called also Pages:
 from sniffpage import SniffPage
 from packetpage import PacketPage
 from sequencepage import SequencePage
+from btsniffpage import BtSniffPage
+from btpacketpage import BtPacketPage
 
 class PerspectiveType:
     PACKET_PERSPECTIVE, \
