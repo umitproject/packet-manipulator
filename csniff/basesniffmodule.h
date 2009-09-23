@@ -39,7 +39,7 @@ typedef struct {
 	uint8_t s_continue;
 	uint8_t	s_pin;
 	uint8_t	s_pin_data[7][16];
-	int	s_pin_master;
+	PyObject *s_pin_master;
 	PyObject *bool_resume;
 	PyObject *s_pindata;
 	PyObject *s_ignore_list;

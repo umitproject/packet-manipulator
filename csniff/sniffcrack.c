@@ -12,8 +12,6 @@
 
 #define DEBUG
 
-
-
 static void debug_print(char *s)
 {
 #ifdef DEBUG
@@ -66,7 +64,7 @@ _sniffcrack_setpindata(PyObject *dummy, PyObject *args, PyObject *kwds)
 	switch (op) {
 		case LMP_IN_RAND:
 			s->s_pin = 1 | GOT_IN_RAND;
-			s->s_pin_master = s->s_master;
+			//			s->s_pin_master = s->s_master;
 			debug_print("in_rand");
 			//memcpy(s->s_pin_data[0], buf, len);
 			if(!listcopy(list_buf, PyList_GetItem(s->s_pindata, 0)))

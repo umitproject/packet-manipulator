@@ -710,7 +710,10 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 	assert(len >= plen);
 
 	if (plen) {
+#ifdef DEBUG
+		//For debug output formatting
 		printf(" ");
+#endif
 		if (!process_payload(s, start, plen, sniffunit, handler))
 			return NULL;
 	} else {
@@ -721,7 +724,10 @@ process_frontline(PyState *s, void *buf, int len, PyObject *handler)
 			fprintf(stderr, "process_frontline: error with callback\n");
 			return PyErr_SetFromErrno(SniffError);
 		}
+#ifdef DEBUG
+		//For debug output formatting
 		printf("\n");
+#endif
 	}
 
 
@@ -816,8 +822,8 @@ basesniff_sniff(PyObject *self, PyObject *args, PyObject *kwds)
 		//Mark for deletion
 		Py_BEGIN_ALLOW_THREADS
 
-		if(resume == Py_False)
-			printf("Yes! we detect a change");
+//		if(resume == Py_False)
+//			printf("Yes! we detect a change");
 
 		Py_END_ALLOW_THREADS
 	}
@@ -868,8 +874,8 @@ static PyMemberDef PyState_members[] = {
 				"List of types to ignore"},
 		{"pindata", T_OBJECT_EX, offsetof(PyState, s_pindata), 0,
 				"Pin data (used for cracking)"},
-		{"pinmaster", T_INT, offsetof(PyState, s_pin_master), 0,
-				"Is pin master. Used in pincracking"},
+		{"pinmaster", T_OBJECT, offsetof(PyState, s_pin_master), 0,
+				"Is pin master. Boolean object. Used in pincracking"},
 		{"ignore_zero", T_INT, offsetof(PyState, s_ignore_zero), 0,
 				"Ignore zero"},
 		{NULL}
@@ -929,7 +935,7 @@ PyState_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	}
 
 	self->bool_resume = Py_True;
-
+	self->s_pin_master = Py_False;
 	self->s_pin = 0;
 
 	return (PyObject *) self;
