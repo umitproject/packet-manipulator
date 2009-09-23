@@ -1,3 +1,18 @@
+2009-09-23 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Modified CaptureState object to store role (master/slave) for initiating pairing device.
+            - basesniffmodule.h
+            - basesniffmodule.c
+    * Added register_pincrack_handler in BtCollectPinCrackHandler for callbacks once pincracking is completed. 
+            - handlers.py
+    * Added tagger for adding descriptions to captured packets
+            - tagger.py
+    * Added packet.py containing PM BtMetaPacket class definition
+            - packet.py
+    * Added cppm script for doing svn move of built btsniff modules to PM_copy
+    * Integrated pincrack into PM_copy. Try it now!
+
+
 2009-09-08 Quek Shu Yang (quekshuy@gmail.com)
 ==============================================
 	* Solved bugs in layers.c

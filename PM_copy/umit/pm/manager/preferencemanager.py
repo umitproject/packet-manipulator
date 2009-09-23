@@ -212,8 +212,8 @@ class Prefs(Singleton):
         'gui.maintab.btsniffview.columns' : 'No.|50|%number%,'            \
                                           'Channel|150|%channel%,'            \
                                           'Clock|120|%clock%,'        \
-                                          'Role|120|%role%,'     \
-                                          'Summary|200|%summary%',
+                                          'Role|50|%role%,'     \
+                                          'Summary|80|%summary%',
 
 
         'gui.views.status_tab' : True,
