@@ -28,11 +28,8 @@ class SequenceSession(Session):
     session_name = "SEQUENCE"
 
     def create_ui(self):
-        self.sequence_page = self.add_perspective(SequencePage, True,
-                                                  True, False)
-
-        self.packet_page = self.add_perspective(PacketPage, True,
-                                                True, False)
+        self.sequence_page = self.add_perspective(SequencePage, True, True)
+        self.packet_page = self.add_perspective(PacketPage, True, True)
 
         self.editor_cbs.insert(0, self.reload_editor)
         self.container_cbs.insert(0, self.reload_container)

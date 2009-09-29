@@ -411,8 +411,7 @@ class MainWindow(gtk.Window):
 
         return SessionType.remove_session(sessklass)
 
-    def bind_session(self, ptype, persp_klass, show_pers=True, resize=False, \
-                     shrink=True):
+    def bind_session(self, ptype, persp_klass, show_pers=True, resize=False):
         """
         Bind the perspective 'pers_klass' to Session 'ptype'
 
@@ -420,8 +419,6 @@ class MainWindow(gtk.Window):
         @param persp_klass the perspective class to add to the selected Session
         @param show_pers choose to show the perspective
         @param resize if True child should resize when the paned is resized
-        @param shrink if True child can be made smaller than its minimum size
-                      request
         """
 
         log.debug(
@@ -429,8 +426,7 @@ class MainWindow(gtk.Window):
             (persp_klass, SessionType.types[ptype])
         )
 
-        self.session_binder[ptype].append((persp_klass, show_pers, \
-                                           resize, shrink))
+        self.session_binder[ptype].append((persp_klass, show_pers, resize))
 
         klass = SessionType.types[ptype]
         maintab = self.get_tab("MainTab")
@@ -442,7 +438,7 @@ class MainWindow(gtk.Window):
     def unbind_session(self, ptype, persp_klass):
         try:
             for i in range(len(self.session_binder[ptype])):
-                (klass, show, resize, shrink) = self.session_binder[ptype][i]
+                (klass, show, resize) = self.session_binder[ptype][i]
 
                 if klass is not persp_klass:
                     continue
@@ -471,9 +467,9 @@ class MainWindow(gtk.Window):
         return False
 
     def apply_bindings(self, page, ptype, klass=None):
-        for persp_klass, show, resize, shrink in self.session_binder[ptype]:
+        for persp_klass, show, resize in self.session_binder[ptype]:
             if not klass or (klass and persp_klass is klass):
-                page.add_perspective(persp_klass, show, resize, shrink)
+                page.add_perspective(persp_klass, show, resize)
 
     def bind_perspective(self, ptype, callback):
         """

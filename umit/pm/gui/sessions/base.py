@@ -84,15 +84,13 @@ class Session(gtk.VBox):
                 self.perspectives.remove(persp)
                 self.paned.remove_child(widget)
 
-    def add_perspective(self, klass, show_pers=True, resize=False, shrink=True):
+    def add_perspective(self, klass, show_pers=True, resize=False):
         """
         Add the perspective to the current session
 
         @param klass a Perspective base class of the perspective to add
         @param show_pers choose to show the perspective
         @param resize if True child should resize when the paned is resized
-        @param shrink if True child can be made smaller than its minimum size
-                      request
         @return the perspective instance
         """
 
@@ -108,7 +106,7 @@ class Session(gtk.VBox):
                                       self.session_orientation)
             widget.add_widget(pers, show_pers)
 
-        self.paned.add_child(widget, resize, shrink)
+        self.paned.add_child(widget, resize)
 
         widget.show()
 

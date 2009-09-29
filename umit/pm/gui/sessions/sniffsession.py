@@ -29,11 +29,8 @@ class SniffSession(Session):
     session_name = "SNIFF"
 
     def create_ui(self):
-        self.sniff_page = self.add_perspective(SniffPage, True,
-                                               True, False)
-
-        self.packet_page = self.add_perspective(PacketPage, False,
-                                                True, False)
+        self.sniff_page = self.add_perspective(SniffPage, True, True)
+        self.packet_page = self.add_perspective(PacketPage, False, True)
 
         self.editor_cbs.insert(0, self.packet_page.reload)
         self.container_cbs.insert(0, self.reload_container)

@@ -274,10 +274,8 @@ class TracerouteSession(Session):
     session_orientation = gtk.ORIENTATION_HORIZONTAL
 
     def create_ui(self):
-        self.trace_page = self.add_perspective(Traceroute, True,
-                                               True, False)
-        self.map_page = self.add_perspective(TracerouteMap, False,
-                                             True, False)
+        self.trace_page = self.add_perspective(Traceroute, True, True)
+        self.map_page = self.add_perspective(TracerouteMap, False, True)
 
         self.editor_cbs.append(self.reload_editor)
         self.container_cbs.append(self.reload_container)

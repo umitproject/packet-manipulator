@@ -33,7 +33,7 @@ class MultiPaned(object):
         self.paneds = []
         self.active_widget = None
 
-    def add_child(self, widget, resize=False, shrink=True):
+    def add_child(self, widget, resize=False):
         if isinstance(widget, (gtk.Expander, AnimatedExpander)):
             widget.connect('activate', self.__on_expanded)
         else:
@@ -124,18 +124,18 @@ class VMultiPaned(gtk.VPaned, MultiPaned):
         self.current = self
         self.paneds = [self.current]
 
-    def add_child(self, widget, resize=False, shrink=True):
+    def add_child(self, widget, resize=False):
         new_paned = gtk.VPaned()
         new_paned.show()
 
-        self.current.pack1(widget, resize, shrink)
+        self.current.pack1(widget, resize, False)
         self.current.pack2(new_paned, False, False)
         self.current.show()
 
         self.current = new_paned
         self.paneds.append(new_paned)
 
-        MultiPaned.add_child(self, widget, resize, shrink)
+        MultiPaned.add_child(self, widget, resize)
 
 class HMultiPaned(gtk.HPaned, MultiPaned):
     def __init__(self):
@@ -145,17 +145,17 @@ class HMultiPaned(gtk.HPaned, MultiPaned):
         self.current = self
         self.paneds = [self.current]
 
-    def add_child(self, widget, resize=False, shrink=True):
+    def add_child(self, widget, resize=False):
         new_paned = gtk.HPaned()
 
-        self.current.pack1(widget, resize, shrink)
+        self.current.pack1(widget, resize, False)
         self.current.pack2(new_paned, False, False)
         self.current.show()
 
         self.current = new_paned
         self.paneds.append(new_paned)
 
-        MultiPaned.add_child(self, widget, resize, shrink)
+        MultiPaned.add_child(self, widget, resize)
 
 if __name__ == "__main__":
     pan = VMultiPaned()

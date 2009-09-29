@@ -27,10 +27,8 @@ class AuditSession(Session):
     session_name = "AUDIT"
 
     def create_ui(self):
-        self.audit_page = self.add_perspective(AuditPage, True,
-                                                True, False)
-        self.output_page = self.add_perspective(AuditOutputPage, True,
-                                                True, False)
+        self.audit_page = self.add_perspective(AuditPage, True, True)
+        self.output_page = self.add_perspective(AuditOutputPage, True, True)
 
         self.editor_cbs.insert(0, lambda: self.audit_page.reload())
 
