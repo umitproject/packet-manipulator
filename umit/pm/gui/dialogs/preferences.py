@@ -515,7 +515,7 @@ class PreferenceDialog(gtk.Dialog):
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
         sw.add(self.tree)
 
-        hbox = gtk.HBox()
+        hbox = gtk.HBox(False, 2)
         hbox.pack_start(sw, False, False)
 
         self.notebook = gtk.Notebook()
@@ -540,7 +540,15 @@ class PreferenceDialog(gtk.Dialog):
         for page in (GUIPage(), ViewsPage(), SniffPage(), BackendPage(), \
                      SystemPage()):
             self.store.append([page.icon, page.title])
-            self.notebook.append_page(page)
+
+            sw = gtk.ScrolledWindow()
+            sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+            sw.set_shadow_type(gtk.SHADOW_NONE)
+            sw.add_with_viewport(page)
+
+            sw.set_size_request(-1, 400)
+
+            self.notebook.append_page(sw)
 
     def __on_switch_page(self, selection):
         model, iter = selection.get_selected()
@@ -554,7 +562,8 @@ class PreferenceDialog(gtk.Dialog):
 
     def apply_changes(self):
         for idx in xrange(self.notebook.get_n_pages()):
-            page = self.notebook.get_nth_page(idx)
+            # The page is inside a ViewPort, and ViewPort is inside ScrolledWindow
+            page = self.notebook.get_nth_page(idx).get_child().get_child()
 
             for options in page.widgets:
 
