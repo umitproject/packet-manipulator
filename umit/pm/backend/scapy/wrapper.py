@@ -209,8 +209,11 @@ def get_field_value_repr(proto, field):
 
 def get_field_size(proto, field):
     if isinstance(field, StrField):
-        # We have to manage in a different way the StrField
-        return field.i2len(proto, getattr(proto, field.name)) * 8
+        try:
+            # We have to manage in a different way the StrField
+            return field.i2len(proto, getattr(proto, field.name)) * 8
+        except TypeError:
+            return len(field.i2m(proto, getattr(proto, field.name)))
         #return len(field.i2m(proto, getattr(proto, field.name))) * 8
 
     if hasattr(field, 'size'):
