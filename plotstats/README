@@ -1,0 +1,17 @@
+= PlotStats =
+
+It is a statistics plugins. The goal of this plugin is show with a pizza 
+graphic how many packets sniffed by protocols
+
+
+Dependences:
+  * gtkcairoplot [1]
+
+Once gtkcairoplot is not a lib yet it should be included directly on sources
+directory to generate UMP file.
+
+$ PYTHONPATH=<PACKETMANIPULATOR_PATH_HERE> python setup.py install 
+
+A plotstats.ump will be created.
+
+[1] - http://bazaar.launchpad.net/~magnun-leno/cairoplot/gtkcairoplot/files
