@@ -29,6 +29,7 @@ from umit.pm.core.netconst import *
 from umit.pm.core.atoms import defaultdict
 
 from umit.pm.gui.core.app import PMApp
+from umit.pm.core.errors import PMErrorException
 
 from umit.pm.gui.plugins.core import Core
 from umit.pm.gui.plugins.engine import Plugin

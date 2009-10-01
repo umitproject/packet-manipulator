@@ -692,7 +692,10 @@ class PluginsTree(object):
                 # op, ver, name = >, 1.0, dummy
 
                 # TODO: check that
-                if not op(p_ver, ver) and (p_ver, p_pkg) in ret:
+                if op(p_ver, ver) == False and (p_ver, p_pkg) in ret:
+                    print need, lst_need
+                    print op, p_ver, ver
+                    print p_ver, p_pkg
                     ret.remove((p_ver, p_pkg))
 
         # 2) Choose the better version (major)
