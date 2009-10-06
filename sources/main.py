@@ -20,7 +20,7 @@
 
 import sys, os, os.path
 
-import gtk
+import gtk, gobject
 
 from umit.pm import backend
 from umit.pm.backend import StaticContext
@@ -33,6 +33,7 @@ from umit.pm.gui.pages.base import Perspective
 from umit.pm.core.errors import PMErrorException
 from umit.pm.manager.preferencemanager import Prefs
 from umit.pm.higwidgets.higdialogs import HIGAlertDialog
+from umit.pm.gui.sessions import SessionType
 
 from chart import Chart
 
@@ -48,7 +49,7 @@ class MSC(Perspective):
 
     def create_ui(self):
         
-        self.chart = Chart()
+        self.chart = Chart(self.session)
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
         
@@ -58,27 +59,27 @@ class MSC(Perspective):
         self.svg_button= gtk.Action(None, None, _('Save as svg'), gtk.STOCK_SAVE_AS)
         self.reload_button= gtk.Action(None, None, _('Reload'), gtk.STOCK_REFRESH)
         self.stop_button= gtk.Action(None, None, _('Stop'), gtk.STOCK_MEDIA_STOP)
-        self.sniff_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_MEDIA_PLAY)
-        self.zoom_in_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_ZOOM_IN)        
-        self.zoom_out_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_ZOOM_OUT)
-        self.filter_pack = gtk.Entry()
+        #self.sniff_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_MEDIA_PLAY)
+        self.zoom_in_button= gtk.Action(None, None, _('Zoom in'), gtk.STOCK_ZOOM_IN)        
+        self.zoom_out_button= gtk.Action(None, None, _('Zoom out'), gtk.STOCK_ZOOM_OUT)
+        #self.filter_pack = gtk.Entry()
         
-        self.intf_combo = InterfacesCombo()
-        self.item = gtk.ToolItem()
-        self.item.add(self.intf_combo)
+        #self.intf_combo = InterfacesCombo()
+        #self.item = gtk.ToolItem()
+        #self.item.add(self.intf_combo)
 
 
         self.toolbar.insert(self.pcap_button.create_tool_item(), -1)
         self.toolbar.insert(self.png_button.create_tool_item(), -1)
         self.toolbar.insert(self.svg_button.create_tool_item(), -1)
-        self.toolbar.insert(self.reload_button.create_tool_item(), -1)
-        self.toolbar.insert(self.stop_button.create_tool_item(), -1)
-        self.toolbar.insert(self.item, -1)
-        self.toolbar.insert(self.sniff_button.create_tool_item(), -1)
+        #self.toolbar.insert(self.reload_button.create_tool_item(), -1)
+        #self.toolbar.insert(self.stop_button.create_tool_item(), -1)
+        #self.toolbar.insert(self.item, -1)
+        #self.toolbar.insert(self.sniff_button.create_tool_item(), -1)
         self.toolbar.insert(self.zoom_out_button.create_tool_item(), -1)
         self.toolbar.insert(self.zoom_in_button.create_tool_item(), -1)        
 
-        self.sniff_button.connect('activate', self.__on_run)
+        #self.sniff_button.connect('activate', self.__on_run)
         self.reload_button.connect('activate', self.__on_reload)
         self.stop_button.connect('activate', self.__on_stop)
         self.zoom_in_button.connect('activate', self.__zoom_in)
@@ -92,17 +93,24 @@ class MSC(Perspective):
         sw.add_with_viewport(self.chart)
         #self.chart.connect('focus_in_event', self.__focus_in, sw.get_vadjustment())
         
+        #self.session.editor_cbs.append(self.repopulate)
+        
         self.pack_start(self.toolbar, False, False)
         self.pack_start(sw)
      
         self.show_all()
-
+        
         # Register the lock/unlock callback
         self.session.context.lock_callback = \
             lambda: self.toolbar.set_sensitive(False)
         self.session.context.unlock_callback = \
             lambda: self.toolbar.set_sensitive(True)
         
+        
+    #def __dummy (self):
+        #print len(self.session.context.data)
+        #return True
+    
     def __open_pcap(self, action):
         types = {}
         sessions = (backend.StaticContext,
@@ -189,9 +197,6 @@ class MSC(Perspective):
     def __on_stop(self, action):
         self.chart.stop_sniffing()
         
-    def __on_run(self, action):
-        self.chart.redraw(self.intf_combo.get_interface())
-        
     def __on_reload(self, action):
         self.chart.redraw(self.intf_combo.get_interface())
     
@@ -207,24 +212,24 @@ class MSC(Perspective):
             adj.set_value(min(alloc.y, adj.upper-adj.page_size))
 
 
-class MSCContext(StaticContext):
-    def __init__(self, fname=None):
-        StaticContext.__init__(self, 'MSC', fname)
-        self.status = self.SAVED
+#class MSCContext(StaticContext):
+    #def __init__(self, fname=None):
+        #StaticContext.__init__(self, 'MSC', fname)
+        #self.status = self.SAVED
 
-        self.lock_callback = None
-        self.unlock_callback = None
+        #self.lock_callback = None
+        #self.unlock_callback = None
 
-    def set_trace(self, ans, unans):
-        self.set_data([ans, unans])
+    #def set_trace(self, ans, unans):
+        #self.set_data([ans, unans])
 
-    def lock(self):
-        if callable(self.lock_callback):
-            self.lock_callback()
+    #def lock(self):
+        #if callable(self.lock_callback):
+            #self.lock_callback()
 
-    def unlock(self):
-        if callable(self.unlock_callback):
-            self.unlock_callback()
+    #def unlock(self):
+        #if callable(self.unlock_callback):
+            #self.unlock_callback()
     
 class MSCSession(Session):
     session_name = "MSC"
@@ -232,8 +237,7 @@ class MSCSession(Session):
     session_orientation = gtk.ORIENTATION_HORIZONTAL
 
     def create_ui(self):
-        self.msc_page = self.add_perspective(MSC, True,
-                                               True, False)
+        self.msc_page = self.add_perspective(MSC, False, True)
 
         self.reload()
         self.pack_start(self.paned)
@@ -241,7 +245,6 @@ class MSCSession(Session):
 
     
     def reload_container(self, packet=None):
-        #self.trace_page.populate()
         pass
 
 
@@ -254,14 +257,12 @@ class MSCPlugin(Plugin):
                 global _
                 _ = catalog.gettext
 
+        PMApp().main_window.bind_session(SessionType.SNIFF_SESSION, MSC)
 
-        id = PMApp().main_window.register_session(MSCSession,
-                                                  MSCContext)
-        log.debug("MSC session binded with id %d" % id)
 
     def stop(self):
-        pass
-        PMApp().main_window.deregister_session(MSCSession)
+        PMApp().main_window.bind_session(SessionType.SNIFF_SESSION, MSC)
+        
 
 __plugins__ = [MSCPlugin]
 

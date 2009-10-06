@@ -30,6 +30,7 @@ import pangocairo
 
 from umit.pm import backend
 from umit.pm.gui.widgets.interfaces import InterfacesCombo
+from umit.pm.backend import StaticContext
 
 
 import scapy.all
@@ -46,15 +47,12 @@ class Chart(gtk.DrawingArea):
     __gtype_name__ = "Chart"
     
 
-    def __init__(self):
+    def __init__(self, session):
         
         super(Chart, self).__init__()
         self.connect('expose_event', self.do_expose_event)
-        
-        self.IPs = []
-        self.Packets = []
-        self.start_time = datetime.now()
-        self.sniffing_frozen = False
+        self.sniff_context = session.context
+        self.sniff_context.callback = self.update_drawing_clbk
         self.scalingfactor = 10
         self.max_nodes = 6
         self.max_packets = 50
@@ -66,8 +64,24 @@ class Chart(gtk.DrawingArea):
         self.hsize = 1000
         self.vsize = 1500
         self.set_size_request(self.hsize, self.vsize)
-
+        self.__init_vars()
         
+
+        #Assuming that the button ordering is as follows:
+            #('Restart capturing'),
+            #('Stop capturing'),
+            #('Reorder flow')
+
+        session.sniff_page.toolbar.get_nth_item(0).connect('clicked', self.redraw)
+        session.sniff_page.toolbar.get_nth_item(1).connect('clicked', self.stop_sniffing)
+
+    def __init_vars(self):
+        
+        self.IPs = []
+        self.Packets = []
+        self.start_time = datetime.now()
+        self.sniffing_frozen = False
+        self.timeout = gobject.timeout_add(300, self.__check_for_packets)
         #add host IP
         #TODO: Need to find a way of finding the IP without using scapy
         for x in scapy.all.conf.route.routes:
@@ -171,23 +185,19 @@ class Chart(gtk.DrawingArea):
         cr.restore()
 
 
-
-    def redraw(self, iface):
-        self.__init__()
-        self.sniff_context = backend.SniffContext(iface, None, 0, 0, None, 0, 0, 0, \
-                                      True, True, True, False, True, True, \
-                                      False, 0, True, self.update_drawing_clbk, None)
-        self.timeout = gobject.timeout_add(300, self.__check_for_packets)
-        self.sniff_context._start()
+    def redraw(self, toolbutton):
+        self.__init_vars()
         
-    def stop_sniffing(self):
+    def stop_sniffing(self, toolbutton):
         self.sniffing_frozen = True
     
     def update_drawing_clbk(self, packet, udata= None):
+        if self.sniffing_frozen:
+            return
         self.__add_node_to_list(packet.get_source())
         self.__add_node_to_list(packet.get_dest())   
         if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1 \
-           and len(self.Packets) <= self.max_packets):
+           and len(self.Packets) <= self.max_packets and self.__get_time_passed(packet.get_datetime()) >=0):
             self.Packets.append(packet)
             print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
                 packet.get_source() + "-->" + packet.get_dest()
