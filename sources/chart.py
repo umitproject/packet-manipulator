@@ -192,7 +192,7 @@ class Chart(gtk.DrawingArea):
         self.sniffing_frozen = True
     
     def update_drawing_clbk(self, packet, udata= None):
-        if self.sniffing_frozen:
+        if self.sniffing_frozen or packet == None:
             return
         self.__add_node_to_list(packet.get_source())
         self.__add_node_to_list(packet.get_dest())   

@@ -36,6 +36,7 @@ from umit.pm.higwidgets.higdialogs import HIGAlertDialog
 from umit.pm.gui.sessions import SessionType
 
 from chart import Chart
+from preferences import MSCPreferenceDialog
 
 if Prefs()['backend.system'].value.lower() != 'scapy':
     raise PMErrorException("I need scapy to work!")
@@ -59,30 +60,23 @@ class MSC(Perspective):
         self.svg_button= gtk.Action(None, None, _('Save as svg'), gtk.STOCK_SAVE_AS)
         self.reload_button= gtk.Action(None, None, _('Reload'), gtk.STOCK_REFRESH)
         self.stop_button= gtk.Action(None, None, _('Stop'), gtk.STOCK_MEDIA_STOP)
-        #self.sniff_button= gtk.Action(None, None, _('Start Drawing'), gtk.STOCK_MEDIA_PLAY)
+        self.filter_button = gtk.Action(None, None, _('Sequential Filter'),gtk.STOCK_PREFERENCES)
         self.zoom_in_button= gtk.Action(None, None, _('Zoom in'), gtk.STOCK_ZOOM_IN)        
         self.zoom_out_button= gtk.Action(None, None, _('Zoom out'), gtk.STOCK_ZOOM_OUT)
-        #self.filter_pack = gtk.Entry()
-        
-        #self.intf_combo = InterfacesCombo()
-        #self.item = gtk.ToolItem()
-        #self.item.add(self.intf_combo)
+
 
 
         self.toolbar.insert(self.pcap_button.create_tool_item(), -1)
         self.toolbar.insert(self.png_button.create_tool_item(), -1)
         self.toolbar.insert(self.svg_button.create_tool_item(), -1)
-        #self.toolbar.insert(self.reload_button.create_tool_item(), -1)
-        #self.toolbar.insert(self.stop_button.create_tool_item(), -1)
-        #self.toolbar.insert(self.item, -1)
-        #self.toolbar.insert(self.sniff_button.create_tool_item(), -1)
+        self.toolbar.insert(self.filter_button.create_tool_item(), -1)
+
         self.toolbar.insert(self.zoom_out_button.create_tool_item(), -1)
         self.toolbar.insert(self.zoom_in_button.create_tool_item(), -1)        
 
-        #self.sniff_button.connect('activate', self.__on_run)
-        self.reload_button.connect('activate', self.__on_reload)
-        self.stop_button.connect('activate', self.__on_stop)
+
         self.zoom_in_button.connect('activate', self.__zoom_in)
+        self.filter_button.connect('activate', self.__open_prefs)
         self.zoom_out_button.connect('activate', self.__zoom_out)
         self.png_button.connect('activate', self.__save_as_png)  
         self.pcap_button.connect('activate', self.__open_pcap)  
@@ -91,9 +85,6 @@ class MSC(Perspective):
         sw.set_policy(gtk.POLICY_ALWAYS, gtk.POLICY_ALWAYS)
         sw.set_shadow_type(gtk.SHADOW_NONE)
         sw.add_with_viewport(self.chart)
-        #self.chart.connect('focus_in_event', self.__focus_in, sw.get_vadjustment())
-        
-        #self.session.editor_cbs.append(self.repopulate)
         
         self.pack_start(self.toolbar, False, False)
         self.pack_start(sw)
@@ -107,9 +98,6 @@ class MSC(Perspective):
             lambda: self.toolbar.set_sensitive(True)
         
         
-    #def __dummy (self):
-        #print len(self.session.context.data)
-        #return True
     
     def __open_pcap(self, action):
         types = {}
@@ -124,7 +112,6 @@ class MSC(Perspective):
         dialog = gtk.FileChooserDialog(_("Select a session"), PMApp().main_window,
                                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                         gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
-        #dialog.set_transient_for(self)
 
         filterall = gtk.FileFilter()
         filterall.set_name(_('All supported files'))
@@ -162,7 +149,6 @@ class MSC(Perspective):
                 d.run()
                 d.destroy()
             else:
-                #self.open_generic_file_async(fname)
                 s =  StaticContext("Load Pcap", fname, False);
                 s.load()
                 self.chart.scan_from_list(s.data)
@@ -194,11 +180,13 @@ class MSC(Perspective):
         dialog.hide()
         dialog.destroy()
         
-    def __on_stop(self, action):
-        self.chart.stop_sniffing()
+   
+    def __open_prefs(self, action):
         
-    def __on_reload(self, action):
-        self.chart.redraw(self.intf_combo.get_interface())
+        dialog = MSCPreferenceDialog()
+        dialog.set_transient_for(PMApp().main_window)
+        dialog.show()
+        
     
     def __zoom_in(self, action):
         self.chart.zoom_in()
@@ -212,24 +200,6 @@ class MSC(Perspective):
             adj.set_value(min(alloc.y, adj.upper-adj.page_size))
 
 
-#class MSCContext(StaticContext):
-    #def __init__(self, fname=None):
-        #StaticContext.__init__(self, 'MSC', fname)
-        #self.status = self.SAVED
-
-        #self.lock_callback = None
-        #self.unlock_callback = None
-
-    #def set_trace(self, ans, unans):
-        #self.set_data([ans, unans])
-
-    #def lock(self):
-        #if callable(self.lock_callback):
-            #self.lock_callback()
-
-    #def unlock(self):
-        #if callable(self.unlock_callback):
-            #self.unlock_callback()
     
 class MSCSession(Session):
     session_name = "MSC"
