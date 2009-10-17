@@ -183,7 +183,7 @@ class MSC(Perspective):
    
     def __open_prefs(self, action):
         
-        dialog = MSCPreferenceDialog()
+        dialog = MSCPreferenceDialog(self.chart)
         dialog.set_transient_for(PMApp().main_window)
         dialog.show()
         

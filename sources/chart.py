@@ -31,6 +31,7 @@ import pangocairo
 from umit.pm import backend
 from umit.pm.gui.widgets.interfaces import InterfacesCombo
 from umit.pm.backend import StaticContext
+from filter import Filter
 
 
 import scapy.all
@@ -64,6 +65,8 @@ class Chart(gtk.DrawingArea):
         self.hsize = 1000
         self.vsize = 1500
         self.set_size_request(self.hsize, self.vsize)
+        self.filters = []
+        self.current_filter_index = 0
         self.__init_vars()
         
 
@@ -198,9 +201,18 @@ class Chart(gtk.DrawingArea):
         self.__add_node_to_list(packet.get_dest())   
         if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1 \
            and len(self.Packets) <= self.max_packets and self.__get_time_passed(packet.get_datetime()) >=0):
-            self.Packets.append(packet)
-            print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
-                packet.get_source() + "-->" + packet.get_dest()
+            if self.current_filter_index < len(self.filters) :
+                f = Filter(self.filters[self.current_filter_index])
+                if f.is_packet_valid(packet):
+                    self.Packets.append(packet)
+                    print 'Filtered:' + str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
+                       packet.get_source() + "-->" + packet.get_dest()
+                    self.current_filter_index = self.current_filter_index +1
+            elif len(self.filters) == 0:
+                print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
+                       packet.get_source() + "-->" + packet.get_dest()
+                self.Packets.append(packet)
+            
         if len(self.Packets) > self.max_packets and not self.sniffing_frozen:
             print "Packets exceded"
             self.sniffing_frozen = True

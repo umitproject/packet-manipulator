@@ -29,7 +29,7 @@ setup(
     copyright=['2009 Adriano Monteiro Marques'],
     url='http://trac.umitproject.org/wiki/AbhiramKasina',
     scripts=['sources/main.py', 'sources/chart.py', 'sources/preferences.py',
-             'sources/prefmanager.py'],
+             'sources/prefmanager.py' , 'sources/filter.py' ],
     start_file="main", 
     data_files=[('data', ['dist/logo.png'])],
     provide=['=MSC-0.1'],

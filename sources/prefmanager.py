@@ -152,7 +152,7 @@ class PreferenceWriter:
         self.writer = XMLGenerator(output, 'utf-8')
         self.writer.startDocument()
 
-        self.startElement('PacketManipulator', {}),
+        self.startElement('MSC', {}),
         self.writer.characters('\n')
 
         items = options.items()
@@ -170,7 +170,7 @@ class PreferenceWriter:
             self.startElement(str(option.type), attrs)
             self.endElement(str(option.type))
 
-        self.endElement('PacketManipulator')
+        self.endElement('MSC')
         self.writer.endDocument()
         output.close()
 
@@ -205,8 +205,10 @@ class MSCPrefManager(Singleton):
 
     def write_options(self):
         writer = PreferenceWriter(self.fname, self.options)
+        print self.options
+        
+    def set_option(self, key, value):
+        self.options[key] = Option(value)
 
     def __getitem__(self, x):
-        return self.options[x]
-
-        
+        return self.options.get(x,Option(''))
