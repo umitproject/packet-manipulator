@@ -31,8 +31,10 @@ from distutils.command.install import install
 from distutils.command.build import build
 from umit.pm.core.const import PM_VERSION, PM_SITE
 
-BASE_DOCS_DIR = os.path.join('share', 'doc', 'PacketManipulator-%s' % PM_VERSION)
-DOCS_DIR = os.path.join('generated-doc', 'html')
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+BASE_DOCS_DIR = os.path.join('share', 'doc',
+                             'PacketManipulator-%s' % PM_VERSION)
+DOCS_DIR = os.path.join(ROOT_DIR, 'generated-doc', 'html')
 
 def getoutput(cmd):
     """Return output (stdout or stderr) of executing cmd in a shell."""
@@ -110,12 +112,12 @@ if os.getenv('PM_DOCKING', False):
     moo = Extension(
         'umit.pm.gui.moo_stub',
         [
-            'umit/pm/moo/moopane.c',
-            'umit/pm/moo/moopaned.c',
-            'umit/pm/moo/moobigpaned.c',
-            'umit/pm/moo/moomarshals.c',
-            'umit/pm/moo/moo-pygtk.c',
-            'umit/pm/moo/moo-stub.c',
+            os.path.join(ROOT_DIR, 'umit/pm/moo/moopane.c'),
+            os.path.join(ROOT_DIR, 'umit/pm/moo/moopaned.c'),
+            os.path.join(ROOT_DIR, 'umit/pm/moo/moobigpaned.c'),
+            os.path.join(ROOT_DIR, 'umit/pm/moo/moomarshals.c'),
+            os.path.join(ROOT_DIR, 'umit/pm/moo/moo-pygtk.c'),
+            os.path.join(ROOT_DIR, 'umit/pm/moo/moo-stub.c'),
         ],
         include_dirs=pkc_get_include_dirs('gtk+-2.0 pygtk-2.0'),
         libraries=pkc_get_libraries('gtk+-2.0 pygtk-2.0'),
@@ -126,8 +128,9 @@ if os.getenv('PM_DOCKING', False):
 
 mo_files = []
 
-for filepath in glob.glob("umit/pm/share/locale/*/LC_MESSAGES/*.mo"):
-    lang = filepath[len("umit/pm/share/locale/"):]
+for filepath in glob.glob(os.path.join(ROOT_DIR, "umit/pm/share/locale/"
+                                                 "*/LC_MESSAGES/*.mo")):
+    lang = filepath[len(ROOT_DIR) + len("umit/pm/share/locale/"):]
     targetpath = os.path.dirname(os.path.join("share/locale",lang))
     mo_files.append((targetpath, [filepath]))
 
@@ -156,8 +159,10 @@ class pm_build(build):
         # Build the documentation just like it is done through the Makefile
         sphinx.main([__file__,
             "-b", "html",
-            "-d", os.path.join("umit", "pm", "share", "doc", "doctrees"),
-            os.path.join("umit", "pm", "share", "doc", "src"), DOCS_DIR])
+            "-d", os.path.join(ROOT_DIR, "umit", "pm",
+                               "share", "doc", "doctrees"),
+            os.path.join(ROOT_DIR, "umit", "pm", "share",
+                         "doc", "src"), DOCS_DIR])
 
     def run(self):
         self.build_html_doc()
@@ -188,19 +193,15 @@ class pm_install(install):
         print "#" * 80
         print
 
-        dir = self.install_data
-        dirs = ['share', 'PacketManipulator', 'audits']
+        dir = os.path.join(ROOT_DIR, self.install_data, 'share',
+                           'PacketManipulator', 'audits')
 
-        while dirs:
-            dir = os.path.join(dir, dirs.pop(0))
-
-            if not os.path.exists(dir):
-                os.mkdir(dir)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
 
         dest_dir = dir
         old_cd = os.getcwd()
-        pm_dir = os.path.abspath(os.path.dirname(os.sys.argv[0]))
-        plugins_dir = os.path.join(pm_dir, 'audits')
+        plugins_dir = os.path.join(ROOT_DIR, 'audits')
         os.chdir(plugins_dir)
 
         if os.name =="nt":
@@ -234,24 +235,21 @@ class pm_install(install):
         print "#" * 80
         print
 
-        dir = self.install_data
-        dirs = ['share', 'PacketManipulator', 'plugins']
+        dir = os.path.join(ROOT_DIR, self.install_data, 'share',
+                           'PacketManipulator', 'plugins')
 
-        while dirs:
-            dir = os.path.join(dir, dirs.pop(0))
-
-            if not os.path.exists(dir):
-                os.mkdir(dir)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
 
         # Ok now dir is our destination so we should make plugins
 
         dest_dir = dir
         old_cd = os.getcwd()
-        pm_dir = os.path.abspath(os.path.dirname(os.sys.argv[0]))
-        plugins_dir = os.path.join(pm_dir, 'plugins')
+        plugins_dir = os.path.join(ROOT_DIR, 'plugins')
 
         os.putenv('PYTHONPATH',
-                  '%s%s%s' % (pm_dir, os.pathsep, os.getenv('PYTHONPATH', '')))
+                  '%s%s%s' % (ROOT_DIR, os.pathsep,
+                              os.getenv('PYTHONPATH', '')))
 
         for dir_entry in os.listdir(plugins_dir):
             dir_entry = os.path.join(plugins_dir, dir_entry)
@@ -268,7 +266,8 @@ class pm_install(install):
         os.chdir(os.path.join(plugins_dir, dir_entry))
 
         if os.name =="nt":
-            os.system("C:\\python25\\python.exe setup.py build_ext -c mingw32 install")
+            os.system("C:\\python25\\python.exe setup.py "
+                      "build_ext -c mingw32 install")
         else:
             os.system("python setup.py install")
 
@@ -310,10 +309,11 @@ setup(name         = 'PacketManipulator',
                       'umit.pm.gui.plugins',
                       'umit.pm.higwidgets'
                      ],
+      package_dir  = {'umit' : os.path.join(ROOT_DIR, 'umit')},
       data_files   = [
                       (os.path.join('share', 'pixmaps', 'pm'),
-                       glob.glob(os.path.join('umit', 'pm', 'share', 'pixmaps',
-                                              'pm', '*'))),
+                       glob.glob(os.path.join(ROOT_DIR, 'umit', 'pm', 'share',
+                                              'pixmaps', 'pm', '*'))),
                       (BASE_DOCS_DIR,
                           glob.glob(os.path.join(DOCS_DIR, '*.html')) + \
                           glob.glob(os.path.join(DOCS_DIR, '*.js')) +   \
@@ -325,7 +325,8 @@ setup(name         = 'PacketManipulator',
                       (os.path.join(BASE_DOCS_DIR, '_static'),
                           glob.glob(os.path.join(DOCS_DIR, '_static', '*'))),
                      ] + mo_files,
-      scripts      = [os.path.join('umit', 'pm', 'PacketManipulator')],
+      scripts      = [os.path.join(ROOT_DIR, 'umit', 'pm',
+                                   'PacketManipulator')],
       ext_modules  = modules,
       cmdclass     = {'install' : pm_install,
                       'build' : pm_build}

@@ -89,7 +89,7 @@ __vulnerabilities__ = (('ICMP decoder', {
     'description' : 'The Internet Control Message Protocol (ICMP) is one of '
                     'the core protocols of the Internet Protocol Suite. It is '
                     'chiefly used by networked computers\' operating systems '
-                    'to send error messages—indicating, for instance, that a '
+                    'to send error messages indicating, for instance, that a '
                     'requested service is not available or that a host or '
                     'router could not be reached.\n\n'
                     'ICMP relies on IP to perform its tasks, and it is an '
