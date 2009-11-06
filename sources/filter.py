@@ -20,8 +20,8 @@
 
 import sys, os, os.path
 import gtk, gobject
+import re
 
-from umit.pm.core.i18n import _
 from umit.pm.backend import MetaPacket
 from umit.pm.backend.scapy import *
 
@@ -29,44 +29,130 @@ class Filter():
     
     def __init__(self, filter):
         self.filter_string = filter
-        
-    
+
+    def evaluate(self, postfix): 
+        stack = []
+        postfix.reverse()
+        for j in range(0, len(postfix)):
+            i = len(postfix)-1-j
+            if postfix[i] == True or postfix[i] == False:
+                stack.append(postfix[i])
+            elif postfix[i] == 'or':
+                p1 = stack.pop() 
+                p2 = stack.pop()
+                stack.append(p1 or p2)
+            elif postfix[i] == 'and':
+                p1 = stack.pop() 
+                p2 = stack.pop()
+                stack.append(p1 and p2)
+                
+        return stack[0]
+
     def is_packet_valid(self, packet):
-        g = Tokenizer(self.filter_string, ' ')
+        stack = []
+        postfix = []
+        g = Tokenizer(self.filter_string )
         while True :
-            left = g.next()
-            if left == '':
+            tok = g.next()
+            if tok == '':
                 break
-            if left == 'ip.src' or \
-               left == 'ip.dst' or \
-               left == 'tcp.flags':
+            elif tok == '(':
+                stack.append(tok)
+            elif tok == ')': 
+                popped = stack.pop() 
+                while not popped == '(':
+                    postfix.append(popped)
+                    popped = stack.pop() 
+                    
+            elif tok == 'and':
+                stack.append(tok)
+            elif tok == 'or':
+                stack.append(tok)
+            if tok == 'ip.src' or \
+               tok == 'ip.dst' or \
+               tok == 'ip.version'  or \
+               tok == 'ip.ihl'  or \
+               tok == 'ip.tos'  or \
+               tok == 'ip.len'  or \
+               tok == 'ip.flags'  or \
+               tok == 'ip.frag'  or \
+               tok == 'ip.ttl'  or \
+               tok == 'ip.options'  or \
+               tok == 'ip.checksum'  or \
+               tok == 'ip.proto'  or \
+               tok == 'tcp.sport'  or \
+               tok == 'tcp.dport'  or \
+               tok == 'tcp.seq'  or \
+               tok == 'tcp.ack'  or \
+               tok == 'tcp.window'  or \
+               tok == 'tcp.chksum'  or \
+               tok == 'tcp.urgptr'  or \
+               tok == 'tcp.flags':
                 token = g.next()
                 if token == '':
                     break
-                if token == '==':
+                elif token == '==':
                     token = g.next()
                     if token == '':
                         break
-                    if str(packet.get_field(left)) != token:
-                        return False
+                    if str(packet.get_field(tok)) != token:
+                        postfix.append(False)
                     else:
-                        token = g.next()
-                        if token == '':
-                            return True
-                        if token == 'and':
-                            continue
-                        else :
-                            break
-        return False
+                        postfix.append(True)
+                elif token == '<=':
+                    token = g.next()
+                    if token == '':
+                        break
+                    if int(packet.get_field(tok)) > int(token):
+                        postfix.append(False)
+                    else:
+                        postfix.append(True)
+                elif token == '>=':
+                    token = g.next()
+                    if token == '':
+                        break
+                    if int(packet.get_field(tok)) < int(token):
+                        postfix.append(False)
+                    else:
+                        postfix.append(True)
+        while not len(stack) == 0:
+            postfix.append(stack.pop())
+
+        return self.evaluate(postfix)
+                
+    
                     
-                    
+#TODO Need to ask nopper for IP flags thing
         
 
 class Tokenizer():
     
-    def __init__ (self, mstring, delimiter):
+    def __init__ (self, mstring):
         self.mstring = str(mstring)
-        self.tokens = self.mstring.split()
+        self.tokens = []
+        regxs = ['(\()', '(\))',  #{,} \
+             '(and)(\(|\s)', '(or)(\(|\s)',  # and, or \
+             '([a-zA-Z]+\.[a-zA-Z]+)(\=\=|\<\=|\>\=|\!\=|\)|\s)',  # field name \
+             '([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)',  # ip \
+             '([a-zA-Z0-9]+)',  #alphanumeric \
+             '(\=\=)', '(\>\=)', '(\<\=)', '(\!\=)'] # comparators
+        while not mstring == '':
+            for regx in regxs:
+                m = re.split(regx, mstring, 1)
+                if m[0] == '':
+                    self.tokens.append(m[1])
+                    mstring = m[2]
+                    if len(m)>3:
+                        mstring = mstring+m[3]
+#                    print regx
+#                    print m
+                    break
+            if not mstring == '':
+                m = re.split('\s', mstring, 1) #skip whitespaces
+                if m[0] == '':
+                    mstring = m[1]
+                
+        print self.tokens
         self.index = 0
     
     def next(self):
@@ -75,11 +161,14 @@ class Tokenizer():
             return self.tokens[self.index-1]
         return ''
     
+    
         
     
 if __name__ == "__main__":
-    f = Filter("ip.dst  ==")
-    m = MetaPacket(Ether() / IP(dst = '144.16.192.247') /  TCP(flags = 'SA'))
-    print m.get_field('tcp.flags')
+    f = Filter('((ip.dst==10.109.10.2)     and tcp.sport <= 9) or ip.src == 10.109.10.1')
+    
+   # f = Filter("ip.dst  ==")
+    m = MetaPacket(Ether() / IP(src = '10.109.10.2' , dst = '10.109.10.2') /  TCP(sport = 10, flags = 'SA'))
+   # print m.get_field('tcp.flags')
     print f.is_packet_valid(m)
     
