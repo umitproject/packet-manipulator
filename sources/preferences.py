@@ -20,33 +20,19 @@
 
 import sys, os, os.path
 import gtk, gobject
+import re
 
 from umit.pm.gui.core.app import PMApp
 from umit.pm.core.i18n import _
 
 from prefmanager import MSCPrefManager
+from filter import Tokenizer
+
 
 
 
 class MSCPreferenceDialog(gtk.Dialog):
     
-    #def __init__(self):
-        #super(MSCPreferenceDialog, self).__init__(
-            #_('Preferences - MSC'), PMApp().main_window,
-            #gtk.DIALOG_DESTROY_WITH_PARENT,
-            #(gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE,
-             #gtk.STOCK_APPLY, gtk.RESPONSE_APPLY,
-             #gtk.STOCK_OK, gtk.RESPONSE_OK)
-        #)
-        #self.set_resizable(False)
-        #vbox = gtk.VBox(True, 0)
-        #self.filters = []
-        #for i in range(0,5):
-            #self.filters.append(gtk.Entry(25))
-            #vbox.add(self.filters[i])
-        #vbox.show_all()
-        #self.add(vbox)
-        #self.connect('response', self.__on_response)
     
     def __init__(self, chart):
         super(MSCPreferenceDialog, self).__init__(
@@ -120,49 +106,29 @@ class MSCPreferenceDialog(gtk.Dialog):
             self.__apply_changes()
             self.hide()
             self.destroy()
+
+
             
             
     def __apply_changes(self):
         self.chart.filters = []
+        self.chart.filter_ips = []
         for i in range(0,4):
             filter_text = self.filter_page.filter_strings[i].get_text()
             if filter_text == '':
                 break
             else:
+                g = Tokenizer(filter_text)
+                tok = 'NULL'
+                while not tok == '':
+                    tok = g.next()
+                    if not re.match( '([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)', tok) == None :
+                        print tok
+                        self.chart.filter_ips.append(tok)
                 self.chart.filters.append(filter_text)
                 print  filter_text
             
    
-    #def __apply_changes(self):
-        #for i in range(0,self.filter_page.n_filters_enabled):
-            #if self.__validate_src(self.filter_page.filter_sources[i].get_text()):
-                #MSCPrefManager().set_option('filter.'+str(i)+'.src',  self.filter_page.filter_sources[i].get_text())
-            #if self.__validate_type(self.filter_page.filter_types[i].get_text()):
-                #MSCPrefManager().set_option('filter.'+str(i)+'.type',  self.filter_page.filter_types[i].get_text())
-            #if self.__validate_dest(self.filter_page.filter_dests[i].get_text()):
-                #MSCPrefManager().set_option('filter.'+str(i)+'.dest',  self.filter_page.filter_dests[i].get_text())
-        #try:
-            #MSCPrefManager().write_options()
-        #except Exception, err:
-            #print err
-            #pass      
-        
-        
-    #def __validate_src(self, value):
-        #if value != 'Source':
-            #return True
-        #return False
-        
-        
-    #def __validate_type(self, value):
-        #if value != 'Type':
-            #return True
-        #return False
-        
-    #def __validate_dest(self, value):
-        #if value != 'Destination':
-            #return True
-        #return False
 
 class FilterView(gtk.VBox):
     
@@ -181,7 +147,7 @@ class FilterView(gtk.VBox):
         
         for i in range(0,4):
             hb = gtk.HBox(False, 0)
-            self.filter_strings.append(gtk.Entry(50))
+            self.filter_strings.append(gtk.Entry(100))
             hb.add(self.filter_strings[i])
 
             vbox.add(hb)
@@ -195,110 +161,3 @@ class FilterView(gtk.VBox):
     
     
     
-    #def __init__(self):
-        #super(FilterView, self).__init__(False, 0)
-        #self.filter_en_check = gtk.CheckButton(_("_Enable Filter"), True)  
-        #self.add(self.filter_en_check)
-        
-        #self.n_filters_enabled = 0
-
-        #vbox = gtk.VBox(True,0)        
-        #frame = gtk.Frame(None)
-        #frame.add(vbox)
-        
-        
-        
-        #self.filter_buttons = []
-        #self.filter_sources = []
-        #self.filter_types = []
-        #self.filter_dests = []
-        
-        #for i in range(0,4):
-            #hb = gtk.HBox(False, 0)
-            #self.filter_buttons.append(gtk.CheckButton(None, None))
-            #self.filter_sources.append(gtk.Entry(15))
-            #self.filter_types.append(gtk.Entry(5))
-            #self.filter_dests.append(gtk.Entry(15))  
-            #hb.add(self.filter_buttons[i])
-            #hb.add(self.filter_sources[i])
-            #hb.add(self.filter_types[i])
-            #hb.add(self.filter_dests[i])
-            #vbox.add(hb)
-            
-            
-        #for i in range(0,4):
-            #if (MSCPrefManager()['filter.'+str(i)+'src'].value == '' and
-                #MSCPrefManager()['filter.'+str(i)+'type'].value == '' and
-                #MSCPrefManager()['filter.'+str(i)+'dest'].value == '' ):
-                #self.n_filters_enabled = i
-                #break
-            #self.filter_sources[i].set_text(MSCPrefManager()['filter.'+str(i)+'src'].value)
-            #self.filter_types[i].set_text(MSCPrefManager()['filter.'+str(i)+'type'].value)
-            #self.filter_dests[i].set_text(MSCPrefManager()['filter.'+str(i)+'dest'].value) 
-            
-        #if self.n_filters_enabled == 0:
-            #self.filter_en_check.set_active(False)
-            
-
-        #for i in range(self.n_filters_enabled, 4):
-            #self.filter_sources[i].set_text(_('Source'))
-            #self.filter_types[i].set_text(_('Type'))
-            #self.filter_dests[i].set_text(_('Destination'))
-            #self.filter_sources[i].set_sensitive(False)
-            #self.filter_types[i].set_sensitive(False)
-            #self.filter_dests[i].set_sensitive(False)
-            
-        #self.add(frame)
-        
-        #self.filter_en_check.connect("toggled", self.__on__filter_en_toggle)
-        
-        #for i in range(0, 4):
-            #self.filter_buttons[i].connect("toggled", self.__on_filter_toggle, i)
-            
-    
-    #def __on_filter_toggle(self, togglebutton, index):
-
-        #if togglebutton.get_active() :
-            #if index == self.n_filters_enabled:
-                #self.n_filters_enabled = self.n_filters_enabled + 1
-            #self.filter_dests[index].set_sensitive(True)
-            #self.filter_sources[index].set_sensitive(True)
-            #self.filter_types[index].set_sensitive(True)
-        #else:
-            #if index <= self.n_filters_enabled -1:
-                #self.n_filters_enabled = index
-            #self.filter_sources[i].set_text(_('Source'))
-            #self.filter_types[i].set_text(_('Type'))
-            #self.filter_dests[i].set_text(_('Destination'))
-            #self.filter_dests[i].set_sensitive(False)
-            #self.filter_sources[i].set_sensitive(False)
-            #self.filter_types[index].set_sensitive(False)            
-        #print self.n_filters_enabled 
-
-    #def __on__filter_en_toggle(self, togglebutton):
-        #if not togglebutton.get_active() :
-            #for i in range(0,4):
-                #self.filter_sources[i].set_text(_('Source'))
-                #self.filter_types[i].set_text(_('Type'))
-                #self.filter_dests[i].set_text(_('Destination'))
-                #self.filter_sources[i].set_sensitive(False)
-                #self.filter_types[i].set_sensitive(False)
-                #self.filter_dests[i].set_sensitive(False)
-                
-        #else :
-            #for i in range(0,self.n_filters_enabled):
-                #self.filter_sources[i].set_sensitive(True)
-                #self.filter_types[i].set_sensitive(True)
-                #self.filter_dests[i].set_sensitive(True) 
-            #for i in range(self.n_filters_enabled, 4):
-                #self.filter_sources[i].set_text(_('Source'))
-                #self.filter_types[i].set_text(_('Type'))
-                #self.filter_dests[i].set_text(_('Destination'))
-                #self.filter_sources[i].set_sensitive(False)
-                #self.filter_types[i].set_sensitive(False)
-                #self.filter_dests[i].set_sensitive(False)
-            
-
-        
-        
-

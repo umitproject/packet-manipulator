@@ -55,7 +55,7 @@ class Chart(gtk.DrawingArea):
         self.sniff_context = session.context
         self.sniff_context.callback = self.update_drawing_clbk
         self.scalingfactor = 10
-        self.max_nodes = 6
+        self.max_nodes = 10
         self.max_packets = 50
         self.left_margin = 180
         self.time_margin = 30
@@ -66,6 +66,7 @@ class Chart(gtk.DrawingArea):
         self.vsize = 1500
         self.set_size_request(self.hsize, self.vsize)
         self.filters = []
+        self.filter_ips = []
         self.current_filter_index = 0
         self.__init_vars()
         
@@ -73,7 +74,6 @@ class Chart(gtk.DrawingArea):
         #Assuming that the button ordering is as follows:
             #('Restart capturing'),
             #('Stop capturing'),
-            #('Reorder flow')
 
         session.sniff_page.toolbar.get_nth_item(0).connect('clicked', self.redraw)
         session.sniff_page.toolbar.get_nth_item(1).connect('clicked', self.stop_sniffing)
@@ -84,12 +84,15 @@ class Chart(gtk.DrawingArea):
         self.Packets = []
         self.start_time = datetime.now()
         self.sniffing_frozen = False
+        self.current_filter_index = 0
         self.timeout = gobject.timeout_add(300, self.__check_for_packets)
         #add host IP
         #TODO: Need to find a way of finding the IP without using scapy
-        for x in scapy.all.conf.route.routes:
-            if x[2] != '0.0.0.0':
-                self.IPs.append(x[4])
+#        for x in scapy.all.conf.route.routes:
+#            if x[2] != '0.0.0.0':
+#                self.IPs.append(x[4])
+        for x in self.filter_ips:
+            self.__add_node_to_list(x)
               
         
     def scan_from_list(self, list):
@@ -125,7 +128,7 @@ class Chart(gtk.DrawingArea):
         #draw IPs
         cr.select_font_face("Arial",
                 cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(14)
+        cr.set_font_size(10)
         i=0
         margin = self.left_margin
         cr.set_source_rgb(0.5, 0.5, 0.5)
@@ -148,10 +151,13 @@ class Chart(gtk.DrawingArea):
         #draw packets   
         prev_timestamp_lower = 0
         cr.set_source_rgb(0.5, 0.5, 0.5)
-        for packet in self.Packets:
-            time_passed = self.__get_time_passed(packet.get_datetime())
-            cur_packet_ypos = self.__get_time_passed(packet.get_datetime())/self.scalingfactor\
-                            + self.top_margin
+        for i in range(len(self.Packets)):
+            packet = self.Packets[i]
+            if self.filters == []:
+                time_passed = self.__get_time_passed(packet.get_datetime())
+            else:
+                time_passed = (i+1)*200
+            cur_packet_ypos = time_passed/self.scalingfactor + self.top_margin
             #Draw if the packet drawing does not cross the lower bound of the drawingArea
             if cur_packet_ypos < self.window.get_size()[1]-self.bottom_margin :
                 x_bearing, y_bearing, width, height = cr.text_extents(str(time_passed) + "ms")[:4]  
@@ -170,14 +176,16 @@ class Chart(gtk.DrawingArea):
                 #Draw the arrow from source to destination
                 cr.select_font_face("Arial",\
                     cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-                cr.set_font_size(14)
+                cr.set_font_size(10)
                 cr.move_to(vline_positions[self.IPs.index(packet.get_source())], cur_packet_ypos-height/2)
                 cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2)
                 if self.IPs.index(packet.get_source()) > self.IPs.index(packet.get_dest()):
-                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
+                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())],\
+                        cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
                     cr.show_text("<")
                 else:
-                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())] - cr.text_extents("<")[2], cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
+                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())]\
+                        - cr.text_extents("<")[2], cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
                     cr.show_text(">")
                 cr.stroke()
             elif not self.sniffing_frozen:
@@ -197,31 +205,33 @@ class Chart(gtk.DrawingArea):
     def update_drawing_clbk(self, packet, udata= None):
         if self.sniffing_frozen or packet == None:
             return
-        self.__add_node_to_list(packet.get_source())
-        self.__add_node_to_list(packet.get_dest())   
-        if(self.IPs.count(packet.get_source()) >=1 and self.IPs.count(packet.get_dest()) >=1 \
-           and len(self.Packets) <= self.max_packets and self.__get_time_passed(packet.get_datetime()) >=0):
+        if(len(self.Packets)<=self.max_packets and self.__get_time_passed(packet.get_datetime())>=0):
             if self.current_filter_index < len(self.filters) :
                 f = Filter(self.filters[self.current_filter_index])
                 if f.is_packet_valid(packet):
-                    self.Packets.append(packet)
-                    print 'Filtered:' + str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
-                       packet.get_source() + "-->" + packet.get_dest()
+                    self.__add_packet_to_list(packet)
                     self.current_filter_index = self.current_filter_index +1
             elif len(self.filters) == 0:
-                print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
-                       packet.get_source() + "-->" + packet.get_dest()
-                self.Packets.append(packet)
+                self.__add_packet_to_list(packet)
             
         if len(self.Packets) > self.max_packets and not self.sniffing_frozen:
             print "Packets exceded"
             self.sniffing_frozen = True
+
+    def __add_packet_to_list(self, packet):
+        if self.__add_node_to_list(packet.get_source()) == False:
+            return
+        if not self.__add_node_to_list(packet.get_dest()) == False:
+            self.Packets.append(packet)
+            print str(self.__get_time_passed(packet.get_datetime())) + "ms :: "  + \
+                       packet.get_source() + "-->" + packet.get_dest()
+
         
     def __add_node_to_list(self, address):
         #Add only IP addresses
         if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= self.max_nodes):
             #TODO: Find a better way instead of hard-coding the bound on the number of nodes
-            return None
+            return False
         try:
             x = self.IPs.index(address)
         except ValueError:
@@ -239,7 +249,6 @@ class Chart(gtk.DrawingArea):
 
 
     def __get_time_passed(self, this_time):
-        #print (str((this_time.microsecond - self.start_time.microsecond)) + ":" +str((this_time.second-self.start_time.second)*1000000)  +":" +str((this_time.minute-self.start_time.minute)*60*1000000))
         return (float((this_time.microsecond - self.start_time.microsecond)) + \
                 (this_time.second - self.start_time.second)*1000000 + \
                 (this_time.minute - self.start_time.minute)*60*1000000)/1000

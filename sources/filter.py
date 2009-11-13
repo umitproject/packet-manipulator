@@ -30,6 +30,9 @@ class Filter():
     def __init__(self, filter):
         self.filter_string = filter
 
+
+
+
     def evaluate(self, postfix): 
         stack = []
         postfix.reverse()
@@ -144,15 +147,15 @@ class Tokenizer():
                     mstring = m[2]
                     if len(m)>3:
                         mstring = mstring+m[3]
-#                    print regx
-#                    print m
+#                    #print regx
+#                    #print m
                     break
             if not mstring == '':
                 m = re.split('\s', mstring, 1) #skip whitespaces
                 if m[0] == '':
                     mstring = m[1]
                 
-        print self.tokens
+        # print self.tokens
         self.index = 0
     
     def next(self):
@@ -168,7 +171,14 @@ if __name__ == "__main__":
     f = Filter('((ip.dst==10.109.10.2)     and tcp.sport <= 9) or ip.src == 10.109.10.1')
     
    # f = Filter("ip.dst  ==")
-    m = MetaPacket(Ether() / IP(src = '10.109.10.2' , dst = '10.109.10.2') /  TCP(sport = 10, flags = 'SA'))
+    m = MetaPacket(Ether() / IP(src = '10.109.10.2' , dst = '10.109.10.2') /  TCP(sport = 10, flags = 'S'))
+    print m.get_field('tcp.flags')
+    m = MetaPacket(Ether() / IP(src = '10.109.10.2' , dst = '10.109.10.2') /
+        TCP(sport = 10, flags = 'SA'))
+    print m.get_field('tcp.flags')
+    m = MetaPacket(Ether() / IP(src = '10.109.10.2' , dst = '10.109.10.2') /
+        TCP(sport = 10, flags = 'A'))
+    print m.get_field('tcp.flags')
    # print m.get_field('tcp.flags')
     print f.is_packet_valid(m)
     
