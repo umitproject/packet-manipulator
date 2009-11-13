@@ -62,7 +62,7 @@ class Chart(gtk.DrawingArea):
         self.right_margin = 100
         self.bottom_margin = 50
         self.top_margin = 50
-        self.hsize = 1000
+        self.hsize = 1500
         self.vsize = 1500
         self.set_size_request(self.hsize, self.vsize)
         self.filters = []
@@ -124,22 +124,26 @@ class Chart(gtk.DrawingArea):
         if len(self.IPs) == 1 :
             cr.restore()
             return
-        
-        #draw IPs
-        cr.select_font_face("Arial",
+
+        #draw time axis 
+        cr.select_font_face("Sans Serif",
                 cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        cr.set_font_size(10)
-        i=0
+        cr.set_font_size(14)
         margin = self.left_margin
         cr.set_source_rgb(0.5, 0.5, 0.5)
         cr.move_to(margin-10, self.top_margin)
         cr.line_to(margin-10, self.window.get_size()[1]-self.bottom_margin)
         cr.stroke()
+
+
+        #draw IPs
+        i=0
         for ip in self.IPs:
-            cr.set_source_rgb(0.0, 0.0, 0.0)
+            cr.set_source_rgb(0.5, 0.5, 0.5)
             x_bearing, y_bearing, width, height = cr.text_extents(ip)[:4]
             cr.move_to(margin, self.top_margin-height)
             cr.show_text(ip)
+            cr.set_source_rgb(0,0,0)
             cr.move_to(margin+width/2, self.top_margin)
             cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
             vline_positions.append(margin+width/2)
@@ -150,7 +154,7 @@ class Chart(gtk.DrawingArea):
         
         #draw packets   
         prev_timestamp_lower = 0
-        cr.set_source_rgb(0.5, 0.5, 0.5)
+        pkts_this_timestamp = 1
         for i in range(len(self.Packets)):
             packet = self.Packets[i]
             if self.filters == []:
@@ -163,20 +167,35 @@ class Chart(gtk.DrawingArea):
                 x_bearing, y_bearing, width, height = cr.text_extents(str(time_passed) + "ms")[:4]  
                 
                 #Draw the text if it doesnt clash with the previous timestamp text
-                if prev_timestamp_lower < cur_packet_ypos - height:
+                if prev_timestamp_lower+5 < cur_packet_ypos - height:
+                    pkts_this_timestamp = 1
+                    text = str(self.__get_time_passed(packet.get_datetime())) + "ms"
+                    cr.set_source_rgb(*self.__get_color(packet))
                     cr.move_to(self.time_margin, cur_packet_ypos)
-                    cr.show_text(str(self.__get_time_passed(packet.get_datetime())) + "ms")
+                    cr.show_text(text)
+                    prev_timestamp_lower = cur_packet_ypos
+                    prev_timestamp = text
+                else :
+                    pkts_this_timestamp = pkts_this_timestamp + 1
+                    cr.set_source_rgb(1.0, 1.0, 1.0)
+                    text = prev_timestamp+'('+str(pkts_this_timestamp)+')'
+                    cr.rectangle(self.time_margin, prev_timestamp_lower -
+                        cr.text_extents(text)[3], cr.text_extents(text)[2],
+                        cr.text_extents(text)[3] )
+                    cr.fill()
+                    cr.set_source_rgb(*self.__get_color(packet))
+                    cr.move_to(self.time_margin, prev_timestamp_lower)
+                    cr.show_text(text)
                 
                 #Draw a small marker on the time axis
                 cr.move_to(self.left_margin-13, cur_packet_ypos-height/2)
                 cr.line_to(self.left_margin-7, cur_packet_ypos-height/2)                
-                prev_timestamp_lower = cur_packet_ypos
                 cr.stroke()
                 
                 #Draw the arrow from source to destination
-                cr.select_font_face("Arial",\
+                cr.select_font_face("Sans Serif",\
                     cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-                cr.set_font_size(10)
+                cr.set_font_size(14)
                 cr.move_to(vline_positions[self.IPs.index(packet.get_source())], cur_packet_ypos-height/2)
                 cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2)
                 if self.IPs.index(packet.get_source()) > self.IPs.index(packet.get_dest()):
@@ -195,6 +214,15 @@ class Chart(gtk.DrawingArea):
             
         cr.restore()
 
+    def __get_color(self, packet):
+        type = packet.get_protocol_str()
+#        print type
+        if type == 'TCP':
+            return [1,0,1]
+        elif type == 'IP' or type == 'UDP' or type == 'NBNS query request':
+            return [105.0/255.0,146.0/255.0,200.0/255.0]
+        else :
+            return [0.5, 0.5, 0.5]
 
     def redraw(self, toolbutton):
         self.__init_vars()
