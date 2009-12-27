@@ -144,7 +144,7 @@ class PMApp(Singleton):
                 except:
                     pass
 
-                self.main_window.start_new_audit(dev1, dev2, bpf_filter)
+                self.main_window.start_new_audit(dev1, dev2, bpf_filter, False, False)
 
             return False
 
