@@ -108,6 +108,9 @@ class Profiler(Plugin, PassiveAudit):
 
         conf = AuditManager().get_configuration('passive.profiler')
 
+        self.maxnum = max(conf['cleanup_hit'], 10)
+        self.keep_local = conf['keep_local']
+
         if conf['mac_fingerprint']:
             if reader:
                 contents = reader.file.read('data/finger.mac.db')
@@ -190,6 +193,7 @@ class Profiler(Plugin, PassiveAudit):
     def register_hooks(self):
         manager = AuditManager()
 
+        # TODO: also handle UDP when UDP dissectors will be ready.
         manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
                                  self._parse_tcp, 1)
 
@@ -280,7 +284,50 @@ class Profiler(Plugin, PassiveAudit):
 
             prof.type = ROUTER_TYPE
 
+    def cleanup(self):
+        # Yes this is really a mess. But it is for performance :)
+        log.info('Cleaning up all collected profiles')
+
+        if self.keep_local:
+            not_interesting = lambda p: p.type != HOST_LOCAL_TYPE
+        else:
+            not_interesting = lambda p: True
+
+        ipidx = 0
+        ips = self.profiles.keys()
+
+        while ipidx < len(ips):
+            ipkey = ips[ipidx]
+            profiles = self.profiles[ipkey]
+
+            profidx = 0
+            proflen = len(profiles)
+
+            while profidx < proflen:
+                profile = profiles[profidx]
+
+                if not_interesting(profile):
+                    if profile.fingerprint or profile.ports:
+                        AuditManager().user_msg(str(profile), 6, 'profiler')
+
+                    # Delete the profile
+                    profile = None
+                    del profiles[profidx]
+                    proflen -= 1
+                else:
+                    profidx += 1
+
+            if not profiles:
+                del self.profiles[ipkey]
+
+            ipidx += 1
+
+        print self.profiles
+
     def get_or_create(self, mpkt, clientside=False):
+        if len(self.profiles) >= self.maxnum:
+            self.cleanup()
+
         if not clientside:
             ip = mpkt.l3_src
             mac = mpkt.l2_src
@@ -309,11 +356,16 @@ class Profiler(Plugin, PassiveAudit):
             return prof
 
 __plugins__ = [Profiler]
-__plugins_deps__ = [('Profiler', [], ['=Profiler-1.0'], [])]
+__plugins_deps__ = [('Profiler', ['=TCPDecoder-1.0'], ['=Profiler-1.0'], [])]
 
 __audit_type__ = 0
 __protocols__ = (('icmp', None), ('eth', None))
 __configurations__ = (('passive.profiler', {
     'mac_fingerprint' : [True, 'Enable MAC lookup into DB to report NIC '
-                         'vendor']}),
+                         'vendor'],
+    'keep_local' : [True, 'Keep only reserved addresses (127./172./10.)'],
+    'cleanup_hit' : [60, 'Purge local cache after cleanup_timeout seconds.' \
+                     'All sensible information will be printed before real '
+                     'deletion. Values should be >= 10'],
+    }),
 )
