@@ -606,11 +606,15 @@ class PluginsTree(object):
 
         try:
             sys.plugins_path.remove(pkg)
+
+            if pkg.start_file in sys.modules:
+                sys.modules.pop(pkg.start_file)
+
         except Exception:
             pass
 
         del self.instances[pkg]
-
+        del self.modules[pkg]
 
     #
     # Usefull functions
