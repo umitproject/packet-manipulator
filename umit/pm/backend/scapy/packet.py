@@ -24,7 +24,7 @@ from umit.pm.core.logger import log
 from umit.pm.core.atoms import generate_traceback
 from umit.pm.core.netconst import IL_TYPE_ETH, IL_TYPE_TR, IL_TYPE_FDDI, \
                              IL_TYPE_RAWIP, IL_TYPE_WIFI, IL_TYPE_COOK, \
-                             IL_TYPE_PRISM
+                             IL_TYPE_PRISM, LL_TYPE_ARP
 
 from umit.pm.backend.scapy.translator import global_trans
 from umit.pm.backend.scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
@@ -52,8 +52,13 @@ class MetaPacket(object):
 
         proto = proto.payload
 
-        self.l3_src = getattr(proto, 'src', None)
-        self.l3_dst = getattr(proto, 'dst', None)
+        if self.l3_proto == LL_TYPE_ARP:
+            self.l3_src = getattr(proto, 'psrc', None)
+            self.l3_dst = getattr(proto, 'pdst', None)
+        else:
+            self.l3_src = getattr(proto, 'src', None)
+            self.l3_dst = getattr(proto, 'dst', None)
+
         self.l4_proto = getattr(proto, 'proto', None) or \
                         getattr(proto, 'nh', None) # IPv6 handling
 
