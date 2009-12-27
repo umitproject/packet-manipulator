@@ -33,7 +33,8 @@ from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
 from umit.pm.core.auditutils import AuditOperation
 from umit.pm.core.atoms import Singleton, defaultdict, generate_traceback
-from umit.pm.core.const import PM_TYPE_STR, PM_TYPE_INT, PM_TYPE_INSTANCE, PM_HOME
+from umit.pm.core.const import PM_TYPE_STR, PM_TYPE_INT, PM_TYPE_INSTANCE,\
+                                 PM_HOME
 from umit.pm.core.netconst import *
 
 ###############################################################################
@@ -241,23 +242,6 @@ class Configuration(object):
 # Implementation
 ###############################################################################
 
-class Forwarder(object):
-    """
-    A Forwarder is a kind of SendManager and it's used to forward packets to
-    received from intf1 and forward them to intf2.
-
-    It's heavilly used in MITM audits
-    """
-
-    def __init__(self, supersocket):
-        self.socket = supersocket
-
-    def forward_l3(self, mpkt):
-        pass
-
-    def forward_l2(self, mpkt):
-        pass
-
 class AuditManager(Singleton):
     """
     This is a singleton classes that is used to track decoders/dissectors etc.
@@ -309,7 +293,8 @@ class AuditManager(Singleton):
 
             self._configurations.update(handler.opt_dict)
         except Exception, err:
-            log.warning('Error while loading audits-conf.xml. Using default options')
+            log.warning('Error while loading audits-conf.xml. ' \
+                        'Using default options')
 
     def write_configurations(self):
         log.debug('Writing configurations to audits-conf.xml')
@@ -368,7 +353,8 @@ class AuditManager(Singleton):
         else:
             if not self._output:
                 import umit.pm.gui.core.app
-                tab = umit.pm.gui.core.app.PMApp().main_window.get_tab('StatusTab')
+                tab = umit.pm.gui.core.app.PMApp().\
+                      main_window.get_tab('StatusTab')
                 self._output = tab.status
             self._output.info(out)
 
@@ -513,7 +499,9 @@ class AuditDispatcher(object):
 
         @param datalink the datalink to be used. As default we use IL_TYPE_ETH.
                         For more information on that @see pcap_datalink manpage
+        @param context an AuditContext or None
         """
+
         self._datalink = datalink
         self._context = context
         self._main_decoder = AuditManager().get_decoder(LINK_LAYER,
@@ -535,6 +523,18 @@ class AuditDispatcher(object):
         AuditManager().run_decoder(LINK_LAYER, self.datalink, mpkt)
 
         if self._context:
+
+            self._context.set_forwardable(mpkt)
+
+            # Check if we have to forward this packet
+            if mpkt.flags & MPKT_FORWARDABLE and \
+               not mpkt.flags & MPKT_FORWARDED:
+
+                self._context.forward(mpkt)
+
+            # TODO: We have to change the injection implementation.
+            #       So these lines aboves should be dropped in the near future.
+
             flags = mpkt.cfields.get('inj::flags', None)
             l4proto = mpkt.cfields.get('inj::l4proto', None)
 

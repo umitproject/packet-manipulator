@@ -25,9 +25,9 @@ import socket
 from threading import Thread
 
 from umit.pm.core.i18n import _
+from umit.pm.core.netconst import *
 from umit.pm.core.logger import log
 from umit.pm.core.atoms import ThreadPool, defaultdict
-from umit.pm.core.netconst import INJ_FORWARDED
 from umit.pm.manager.auditmanager import AuditDispatcher, IL_TYPE_ETH
 
 from umit.pm.backend.scapy import *
@@ -124,18 +124,24 @@ def register_audit_context(BaseAuditContext):
          - onrecv(send, mpkt, udata)
         """
 
-        def __init__(self, dev1, dev2=None, bpf_filter=None, capmethod=0):
+        def __init__(self, dev1, dev2=None, bpf_filter=None, \
+                     skip_forwarded=True, unoffensive=False, capmethod=0):
             BaseAuditContext.__init__(self, dev1, dev2, bpf_filter, capmethod)
 
             self.internal = False
             self.thread1 = None
             self.thread2 = None
+            self.skip_forwarded = skip_forwarded
+            self.unoffensive = unoffensive
 
             self.thread_pool = ThreadPool()
             self.audit_dispatcher = None
 
             self.ans_dict = defaultdict(list)
             self.receivers = [] # A list of callable
+
+            self.iface_origin_table = []
+            self.bridge_origin_table = []
 
             if dev2:
                 self.title = self.summary = _('Audit on %s:%s') % (dev1, dev2)
@@ -159,10 +165,18 @@ def register_audit_context(BaseAuditContext):
                     self._mtu2 = get_mtu(dev2)
 
                     self._lb_socket = conf.L2socket(iface=dev2)
+
+                    self.check_forwarded = self.__check_forwarded_multi
+                    self.set_forwardable = self.__set_forwardable_multi
+                    self.forward = self.__forward_multi
                 else:
                     self._ip2 = None
                     self._mac2 = None
                     self._mtu2 = None
+
+                    self.check_forwarded = self.__check_forwarded_single
+                    self.set_forwardable = self.__set_forwardable_single
+                    self.forward = self.__forward_single
 
                 if capmethod == 0:
                     log.debug('Creating listen sockets')
@@ -232,6 +246,73 @@ def register_audit_context(BaseAuditContext):
             return get_routes(self._iface1)[1]
         def get_netmask2(self):
             return get_routes(self._iface2)[1]
+
+        def __check_forwarded_single(self, mpkt):
+            # Skip forwarded packets (same MAC, different IP)
+            if mpkt.l2_src == self._mac1 and \
+               mpkt.l3_src == self._ip1:
+
+                mpkt.flags |= MPKT_FORWARDED
+                return self.skip_forwarded
+
+            return False
+
+        def __check_forwarded_multi(self, mpkt):
+            if mpkt.flags & MPKT_FROMIFACE:
+                if mpkt.l2_src in self.iface_origin_table:
+                    return False
+
+                if mpkt.l2_src in self.bridge_origin_table:
+                    mpkt.flags |= MPKT_FORWARDED
+                    return self.skip_forwarded
+
+            elif mpkt.flags & MPKT_FROMBRIDGE:
+                if mpkt.l2_src in self.bridge_origin_table:
+                    return False
+
+                if mpkt.l2_src in self.iface_origin_table:
+                    mpkt.flags |= MPKT_FORWARDED
+                    return self.skip_forwarded
+
+            if mpkt.flags & MPKT_FROMIFACE:
+                log.info('Adding %s MAC to the IFACE table' % mpkt.l2_src)
+                self.iface_origin_table.insert(0, mpkt.l2_src)
+
+            elif mpkt.flags & MPKT_FROMBRIDGE:
+                log.info('Adding %s MAC to the BRIDGE table' % mpkt.l2_src)
+                self.bridge_origin_table.insert(0, mpkt.l2_src)
+
+            return False
+
+        def __set_forwardable_single(self, mpkt):
+            if mpkt.l2_dst == self._mac1 and \
+               mpkt.l2_src != self._mac1 and \
+               mpkt.l3_dst != self._ip1:
+
+                mpkt.flags |= MPKT_FORWARDABLE
+
+        def __set_forwardable_multi(self, mpkt):
+            if mpkt.l2_src == self._mac1 or \
+               mpkt.l2_dst == self._mac1:
+                return
+
+            if mpkt.l2_src == self._mac2 or \
+               mpkt.l2_dst == self._mac2:
+                return
+
+            mpkt.flags |= MPKT_FORWARDABLE
+
+        def __forward_single(self, mpkt):
+            if self.unoffensive:
+                return
+
+            self.si_l3(mpkt)
+
+        def __forward_multi(self, mpkt):
+            if mpkt.flags & MPKT_FROMIFACE:
+                self.si_lb(mpkt)
+            elif mpkt.flags & MPKT_FROMBRIDGE:
+                self.si_l2(mpkt)
 
         ########################################################################
         # Threads callbacks
@@ -320,6 +401,8 @@ def register_audit_context(BaseAuditContext):
             log.debug('Entering in the helper mainloop')
 
             reported_packets = 0
+            mflags = (obj is self._listen_dev1) and \
+                   MPKT_FROMIFACE and MPKT_FROMBRIDGE
 
             while self.internal:
                 report_idx = get_n_packets(obj[0])
@@ -333,7 +416,7 @@ def register_audit_context(BaseAuditContext):
                     if not r:
                         break
 
-                    self.__manage_mpkt(obj, MetaPacket(r))
+                    self.__manage_mpkt(obj, MetaPacket(r, flags=mflags))
 
                     reported_packets += 1
 
@@ -346,6 +429,8 @@ def register_audit_context(BaseAuditContext):
 
         def __sniff_thread(self, obj):
             errstr = None
+            mflags = (obj is self._listen_dev1) and \
+                   MPKT_FROMIFACE and MPKT_FROMBRIDGE
 
             log.debug('Entering in the native mainloop')
 
@@ -368,7 +453,7 @@ def register_audit_context(BaseAuditContext):
                     if r is None:
                         continue
 
-                    self.__manage_mpkt(obj, MetaPacket(r))
+                    self.__manage_mpkt(obj, MetaPacket(r, flags=mflags))
 
                 except Exception, err:
                     if self.internal:
@@ -434,15 +519,8 @@ def register_audit_context(BaseAuditContext):
                              self.socket1 or self.socket2), mpkt)
 
 
-            # Packets with equal MAC address and different IP
-            # are sent by us so ignore it.
-
-            if mpkt.get_field('eth.src') == self.get_mac1() and \
-               mpkt.get_field('ip.src') != self.get_ip1():
-
-                mpkt.set_cfield('inj::flags', INJ_FORWARDED)
-
-            self.audit_dispatcher.feed(mpkt)
+            if not self.check_forwarded(mpkt):
+                self.audit_dispatcher.feed(mpkt)
 
         ########################################################################
         # Worker functions

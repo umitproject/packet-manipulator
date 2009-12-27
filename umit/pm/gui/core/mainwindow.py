@@ -751,12 +751,14 @@ class MainWindow(gtk.Window):
         dialog.hide()
         dialog.destroy()
 
-    def start_new_audit(self, dev1, dev2, bpf_filter):
-        log.debug('Creating a new AuditOperation using %s %s %s' \
-                  % (dev1, dev2, bpf_filter))
+    def start_new_audit(self, dev1, dev2, bpf_filter, skipfwd, unoffensive):
+        log.debug('Creating a new AuditOperation using dev1: %s dev2: %s '
+                  'bpf: %s skipfwd: %s unoffensive: %s' \
+                  % (dev1, dev2, bpf_filter, skipfwd, unoffensive))
 
         tab = self.get_tab('OperationsTab')
-        tab.tree.append_operation(AuditOperation(dev1, dev2, bpf_filter))
+        tab.tree.append_operation(AuditOperation(dev1, dev2, bpf_filter, \
+                                                 skipfwd, unoffensive))
 
     def __on_new_audit(self, action):
         dialog = NewAuditDialog(self)

@@ -425,7 +425,7 @@ class SequenceOperation(backend.SequenceContext, Operation):
         return ret
 
 class AuditOperation(backend.AuditContext, Operation):
-    def __init__(self, dev1, dev2, bpf_filter):
+    def __init__(self, dev1, dev2, bpf_filter, skipfwd, unoffensive):
         capmethod = Prefs()['backend.system.audit.capmethod'].value
 
         if capmethod < 0 or capmethod > 2:

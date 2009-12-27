@@ -29,12 +29,15 @@ class BaseAuditContext(TimedContext):
     has_restart = False
     file_types = []
 
-    def __init__(self, dev1, dev2=None, bpf_filter=None, capmethod=0):
+    def __init__(self, dev1, dev2=None, bpf_filter=None, skip_forwarded=True,
+                 unoffensive=False, capmethod=0):
         """
         @param dev1 the first interface to sniff on
         @param dev2 the second interface to sniff on (used in bridged sniffing)
                     or None
         @param bpf_filter pcap filter to apply to the inputs interfaces
+        @param skip_forwarded Skip forwarded packets. Don't execute decode phase
+        @param unoffensive Don't forward any packets while unified sniffing
         @param capmethod use 0 for standard capture, 1 for tcpdump and 2 for
                          dumpcap helper
         @return a BaseAuditContext
@@ -58,6 +61,28 @@ class BaseAuditContext(TimedContext):
         self.status = self.SAVED
 
     def _stop(self):
+        pass
+
+    def check_forwarded(self, mpkt):
+        """
+        Called to check if the metapacket is sent by us (same src MAC, different
+        src IP). You have to set MPKT_FORWARDED flag to ``mpkt.flags''.
+
+        @return true if the feed() of AuditDispatcher should be blocked.
+        """
+        pass
+
+    def set_forwardable(self, mpkt):
+        """
+        Test and set MPKT_FORWARDABLE if a mpkt could be forwarded (same dst
+        MAC, different dst IP).
+        """
+        pass
+
+    def forward(self, mpkt):
+        """
+        Utility function called when we have to forward packets. Just use si_l3
+        """
         pass
 
     def get_l2socket(self): return self._l2_socket
