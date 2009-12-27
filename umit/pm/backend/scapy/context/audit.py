@@ -128,7 +128,9 @@ def register_audit_context(BaseAuditContext):
                      skip_forwarded=True, unoffensive=False, capmethod=0):
             BaseAuditContext.__init__(self, dev1, dev2, bpf_filter, capmethod)
 
-            self._mac1, self._mac2, self._ip1, self._ip2 = None, None, None, None
+            self._mac1, self._mac2 = None, None
+            self._ip1, self._ip2 = None, None
+            self.linktype = None
 
             self.internal = False
             self.thread1 = None
