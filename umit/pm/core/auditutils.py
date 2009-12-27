@@ -29,7 +29,7 @@ from array import array
 from random import randint
 from struct import pack, unpack
 from subprocess import Popen, PIPE
-from socket import inet_ntoa, inet_aton
+from socket import inet_ntoa, inet_aton, gethostbyname
 
 from umit.pm.core.netconst import IL_TYPE_ETH
 
@@ -77,27 +77,73 @@ def atol(x):
     try:
         ip = inet_aton(x)
     except socket.error:
-        ip = inet_aton(socket.gethostbyname(x))
+        ip = inet_aton(gethostbyname(x))
     return unpack("!I", ip)[0]
 
 class Netmask(object):
-    def __init__(self, netmask):
-        if not is_netmask(netmask):
-            raise Exception('Not a valid netmask')
+    """
+    >>> Netmask("255.255.255.250", "23.43.43.2")
+    Traceback (most recent call last):
+    ...
+    Exception: Invalid netmask
+    >>> Netmask("255.255.0.255", "23.43.43.2")
+    Traceback (most recent call last):
+    ...
+    Exception: Invalid netmask
+    >>> Netmask("255.255.255.255", "23.43.43.2")
+    Traceback (most recent call last):
+    ...
+    Exception: Invalid netmask
+    >>> Netmask("255.255.255.0", "10.0.0.23").match("10.0.0.255")
+    True
+    >>> Netmask("255.255.255.0", "10.0.0.23").match("10.0.1.1")
+    False
+    """
 
-        if '/' in netmask:
-            dest, netmask = netmask.split('/')
+    def __init__(self, netmask, ip=None):
+        if not is_netmask(netmask) or '255.255.255.255' == netmask:
+            raise Exception('Invalid netmask')
+
+        if ip and not is_ip(ip):
+            raise Exception('Not a valid IP')
+
+        if ip:
+            idx = 0; stop = False
+            groups = map(int, netmask.split('.'))
+            netmask = 0
+
+            for idx in xrange(4):
+                value = groups[idx]
+
+                if value not in (0, 128, 192, 224, 240, 248, 252, 254, 255):
+                    raise Exception("Invalid netmask")
+
+                if stop and value != 0:
+                    raise Exception("Invalid netmask")
+
+                netmask |= value << (3 - idx) * 8
+
+                if value != 255:
+                    stop = True
+
+            self.net = netmask
+            self.dest = atol(ip)
+            self.netmask = netmask & self.dest
         else:
-            dest, netmask = netmask, '24'
 
-        netmask = itom(int(netmask))
-        dest += '.0' * (3 - dest.count('.'))
-        dest = atol(dest)
+            if '/' in netmask:
+                dest, netmask = netmask.split('/')
+            else:
+                dest, netmask = netmask, '24'
 
-        self.net = netmask
-        self.dest = dest
+            netmask = itom(int(netmask))
+            dest += '.0' * (3 - dest.count('.'))
+            dest = atol(dest)
 
-        self.netmask = netmask & dest
+            self.net = netmask
+            self.dest = dest
+
+            self.netmask = netmask & dest
 
     def match(self, ip):
         ip = atol(ip)
@@ -187,3 +233,7 @@ class AuditOperation(object):
 
     state = property(get_state, set_state)
     summary = property(get_summary, set_summary)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
