@@ -312,20 +312,23 @@ class HostListTab(UmitView):
         self.populate()
 
     def __on_info(self, button):
-        model, iter = self.tree.get_selection().get_selected()
+        import umit.pm.gui.core.app
 
-        if iter:
-            intf = self.intf_combo.get_interface()
-            ip, mac = model.get_value(iter, 0), model.get_value(iter, 1)
+        ips = []
+        intf = self.intf_combo.get_interface()
+        info_cb = ServiceBus().get_function('pm.hostlist', 'info')
 
-            info_cb = ServiceBus().get_function('pm.hostlist', 'info')
+        # Doesn't test for null info_cb. If we are here the button is enabled
+        # and the test is already done.
 
-            if callable(info_cb):
-                ret = info_cb(intf, ip, mac)
-            else:
-                return
+        def add_to_string(model, path, iter, selected):
+            ips.append((model.get_value(iter, 0), model.get_value(iter, 1)))
 
-            import umit.pm.gui.core.app
+        self.tree.get_selection().selected_foreach(add_to_string, ips)
+
+
+        for ip, mac in ips:
+            ret = info_cb(intf, ip, mac)
 
             d = gtk.Dialog(_('Informations for %s - PacketManipulator') % \
                            ret.l3_addr,
