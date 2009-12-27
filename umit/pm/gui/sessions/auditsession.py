@@ -20,6 +20,7 @@
 
 from base import Session
 from umit.pm.gui.pages.auditpage import AuditPage
+from umit.pm.gui.pages.audittargetpage import AuditTargetPage
 from umit.pm.gui.pages.auditoutputpage import AuditOutputPage
 
 class AuditSession(Session):
@@ -27,8 +28,13 @@ class AuditSession(Session):
     session_name = "AUDIT"
 
     def create_ui(self):
+        self.mitm_attacks = []
+
         self.audit_page = self.add_perspective(AuditPage, True, True)
         self.output_page = self.add_perspective(AuditOutputPage, True, True)
+
+        self.append_page('Targets')
+        self.target_page = self.add_perspective(AuditTargetPage, True, True, 1)
 
         self.editor_cbs.insert(0, lambda: self.audit_page.reload())
         super(AuditSession, self).create_ui()

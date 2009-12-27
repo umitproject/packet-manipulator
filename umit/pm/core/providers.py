@@ -65,3 +65,24 @@ class ProfileProvider(object):
     def get_port(self, proto, port):
         "@return a PortProvider object or None"
         raise Exception('Not implemented')
+
+class HostEntry(object):
+    def __init__(self, l2_addr=None, l3_addr=None, hostname=None):
+        self.l2_addr = l2_addr
+        self.l3_addr = l3_addr
+        self.hostname = hostname
+
+    def __str__(self):
+        out = ''
+
+        if self.l2_addr:
+            out += self.l2_addr + ' '
+        if self.l3_addr:
+            out += self.l3_addr + ' '
+        if self.hostname:
+            out += self.hostname + ' '
+
+        if not out:
+            return super(HostEntry, self).__str__()
+        else:
+            return out[:-1]
