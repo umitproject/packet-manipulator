@@ -146,13 +146,17 @@ class AuditTargetPage(Perspective):
         self.pack_start(hbox)
         self.show_all()
 
-    def get_targets1():
+    def get_targets1(self):
         return self.targets[0]
 
-    def get_targets2():
+    def get_targets2(self):
         return self.targets[1]
 
     def create_targets(self):
+        """
+        Update targets structure appropriately by looking at target{1,2}_tree.
+        @return True if the list is filled right or False
+        """
         func = ServiceBus().get_function('pm.hostlist', 'get_target')
 
         if not func:
@@ -175,7 +179,7 @@ class AuditTargetPage(Perspective):
                 entry = HostEntry(l2_addr=target)
 
             elif func:
-                if is_ip(target) and netmask.match(target):
+                if is_ip(target) and netmask.match_strict(target):
                     profs = filter(lambda p: p.l2_addr is not None,
                                    func(l3_addr=target, netmask=netmask) or \
                                    [])
@@ -195,7 +199,7 @@ class AuditTargetPage(Perspective):
                                           hostname=target)
 
             if entry:
-                log.info('Group %d -> %s' % (targets_idx, entry))
+                log.info('Group %d -> %s' % (targets_idx + 1, entry))
                 self.targets[targets_idx].append(entry)
 
         # Ok. Now let's create the target list
@@ -207,3 +211,65 @@ class AuditTargetPage(Perspective):
 
             for target in self.target2_tree.get_targets():
                 add_host_entry(target, 1)
+
+            errs = []
+
+            if func:
+                netmask = None
+
+                if not self.targets[0]:
+                    netmask = Netmask(self.session.context.get_netmask1(),
+                                      self.session.context.get_ip1())
+
+                    for prof in filter(lambda p: p.l2_addr is not None,
+                                       func(netmask=netmask) or []):
+
+                        entry = HostEntry(l2_addr=prof.l2_addr,
+                                          l3_addr=prof.l3_addr,
+                                          hostname=prof.hostname)
+
+                        self.targets[0].append(entry)
+                        log.info('[AUTOADD] Group 1 -> %s' % entry)
+
+                if not self.targets[1]:
+                    if not netmask:
+                        netmask = Netmask(self.session.context.get_netmask1(),
+                                          self.session.context.get_ip1())
+
+                    for prof in filter(lambda p: p.l2_addr is not None,
+                                       func(netmask=netmask) or []):
+
+                        entry = HostEntry(l2_addr=prof.l2_addr,
+                                          l3_addr=prof.l3_addr,
+                                          hostname=prof.hostname)
+
+                        self.targets[1].append(entry)
+                        log.info('[AUTOADD] Group 2 -> %s' % entry)
+
+            if not self.targets[0]:
+                errs.append(
+                    _('Could not set any targets for the first group.'))
+
+            if not self.targets[1]:
+                errs.append(
+                    _('Could not set any targets for the second group.'))
+
+            if errs and not func:
+                errs.append(
+                    _('Neither get_target could be used to autopopulate'
+                      'target. Please load at least an appropriate plugin and '
+                      'make an ARP scan, or add targets MAC by hand.'))
+
+            if errs:
+                dialog = gtk.MessageDialog(self.get_toplevel(),
+                                           gtk.DIALOG_MODAL,
+                                           gtk.MESSAGE_WARNING, gtk.BUTTONS_OK,
+                                           "Some errors found:\n\n" + \
+                                           '\n'.join(errs))
+                dialog.run()
+                dialog.hide()
+                dialog.destroy()
+
+                return False
+
+            return True

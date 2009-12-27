@@ -200,7 +200,8 @@ class Profiler(Plugin, PassiveAudit):
             netmask = kwargs.pop('netmask')
 
         log.debug('Looking for a profile matching l2_addr=%s l3_addr=%s '
-                  'hostname=%s' % (l2_addr, l3_addr, hostname))
+                  'hostname=%s netmask=%s' % \
+                  (l2_addr, l3_addr, hostname, netmask))
 
         check_validity = lambda prof: \
                (not l2_addr or (l2_addr and prof.l2_addr == l2_addr)) and \
@@ -215,7 +216,7 @@ class Profiler(Plugin, PassiveAudit):
                     ret.append(prof)
         else:
             if netmask:
-                valid_ip = filter(netmask.match, self.profiles.keys())
+                valid_ip = filter(netmask.match_strict, self.profiles.keys())
             else:
                 valid_ip = self.profiles.keys()
 
