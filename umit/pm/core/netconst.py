@@ -101,6 +101,16 @@ INJ_FORWARD       = 4 # Forward the packet as is
 INJ_MODIFIED      = 5 # Forward the packet but recompute checksums
 
 ###############################################################################
+# Metapacket constants
+###############################################################################
+
+MPKT_IGNORE      = 1
+MPKT_FORWARDABLE = 1 << 2
+MPKT_FORWARDED   = 1 << 3
+MPKT_FROMIFACE   = 1 << 4
+MPKT_FROMBRIDGE  = 1 << 5
+
+###############################################################################
 # Connection tracking constants
 ###############################################################################
 

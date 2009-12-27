@@ -30,12 +30,39 @@ from umit.pm.backend.scapy.translator import global_trans
 from umit.pm.backend.scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
                                        Raw, IP, get_proto_size, get_proto
 
+MAPPINGS = {
+    Ether : IL_TYPE_ETH,
+    # TODO: complete this!
+}
 
 class MetaPacket(object):
-    def __init__(self, proto=None, cfields=None):
+    def __init__(self, proto=None, cfields=None, flags=0):
         self.root = proto
         self.cfields = cfields or {}
-        self.flags = 0
+        self.flags = flags
+
+        proto = self.root
+
+        # Fallback to ether
+        self.l2_proto = MAPPINGS.get(type(proto), IL_TYPE_ETH)
+
+        self.l2_src = getattr(proto, 'src', None)
+        self.l2_dst = getattr(proto, 'dst', None)
+        self.l3_proto = getattr(proto, 'type', None)
+
+        proto = proto.payload
+
+        self.l3_src = getattr(proto, 'src', None)
+        self.l3_dst = getattr(proto, 'dst', None)
+        self.l4_proto = getattr(proto, 'proto', None) or \
+                        getattr(proto, 'nh', None) # IPv6 handling
+
+        proto = proto.payload
+
+        self.l4_src = getattr(proto, 'sport', None)
+        self.l4_dst = getattr(proto, 'dport', None)
+        self.l4_ack = getattr(proto, 'ack', None)
+        self.l4_seq = getattr(proto, 'seq', None)
 
     def __div__(self, other):
         cfields = self.cfields.copy()
@@ -84,6 +111,7 @@ class MetaPacket(object):
                 self.root = ret
 
             return True
+
     def complete(self):
         # Add missing layers (Ethernet and IP)
 
