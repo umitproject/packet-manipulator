@@ -22,6 +22,7 @@ import gtk
 import pango
 
 from umit.pm.core.i18n import _
+from umit.pm.core.netconst import *
 from umit.pm.gui.core.views import UmitView
 from umit.pm.gui.widgets.interfaces import InterfacesCombo
 from umit.pm.core.providers import HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
@@ -120,9 +121,9 @@ class HostListDetails(gtk.TreeView):
         for port in prof.ports:
             child = self.store.append(iter, [_('Port:'), str(port.port)])
 
-            if port.proto == 6:
+            if port.proto == NL_TYPE_TCP:
                 proto = 'TCP'
-            elif port.proto == 17:
+            elif port.proto == NL_TYPE_UDP:
                 proto = 'UDP'
             else:
                 proto = port.proto and str(port.proto) or ''
