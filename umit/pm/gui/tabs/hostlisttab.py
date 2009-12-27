@@ -161,6 +161,8 @@ class HostListTab(UmitView):
         self._main_widget.set_spacing(2)
 
         self.intf_combo = InterfacesCombo()
+        self.intf_combo.connect('changed', self.__on_interface_changed)
+
         self._main_widget.pack_start(self.intf_combo, False, False)
 
         sw = gtk.ScrolledWindow()
@@ -192,21 +194,16 @@ class HostListTab(UmitView):
         self.btn_refresh = new_button(gtk.STOCK_REFRESH, _('Refresh the list'))
         self.btn_refresh.connect('clicked', self.__on_refresh)
 
-        self.btn_scan = new_button(gtk.STOCK_CONNECT, _('Scan for new hosts'))
-        self.btn_scan.connect('clicked', self.__on_scan)
-
         self.btn_info = new_button(gtk.STOCK_INFO,
                                    _('Information for selected host'))
         self.btn_info.connect('clicked', self.__on_info)
 
-        bb.pack_start(self.btn_scan, False, False)
         bb.pack_start(self.btn_refresh, False, False)
         bb.pack_end(self.btn_info, False, False)
 
         self._main_widget.pack_end(bb, False, False)
         self._main_widget.show_all()
 
-        self.btn_scan.set_sensitive(False)
         self.btn_info.set_sensitive(False)
         self.btn_refresh.set_sensitive(False)
 
@@ -219,23 +216,13 @@ class HostListTab(UmitView):
     def __on_func_assigned(self, svc, funcname, func=None):
         value = func is not None and True or False
 
-        print svc, funcname, func
-
-        if funcname == 'scan':
-            self.btn_scan.set_sensitive(value)
-        elif funcname == 'info':
+        if funcname == 'info':
             self.btn_info.set_sensitive(value)
         elif funcname == 'populate':
             self.btn_refresh.set_sensitive(value)
 
     def __on_refresh(self, button):
         self.populate()
-
-    def __on_scan(self, button):
-        scan_cb = ServiceBus().get_function('pm.hostlist', 'scan')
-
-        if callable(scan_cb):
-            scan_cb()
 
     def __on_info(self, button):
         model, iter = self.tree.get_selection().get_selected()
