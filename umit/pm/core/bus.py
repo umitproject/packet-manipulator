@@ -230,4 +230,5 @@ def services_boot():
         def info(self, intf, ip, mac): pass
 
         def get(self): pass
-        def get_for_iface(self, intf): pass
+        def get_target(self, l2_addr=None, l3_addr=None, hostname=None, \
+                       netmask=None): pass

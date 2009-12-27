@@ -139,7 +139,7 @@ class Profiler(Plugin, PassiveAudit):
         else:
             self.debug = True
 
-    @unbind_function('pm.hostlist', ('get', 'info', 'populate', 'get_for_iface'))
+    @unbind_function('pm.hostlist', ('get', 'info', 'populate', 'get_target'))
     def stop(self):
         try:
             manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
@@ -186,9 +186,46 @@ class Profiler(Plugin, PassiveAudit):
     def __impl_get(self):
         return self.profiles
 
-    def __impl_get_for_iface(self, intf):
-        # HACK!
-        raise Exception("Not implemented")
+    def __impl_get_target(self, **kwargs):
+        ret = []
+        l2_addr, l3_addr, hostname, netmask = None, None, None, None
+
+        if 'l2_addr' in kwargs:
+            l2_addr = kwargs.pop('l2_addr')
+        if 'l3_addr' in kwargs:
+            l3_addr = kwargs.pop('l3_addr')
+        if 'hostname' in kwargs:
+            hostname = kwargs.pop('hostname')
+        if 'netmask' in kwargs:
+            netmask = kwargs.pop('netmask')
+
+        log.debug('Looking for a profile matching l2_addr=%s l3_addr=%s '
+                  'hostname=%s' % (l2_addr, l3_addr, hostname))
+
+        check_validity = lambda prof: \
+               (not l2_addr or (l2_addr and prof.l2_addr == l2_addr)) and \
+               (not hostname or (hostname and prof.hostname == hostname))
+
+        if l3_addr:
+            if l3_addr not in self.profiles:
+                return None
+
+            for prof in self.profiles[l3_addr]:
+                if check_validity(prof):
+                    ret.append(prof)
+        else:
+            if netmask:
+                valid_ip = filter(netmask.match, self.profiles.keys())
+            else:
+                valid_ip = self.profiles.keys()
+
+            for ip in valid_ip:
+                for prof in self.profiles[ip]:
+                    if check_validity(prof):
+                        ret.append(prof)
+
+        log.debug('Returning %s' % ret)
+        return ret
 
     def register_hooks(self):
         manager = AuditManager()
@@ -321,8 +358,6 @@ class Profiler(Plugin, PassiveAudit):
                 del self.profiles[ipkey]
 
             ipidx += 1
-
-        print self.profiles
 
     def get_or_create(self, mpkt, clientside=False):
         if len(self.profiles) >= self.maxnum:
