@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import pango
 import gobject
 
 from umit.pm.gui.core.icons import get_pixbuf
@@ -46,6 +47,8 @@ class ClosableLabel(gtk.HBox):
         self.label = gtk.Label(txt)
         self.label.set_use_markup(True)
         self.label.set_alignment(0, 0.5)
+        self.label.set_ellipsize(pango.ELLIPSIZE_START)
+        self.label.set_size_request(150, -1)
 
         self.button = gtk.Button()
         self.button.add(gtk.image_new_from_pixbuf(self.__close_icon))
