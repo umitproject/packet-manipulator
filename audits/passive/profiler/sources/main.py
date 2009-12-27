@@ -44,7 +44,9 @@ from umit.pm.core.atoms import defaultdict
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 
-from umit.pm.core.providers import AccountProvider, PortProvider, ProfileProvider, \
+from umit.pm.core.bus import bind_function, unbind_function
+from umit.pm.core.providers import AccountProvider, PortProvider, \
+     ProfileProvider, \
      UNKNOWN_TYPE, HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
      GATEWAY_TYPE, ROUTER_TYPE
 
@@ -130,23 +132,11 @@ class Profiler(Plugin, PassiveAudit):
 
         if reader:
             self.debug = False
-
-            hltab = PMApp().main_window.get_tab('HostListTab')
-
-            if hltab:
-                hltab.info_cb = self.info_cb
-                hltab.populate_cb = self.populate_cb
-
-                self.hltab = hltab
-            else:
-                self.hltab = None
         else:
             self.debug = True
 
+    @unbind_function('pm.hostlist', ('get', 'info', 'populate'))
     def stop(self):
-        if self.hltab:
-            self.hltab.info_cb = None
-            self.hltab.populate_cb = None
         try:
             manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
                                      self._parse_tcp, 1)
@@ -165,6 +155,7 @@ class Profiler(Plugin, PassiveAudit):
         except:
             pass
 
+    @bind_function('pm.hostlist', 'info')
     def info_cb(self, intf, ip, mac):
         """
         @return a ProfileProvider object or None if not found
@@ -174,6 +165,7 @@ class Profiler(Plugin, PassiveAudit):
             if prof.l2_addr == mac:
                 return prof
 
+    @bind_function('pm.hostlist', 'populate')
     def populate_cb(self, interface):
         # This signal is triggered when the user change the interface
         # combobox selection and we have to repopulate the tree
@@ -189,6 +181,10 @@ class Profiler(Plugin, PassiveAudit):
 
         return ret
 
+    @bind_function('pm.hostlist', 'get')
+    def get_profiles(self):
+        return self.profiles
+
     def register_hooks(self):
         manager = AuditManager()
 
@@ -202,9 +198,9 @@ class Profiler(Plugin, PassiveAudit):
                                  self._parse_icmp, 1)
 
     def _parse_tcp(self, mpkt):
-        sport = mpkt.get_field('tcp.sport')
-        dport = mpkt.get_field('tcp.dport')
-        tcpflags = mpkt.get_field('tcp.flags')
+        sport = mpkt.l4_src
+        dport = mpkt.l4_dst
+        tcpflags = mpkt.l4_flags
 
         if not tcpflags:
             return
@@ -284,11 +280,11 @@ class Profiler(Plugin, PassiveAudit):
 
     def get_or_create(self, mpkt, clientside=False):
         if not clientside:
-            ip = mpkt.get_field('ip.src')
-            mac = mpkt.get_field('eth.src')
+            ip = mpkt.l3_src
+            mac = mpkt.l2_src
         else:
-            ip = mpkt.get_field('ip.dst')
-            mac = mpkt.get_field('eth.dst')
+            ip = mpkt.l3_dst
+            mac = mpkt.l3_dst
 
         for prof in self.profiles[ip]:
             if not mac:

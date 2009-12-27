@@ -28,6 +28,7 @@ from socket import gethostbyname, inet_aton, inet_ntoa
 from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
 from umit.pm.core.auditutils import is_ip, is_mac
+from umit.pm.core.bus import ServiceBus, bind_function, unbind_function
 from umit.pm.core.const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
 
 from umit.pm.gui.core.app import PMApp
@@ -242,20 +243,15 @@ class ARPPing(ActiveAudit):
     )
 
     def start(self, reader):
-        tab = PMApp().main_window.get_tab('HostListTab')
-
-        if tab:
-            # Register scan button of hostlisttab
-
-            tab.scan_cb = self.on_scan_cb
-
         a, self.item = self.add_menu_entry('ARPPing', 'ARP ping ...',
                                            _('Ping a target using ARP request'),
                                            gtk.STOCK_EXECUTE)
 
+    @unbind_function('pm.hostlist', 'scan')
     def stop(self):
         self.remove_menu_entry(self.item)
 
+    @bind_function('pm.hostlist', 'scan')
     def on_scan_cb(self):
         tab = PMApp().main_window.get_tab('MainTab')
         sess = tab.get_current_session()

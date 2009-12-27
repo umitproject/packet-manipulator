@@ -33,6 +33,7 @@ from optparse import OptionParser
 
 from umit.pm.core.i18n import _
 from umit.pm.core.atoms import Singleton
+from umit.pm.core.bus import services_boot
 from umit.pm.gui.core.splash import SplashScreen
 from umit.pm.gui.plugins.engine import PluginEngine
 from umit.pm.manager.preferencemanager import Prefs
@@ -109,6 +110,7 @@ class PMApp(Singleton):
             from umit.pm.manager.preferencemanager import Prefs
             self.prefs = Prefs()
         elif self.phase == 2:
+            services_boot()
             self.splash.text = _("Creating main window ...")
 
             from mainwindow import MainWindow

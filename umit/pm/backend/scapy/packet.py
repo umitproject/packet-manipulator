@@ -63,6 +63,7 @@ class MetaPacket(object):
         self.l4_dst = getattr(proto, 'dport', None)
         self.l4_ack = getattr(proto, 'ack', None)
         self.l4_seq = getattr(proto, 'seq', None)
+        self.l4_flags = getattr(proto, 'flags', None)
 
     def __div__(self, other):
         cfields = self.cfields.copy()

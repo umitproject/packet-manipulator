@@ -28,6 +28,7 @@ import gtk
 import gobject
 
 from umit.pm.core.logger import log
+from umit.pm.core.bus import ServiceBus
 from umit.pm.core.atoms import Singleton
 from umit.pm.gui.plugins.atoms import Version
 from umit.pm.higwidgets.gtkutils import gobject_register
@@ -44,6 +45,7 @@ class Core(Singleton, gobject.GObject):
         gobject.GObject.__init__(self)
 
         self.mainwindow = None
+        self.bus = ServiceBus()
         gtk.about_dialog_set_url_hook(self.__about_dialog_url, None)
 
     #

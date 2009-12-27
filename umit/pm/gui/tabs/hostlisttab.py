@@ -23,6 +23,7 @@ import pango
 
 from umit.pm.core.i18n import _
 from umit.pm.core.netconst import *
+from umit.pm.core.bus import ServiceBus
 from umit.pm.gui.core.views import UmitView
 from umit.pm.gui.widgets.interfaces import InterfacesCombo
 from umit.pm.core.providers import HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
@@ -147,13 +148,7 @@ class HostListDetails(gtk.TreeView):
 
 class HostListTab(UmitView):
     """
-    HostListTab is a tab that lists active hosts.
-
-    We have 3 callbacks that could be set:
-     - populate_cb is called when the user change the combobox selection
-     - info_cb is fired when the user select an ip and then click on info button
-     - scan_cb is fired when the user click on scan button to obtain a new shiny
-               host list
+    HostListTab is a tab that lists active hosts, by using pm.hostlist service
     """
 
     name = 'HostListTab'
@@ -162,10 +157,6 @@ class HostListTab(UmitView):
     icon_name = gtk.STOCK_INDEX
 
     def create_ui(self):
-        self._populate_cb = None
-        self._info_cb = None
-        self._scan_cb = None
-
         self._main_widget.set_border_width(4)
         self._main_widget.set_spacing(2)
 
@@ -219,13 +210,32 @@ class HostListTab(UmitView):
         self.btn_info.set_sensitive(False)
         self.btn_refresh.set_sensitive(False)
 
+        svc = ServiceBus().get_service('pm.hostlist')
+        svc.connect('func-binded', self.__on_func_assigned)
+        svc.connect('func-unbinded', self.__on_func_assigned)
+
         self.populate()
+
+    def __on_func_assigned(self, svc, funcname, func=None):
+        value = func is not None and True or False
+
+        print svc, funcname, func
+
+        if funcname == 'scan':
+            self.btn_scan.set_sensitive(value)
+        elif funcname == 'info':
+            self.btn_info.set_sensitive(value)
+        elif funcname == 'populate':
+            self.btn_refresh.set_sensitive(value)
 
     def __on_refresh(self, button):
         self.populate()
 
     def __on_scan(self, button):
-        self._scan_cb()
+        scan_cb = ServiceBus().get_function('pm.hostlist', 'scan')
+
+        if callable(scan_cb):
+            scan_cb()
 
     def __on_info(self, button):
         model, iter = self.tree.get_selection().get_selected()
@@ -234,9 +244,11 @@ class HostListTab(UmitView):
             intf = self.intf_combo.get_interface()
             ip, mac = model.get_value(iter, 0), model.get_value(iter, 1)
 
-            ret = self._info_cb(intf, ip, mac)
+            info_cb = ServiceBus().get_function('pm.hostlist', 'info')
 
-            if not ret:
+            if callable(info_cb):
+                ret = info_cb()
+            else:
                 return
 
             import umit.pm.gui.core.app
@@ -286,45 +298,10 @@ class HostListTab(UmitView):
         intf = self.intf_combo.get_interface()
 
         self.store.clear()
+        populate_cb = ServiceBus().get_function('pm.hostlist', 'populate')
 
-        if not callable(self._populate_cb):
+        if not callable(populate_cb):
             return
 
-        for ip, mac, desc in self._populate_cb(intf):
+        for ip, mac, desc in populate_cb(intf):
             self.store.append([ip, mac, desc])
-
-    def get_populate_cb(self):
-        return self._populate_cb
-
-    def get_scan_cb(self):
-        return self._scan_cb
-
-    def get_info_cb(self):
-        return self._info_cb
-
-    def set_populate_cb(self, call):
-        if callable(call):
-            self._populate_cb = call
-            self.btn_refresh.set_sensitive(True)
-            self.populate()
-        else:
-            self.store.clear()
-            self.btn_refresh.set_sensitive(False)
-
-    def set_scan_cb(self, call):
-        if callable(call):
-            self._scan_cb = call
-            self.btn_scan.set_sensitive(True)
-        else:
-            self.btn_scan.set_sensitive(False)
-
-    def set_info_cb(self, call):
-        if callable(call):
-            self._info_cb = call
-            self.btn_info.set_sensitive(True)
-        else:
-            self.btn_info.set_sensitive(False)
-
-    populate_cb = property(get_populate_cb, set_populate_cb)
-    scan_cb = property(get_scan_cb, set_scan_cb)
-    info_cb = property(get_info_cb, set_info_cb)
