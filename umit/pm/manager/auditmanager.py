@@ -646,6 +646,12 @@ class ActiveAudit(AuditPlugin):
             item
         )
 
+    def remove_mitm_attack(self, item):
+        import umit.pm.gui.core.app
+
+        return umit.pm.gui.core.app.PMApp().main_window.\
+               deregister_audit_mitm_item(item)
+
     def add_menu_entry(self, name, lbl, tooltip, stock):
         """
         Add a MenuEntry to the MainWindow of PM.
@@ -662,6 +668,15 @@ class ActiveAudit(AuditPlugin):
         return umit.pm.gui.core.app.PMApp().main_window.register_audit_item(
             name, lbl, tooltip, stock, self.on_input_request
         )
+
+    def add_mitm_attack(self, name, lbl, tooltip, stock):
+        log.debug('Registering new MITM menu entry for \'%s\' attack' % lbl)
+
+        import umit.pm.gui.core.app
+
+        return umit.pm.gui.core.app.PMApp().main_window.\
+               register_audit_mitm_item(name, lbl, tooltip, stock,
+                                        self.on_input_request)
 
     def execute_audit(self, audit_sess, input_dct=None):
         """

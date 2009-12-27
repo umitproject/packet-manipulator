@@ -152,6 +152,8 @@ class MainWindow(gtk.Window):
 
             ('Audits', None, _('Audits'), None),
 
+            ('Mitm', None, _('MITM'), None),
+
             ('Options', None, _('Options'), None),
 
             ('Routes', gtk.STOCK_NETWORK, _('Routing table'), '<Control>r',
@@ -185,6 +187,7 @@ class MainWindow(gtk.Window):
                 <menuitem action='Interface'/>
             </menu>
             <menu action='Audits'/>
+            <menu action='Mitm'/>
             <menu action='Options'>
                 <menuitem action='Routes'/>
                 <separator/>
@@ -232,8 +235,11 @@ class MainWindow(gtk.Window):
         self.ui_manager.connect('connect-proxy', self.__on_connect_proxy)
         self.ui_manager.connect('disconnect-proxy', self.__on_disconnect_proxy)
 
-        # Set unsensitive the audit menu
+        # Set unsensitive the audit menu and also Mitm
         item = self.ui_manager.get_widget('/menubar/Audits')
+        item.set_sensitive(False)
+
+        item = self.ui_manager.get_widget('/menubar/Mitm')
         item.set_sensitive(False)
 
         # Central widgets
@@ -245,7 +251,15 @@ class MainWindow(gtk.Window):
         self.plugin_window = PluginWindow()
 
     def register_audit_item(self, name, lbl, tooltip, stock, callback):
-        audititem = self.ui_manager.get_widget('/menubar/Audits')
+        return self.__register_audit_item('/menubar/Audits', name, lbl, tooltip,
+                                   stock, callback)
+
+    def register_audit_mitm_item(self, name, lbl, tooltip, stock, callback):
+        return self.__register_audit_item('/menubar/Mitm', name, lbl, tooltip,
+                                   stock, callback)
+
+    def __register_audit_item(self, mname, name, lbl, tooltip, stock, cb):
+        audititem = self.ui_manager.get_widget(mname)
         menu = audititem.get_submenu()
 
         audititem.show()
@@ -255,9 +269,10 @@ class MainWindow(gtk.Window):
             audititem.set_submenu(menu)
 
         act = gtk.Action(name, lbl, tooltip, stock)
-        act.connect('activate', callback)
+        act.connect('activate', cb)
 
         item = act.create_menu_item()
+        item.set_name(name)
         item.show()
 
         menu.append(item)
@@ -265,11 +280,17 @@ class MainWindow(gtk.Window):
         return act, item
 
     def deregister_audit_item(self, item):
-        audititem = self.ui_manager.get_widget('/menubar/Audits')
+        return self.__deregister_audit_item('/menubar/Audits', item)
+
+    def deregister_audit_mitm_item(self, item):
+        return self.__deregister_audit_item('/menubar/Mitm', item)
+
+    def __deregister_audit_item(self, mname, item):
+        audititem = self.ui_manager.get_widget(mname)
         menu = audititem.get_submenu()
 
         if not menu:
-            return
+            return False
 
         for citem in menu:
             if citem is item:
@@ -550,6 +571,9 @@ class MainWindow(gtk.Window):
         item = self.ui_manager.get_widget('/menubar/Audits')
         item.remove_submenu()
 
+        item = self.ui_manager.get_widget('/menubar/Mitm')
+        item.remove_submenu()
+
         self.vbox.pack_start(self.main_paned)
         self.vbox.pack_start(self.statusbar, False, False)
 
@@ -651,7 +675,9 @@ class MainWindow(gtk.Window):
 
     def __on_maintab_page_switched(self, notebook, page, pagenum):
         page = notebook.get_nth_page(pagenum)
+
         item = self.ui_manager.get_widget('/menubar/Audits')
+        mitm_item = self.ui_manager.get_widget('/menubar/Mitm')
 
         if isinstance(page, Session) and getattr(page, 'context', None):
             enabled = (page.context.file_types and True or False)
@@ -663,11 +689,22 @@ class MainWindow(gtk.Window):
 
         if not isinstance(page, AuditSession):
             item.set_sensitive(False)
+            mitm_item.set_sensitive(False)
         else:
             submenu = item.get_submenu()
 
             if submenu and submenu.get_children():
                 item.set_sensitive(True)
+
+            submenu = mitm_item.get_submenu()
+
+            if submenu and submenu.get_children():
+                mitm_item.set_sensitive(True)
+
+                for item in submenu:
+                    item.set_sensitive(False)
+                else:
+                    item.set_sensitive(True)
 
     def __on_toggle_tab_menu(self, menuitem, tab):
         if menuitem.get_active():
