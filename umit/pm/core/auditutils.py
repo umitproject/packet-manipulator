@@ -98,6 +98,8 @@ class Netmask(object):
     True
     >>> Netmask("255.255.255.0", "10.0.0.23").match("10.0.1.1")
     False
+    >>> print Netmask("255.255.255.0", "10.0.0.23")
+    10.0.0.23/24
     """
 
     def __init__(self, netmask, ip=None):
@@ -127,6 +129,7 @@ class Netmask(object):
                     stop = True
 
             self.net = netmask
+            ip += '.0' * (3 - ip.count('.'))
             self.dest = atol(ip)
             self.netmask = netmask & self.dest
         else:
@@ -148,6 +151,16 @@ class Netmask(object):
     def match(self, ip):
         ip = atol(ip)
         return (self.netmask | ip) & self.net == self.netmask
+
+    def match_strict(self, ip):
+        ip = atol(ip)
+        if self.dest == ip:
+            return False
+        return (self.netmask | ip) & self.net == self.netmask
+
+    def __str__(self):
+        return inet_ntoa(pack("!I", self.dest)) + '/' + \
+               str(bin(self.net).count('1'))
 
 ################################################################################
 # String utilities
