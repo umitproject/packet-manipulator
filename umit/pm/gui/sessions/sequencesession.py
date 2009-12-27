@@ -35,9 +35,7 @@ class SequenceSession(Session):
         self.container_cbs.insert(0, self.reload_container)
 
         self.reload()
-
-        self.pack_start(self.paned)
-        self.show_all()
+        super(SequenceSession, self).create_ui()
 
     def reload_editor(self):
         self.packet_page.reload()

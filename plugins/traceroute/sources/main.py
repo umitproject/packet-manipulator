@@ -271,7 +271,7 @@ class TracerouteContext(StaticContext):
 class TracerouteSession(Session):
     session_name = "TRACEROUTE"
     session_menu = "Traceroute"
-    session_orientation = gtk.ORIENTATION_HORIZONTAL
+    session_orientation = [gtk.ORIENTATION_HORIZONTAL]
 
     def create_ui(self):
         self.trace_page = self.add_perspective(Traceroute, True, True)
@@ -280,8 +280,7 @@ class TracerouteSession(Session):
         self.editor_cbs.append(self.reload_editor)
         self.container_cbs.append(self.reload_container)
 
-        self.pack_start(self.paned)
-        self.show_all()
+        super(TracerouteSession, self).create_ui()
 
     def reload_editor(self):
         self.map_page.create_map()

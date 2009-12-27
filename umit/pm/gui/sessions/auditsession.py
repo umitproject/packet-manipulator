@@ -31,6 +31,4 @@ class AuditSession(Session):
         self.output_page = self.add_perspective(AuditOutputPage, True, True)
 
         self.editor_cbs.insert(0, lambda: self.audit_page.reload())
-
-        self.pack_start(self.paned)
-        self.show_all()
+        super(AuditSession, self).create_ui()

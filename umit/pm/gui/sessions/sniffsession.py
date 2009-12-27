@@ -36,9 +36,7 @@ class SniffSession(Session):
         self.container_cbs.insert(0, self.reload_container)
 
         self.packet_page.reload()
-
-        self.pack_start(self.paned)
-        self.show_all()
+        super(SniffSession, self).create_ui()
 
     def reload_container(self, packet=None):
         if not isinstance(self.context, backend.TimedContext):

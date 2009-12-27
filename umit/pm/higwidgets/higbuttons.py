@@ -36,13 +36,13 @@ class HIGMixButton (gtk.HBox):
         gtk.HBox.__init__(self, False, 4)
         self.img = gtk.Image()
         self.img.set_from_stock(stock, gtk.ICON_SIZE_BUTTON)
-        
+
         self.lbl = gtk.Label(title)
-		
+
         self.hbox1 = gtk.HBox(False, 2)
         self.hbox1.pack_start(self.img, False, False, 0)
         self.hbox1.pack_start(self.lbl, False, False, 0)
-		
+
         self.align = gtk.Alignment(0.5, 0.5, 0, 0)
         self.pack_start(self.align)
         self.pack_start(self.hbox1)
@@ -94,7 +94,7 @@ class HIGArrowButton(gtk.Button):
 
     def __init__(self, orient):
         super(HIGArrowButton, self).__init__()
-        
+
         # Fascist mode!
         self.arrow = gtk.Arrow(gtk.ARROW_RIGHT, gtk.SHADOW_ETCHED_IN)
 
