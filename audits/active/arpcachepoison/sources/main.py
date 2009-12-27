@@ -25,6 +25,7 @@ from socket import gethostbyname
 
 from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
+from umit.pm.core.netconst import *
 from umit.pm.core.auditutils import is_ip, is_mac
 
 from umit.pm.gui.core.app import PMApp
@@ -71,6 +72,13 @@ class ARPCachePoison(Plugin, ActiveAudit):
                                 % (send.mpkts[0].get_field('arp.pdst'), status))
 
     def execute_audit(self, sess, inp_dict):
+        datalink = sess.context.datalink()
+
+        if datalink not in (IL_TYPE_ETH, IL_TYPE_TR, IL_TYPE_FDDI):
+            self.status.error(_('Could not run arpcachepoison. Datalink '
+                                'not supported. Ethernet needed.'))
+            return False
+
         host = inp_dict['host']
         hwsrc = inp_dict['hwsrc']
         target = inp_dict['target']

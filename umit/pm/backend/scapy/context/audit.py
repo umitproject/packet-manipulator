@@ -191,25 +191,33 @@ def register_audit_context(BaseAuditContext):
                     # Get datalink
                     try:
                         if self._listen_dev1.LL in conf.l2types.layer2num:
-                            linktype = \
+                            self.linktype = \
                                 conf.l2types.layer2num[self._listen_dev1.LL]
                         elif self._listen_dev1.LL in conf.l3types.layer2num:
-                            linktype = \
+                            self.linktype = \
                                 conf.l3types.layer2num[self._listen_dev1.LL]
                         else:
                             log.debug('Falling back to IL_TYPE_ETH as DL')
-                            linktype = IL_TYPE_ETH
+                            self.linktype = IL_TYPE_ETH
                     except:
                         try:
-                            linktype = self._listen_dev1.ins.datalink()
+                            self.linktype = self._listen_dev1.ins.datalink()
                         except:
                             log.debug('It seems that we\'re using PF_PACKET'
                                       ' socket. Using IL_TYPE_ETH as DL')
-                            linktype = IL_TYPE_ETH
-
-                    self.audit_dispatcher = AuditDispatcher(linktype, self)
+                            self.linktype = IL_TYPE_ETH
                 else:
                     log.debug('Creating helper processes')
+
+                    # FIXME: what we are doing here is to assume that the
+                    # the interface on which we're running tcpdump is an
+                    # ethernet. We should find a way to get the datalink type
+                    # from run_helper or just drop this workaround and implement
+                    # a C module.
+
+
+                    log.warn('Assuming IL_TYPE_ETH as datalink!')
+                    self.linktype = IL_TYPE_ETH
 
                     self._listen_dev1 = run_helper(self.capmethod - 1, dev1,
                                                    bpf_filter)
@@ -217,6 +225,8 @@ def register_audit_context(BaseAuditContext):
                     if dev2:
                         self._listen_dev2 = run_helper(self.capmethod - 1, dev2,
                                                        bpf_filter)
+
+                self.audit_dispatcher = AuditDispatcher(self.linktype, self)
 
             except socket.error, (errno, err):
                 self.summary = self.title + ' (' + str(err) +')'
@@ -226,6 +236,9 @@ def register_audit_context(BaseAuditContext):
             except Exception, err:
                 self.summary = self.title + ' (' + str(err) +')'
                 log.error(generate_traceback())
+
+        def get_datalink(self):
+            return self.linktype
 
         def get_ip1(self):
             return self._ip1

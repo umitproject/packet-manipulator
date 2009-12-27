@@ -89,6 +89,8 @@ class BaseAuditContext(TimedContext):
     def get_l3socket(self): return self._l3_socket
     def get_lbsocket(self): return self._lb_socket
 
+    def get_datalink(self): pass
+
     def get_ip1(self): pass
     def get_mac1(self): pass
     def get_ip2(self): pass
