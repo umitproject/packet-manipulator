@@ -29,7 +29,7 @@ from datetime import datetime
 from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
 from umit.pm.core.atoms import strip_tags
-from umit.pm.core.const import STATUS_INFO
+from umit.pm.core.const import STATUS_INFO, STATUS_ERR
 
 from umit.pm.gui.core.app import PMApp
 from umit.pm.gui.core.icons import get_pixbuf
@@ -385,6 +385,28 @@ class AuditOutputPage(Perspective):
         self.output = AuditOutput()
         self.user_msg(_('<tt>New audit session started.</tt>'),
                       STATUS_INFO, 'AuditManager')
+
+        iface1 = self.session.context.get_iface1()
+        mac1   = self.session.context.get_mac1()
+        ip1    = self.session.context.get_ip1()
+
+        if iface1 and mac1 and ip1:
+            self.user_msg('%s -> %s (%s)' % (iface1, ip1, mac1),
+                          STATUS_INFO, 'AuditManager')
+        elif iface1:
+            self.user_msg(_('Error listening on %s') % iface1,
+                          STATUS_ERR, 'AuditManager')
+
+        iface2 = self.session.context.get_iface2()
+        mac2   = self.session.context.get_mac2()
+        ip2    = self.session.context.get_ip2()
+
+        if iface2 and mac2 and ip2:
+            self.user_msg('%s -> %s (%s)' % (iface2, ip2, mac2),
+                          STATUS_INFO, 'AuditManager')
+        elif iface2:
+            self.user_msg(_('Error listening on %s') % iface2,
+                          STATUS_ERR, 'AuditManager')
 
         self.pack_start(self.output)
         self.show_all()
