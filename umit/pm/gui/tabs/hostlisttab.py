@@ -161,7 +161,6 @@ class HostListTab(UmitView):
         self._main_widget.set_spacing(2)
 
         self.intf_combo = InterfacesCombo()
-        self.intf_combo.connect('changed', self.__on_interface_changed)
 
         self._main_widget.pack_start(self.intf_combo, False, False)
 
@@ -180,6 +179,19 @@ class HostListTab(UmitView):
                                                    text=2))
 
         self.tree.get_column(2).set_resizable(True)
+        self.tree.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
+                                           [('text/plain', 0, 0)],
+                                           gtk.gdk.ACTION_DEFAULT | \
+                                           gtk.gdk.ACTION_COPY)
+
+        # Enable multiple selection
+        self.tree.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+        self.tree.set_rubber_banding(True)
+
+        self.last_pos = (0, 0)
+        self.tree.connect("drag-begin", self.__on_drag_begin)
+        self.tree.connect("drag-data-get", self.__on_drag_data_get)
+        self.tree.connect("button-press-event", self.__on_button_press)
 
         self.tree.set_rules_hint(True)
         self.tree.set_search_column(0)
@@ -213,6 +225,81 @@ class HostListTab(UmitView):
 
         self.populate()
 
+    def get_selected_ips(self):
+        selected = []
+
+        def add_to_string(model, path, iter, selected):
+            selected.append(model.get_value(iter, 0))
+
+        self.tree.get_selection().selected_foreach(add_to_string, selected)
+
+        return selected
+
+    def __on_button_press(self, tree, event):
+        self.last_pos = (event.x, event.y)
+
+        if event.button != 3:
+            return
+
+        selected = self.get_selected_ips()
+
+        if not selected:
+            return
+
+        info_str = len(selected) == 1 and \
+                 selected[0] or _('%d IP') % len(selected)
+
+        session = ServiceBus().call('pm.sessions', 'get_current_session')
+
+        if session.session_name == 'AUDIT' and \
+           session.get_current_page_name() == 'TARGETS':
+            sensitive = True
+        else:
+            sensitive = False
+
+        menu = gtk.Menu()
+
+        act = gtk.Action('target1-add', _("Add '%s' to target1") % info_str,
+                         None, gtk.STOCK_ADD)
+        act.connect('activate', lambda a, (s, ip): \
+                    s.target_page.target1_tree.append(ip), (session, selected))
+
+        item = act.create_menu_item()
+        item.set_sensitive(sensitive)
+        menu.append(item)
+
+        act = gtk.Action('target2-add', _("Add '%s' to target2") % info_str,
+                         None, gtk.STOCK_ADD)
+        act.connect('activate', lambda a, (s, selected): \
+                    s.target_page.target2_tree.append(ip), (session, selected))
+
+        item = act.create_menu_item()
+        item.set_sensitive(sensitive)
+        menu.append(item)
+
+        menu.show_all()
+        menu.popup(None, None, None, event.button, event.time)
+
+        return True
+
+    def __on_drag_begin(self, tree, context):
+        path = self.tree.get_path_at_pos(*map(int, self.last_pos))
+
+        if not path:
+            return False
+
+        if not tree.get_selection().path_is_selected(path[0]):
+            tree.get_selection().select_path(path[0])
+
+        return False
+
+    def __on_drag_data_get(self, tree, context, selection, info, timestamp):
+        outstr = '\n'.join(self.get_selected_ips())
+
+        if outstr:
+            selection.set('text/plain', 8, outstr)
+            return True
+
     def __on_func_assigned(self, svc, funcname, func=None):
         value = func is not None and True or False
 
@@ -234,7 +321,7 @@ class HostListTab(UmitView):
             info_cb = ServiceBus().get_function('pm.hostlist', 'info')
 
             if callable(info_cb):
-                ret = info_cb()
+                ret = info_cb(intf, ip, mac)
             else:
                 return
 
