@@ -51,7 +51,7 @@ class Session(gtk.VBox):
         self.paned_nb.set_show_border(False)
         self.paned_nb.append_page(self.paneds[0], gtk.Label('Main'))
 
-        self.pages = ['main']
+        self.pages = ['Main']
 
         self.perspectives = []
         self.container_cbs = []
@@ -71,6 +71,7 @@ class Session(gtk.VBox):
         PMApp().main_window.apply_bindings(self, self.session_id)
 
     def create_ui(self):
+        self.paned_nb.set_current_page(0)
         self.pack_start(self.paned_nb)
         self.show_all()
 
@@ -138,6 +139,12 @@ class Session(gtk.VBox):
 
         self.paned_nb.append_page(child, gtk.Label(page_name))
         self._label.set_menu_active(True)
+
+    def get_current_page(self):
+        return self.paned_nb.get_current_page()
+
+    def get_current_page_name(self):
+        return self.pages[self.paned_nb.get_current_page()].upper()
 
     def reload(self):
         self.reload_containers()
