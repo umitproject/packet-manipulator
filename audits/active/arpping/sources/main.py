@@ -243,7 +243,6 @@ class ARPScan(ActiveAudit):
         self.remove_menu_entry(self.item)
 
     def execute_audit(self, sess, inp_dict):
-        print sess, dir(sess)
         if not self.ping_scan(sess,
                               sess.context.get_iface1(),
                               sess.context.get_ip1(),
