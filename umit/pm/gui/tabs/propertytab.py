@@ -24,6 +24,7 @@ import pango
 from umit.pm import backend
 from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
+from umit.pm.core.bus import ServiceBus
 
 from umit.pm.gui.core.app import PMApp
 from umit.pm.gui.core.views import UmitView
@@ -135,9 +136,7 @@ class PropertyTab(UmitView):
         self.grid.populate(packet, proto)
 
         # Let's select entire protocol in the hexview
-
-        tab = PMApp().main_window.get_tab("MainTab")
-        page = tab.session_notebook.get_current_session()
+        page = ServiceBus().call('pm.sessions', 'get_current_session')
 
         if page:
             bounds = packet.get_protocol_bounds(proto)
@@ -153,8 +152,7 @@ class PropertyTab(UmitView):
         # and we could redraw the entire hexview to show changes
         # The tree argument is the PropertyGridTree object
 
-        tab = PMApp().main_window.get_tab("MainTab")
-        page = tab.session_notebook.get_current_session()
+        page = ServiceBus().call('pm.sessions', 'get_current_session')
 
         # FIXME: check if the packet page object is avaiable
         # within this session or use isinstance(SessionPage, SequencePage)
@@ -180,8 +178,7 @@ class PropertyTab(UmitView):
                 cb(packet, proto, field, False)
 
         # We should select also the bounds in HexView
-        tab = PMApp().main_window.get_tab("MainTab")
-        page = tab.session_notebook.get_current_session()
+        page = ServiceBus().call('pm.sessions', 'get_current_session')
 
         if page:
             start  = backend.get_field_offset(packet, proto, field)

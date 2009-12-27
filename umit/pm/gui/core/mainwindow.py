@@ -29,6 +29,7 @@ import random
 
 from umit.pm import backend
 from umit.pm.core.logger import log
+from umit.pm.core.bus import ServiceBus
 from umit.pm.manager.preferencemanager import Prefs
 from umit.pm.manager.auditmanager import AuditManager
 
@@ -370,8 +371,7 @@ class MainWindow(gtk.Window):
         @param tuple a tuple containing (sessklass, ctxklass)
         """
         sessklass, ctxklass = tup
-        maintab = self.get_tab("MainTab")
-        maintab.session_notebook.create_session(sessklass, ctxklass)
+        ServiceBus().call('pm.sessions', 'create_session', sessklass, ctxklass)
 
     def register_session(self, sessklass, ctxklass=None):
         """
@@ -429,9 +429,8 @@ class MainWindow(gtk.Window):
         self.session_binder[ptype].append((persp_klass, show_pers, resize))
 
         klass = SessionType.types[ptype]
-        maintab = self.get_tab("MainTab")
 
-        for page in maintab.session_notebook:
+        for page in ServiceBus().call('pm.sessions', 'get_sessions'):
             if isinstance(page, klass):
                 self.apply_bindings(page, ptype, persp_klass)
 
@@ -446,9 +445,8 @@ class MainWindow(gtk.Window):
                 del self.session_binder[ptype][i]
 
                 klass = SessionType.types[ptype]
-                maintab = self.get_tab("MainTab")
 
-                for page in maintab.session_notebook:
+                for page in ServiceBus().call('pm.sessions', 'get_sessions'):
                     if isinstance(page, klass):
                         page.remove_perspective(persp_klass)
 
@@ -490,9 +488,7 @@ class MainWindow(gtk.Window):
 
         self.perspective_binder[ptype].append(callback)
 
-        maintab = self.get_tab("MainTab")
-
-        for page in maintab.session_notebook:
+        for page in ServiceBus().call('pm.sessions', 'get_sessions'):
             if not isinstance(page, Session):
                 continue
 
@@ -513,9 +509,7 @@ class MainWindow(gtk.Window):
         try:
             self.perspective_binder[type].remove(callback)
 
-            maintab = self.get_tab("MainTab")
-
-            for page in maintab.session_notebook:
+            for page in ServiceBus().call('pm.sessions', 'get_sessions'):
                 if not isinstance(page, Session):
                     continue
 
@@ -772,8 +766,7 @@ class MainWindow(gtk.Window):
         dialog.destroy()
 
     def __on_new_sequence(self, action):
-        tab = self.get_tab('MainTab')
-        tab.session_notebook.create_sequence_session([])
+        ServiceBus().call('pm.sessions', 'create_sequence_session', [])
 
     def __on_open_session(self, action):
         types = {}
@@ -868,27 +861,26 @@ class MainWindow(gtk.Window):
         except:
             pass
 
-        tab = self.get_tab("MainTab")
-
         if ctx is backend.SequenceContext:
-            return tab.session_notebook.load_sequence_session(fname)
+            return ServiceBus().call('pm.sessions', 'load_sequence_session',
+                                     fname)
 
         elif ctx is backend.SniffContext:
-            return tab.session_notebook.load_sniff_session(fname)
+            return ServiceBus().call('pm.sessions', 'load_sniff_session',
+                                     fname)
 
         elif ctx is backend.StaticContext:
-            return tab.session_notebook.load_static_session(fname)
+            return ServiceBus().call('pm.sessions', 'load_static_session',
+                                     fname)
 
     def __on_save_session(self, action):
-        maintab = self.get_tab("MainTab")
-        session = maintab.get_current_session()
+        session = ServiceBus().call('pm.sessions', 'get_current_session')
 
         if session:
             session.save()
 
     def __on_save_session_as(self, action):
-        maintab = self.get_tab("MainTab")
-        session = maintab.get_current_session()
+        session = ServiceBus().call('pm.sessions', 'get_current_session')
 
         if session:
             session.save_as()
@@ -897,11 +889,9 @@ class MainWindow(gtk.Window):
         self.hide()
 
         # We need to stop the pending sniff threads
-        maintab = self.get_tab("MainTab")
-
         lst = []
 
-        for page in maintab.session_notebook:
+        for page in ServiceBus().call('pm.sessions', 'get_sessions'):
             if isinstance(page, Session) and \
                isinstance(page.context, backend.TimedContext):
                 lst.append(page.context)

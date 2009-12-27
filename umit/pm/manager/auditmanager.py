@@ -31,6 +31,7 @@ from xml.sax.xmlreader import AttributesImpl
 
 from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
+from umit.pm.core.bus import ServiceBus
 from umit.pm.core.auditutils import AuditOperation
 from umit.pm.core.atoms import Singleton, defaultdict, generate_traceback
 from umit.pm.core.const import PM_TYPE_STR, PM_TYPE_INT, PM_TYPE_INSTANCE,\
@@ -676,8 +677,8 @@ class ActiveAudit(AuditPlugin):
         import umit.pm.gui.core.app
 
         if not self.__inputs__:
-            tab = umit.pm.gui.core.app.PMApp().main_window.get_tab('MainTab')
-            audit_sess = tab.session_notebook.get_current_session()
+            audit_sess = ServiceBus().call('pm.sessions',
+                                           'get_current_session')
 
             self.__start_audit(audit_sess, {})
             return
@@ -786,8 +787,7 @@ class ActiveAudit(AuditPlugin):
         dialog.hide()
         dialog.destroy()
 
-        tab = umit.pm.gui.core.app.PMApp().main_window.get_tab('MainTab')
-        audit_sess = tab.session_notebook.get_current_session()
+        audit_sess = ServiceBus().call('pm.sessions', 'get_current_session')
 
         self.__start_audit(audit_sess, inp_dict)
 

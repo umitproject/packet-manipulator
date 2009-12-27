@@ -44,7 +44,7 @@ from umit.pm.core.atoms import defaultdict
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 
-from umit.pm.core.bus import bind_function, unbind_function
+from umit.pm.core.bus import unbind_function, implements
 from umit.pm.core.providers import AccountProvider, PortProvider, \
      ProfileProvider, \
      UNKNOWN_TYPE, HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
@@ -99,6 +99,7 @@ class Profile(ProfileProvider):
 
         return s[:-1]
 
+@implements('pm.hostlist')
 class Profiler(Plugin, PassiveAudit):
     def start(self, reader):
         # We see profile with l3_addr as key (IP address)
@@ -135,7 +136,7 @@ class Profiler(Plugin, PassiveAudit):
         else:
             self.debug = True
 
-    @unbind_function('pm.hostlist', ('get', 'info', 'populate'))
+    @unbind_function('pm.hostlist', ('get', 'info', 'populate', 'get_for_iface'))
     def stop(self):
         try:
             manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
@@ -155,8 +156,7 @@ class Profiler(Plugin, PassiveAudit):
         except:
             pass
 
-    @bind_function('pm.hostlist', 'info')
-    def info_cb(self, intf, ip, mac):
+    def __impl_info(self, intf, ip, mac):
         """
         @return a ProfileProvider object or None if not found
         """
@@ -165,8 +165,7 @@ class Profiler(Plugin, PassiveAudit):
             if prof.l2_addr == mac:
                 return prof
 
-    @bind_function('pm.hostlist', 'populate')
-    def populate_cb(self, interface):
+    def __impl_populate(self, interface):
         # This signal is triggered when the user change the interface
         # combobox selection and we have to repopulate the tree
 
@@ -181,9 +180,12 @@ class Profiler(Plugin, PassiveAudit):
 
         return ret
 
-    @bind_function('pm.hostlist', 'get')
-    def get_profiles(self):
+    def __impl_get(self):
         return self.profiles
+
+    def __impl_get_for_iface(self, intf):
+        # HACK!
+        raise Exception("Not implemented")
 
     def register_hooks(self):
         manager = AuditManager()

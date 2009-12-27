@@ -27,6 +27,7 @@ from umit.pm import backend
 from umit.pm.core.i18n import _
 from umit.pm.core.tracing import trace
 from umit.pm.core.logger import log
+from umit.pm.core.bus import ServiceBus
 
 from umit.pm.gui.core.app import PMApp
 from umit.pm.gui.core.views import UmitView
@@ -194,17 +195,19 @@ class FileOperation(Operation):
 
             log.debug('Creating a new session after loading for %s' % str(ctx))
 
-            tab = PMApp().main_window.get_tab('MainTab')
-
             if ctx is backend.SequenceContext:
                 from umit.pm.gui.sessions.sequencesession import SequenceSession
-                tab.session_notebook.bind_session(SequenceSession, rctx)
+
+                ServiceBus().call('pm.sessions', 'bind_session',
+                                  SequenceSession, rctx)
 
             elif ctx is backend.SniffContext or \
                  ctx is backend.StaticContext:
 
                 from umit.pm.gui.sessions.sniffsession import SniffSession
-                tab.session_notebook.bind_session(SniffSession, rctx)
+
+                ServiceBus().call('pm.sessions', 'bind_session',
+                                  SniffSession, rctx)
 
         else:
             from umit.pm.gui.sessions.sniffsession import SniffSession
@@ -327,8 +330,8 @@ class SendReceiveOperation(backend.SendReceiveContext, Operation):
         return ret
 
     def __create_session(self):
-        nb = PMApp().main_window.get_tab("MainTab").session_notebook
-        self.session = nb.create_sniff_session(self)
+        self.session = ServiceBus().call('pm.sessions', 'create_sniff_session',
+                                         self)
 
     def __send_callback(self, packet, idx, udata):
         if not self.SKIP_UPDATE:
@@ -357,8 +360,8 @@ class SniffOperation(backend.SniffContext, Operation):
                                       self.__recv_callback, None)
 
         if not self.background:
-            nb = PMApp().main_window.get_tab('MainTab').session_notebook
-            self.session = nb.create_sniff_session(self)
+            self.session = ServiceBus().call('pm.sessions',
+                                             'create_sniff_session', self)
         else:
             self.session = None
 
@@ -377,8 +380,8 @@ class SniffOperation(backend.SniffContext, Operation):
 
     def activate(self):
         if not self.session:
-            nb = PMApp().main_window.get_tab('MainTab').session_notebook
-            self.session = nb.create_sniff_session(self)
+            self.session = ServiceBus().call('pm.sessions',
+                                             'create_sniff_session', self)
 
     def __recv_callback(self, packet, udata):
         if not self.SKIP_UPDATE:
@@ -404,8 +407,8 @@ class SequenceOperation(backend.SequenceContext, Operation):
                                          self.__send_callback,             \
                                          self.__receive_callback)
 
-        nb = PMApp().main_window.get_tab('MainTab').session_notebook
-        self.session = nb.create_sniff_session(self)
+        self.session = ServiceBus().call('pm.sessions', 'create_sniff_session',
+                                         self)
 
     def __send_callback(self, packet, want_reply, loop, count, udata):
         if not self.SKIP_UPDATE:
@@ -435,8 +438,8 @@ class AuditOperation(backend.AuditContext, Operation):
         Operation.__init__(self)
         backend.AuditContext.__init__(self, dev1, dev2, bpf_filter, capmethod)
 
-        nb = PMApp().main_window.get_tab('MainTab').session_notebook
-        self.session = nb.create_audit_session(self)
+        self.session = ServiceBus().call('pm.sessions', 'create_audit_session',
+                                         self)
 
 class OperationTree(gtk.TreeView):
     def __init__(self):

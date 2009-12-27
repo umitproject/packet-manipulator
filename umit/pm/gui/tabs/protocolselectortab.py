@@ -265,16 +265,14 @@ class ProtocolTree(gtk.VBox):
         sel = self.__get_selected()
 
         if sel:
-            tab = PMApp().main_window.get_tab('MainTab')
-            tab.session_notebook.create_edit_session(sel)
+            ServiceBus().call('pm.sessions', 'create_edit_session', sel)
             return True
 
     def __do_append_cur_sequence(self, selection=None, hier=False):
         sel = self.__get_selected()
 
         if sel:
-            tab = PMApp().main_window.get_tab('MainTab')
-            sess = tab.session_notebook.get_current_session()
+            sess = ServiceBus().call('pm.sessions', 'get_current_session')
 
             if not isinstance(sess, SequenceSession):
                 return False

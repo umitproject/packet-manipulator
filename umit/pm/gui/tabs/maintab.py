@@ -19,10 +19,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import os.path
 
 from umit.pm import backend
 from umit.pm.core.i18n import _
 from umit.pm.core.atoms import Node
+from umit.pm.core.const import PIXMAPS_DIR
+from umit.pm.core.bus import provides, ServiceBus
 
 from umit.pm.gui.core.app import PMApp
 from umit.pm.gui.core.views import UmitView
@@ -33,9 +36,6 @@ from umit.pm.gui.sessions.auditsession import AuditSession
 from umit.pm.gui.sessions.sequencesession import SequenceSession
 
 from umit.pm.manager.preferencemanager import Prefs
-
-import os.path
-from umit.pm.core.const import PIXMAPS_DIR
 
 class IntroPage(gtk.HBox):
     def __init__(self):
@@ -80,6 +80,7 @@ class IntroPage(gtk.HBox):
     def __on_leave(self, widget, evt):
         self.image.set_from_pixbuf(self.pixbufs[0])
 
+@provides('pm.sessions')
 class SessionNotebook(gtk.Notebook):
     def __init__(self):
         gtk.Notebook.__init__(self)
@@ -98,7 +99,32 @@ class SessionNotebook(gtk.Notebook):
         self.connect('page-added', self.__check_last_page)
         self.connect('page-removed', self.__check_last_page)
 
-    def create_sequence_session(self, packets):
+    # Public methods for pm.sessions service
+    def __impl_get_sessions(self):
+        for i in self:
+            yield i
+
+    def __impl_get_current_session(self):
+        """
+        Get the current Session
+
+        @return a Session instance or None
+        """
+
+        obj = self.__impl_get_current_page()
+
+        if obj and isinstance(obj, Session):
+            return obj
+
+        return None
+
+    def __impl_get_current_page(self):
+        "@return the current page in notebook or None"
+
+        idx = self.get_current_page()
+        return self.get_nth_page(idx)
+
+    def __impl_create_sequence_session(self, packets):
         """
         Create a sequence from packets
 
@@ -118,48 +144,48 @@ class SessionNotebook(gtk.Notebook):
         session = SequenceSession(ctx)
         return self.__append_session(session)
 
-    def create_edit_session(self, packet):
+    def __impl_create_edit_session(self, packet):
         if isinstance(packet, basestring):
             packet = backend.get_proto(packet)()
             packet = backend.MetaPacket(packet)
 
-        return self.create_sequence_session([packet])
+        return self.__impl_create_sequence_session([packet])
 
-    def create_sniff_session(self, ctx):
+    def __impl_create_sniff_session(self, ctx):
         session = SniffSession(ctx)
         return self.__append_session(session)
 
-    def create_audit_session(self, ctx):
+    def __impl_create_audit_session(self, ctx):
         session = AuditSession(ctx)
         return self.__append_session(session)
 
-    def load_static_session(self, fname):
+    def __impl_load_static_session(self, fname):
         ctx = backend.StaticContext(fname, fname)
         ctx.load()
 
         session = SniffSession(ctx)
         return self.__append_session(session)
 
-    def load_sniff_session(self, fname):
-        return self.load_static_session(fname)
+    def __impl_load_sniff_session(self, fname):
+        return self.__impl_load_static_session(fname)
 
-    def load_sequence_session(self, fname):
+    def __impl_load_sequence_session(self, fname):
         ctx = backend.SequenceContext(fname)
         ctx.load()
 
         session = SequenceSession(ctx)
         return self.__append_session(session)
 
-    def create_empty_session(self, title):
+    def __impl_create_empty_session(self, title):
         session = SniffSession(title=title)
         return self.__append_session(session)
 
-    def bind_session(self, sessk, ctx):
+    def __impl_bind_session(self, sessk, ctx):
         session = sessk(ctx)
         return self.__append_session(session)
 
-    def create_session(self, sessk, ctxk):
-        return self.bind_session(sessk, ctxk())
+    def __impl_create_session(self, sessk, ctxk):
+        return self.__impl_bind_session(sessk, ctxk())
 
     def __append_session(self, session):
         session.label.connect('close-clicked', self.__on_close_page, session)
@@ -176,21 +202,6 @@ class SessionNotebook(gtk.Notebook):
 
         idx = self.page_num(session)
         self.remove_page(idx)
-
-    def get_current_session(self):
-        """
-        Get the current Session
-
-        @return a Session instance or None
-        """
-
-        idx = self.get_current_page()
-        obj = self.get_nth_page(idx)
-
-        if obj and isinstance(obj, Session):
-            return obj
-
-        return None
 
     def __check_last_page(self, widget, child, pagenum):
         if self.get_n_pages() == 1:
@@ -278,19 +289,6 @@ class MainTab(UmitView):
         self.__pack_widgets()
         self.__connect_signals()
 
-    def get_current_session(self):
-        "@returns the current Session or None"
-        page = self.get_current_page()
-
-        if page and isinstance(page, Session):
-            return page
-        return None
-
-    def get_current_page(self):
-        "@return the current page in notebook or None"
-
-        idx = self.session_notebook.get_current_page()
-        return self.session_notebook.get_nth_page(idx)
 
     def __on_drag_data(self, widget, ctx, x, y, data, info, time):
         "drag-data-received callback"
@@ -299,7 +297,8 @@ class MainTab(UmitView):
             proto = data.data
 
             if backend.get_proto(proto):
-                self.session_notebook.create_edit_session(data.data)
+                ServiceBus().call('pm.sessions', 'create_edit_session',
+                                  data.data)
                 ctx.finish(True, False, time)
                 return True
 

@@ -18,8 +18,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-import inspect
 import gobject
+import inspect
+import functools
 
 from umit.pm.core.logger import log
 from umit.pm.core.atoms import Singleton
@@ -52,10 +53,14 @@ class Service(gobject.GObject):
             self.funcs[funcname] = None
             self.emit('vfunc-registered', funcname)
 
+            log.info('%s vfunction registered for %s' % (funcname, self.id))
+
     def register_function(self, funcname, cb):
         if not funcname in self.funcs or not self.funcs[funcname]:
             self.funcs[funcname] = cb
             self.emit('func-registered', funcname, cb)
+
+            log.info('%s function registered for %s' % (funcname, self.id))
         else:
             raise ValueError("Function `%s' already registered" % funcname)
 
@@ -63,6 +68,7 @@ class Service(gobject.GObject):
         if funcname in self.funcs and self.funcs[funcname] is None:
             self.funcs[funcname] = func
             self.emit('func-binded', funcname, func)
+            log.info("Function %s binded as %s" % (func, funcname))
         else:
             raise ValueError("Service doesn't provide `%s' method" % \
                              funcname)
@@ -112,40 +118,83 @@ class ServiceBus(Singleton, gobject.GObject):
         self.__svc[svcid] = obj
         self.emit('registered', svcid, obj)
 
+    # Utilities functions
     def get_function(self, svcid, funcname):
-        self.__svc[svcid].get_function(funcname)
+        return self.__svc[svcid].get_function(funcname)
+
+    def call(self, svcid, funcname, *args, **kwargs):
+        return self.__svc[svcid].call(funcname, *args, **kwargs)
 
 # Decorators start here.
 
-def register_service(svcid):
-    def wrap(svc):
+def register_interface(svcid):
+    # Should be nice to have type checking or something li
+    def export_imethods(svc):
         svc_inst = Service(svcid)
         ServiceBus().register_service(svcid, svc_inst)
 
-        log.info("Registering new service `%s'" % svcid)
+        log.info("Registering new service INTERFACE `%s'" % svcid)
 
         for _, meth in inspect.getmembers(svc, inspect.ismethod):
             meth_name = meth.__name__
 
-            if meth_name.startswith('__intf_'):
-                svc_inst.register_vfunction(meth_name[7:])
-                log.info("Service has `%s' VFUNC" % meth_name[7:])
+            if meth_name[0] == '_':
+                continue
 
-            elif meth_name.startswith('__impl_'):
-                svc_inst.register_function(meth_name[7:], meth)
-                log.info("Service has `%s' FUNC" % meth_name[7:])
+            svc_inst.register_vfunction(meth_name)
+            log.info("Service has `%s' VFUNC" % meth_name)
 
         return svc
-    return wrap
+    return export_imethods
 
-def bind_function(svcid, funcname):
-    def wrap(func):
+def export_methods(self, *args, **kwargs):
+    cls = self.__class__
+    cls.__init__ = cls.__original_init__
+
+    svcid, implementor = cls.__svc_id__
+    cls.__init__(self, *args, **kwargs)
+
+    delattr(cls, '__svc_id__')
+    delattr(cls, '__original_init__')
+
+    if not implementor:
+        log.info("Registering new service %s" % svcid)
+
+        svc_inst = Service(svcid)
+        ServiceBus().register_service(svcid, svc_inst)
+    else:
         svc_inst = ServiceBus().get_service(svcid)
 
-        if svc_inst:
-            svc_inst.bind_function(funcname, func)
+    for _, meth in inspect.getmembers(self, inspect.ismethod):
+        meth_name = meth.__name__
 
-        return func
+        if meth_name.startswith('__impl_'):
+            if implementor:
+                svc_inst.bind_function(meth_name[7:], meth)
+            else:
+                svc_inst.register_function(meth_name[7:], meth)
+
+        elif not implementor and meth_name.startswith('__intf_'):
+            svc_inst.register_vfunction(meth_name[7:])
+
+def provides(svcid):
+    def wrap(cls):
+        cls.__original_init__ = cls.__init__
+        cls.__init__ = export_methods
+
+        setattr(cls, '__svc_id__', (svcid, False))
+        return cls
+
+    return wrap
+
+def implements(svcid):
+    def wrap(cls):
+        cls.__original_init__ = cls.__init__
+        cls.__init__ = export_methods
+
+        setattr(cls, '__svc_id__', (svcid, True))
+        return cls
+
     return wrap
 
 class unbind_function(object):
@@ -154,6 +203,7 @@ class unbind_function(object):
         self.funcname = funcname
 
     def __call__(self, f):
+        @functools.wraps(f)
         def wrap(*args, **kwargs):
             f(*args, **kwargs)
 
@@ -171,12 +221,13 @@ class unbind_function(object):
 # Initialize services from here
 
 def services_boot():
-    @register_service('pm.hostlist')
+    @register_interface('pm.hostlist')
     class SvcHostList(object):
         """
         This service is used to share a list of hosts
         """
-        def __intf_populate(self, interface): pass
-        def __intf_info(self, intf, ip, mac): pass
-        def __intf_scan(self): pass
-        def __intf_get(self): pass
+        def populate(self, interface): pass
+        def info(self, intf, ip, mac): pass
+
+        def get(self): pass
+        def get_for_iface(self, intf): pass

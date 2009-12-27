@@ -32,6 +32,7 @@ from umit.pm import backend
 from umit.pm.core.i18n import _
 from umit.pm.core.atoms import Node
 from umit.pm.core.logger import log
+from umit.pm.core.bus import ServiceBus
 from umit.pm.manager.preferencemanager import Prefs
 
 from umit.pm.gui.core.app import PMApp
@@ -400,10 +401,8 @@ class SniffPage(Perspective):
             return ret
 
     def __on_create_seq(self, action):
-        tab = PMApp().main_window.get_tab("MainTab")
-        tab.session_notebook.create_sequence_session(
-            self.get_selected_packets(True)
-        )
+        ServiceBus().call('pm.sessions', 'create_sequence_session',
+                          self.get_selected_packets(True))
 
     def __on_save_selection(self, action):
         dialog = self.__create_save_dialog()

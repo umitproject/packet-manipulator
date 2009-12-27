@@ -33,7 +33,8 @@ from optparse import OptionParser
 
 from umit.pm.core.i18n import _
 from umit.pm.core.atoms import Singleton
-from umit.pm.core.bus import services_boot
+from umit.pm.core.bus import services_boot, ServiceBus
+
 from umit.pm.gui.core.splash import SplashScreen
 from umit.pm.gui.plugins.engine import PluginEngine
 from umit.pm.manager.preferencemanager import Prefs
@@ -114,6 +115,7 @@ class PMApp(Singleton):
             self.splash.text = _("Creating main window ...")
 
             from mainwindow import MainWindow
+            self.bus = ServiceBus()
             self.main_window = MainWindow()
             self.main_window.connect_tabs_signals()
             self.plugin_engine = PluginEngine()

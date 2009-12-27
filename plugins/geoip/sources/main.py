@@ -72,8 +72,8 @@ class GeoTab(UmitView):
         tab.session_notebook.connect('switch-page', self.__on_switch_page)
 
     def __on_refresh(self, btn):
-        tab = PMApp().main_window.get_tab("MainTab")
-        self.__load_session(tab.session_notebook.get_current_session())
+        self.__load_session(PMApp().bus.call('pm.sessions',
+                                             'get_current_session'))
 
     def __on_switch_page(self, sess_nb, page, num):
         self.__load_session(sess_nb.get_nth_page(num))
