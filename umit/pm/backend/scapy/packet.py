@@ -91,6 +91,15 @@ class MetaPacket(object):
             log.error('Protocol %s not registered. Add it to global_trans')
             return None
 
+    @classmethod
+    def new_from_layer(cls, mpkt, proto_name):
+        try:
+            klass = global_trans[proto_name][0]
+            return MetaPacket(mpkt.getlayer(klass))
+        except ValueError:
+            log.error('Protocol %s not registered. Add it to global_trans')
+            return None
+
     def insert(self, proto, layer):
         if layer == -1:
             # Append
@@ -391,7 +400,7 @@ class MetaPacket(object):
     def copy(self):
         if self.root:
             return MetaPacket(self.root.copy(),
-                               self.cfields.copy())
+                              self.cfields.copy())
 
     # Custom fields
 
