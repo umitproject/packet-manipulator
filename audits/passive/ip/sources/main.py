@@ -68,6 +68,10 @@ def ip_decoder():
 
     def ip(mpkt):
         ipraw = mpkt.get_field('ip')
+
+        if not ipraw:
+            return
+
         iplen = min(20, len(ipraw))
 
         if mpkt.get_field('ip.len') > len(ipraw):
@@ -77,7 +81,8 @@ def ip_decoder():
             return PROTO_LAYER, mpkt.get_field('ip.proto')
 
         if checksum_check:
-            pkt = ipraw[:10] + '\x00\x00' + ipraw[12:iplen]
+            ihl = max(20, mpkt.get_field('ip.ihl') * 4)
+            pkt = ipraw[:10] + '\x00\x00' + ipraw[12:ihl]
 
             chksum = checksum(pkt)
 
