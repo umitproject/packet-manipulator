@@ -255,6 +255,7 @@ class AuditManager(Singleton):
         # Here we need separated dict so we should declare them all
         self._decoders = ({}, {}, {}, {}, {}, {}, {}, {})
         self._injectors = ({}, {}, {}, {}, {}, {}, {}, {})
+        self._hooks = {}
         self._configurations = {}
 
         self.load_configurations()
@@ -358,6 +359,55 @@ class AuditManager(Singleton):
                       main_window.get_tab('StatusTab')
                 self._output = tab.status
             self._output.info(out)
+
+    ############################################################################
+    # General hooks
+    ############################################################################
+
+    def register_hook_point(self, name):
+        """
+        Register a hook point
+        @param name the hook point name
+        @return bool True if registered correctly
+        """
+        if name in self._hooks:
+            return False
+
+        self._hooks[name] = []
+        return True
+
+    def deregister_hook_point(self, name):
+        try:
+            del self._hooks[name]
+            return True
+        except:
+            return False
+
+    def add_to_hook_point(self, name, callback, to=-1):
+        try:
+            if to < 0:
+                self._hooks[name].append(callback)
+            else:
+                self._hooks[name].insert(to, callback)
+            return True
+        except:
+            return False
+
+    def remove_from_hook_point(self, name, callback):
+        try:
+            self._hooks[name].remove(callback)
+            return True
+        except:
+            return False
+
+    def run_hook_point(self, name, *args, **kwargs):
+        idx = 0
+        log.debug('Starting hook cascade for %s' % name)
+        while name in self._hooks and idx < len(self._hooks[name]):
+            callback = self._hooks[name][idx]
+            log.debug('Callback %d is %s' % (idx, callback))
+            callback(*args, **kwargs)
+            idx += 1
 
     ############################################################################
     # Injectors
