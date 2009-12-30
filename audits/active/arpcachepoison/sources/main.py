@@ -54,8 +54,8 @@ class PoisonOperation(AuditOperation):
     has_stop = True
     has_start = True
 
-    def __init__(self, sess, oneway, poison_equal_mac, icmp, request, \
-                 first, second):
+    def __init__(self, sess, status, oneway, poison_equal_mac, icmp, \
+                 request, first, second):
         AuditOperation.__init__(self)
 
         self.percentage = 0
@@ -73,6 +73,10 @@ class PoisonOperation(AuditOperation):
 
         self.first_timeout = first
         self.second_timeout = second
+
+        self.status = status
+        self.status.set_sensitive(False)
+        sess.mitm_attacks.append(AUDIT_NAME)
 
     def start(self):
         if self.state == self.RUNNING or self.internal:
@@ -100,6 +104,9 @@ class PoisonOperation(AuditOperation):
 
         self.summary = AUDIT_MSG % _('Stopping...')
         self.internal = False
+
+        self.status.set_sensitive(True)
+        sess.mitm_attacks.remove(AUDIT_NAME)
 
         return True
 
@@ -268,9 +275,6 @@ class ARPMitm(Plugin, ActiveAudit):
         self.remove_mitm_attack(self.status)
 
     def execute_audit(self, sess, inp_dict):
-        # We need to disable it if we're implementing a MITM attack
-        self.status.set_sensitive(False)
-
         if AUDIT_NAME in sess.mitm_attacks:
             return
 
@@ -281,18 +285,13 @@ class ARPMitm(Plugin, ActiveAudit):
                                       AUDIT_NAME)
             return
 
-        sess.mitm_attacks.append(AUDIT_NAME)
-
-        # Ok start here
-        sess.audit_page.tree.append_operation(
-            PoisonOperation(sess,
-                            inp_dict['oneway'],
-                            inp_dict['poison_equal_mac'],
-                            inp_dict['icmp'],
-                            inp_dict['request'],
-                            inp_dict['first_stage'],
-                            inp_dict['second_stage'])
-        )
+        return PoisonOperation(sess, self.status,
+                               inp_dict['oneway'],
+                               inp_dict['poison_equal_mac'],
+                               inp_dict['icmp'],
+                               inp_dict['request'],
+                               inp_dict['first_stage'],
+                               inp_dict['second_stage'])
 
 class ARPCachePoison(Plugin, ActiveAudit):
     __inputs__ = (
