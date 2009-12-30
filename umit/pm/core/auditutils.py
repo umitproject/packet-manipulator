@@ -80,6 +80,70 @@ def atol(x):
         ip = inet_aton(gethostbyname(x))
     return unpack("!I", ip)[0]
 
+class IPPool(object):
+    ipaddress = re.compile(r"^(\*|[0-2]?[0-9]?[0-9](-[0-2]?[0-9]?[0-9])?)\.(\*|[0-2]?[0-9]?[0-9](-[0-2]?[0-9]?[0-9])?)\.(\*|[0-2]?[0-9]?[0-9](-[0-2]?[0-9]?[0-9])?)\.(\*|[0-2]?[0-9]?[0-9](-[0-2]?[0-9]?[0-9])?)(/[0-3]?[0-9])?$")
+
+    @staticmethod
+    def _parse_digit(a,netmask):
+        netmask = min(8,max(netmask,0))
+        if a == "*":
+            a = (0,256)
+        elif a.find("-") >= 0:
+            x,y = map(int,a.split("-"))
+            if x > y:
+                y = x
+            a = (x &  (0xffL<<netmask) , max(y, (x | (0xffL>>(8-netmask))))+1)
+        else:
+            a = (int(a) & (0xffL<<netmask),(int(a) | (0xffL>>(8-netmask)))+1)
+        return a
+
+    @classmethod
+    def _parse_net(cls, net):
+        tmp=net.split('/')+["32"]
+        if not cls.ipaddress.match(net):
+            tmp[0]=socket.gethostbyname(tmp[0])
+        netmask = int(tmp[1])
+        return map(lambda x,y: cls._parse_digit(x,y), tmp[0].split("."), map(lambda x,nm=netmask: x-nm, (8,16,24,32))),netmask
+
+    def __init__(self, net):
+        self.repr=net
+        self.parsed,self.netmask = self._parse_net(net)
+
+    def __iter__(self):
+        for d in xrange(*self.parsed[3]):
+            for c in xrange(*self.parsed[2]):
+                for b in xrange(*self.parsed[1]):
+                    for a in xrange(*self.parsed[0]):
+                        yield "%i.%i.%i.%i" % (a,b,c,d)
+    def choice(self):
+        ip = []
+        for v in self.parsed:
+            ip.append(str(random.randint(v[0],v[1]-1)))
+        return ".".join(ip)
+
+    def __repr__(self):
+        return self.repr
+
+    def __eq__(self, other):
+        if hasattr(other, "parsed"):
+            p2 = other.parsed
+        else:
+            p2,nm2 = self._parse_net(other)
+        return self.parsed == p2
+
+    def __contains__(self, other):
+        if hasattr(other, "parsed"):
+            p2 = other.parsed
+        else:
+            p2,nm2 = self._parse_net(other)
+        for (a1,b1),(a2,b2) in zip(self.parsed,p2):
+            if a1 > a2 or b1 < b2:
+                return False
+        return True
+
+    def __rcontains__(self, other):
+        return self in self.__class__(other)
+
 class Netmask(object):
     """
     >>> Netmask("255.255.255.250", "23.43.43.2")
@@ -100,6 +164,8 @@ class Netmask(object):
     False
     >>> print Netmask("255.255.255.0", "10.0.0.23")
     10.0.0.23/24
+    >>> Netmask("255.255.255.0", "10.0.0.23") == Netmask("10.0.0.23/24")
+    True
     """
 
     def __init__(self, netmask, ip=None):
@@ -161,6 +227,11 @@ class Netmask(object):
     def __str__(self):
         return inet_ntoa(pack("!I", self.dest)) + '/' + \
                str(bin(self.net).count('1'))
+
+    def __eq__(self, other):
+        return self.netmask == other.netmask and \
+               self.dest == other.dest and \
+               self.net == other.net
 
 ################################################################################
 # String utilities
