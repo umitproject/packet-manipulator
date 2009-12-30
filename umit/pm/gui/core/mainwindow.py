@@ -702,9 +702,10 @@ class MainWindow(gtk.Window):
                 mitm_item.set_sensitive(True)
 
                 for item in submenu:
-                    item.set_sensitive(False)
-                else:
-                    item.set_sensitive(True)
+                    if item.get_name() in page.mitm_attacks:
+                        item.set_sensitive(False)
+                    else:
+                        item.set_sensitive(True)
 
     def __on_toggle_tab_menu(self, menuitem, tab):
         if menuitem.get_active():
