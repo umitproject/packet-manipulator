@@ -19,7 +19,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 from umit.pm.backend.scapy.wrapper import Ether, RadioTap, Dot11, ARP, IP, TCP, \
-                                     UDP, DNS, DNSQR, DNSRR, ICMP, Raw
+                                          UDP, BOOTP, DHCP, DNS, DNSQR, DNSRR, \
+                                          ICMP, Raw
 
 # Scapy seems to respect wireshark nomenclature for protocol and fields.
 
@@ -32,6 +33,8 @@ global_trans = {
     'icmp' : (ICMP, None),
     'tcp' : (TCP, None),
     'udp' : (UDP, None),
+        'bootp' : (BOOTP, None),
+            'dhcp' : (DHCP, None),
         'dns' : (DNS, None),
         'dnsqr' : (DNSQR, None),
         'dnsrr' : (DNSRR, None),
