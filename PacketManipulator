@@ -29,7 +29,7 @@ os.putenv('PYTHONPATH', '%s%s%s' % (os.getcwd(), os.pathsep,
                                     os.getenv('PYTHONPATH', '')))
 
 if os.name == 'nt':
-    os.chdir('PM')
+    os.chdir('umit/pm')
     os.system('python PacketManipulator %s' % ' '.join(sys.argv[1:]))
 else:
     if '--debug' in sys.argv:
