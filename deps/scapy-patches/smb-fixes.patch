@@ -1,0 +1,437 @@
+diff -r 7a211173d33f scapy/fields.py
+--- a/scapy/fields.py	Mon Jan 11 17:59:00 2010 +0100
++++ b/scapy/fields.py	Fri Jan 29 13:54:42 2010 +0100
+@@ -271,7 +271,7 @@
+ 
+ class ShortField(Field):
+     def __init__(self, name, default):
+-        Field.__init__(self, name, default, "H")
++        Field.__init__(self, name, default, "!H")
+ 
+ class LEShortField(Field):
+     def __init__(self, name, default):
+@@ -478,8 +478,8 @@
+         return rr
+ 
+ class NetBIOSNameField(StrFixedLenField):
+-    def __init__(self, name, default, length=31):
+-        StrFixedLenField.__init__(self, name, default, length)
++    def __init__(self, name, default, length=31, length_from=None):
++        StrFixedLenField.__init__(self, name, default, length, length_from=length_from)
+     def i2m(self, pkt, x):
+         l = self.length_from(pkt)/2
+         if x is None:
+@@ -491,6 +491,7 @@
+         return x
+     def m2i(self, pkt, x):
+         x = x.strip("\x00").strip(" ")
++        if len(x) % 2 != 0: x+='A'
+         return "".join(map(lambda x,y: chr((((ord(x)-1)&0xf)<<4)+((ord(y)-1)&0xf)), x[::2],x[1::2]))
+ 
+ class StrLenField(StrField):
+@@ -585,6 +586,27 @@
+     def randval(self):
+         return RandTermString(RandNum(0,1200),"\x00")
+ 
++class NBTStrField(StrField):
++    def addfield(self, pkt, s, val):
++        return s+self.i2m(pkt, val)
++    def getfield(self, pkt, s):
++        l = s.find("\x00\x00")
++        if l < 0:
++            return "",s
++        if l > 0 and l + 2 < len(s) and s[l+2] == "\x00":
++            l += 1
++        return s[l+2:],self.m2i(pkt, s[:l+2])
++    def i2m(self, pkt, s):
++        if s.endswith("\x00\x00"):
++            s = s[:-1]
++        else:
++            s += "\x00"
++        return ''.join(map(lambda x: x + "\x00", list(s)))
++    def m2i(self, pkt, s):
++        return s.replace('\x00', '').strip(" ")
++    def randval(self):
++        return RandTermString(RandNum(0,1200), "\x00")
++
+ class StrStopField(StrField):
+     def __init__(self, name, default, stop, additionnal=0):
+         Field.__init__(self, name, default)
+diff -r 7a211173d33f scapy/layers/netbios.py
+--- a/scapy/layers/netbios.py	Mon Jan 11 17:59:00 2010 +0100
++++ b/scapy/layers/netbios.py	Fri Jan 29 13:54:42 2010 +0100
+@@ -199,8 +199,22 @@
+ class NBTSession(Packet):
+     name="NBT Session Packet"
+     fields_desc= [ByteEnumField("TYPE",0,{0x00:"Session Message",0x81:"Session Request",0x82:"Positive Session Response",0x83:"Negative Session Response",0x84:"Retarget Session Response",0x85:"Session Keepalive"}),
+-                  BitField("RESERVED",0x00,7),
+-                  BitField("LENGTH",0,17)]
++                  #BitField("RESERVED",0x00,7),
++                  #BitField("LENGTH",0,17),
++                  ByteField("RESERVED", 0),
++                  ShortField("LENGTH",None),
++                  ConditionalField(NetBIOSNameField("CALLEDNAME", "", None, length_from = lambda pkt:pkt.LENGTH/2),  lambda pkt:pkt.TYPE==0x81),
++                  ConditionalField(NetBIOSNameField("CALLINGNAME", "", None, length_from = lambda pkt:pkt.LENGTH/2), lambda pkt:pkt.TYPE==0x81),
++                  ConditionalField(ByteField("ERRORCODE", 0), lambda pkt:pkt.TYPE==0x83),
++                  ]
++
++    def post_build(self, p, pay):
++        if self.LENGTH is None:
++            l = len(pay)
++            if l > 65535:
++                self.RESERVED |= 1 # Extended flag
++            p = p[:1] + struct.pack("B", self.RESERVED) + struct.pack("!H",len(pay)) + p[4:]
++        return p+pay
+ 
+ bind_layers( UDP,           NBNSQueryRequest,  dport=137)
+ bind_layers( UDP,           NBNSRequest,       dport=137)
+@@ -214,3 +228,6 @@
+ bind_layers( UDP,           NBNSWackResponse, sport=137)
+ bind_layers( UDP,           NBTDatagram,      dport=138)
+ bind_layers( TCP,           NBTSession,       dport=139)
++bind_layers( TCP,           NBTSession,       sport=139)
++bind_layers( TCP,           NBTSession,       dport=445)
++bind_layers( TCP,           NBTSession,       sport=445)
+diff -r 7a211173d33f scapy/layers/smb.py
+--- a/scapy/layers/smb.py	Mon Jan 11 17:59:00 2010 +0100
++++ b/scapy/layers/smb.py	Fri Jan 29 13:54:42 2010 +0100
+@@ -7,6 +7,245 @@
+ from scapy.fields import *
+ from scapy.layers.netbios import NBTSession
+ 
++BINDER = {}
++
++################################################################################
++# SMB Header
++################################################################################
++
++class SMBHeader(Packet):
++    name="SMB Protocol Header"
++    fields_desc = [StrFixedLenField("Start","\xffSMB",4),
++                   ByteEnumField("Command",0x72,{0x72:"SMB_COM_NEGOTIATE"}),
++                   ByteField("Error_Class",0x02),
++                   ByteField("Reserved",0),
++                   LEShortField("Error_Code",4),
++                   ByteField("Flags",0),
++                   LEShortField("Flags2",0x0000),
++                   LEShortField("PIDHigh",0x0000),
++                   LELongField("Signature",0x0),
++                   LEShortField("Unused",0x0),
++                   LEShortField("TID",0),
++                   LEShortField("PID",0),
++                   LEShortField("UID",0),
++                   LEShortField("MID",0)]
++
++    def guess_payload_class(self, payload):
++        index = self.Flags & 128 != 0 and 1 or 0
++        secure = self.Flags2 & 2048 != 0 and 1 or 0
++        protos = BINDER.get(self.Command, None)
++
++        if isinstance(protos, tuple):
++            if isinstance(protos[index], tuple):
++                return protos[index][secure]
++            return protos[index]
++
++        return Packet.guess_payload_class(self, payload)
++
++bind_layers(NBTSession, SMBHeader, TYPE=0)
++
++################################################################################
++# (0x32) SMB Setup AndX
++################################################################################
++
++class SMBSetup_AndX_Response(Packet):
++    name="Session Setup AndX Response"
++    fields_desc=[ByteField("WordCount",0),
++                 LEShortField("TotalParameterCount",0),
++                 LEShortField("TotalDataCount",0),
++                 LEShortField("MaxParameterCount",0),
++                 LEShortField("MaxDataCount",0),
++                 LEShortField("MaxSetupCount",0),
++                 ByteField("Reserved",0),
++                 LEShortField("Flags",0),
++                 LELongField("Timeout",0),
++                 LEShortField("Reserved",0),
++                 LEShortField("ParameterCount",0),
++                 LEShortField("ParameterOffset",0),
++                 LEShortField("DataCount",0),
++                 LEShortField("DataOffset",0),
++                 ByteField("SetupCount",0),
++                 ByteField("Reserved",0),
++                 LEShortField("SubCommand",0),
++                 LEShortField("ByteCount",0),
++                 ]
++
++
++################################################################################
++# (0x73) SMB Setup AndX
++################################################################################
++
++class SMBSetup_AndX_Response(Packet):
++    name="Session Setup AndX Response"
++    fields_desc=[ByteField("WordCount",0),
++                 LEShortField("ByteCount",0)]
++
++    def guess_payload_class(self, payload):
++        if self.ByteCount > 0:
++            return SMBDialect
++        return Packet.guess_payload_class(self, payload)
++
++class SMBSetup_AndX_Request(Packet):
++    name="Session Setup AndX Request"
++    fields_desc=[ByteField("WordCount",13),
++                 ByteEnumField("AndXCommand",0x75,{0x75:"SMB_COM_TREE_CONNECT_ANDX"}),
++                 ByteField("Reserved",0),
++                 LEShortField("AndXOffset",96),
++                 LEShortField("MaxBuffer",2920),
++                 LEShortField("MaxMPXCount",50),
++                 LEShortField("VCNumber",0),
++                 LEIntField("SessionKey",0),
++                 LEFieldLenField("ANSIPasswordLength",None,"ANSIPassword"),
++                 LEFieldLenField("UnicodePasswordLength",None,"UnicodePassword"),
++                 LEIntField("Reserved2",0),
++                 LEShortField("Capabilities",0x05),
++                 BitField("UnixExtensions",0,1),
++                 BitField("Reserved3",0,7),
++                 BitField("ExtendedSecurity",0,1),
++                 BitField("CompBulk",0,2),
++                 BitField("Reserved5",0,5),
++                 LEShortField("ByteCount",35),
++                 StrLenField("ANSIPassword", "Pass",length_from=lambda x:x.ANSIPasswordLength),
++                 StrLenField("UnicodePassword", "Pass",length_from=lambda x:x.UnicodePasswordLength),
++                 NBTStrField("Account","GUEST"),
++                 NBTStrField("PrimaryDomain",  ""),
++                 NBTStrField("NativeOS","Windows 4.0"),
++                 NBTStrField("NativeLanManager","Windows 4.0"),
++                 StrLenField("ExtraBytes", "", length_from=lambda x:(x.ByteCount - x.ANSIPasswordLength - x.UnicodePasswordLength - (len(x.Account) + len(x.PrimaryDomain) + len(x.NativeOS) + len(x.NativeLanManager) + 4) * 2 + 1) / 2)]
++
++    def guess_payload_class(self, payload):
++        protos = BINDER.get(self.AndXCommand, None)
++        if protos:
++            return protos[0]
++        return Packet.guess_payload_class(self, payload)
++
++class SMBSetup_AndX_Response_Advanced_Security(Packet):
++    name="SMBNegociate Protocol Response Advanced Security"
++    fields_desc = [ByteField("WordCount",4),
++                   ByteEnumField("AndXCommand",0x75,{0x75:"SMB_COM_TREE_CONNECT_ANDX"}),
++                   ByteField("Reserved",0),
++                   ShortField("AndXOffset",0),
++                   ByteField("Action",0),
++                   ShortField("SecurityBlobLength",0),
++                   ShortField("ByteCount",0),
++                   StrLenField("SecurityBlob", "", length_from=lambda x:x.SecurityBlobLength),
++                   NBTStrField("NativeOS","Windows 4.0"),
++                   NBTStrField("NativeLanManager","Windows 4.0")]
++
++BINDER[0x73] = (SMBSetup_AndX_Request, (SMBSetup_AndX_Response, SMBSetup_AndX_Response_Advanced_Security))
++
++################################################################################
++# (0x80) Query Information Disk
++################################################################################
++
++class SMBQueryInformationDisk_Request(Packet):
++    name="SMB Query Information Disk"
++    fields_desc=[ByteField("WordCount", 0),
++                 LEShortField("ByteCount",0)]
++
++class SMBQueryInformationDisk_Response(Packet):
++    name="SMB Query Information Disk"
++    fields_desc=[ByteField("WordCount", 0),
++                 LEShortField("TotalUnits", 0),
++                 LEShortField("BlocksPerUnit", 0),
++                 LEShortField("BlockSize", 0),
++                 LEShortField("FreeUnits", 0),
++                 LEShortField("Reserved", 0),
++                 LEShortField("ByteCount",0)]
++
++BINDER[0x80] = (SMBQueryInformationDisk_Request, SMBQueryInformationDisk_Response)
++
++################################################################################
++# (0x75) SMB Tree Connect AndX
++################################################################################
++
++class SMBTree_Connect_AndX_Request(Packet):
++    name="Session Tree Connect AndX Request"
++    fields_desc=[ByteField("WordCount",4),
++                 ByteEnumField("AndXCommand",0xFF,{0xFF:"SMB_COM_NONE"}),
++                 ByteField("Reserved",0),
++                 LEShortField("AndXOffset",0),
++                 LEShortField("Flags",0x2),
++                 LEShortField("PasswordLength",0x1),
++                 LEShortField("ByteCount",18),
++                 ByteField("Password",0),
++                 NBTStrField("Path","\\\\WIN2K\\IPC$"),
++                 StrNullField("Service","IPC")]
++
++class SMBTree_Connect_AndX_Response(Packet):
++    name="Session Tree Connect AndX Response"
++    fields_desc=[ByteField("WordCount",3),
++                 ByteEnumField("AndXCommand",0xFF,{0xFF:"SMB_COM_NONE"}),
++                 ByteField("Reserved",0),
++                 LEShortField("AndXOffset",80),
++                 LEShortField("OptionalSupport",0x01),
++                 LEShortField("ByteCount",5),
++                 StrNullField("Service","IPC"),
++                 NBTStrField("NativeFileSystem","")]
++
++BINDER[0x75] = (SMBTree_Connect_AndX_Request, SMBTree_Connect_AndX_Response)
++
++################################################################################
++# (0x72) SMB Negociate
++################################################################################
++
++class SMBDialect(Packet):
++    name="SMB Negociate Protocol Request Tail"
++    fields_desc=[ByteField("BufferFormat",0x02),
++                 StrNullField("BufferData","NT LM 0.12")]
++
++bind_layers(SMBDialect, SMBDialect)
++
++class SMBNegociate_Response(Packet):
++    name="SMB Negociate Protocol Response"
++    fields_desc=[ByteField("WordCount",17),
++                 LEShortField("DialectIndex",7),
++                 ByteField("SecurityMode",0x03),
++                 LEShortField("MaxMpxCount",50),
++                 LEShortField("MaxNumberVC",1),
++                 LEIntField("MaxBufferSize",16144),
++                 LEIntField("MaxRawSize",65536),
++                 LEIntField("SessionKey",0x0000),
++                 LEShortField("ServerCapabilities",0xf3f9),
++                 BitField("UnixExtensions",0,1),
++                 BitField("Reserved2",0,7),
++                 BitField("ExtendedSecurity",0,1),
++                 FlagsField("CompBulk",0,2,"CB"),
++                 BitField("Reserved3",0,5),
++                 # There have been 127490112000000000 tenths of micro-seconds between 1st january 1601 and 1st january 2005. 127490112000000000=0x1C4EF94D6228000, so ServerTimeHigh=0xD6228000 and ServerTimeLow=0x1C4EF94.
++                 LEIntField("ServerTimeHigh",0xD6228000L),
++                 LEIntField("ServerTimeLow",0x1C4EF94),
++                 LEShortField("ServerTimeZone",0x3c),
++                 ByteField("EncryptionKeyLength",8),
++                 LEShortField("ByteCount",24),
++                 BitField("EncryptionKey",0,64),
++                 NBTStrField("DomainName","WORKGROUP"),
++                 NBTStrField("ServerName","RMFF1")]
++
++class SMBNegociate_Response_Advanced_Security(Packet):
++    name="SMB Negociate Protocol Response"
++    fields_desc = [ByteField("WordCount",17),
++                   LEShortField("DialectIndex",10),
++                   ByteField("SecurityMode",0x03),
++                   LEShortField("MaxMpxCount",50),
++                   LEShortField("MaxNumberVC",1),
++                   LEIntField("MaxBufferSize",16144),
++                   LEIntField("MaxRawSize",65536),
++                   LEIntField("SessionKey",0x0000),
++                   LEIntField("ServerCapabilities",0xf3f9),
++                   LEIntField("ServerTimeHigh",0xD6228000L),
++                   LEIntField("ServerTimeLow",0x1C4EF94),
++                   LEShortField("ServerTimeZone",0x3c),
++                   ByteField("EncryptionKeyLength",0),
++                   LEFieldLenField("ByteCount", None, "SecurityBlob", adjust=lambda pkt,x:x-16),
++                   BitField("GUID",0,128),
++                   StrLenField("SecurityBlob", "", length_from=lambda x:x.ByteCount+16)]
++
++BINDER[0x72] = (SMBDialect, (SMBNegociate_Response, SMBNegociate_Response_Advanced_Security))
++
++##################################################################################
++# END HERE
++##################################################################################
+ 
+ # SMB NetLogon Response Header
+ class SMBNetlogon_Protocol_Response_Header(Packet):
+@@ -106,32 +345,6 @@
+                    StrNullField("ServerName","WIN"),
+                    LEShortField("LM20Token", 0xffff)]
+ 
+-# SMBNegociate Protocol Request Header
+-class SMBNegociate_Protocol_Request_Header(Packet):
+-    name="SMBNegociate Protocol Request Header"
+-    fields_desc = [StrFixedLenField("Start","\xffSMB",4),
+-                   ByteEnumField("Command",0x72,{0x72:"SMB_COM_NEGOTIATE"}),
+-                   ByteField("Error_Class",0),
+-                   ByteField("Reserved",0),
+-                   LEShortField("Error_code",0),
+-                   ByteField("Flags",0x18),
+-                   LEShortField("Flags2",0x0000),
+-                   LEShortField("PIDHigh",0x0000),
+-                   LELongField("Signature",0x0),
+-                   LEShortField("Unused",0x0),
+-                   LEShortField("TID",0),
+-                   LEShortField("PID",1),
+-                   LEShortField("UID",0),
+-                   LEShortField("MID",2),
+-                   ByteField("WordCount",0),
+-                   LEShortField("ByteCount",12)]
+-
+-# SMB Negociate Protocol Request Tail
+-class SMBNegociate_Protocol_Request_Tail(Packet):
+-    name="SMB Negociate Protocol Request Tail"
+-    fields_desc=[ByteField("BufferFormat",0x02),
+-                 StrNullField("BufferData","NT LM 0.12")]
+-
+ # SMBNegociate Protocol Response Advanced Security
+ class SMBNegociate_Protocol_Response_Advanced_Security(Packet):
+     name="SMBNegociate Protocol Response Advanced Security"
+@@ -211,8 +424,8 @@
+                    ByteField("EncryptionKeyLength",8),
+                    LEShortField("ByteCount",24),
+                    BitField("EncryptionKey",0,64),
+-                   StrNullField("DomainName","WORKGROUP"),
+-                   StrNullField("ServerName","RMFF1")]
++                   NBTStrField("DomainName","WORKGROUP"),
++                   NBTStrField("ServerName","RMFF1")]
+     
+ # SMBNegociate Protocol Response No Security No Key
+ class SMBNegociate_Protocol_Response_No_Security_No_Key(Packet):
+@@ -290,10 +503,11 @@
+                  BitField("Reserved5",0,5),
+                  LEShortField("ByteCount",35),
+                  StrLenField("ANSIPassword", "Pass",length_from=lambda x:x.ANSIPasswordLength),
+-                 StrNullField("Account","GUEST"),
+-                 StrNullField("PrimaryDomain",  ""),
+-                 StrNullField("NativeOS","Windows 4.0"),
+-                 StrNullField("NativeLanManager","Windows 4.0"),
++                 StrLenField("UnicodePassword", "Pass",length_from=lambda x:x.UnicodePasswordLength),
++                 NBTStrField("Account","GUEST"),
++                 NBTStrField("PrimaryDomain",  ""),
++                 NBTStrField("NativeOS","Windows 4.0"),
++                 NBTStrField("NativeLanManager","Windows 4.0"),
+                  ByteField("WordCount2",4),
+                  ByteEnumField("AndXCommand2",0xFF,{0xFF:"SMB_COM_NONE"}),
+                  ByteField("Reserved6",0),
+@@ -302,7 +516,7 @@
+                  LEShortField("PasswordLength",0x1),
+                  LEShortField("ByteCount2",18),
+                  ByteField("Password",0),
+-                 StrNullField("Path","\\\\WIN2K\\IPC$"),
++                 NBTStrField("Path","\\\\WIN2K\\IPC$"),
+                  StrNullField("Service","IPC")]
+ 
+ # Session Setup AndX Response
+@@ -328,9 +542,9 @@
+                  LEShortField("AndXOffset",66),
+                  LEShortField("Action",0),
+                  LEShortField("ByteCount",25),
+-                 StrNullField("NativeOS","Windows 4.0"),
+-                 StrNullField("NativeLanManager","Windows 4.0"),
+-                 StrNullField("PrimaryDomain",""),
++                 NBTStrField("NativeOS","Windows 4.0"),
++                 NBTStrField("NativeLanManager","Windows 4.0"),
++                 NBTStrField("PrimaryDomain",""),
+                  ByteField("WordCount2",3),
+                  ByteEnumField("AndXCommand2",0xFF,{0xFF:"SMB_COM_NONE"}),
+                  ByteField("Reserved3",0),
+@@ -340,11 +554,3 @@
+                  StrNullField("Service","IPC"),
+                  StrNullField("NativeFileSystem","")]
+ 
+-bind_layers( NBTSession,                           SMBNegociate_Protocol_Request_Header, )
+-bind_layers( NBTSession,    SMBNegociate_Protocol_Response_Advanced_Security,  ExtendedSecurity=1)
+-bind_layers( NBTSession,    SMBNegociate_Protocol_Response_No_Security,        ExtendedSecurity=0, EncryptionKeyLength=8)
+-bind_layers( NBTSession,    SMBNegociate_Protocol_Response_No_Security_No_Key, ExtendedSecurity=0, EncryptionKeyLength=0)
+-bind_layers( NBTSession,    SMBSession_Setup_AndX_Request, )
+-bind_layers( NBTSession,    SMBSession_Setup_AndX_Response, )
+-bind_layers( SMBNegociate_Protocol_Request_Header, SMBNegociate_Protocol_Request_Tail, )
+-bind_layers( SMBNegociate_Protocol_Request_Tail,   SMBNegociate_Protocol_Request_Tail, )
