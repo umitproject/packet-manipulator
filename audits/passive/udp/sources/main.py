@@ -72,7 +72,7 @@ def udp_decoder():
                             _("Invalid UDP packet from %s to %s : " \
                               "wrong checksum %s instead of %s") %  \
                             (ip_src, ip_dst,                        \
-                             hex(mpkt.get_field('udp.chksum')),     \
+                             hex(mpkt.get_field('udp.chksum', 0)),  \
                              hex(chksum)),                          \
                             5, 'decoder.udp')
 

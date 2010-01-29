@@ -313,8 +313,8 @@ class Reassembler(object):
         else:
             snd, rcv = stream.server, stream.client
 
-        tcpseq = mpkt.get_field('tcp.seq')
-        tcpack = mpkt.get_field('tcp.ack')
+        tcpseq = mpkt.get_field('tcp.seq', 0)
+        tcpack = mpkt.get_field('tcp.ack', 0)
 
         if tcpflags & TH_SYN:
             if is_client or stream.client.state != TCP_SYN_SENT or \
