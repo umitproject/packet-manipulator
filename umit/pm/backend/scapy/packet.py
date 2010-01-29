@@ -92,6 +92,16 @@ class MetaPacket(object):
             return None
 
     @classmethod
+    def new_from_str(cls, proto_name, raw):
+        try:
+            klass = global_trans[proto_name][0]
+            return MetaPacket(klass(raw))
+        except:
+            log.error('Could not create %s MetaPacket from %s' % \
+                      (proto_name, repr(raw)))
+            return None
+
+    @classmethod
     def new_from_layer(cls, mpkt, proto_name):
         try:
             klass = global_trans[proto_name][0]
@@ -345,6 +355,21 @@ class MetaPacket(object):
         except Exception, err:
             log.error('Error while resetting %s field. Traceback:' % \
                       fieldname)
+            log.error(generate_traceback())
+
+    def set_fields(self, proto, dict):
+        try:
+            layer = self.root.getlayer(global_trans[proto][0])
+
+            if not layer:
+                return None
+
+            for key, value in dict.items():
+                setattr(layer, key, value)
+
+        except Exception, err:
+            log.error('Error while setting %s fields to %s. Traceback:' % \
+                      (dict, proto))
             log.error(generate_traceback())
 
     def set_field(self, fieldname, value):
