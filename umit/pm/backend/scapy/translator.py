@@ -18,9 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
-from umit.pm.backend.scapy.wrapper import Ether, RadioTap, Dot11, ARP, IP, TCP, \
-                                          UDP, BOOTP, DHCP, DNS, DNSQR, DNSRR, \
-                                          ICMP, Raw
+from umit.pm.backend.scapy.wrapper import *
 
 # Scapy seems to respect wireshark nomenclature for protocol and fields.
 
@@ -35,6 +33,16 @@ global_trans = {
     'udp' : (UDP, None),
         'bootp' : (BOOTP, None),
             'dhcp' : (DHCP, None),
+        'nbt' : (NBTSession, None),
+        'smb' : (SMBHeader, None),
+
+        'smbneg_resp' : (SMBNegociate_Response, None),
+
+        'smbsax_resp' : (SMBSetup_AndX_Response, None),
+        'smbsax_req' : (SMBSetup_AndX_Request, None),
+
+        'smbtcax_req' : (SMBTree_Connect_AndX_Request, None),
+
         'dns' : (DNS, None),
         'dnsqr' : (DNSQR, None),
         'dnsrr' : (DNSRR, None),
