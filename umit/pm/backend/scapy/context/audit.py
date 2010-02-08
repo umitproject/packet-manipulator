@@ -28,8 +28,8 @@ from umit.pm.core.i18n import _
 from umit.pm.core.netconst import *
 from umit.pm.core.logger import log
 from umit.pm.core.atoms import ThreadPool, defaultdict
-from umit.pm.manager.auditmanager import AuditDispatcher, IL_TYPE_ETH
-
+from umit.pm.manager.auditmanager import AuditDispatcher, AuditManager, \
+                                         IL_TYPE_ETH
 from umit.pm.backend.scapy import *
 
 # These should be moved outside.
@@ -267,7 +267,7 @@ def register_audit_context(BaseAuditContext):
         def __check_forwarded_single(self, mpkt):
             # Skip forwarded packets (same MAC, different IP)
             if mpkt.l2_src == self._mac1 and \
-               mpkt.l3_src == self._ip1:
+               mpkt.l3_src != self._ip1:
 
                 mpkt.flags |= MPKT_FORWARDED
                 return self.skip_forwarded
@@ -323,13 +323,44 @@ def register_audit_context(BaseAuditContext):
             if self.unoffensive:
                 return
 
-            self.si_l3(mpkt)
+            if mpkt.flags & MPKT_DROPPED == 0:
+                self.si_l3(mpkt)
+
+            if mpkt.inject:
+                self.inject_buffer(mpkt)
 
         def __forward_multi(self, mpkt):
             if mpkt.flags & MPKT_FROMIFACE:
                 self.si_lb(mpkt)
             elif mpkt.flags & MPKT_FROMBRIDGE:
                 self.si_l2(mpkt)
+
+        def inject_buffer(self, mpkt):
+            while True:
+                is_ok, length = self.__inject(mpkt)
+
+                if not is_ok or not length:
+                    log.warning("Error while running injectors ok: %s len: %s" % (is_ok, length))
+                    break
+
+                self.si_l3(mpkt)
+
+                mpkt.inject_len -= length
+                mpkt.inject = mpkt.inject[length:]
+
+                if not mpkt.inject_len:
+                    break
+
+            return True
+
+        def __inject(self, mpkt):
+            injector = AuditManager().get_injector(1, mpkt.l4_proto)
+
+            if not injector:
+                log.warning("No injectors for L4 proto: %d" % mpkt.l4_proto)
+                return False, 0
+
+            return injector(self, mpkt, 0)
 
         ########################################################################
         # Threads callbacks
@@ -537,7 +568,11 @@ def register_audit_context(BaseAuditContext):
 
 
             if not self.check_forwarded(mpkt):
-                self.audit_dispatcher.feed(mpkt)
+                try:
+                    self.audit_dispatcher.feed(mpkt)
+                except Exception, exc:
+                    log.error(_('Error while feeding audit dispatcher'))
+                    log.error(generate_traceback())
 
         ########################################################################
         # Worker functions

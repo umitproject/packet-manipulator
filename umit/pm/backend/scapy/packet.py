@@ -24,16 +24,12 @@ from umit.pm.core.logger import log
 from umit.pm.core.atoms import generate_traceback
 from umit.pm.core.netconst import IL_TYPE_ETH, IL_TYPE_TR, IL_TYPE_FDDI, \
                              IL_TYPE_RAWIP, IL_TYPE_WIFI, IL_TYPE_COOK, \
-                             IL_TYPE_PRISM, LL_TYPE_ARP
+                             IL_TYPE_PRISM, LL_TYPE_ARP, \
+                             NL_TYPE_TCP, NL_TYPE_UDP
 
 from umit.pm.backend.scapy.translator import global_trans
-from umit.pm.backend.scapy.wrapper import Packet, NoPayload, Ether, RadioTap, \
-                                       Raw, IP, get_proto_size, get_proto
+from umit.pm.backend.scapy.wrapper import *
 
-MAPPINGS = {
-    Ether : IL_TYPE_ETH,
-    # TODO: complete this!
-}
 
 class MetaPacket(object):
     def __init__(self, proto=None, cfields=None, flags=0):
@@ -41,34 +37,49 @@ class MetaPacket(object):
         self.cfields = cfields or {}
         self.flags = flags
 
-        proto = self.root
+        self.l2_proto = None
+        self.l2_src = None
+        self.l2_dst = None
+        self.l2_len = 0
 
-        # Fallback to ether
-        self.l2_proto = MAPPINGS.get(type(proto), IL_TYPE_ETH)
+        self.l3_src = None
+        self.l3_dst = None
+        self.l3_proto = None
+        self.l3_len = 0
 
-        self.l2_src = getattr(proto, 'src', None)
-        self.l2_dst = getattr(proto, 'dst', None)
-        self.l3_proto = getattr(proto, 'type', None)
+        self.l4_src = None
+        self.l4_dst = None
+        self.l4_ack = 0
+        self.l4_seq = 0
+        self.l4_flags = 0
+        self.l4_proto = 0
+        self.l4_len = 0
 
-        proto = proto.payload
+        self.payload_len = 0
 
-        if self.l3_proto == LL_TYPE_ARP:
-            self.l3_src = getattr(proto, 'psrc', None)
-            self.l3_dst = getattr(proto, 'pdst', None)
-        else:
-            self.l3_src = getattr(proto, 'src', None)
-            self.l3_dst = getattr(proto, 'dst', None)
+        self.inject = ''
+        self.inject_len = 0
+        self.inj_delta = 0
 
-        self.l4_proto = getattr(proto, 'proto', None) or \
-                        getattr(proto, 'nh', None) # IPv6 handling
+        self.data = ''
+        self.data_len = 0
 
-        proto = proto.payload
+        self.session = None
+        self.context = None
 
-        self.l4_src = getattr(proto, 'sport', None)
-        self.l4_dst = getattr(proto, 'dport', None)
-        self.l4_ack = getattr(proto, 'ack', None)
-        self.l4_seq = getattr(proto, 'seq', None)
-        self.l4_flags = getattr(proto, 'flags', None)
+    def set_data_len(self, length):
+        """
+        This is used from the injection engine to set the correct payload
+        string to transport protocols like TCP or UDP
+        """
+        value = self.data[:length]
+
+        if self.l4_proto == NL_TYPE_TCP:
+            self.root[TCP].payload = Raw(value)
+            self.root[TCP].chksum = None
+        elif self.l4_proto == NL_TYPE_UDP:
+            self.root[UDP].payload = Raw(value)
+            self.root[UDP].chksum = None
 
     def __div__(self, other):
         cfields = self.cfields.copy()
@@ -400,6 +411,25 @@ class MetaPacket(object):
                       (fieldname, repr(value)))
             log.error(generate_traceback())
 
+    def get_fields(self, proto, tup):
+        try:
+            layer = self.root.getlayer(global_trans[proto][0])
+
+            if not layer:
+                return (None, ) * len(tup)
+
+            out = []
+
+            for key in tup:
+                out.append(getattr(layer, key))
+
+            return out
+        except Exception, err:
+            log.error('Error while getting %s fields from %s. Traceback:' % \
+                      (tup, proto))
+            log.error(generate_traceback())
+            return (None, ) * len(tup)
+
     def get_field(self, fieldname, default=None):
         try:
             ret = fieldname.split('.')
@@ -422,10 +452,42 @@ class MetaPacket(object):
             log.error(generate_traceback())
             return default
 
-    def copy(self):
+    def copy(self, full=False):
         if self.root:
-            return MetaPacket(self.root.copy(),
-                              self.cfields.copy())
+            cpy = MetaPacket(self.root.copy(),
+                             self.cfields.copy())
+        if full:
+            cpy.l2_proto = self.l2_proto
+            cpy.l2_src = self.l2_src
+            cpy.l2_dst = self.l2_dst
+            cpy.l2_len = self.l2_len
+
+            cpy.l3_src = self.l3_src
+            cpy.l3_dst = self.l3_dst
+            cpy.l3_proto = self.l3_proto
+            cpy.l3_len = self.l3_len
+
+            cpy.l4_src = self.l4_src
+            cpy.l4_dst = self.l4_dst
+            cpy.l4_ack = self.l4_ack
+            cpy.l4_seq = self.l4_seq
+            cpy.l4_flags = self.l4_flags
+            cpy.l4_proto = self.l4_proto
+            cpy.l4_len = self.l4_len
+
+            cpy.payload_len = self.payload_len
+
+            cpy.inject = self.inject
+            cpy.inject_len = self.inject_len
+            cpy.inj_delta = self.inj_delta
+
+            cpy.data = self.data
+            cpy.data_len = self.data_len
+
+        return cpy
+
+    def add_to(self, aft_proto, mpkt):
+        self.root[global_trans[aft_proto][0]].payload = mpkt.root
 
     # Custom fields
 
