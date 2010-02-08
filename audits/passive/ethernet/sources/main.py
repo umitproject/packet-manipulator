@@ -28,7 +28,18 @@ from umit.pm.manager.auditmanager import *
 from umit.pm.core.netconst import *
 
 def eth_decoder(mpkt):
-    return NET_LAYER, mpkt.get_field('eth.type')
+    mpkt.l2_proto = IL_TYPE_ETH
+    mpkt.l2_len = 14
+    mpkt.l2_src, \
+    mpkt.l2_dst, \
+    mpkt.l3_proto = mpkt.get_fields('eth', ('src', 'dst', 'type'))
+
+    # Also handle ARP assignment
+    if mpkt.l3_proto == LL_TYPE_ARP:
+        mpkt.l3_src, \
+        mpkt.l3_dst = mpkt.get_fields('arp', ('psrc', 'pdst'))
+
+    return NET_LAYER, mpkt.l3_proto
 
 class EthDecoder(Plugin, PassiveAudit):
     def stop(self):
