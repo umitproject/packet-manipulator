@@ -165,6 +165,9 @@ def export_methods(self, *args, **kwargs):
     else:
         svc_inst = ServiceBus().get_service(svcid)
 
+    if not svc_inst:
+        return
+
     for _, meth in inspect.getmembers(self, inspect.ismethod):
         meth_name = meth.__name__
 
