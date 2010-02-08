@@ -33,9 +33,10 @@ from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
 from umit.pm.core.bus import ServiceBus
 from umit.pm.core.auditutils import AuditOperation
+from umit.pm.manager.sessionmanager import ConnectionManager
 from umit.pm.core.atoms import Singleton, defaultdict, generate_traceback
 from umit.pm.core.const import PM_TYPE_STR, PM_TYPE_INT, PM_TYPE_INSTANCE,\
-                                 PM_HOME
+                               PM_HOME
 from umit.pm.core.netconst import *
 
 ###############################################################################
@@ -255,7 +256,14 @@ class AuditManager(Singleton):
         # Here we need separated dict so we should declare them all
         self._decoders = ({}, {}, {}, {}, {}, {}, {}, {})
         self._injectors = ({}, {}, {}, {}, {}, {}, {}, {})
-        self._hooks = {}
+        self._hooks = {
+            'pm::received'    : [],
+            'pm::handled'     : [],
+            'pm::decoded'     : [],
+            'pm::filter'      : [],
+            'pm::pre-forward' : [],
+            'pm::dispatcher'  : [],
+        }
         self._configurations = {}
 
         self.load_configurations()
@@ -281,6 +289,46 @@ class AuditManager(Singleton):
             'inj::payload' : [PM_TYPE_STR, 'Data for injection'],
             'inj::data' : [PM_TYPE_INSTANCE, 'General objects'],
         })
+
+        self.add_decoder(APP_LAYER, PL_DEFAULT, self.__run_dissectors)
+
+    def __run_dissectors(self, mpkt):
+        if mpkt.flags & MPKT_DONT_DISSECT:
+            return
+
+        # TODO: Here we should add a callback to unset MPKT_IGNORE
+        # if the packet is directed to TARGET1 or TARGET2
+
+        self.run_hook_point('pm::handled', mpkt)
+
+        if mpkt.flags & MPKT_IGNORE:
+            return
+
+        if mpkt.l4_proto == NL_TYPE_TCP:
+            ret = NL_TYPE_TCP
+        elif mpkt.l4_proto == NL_TYPE_UDP:
+            ret = NL_TYPE_UDP
+        else:
+            ret = None
+
+        if ret is not None:
+            self.run_decoder(ret, mpkt.l4_src, mpkt)
+            self.run_decoder(ret, mpkt.l4_dst, mpkt)
+
+        self.run_hook_point('pm::decoded', mpkt)
+
+        mtu = mpkt.context and mpkt.context.get_mtu() or 1500
+        max_len = mtu - (mpkt.l2_len + mpkt.l3_len + mpkt.l4_len)
+
+        #log.debug('Max length for the payload is %d' % max_len)
+
+        if mpkt.data_len > max_len:
+            mpkt.inject = mpkt.data[max_len:]
+            mpkt.inject_len = mpkt.data_len - max_len
+            mpkt.inj_delta -= mpkt.data_len - max_len
+            mpkt.data_len = max_len
+
+        self.run_hook_point('pm::filter', mpkt)
 
     # Configurations stuff
 
@@ -497,7 +545,8 @@ class AuditManager(Singleton):
             return None, None, None
 
     def run_decoder(self, level, type, metapkt):
-        while level and type:
+        ret = None
+        while level is not None and type is not None:
             decoder, pre, post = self.get_decoder(level, type)
 
             if not decoder and not pre and not post:
@@ -555,6 +604,7 @@ class AuditDispatcher(object):
 
         self._datalink = datalink
         self._context = context
+        self._conn_manager = ConnectionManager()
         self._main_decoder = AuditManager().get_decoder(LINK_LAYER,
                                                         self._datalink)
 
@@ -570,80 +620,61 @@ class AuditDispatcher(object):
         if not mpkt or not self._main_decoder:
             return
 
-        #assert isinstance(metapkt, backend.MetaPacket)
-        AuditManager().run_decoder(LINK_LAYER, self.datalink, mpkt)
+        manager = AuditManager()
+        manager.run_hook_point('pm::received', mpkt)
 
-        if self._context:
+        if not self._context:
+            manager.run_decoder(LINK_LAYER, self.datalink, mpkt)
+            return
 
-            self._context.set_forwardable(mpkt)
+        # Same code of run_decoder.
+        # Only executed when there's a context so we can have more granularity
+        # over various callbacks
 
-            # Check if we have to forward this packet
-            if mpkt.flags & MPKT_FORWARDABLE and \
-               not mpkt.flags & MPKT_FORWARDED:
+        level = LINK_LAYER
+        type = self.datalink
+        mpkt.context = self._context
 
-                self._context.forward(mpkt)
+        while level is not None and type is not None:
+            decoder, pre, post = manager.get_decoder(level, type)
 
-            # TODO: We have to change the injection implementation.
-            #       So these lines aboves should be dropped in the near future.
+            if not decoder and not pre and not post:
+                break
 
-            flags = mpkt.cfields.get('inj::flags', None)
-            l4proto = mpkt.cfields.get('inj::l4proto', None)
+            #log.debug("Running decoder %s" % decoder)
 
-            import string
+            for pre_hook in pre:
+                pre_hook(mpkt)
 
-            table = string.maketrans('\n\t\r', '...')
-            esc = lambda x: string.translate(x, table)
+            if decoder:
+                ret = decoder(mpkt)
 
-            if flags == INJ_FORWARDED:
-                log.debug('Skipping forwarded packet')
-                return
+            for post_hook in post:
+                post_hook(mpkt)
 
-            while mpkt is not None:
-                injector = AuditManager().get_injector(1, l4proto)
+            if decoder and isinstance(ret, tuple):
+                # Infinite loop over there :)
+                level, type = ret
+            else:
+                break
 
-                if not injector:
-                    return
+        self._conn_manager.parse(mpkt)
 
-                if flags == INJ_MODIFIED:
-                    ret = injector(self._context, mpkt)
+        if mpkt.flags & MPKT_FORWARDABLE and \
+           not mpkt.flags & MPKT_FORWARDED:
 
-                    if ret == INJ_FORWARD:
-                        self._context.si_l3(mpkt)
+            manager.run_hook_point('pm::pre-forward', mpkt)
+            self._context.forward(mpkt)
 
-                        print mpkt.get_source(), "->", mpkt.get_dest(), \
-                              'Data:', \
-                              '"%s"' % esc((mpkt.get_field('raw.load') or '')[:20]), \
-                              'ACK:', mpkt.get_field('tcp.ack'), \
-                              'SEQ:', mpkt.get_field('tcp.seq')
+        mpkt.context = None
+        mpkt.data = ''
 
-                    elif ret == INJ_SKIP_PACKET:
-                        pass
-
-                    else:
-                        log.warning('Something went wrong in %s injector' % \
-                                    injector)
-                        return
-
-                elif flags == INJ_FORWARD:
-                    self._context.si_l3(mpkt)
-
-                # Get the next packet to inject
-                next = mpkt.cfields.get('inj::data', None)
-
-                # Cleaning up cfields
-
-                fields = ('inj::data', 'inj::flags', 'inj::data', 'inj::payload')
-
-                for f in fields:
-                    if f in mpkt.cfields:
-                        mpkt.unset_cfield(f)
-
-                mpkt = next
 
     def get_main_decoder(self): return self._main_decoder
     def set_main_decoder(self, dec): self._main_decoder = dec
 
     def get_datalink(self): return self._datalink
+    def get_connection_manager(self): return self._conn_manager
 
     main_decoder = property(get_main_decoder, set_main_decoder)
     datalink = property(get_datalink)
