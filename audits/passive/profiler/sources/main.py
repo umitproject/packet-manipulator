@@ -242,6 +242,10 @@ class Profiler(Plugin, PassiveAudit):
                                  self._parse_icmp, 1)
 
     def _parse_tcp(self, mpkt):
+        if mpkt.flags & MPKT_FORWARDED or \
+           mpkt.flags & MPKT_IGNORE:
+            return
+
         sport = mpkt.l4_src
         dport = mpkt.l4_dst
         tcpflags = mpkt.l4_flags
@@ -297,6 +301,13 @@ class Profiler(Plugin, PassiveAudit):
             print prof
 
     def _parse_arp(self, mpkt):
+        if mpkt.context:
+            mpkt.context.check_forwarded(mpkt)
+
+        if mpkt.flags & MPKT_FORWARDED or \
+           mpkt.flags & MPKT_IGNORE:
+            return
+
         prof = self.get_or_create(mpkt)
         prof.type = HOST_LOCAL_TYPE
         prof.distance = 1 # we are in LAN so distance is 1
@@ -305,6 +316,10 @@ class Profiler(Plugin, PassiveAudit):
         # and if equal set distance to 0
 
     def _parse_icmp(self, mpkt):
+        if mpkt.flags & MPKT_FORWARDED or \
+           mpkt.flags & MPKT_IGNORE:
+            return
+
         prof = self.get_or_create(mpkt)
 
         icmp_type = mpkt.get_field('icmp.type')
@@ -369,7 +384,7 @@ class Profiler(Plugin, PassiveAudit):
             mac = mpkt.l2_src
         else:
             ip = mpkt.l3_dst
-            mac = mpkt.l3_dst
+            mac = mpkt.l2_dst
 
         for prof in self.profiles[ip]:
             if not mac:
