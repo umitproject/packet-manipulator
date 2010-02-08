@@ -144,6 +144,8 @@ def kill_connection(ctx, conn):
     send_tcpkill(ctx, conn.l3_addr2, conn.l3_addr1,
                  conn.l4_addr2, conn.l4_addr1, status.last_ack)
 
+    conn.status = CN_KILLED
+
     return True
 
 class InjectDialog(gtk.Dialog):
@@ -254,6 +256,9 @@ class TabDetails(gtk.VBox):
             self.tagtable.add(tag)
 
         self.buff = gtk.TextBuffer(self.tagtable)
+        self.endmark = self.buff.create_mark('end',
+                                             self.buff.get_end_iter(), 0)
+
         self.view = gtk.TextView(self.buff)
         self.view.set_wrap_mode(gtk.WRAP_CHAR)
         self.view.set_editable(False)
@@ -331,6 +336,8 @@ class TabDetails(gtk.VBox):
                                        self.tagtable.lookup(tags[is_client]))
 
             self.index += 1
+
+        self.view.scroll_to_mark(self.endmark, 0, False, 0, 0)
 
 class ConnectionsWindow(gtk.Dialog):
     def __init__(self, session):
