@@ -106,7 +106,7 @@ class PoisonOperation(AuditOperation):
         self.internal = False
 
         self.status.set_sensitive(True)
-        sess.mitm_attacks.remove(AUDIT_NAME)
+        self.session.mitm_attacks.remove(AUDIT_NAME)
 
         return True
 
