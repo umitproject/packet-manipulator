@@ -376,7 +376,10 @@ class MetaPacket(object):
                 return None
 
             for key, value in dict.items():
-                setattr(layer, key, value)
+                if isinstance(value, MetaPacket):
+                    setattr(layer, key, value.root)
+                else:
+                    setattr(layer, key, value)
 
         except Exception, err:
             log.error('Error while setting %s fields to %s. Traceback:' % \
@@ -421,7 +424,12 @@ class MetaPacket(object):
             out = []
 
             for key in tup:
-                out.append(getattr(layer, key))
+                value = getattr(layer, key)
+
+                if isinstance(value, Packet):
+                    value = MetaPacket(value)
+
+                out.append(value)
 
             return out
         except Exception, err:
@@ -443,6 +451,9 @@ class MetaPacket(object):
 
                 if len(ret) == 3 and val:
                     val = getattr(val, ret[2])
+
+                if isinstance(val, Packet):
+                    return MetaPacket(val)
 
                 return val != None and val or default
             else:
