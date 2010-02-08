@@ -104,11 +104,14 @@ INJ_MODIFIED      = 5 # Forward the packet but recompute checksums
 # Metapacket constants
 ###############################################################################
 
-MPKT_IGNORE      = 1
-MPKT_FORWARDABLE = 1 << 2
-MPKT_FORWARDED   = 1 << 3
-MPKT_FROMIFACE   = 1 << 4
-MPKT_FROMBRIDGE  = 1 << 5
+MPKT_IGNORE       = 1
+MPKT_DONT_DISSECT = 1 << 1
+MPKT_FORWARDABLE  = 1 << 2
+MPKT_FORWARDED    = 1 << 3
+MPKT_FROMIFACE    = 1 << 4
+MPKT_FROMBRIDGE   = 1 << 5
+MPKT_MODIFIED     = 1 << 6
+MPKT_DROPPED      = 1 << 7
 
 ###############################################################################
 # Connection tracking constants
@@ -120,3 +123,15 @@ CONN_DATA             = 1
 CONN_RESET            = 2
 CONN_CLOSE            = 3
 CONN_TIMED_OUT        = 4
+
+CN_IDLE      = 0
+CN_OPENING   = 1
+CN_OPEN      = 2
+CN_ACTIVE    = 3
+CN_CLOSING   = 4
+CN_CLOSED    = 5
+CN_KILLED    = 6
+
+CN_INJECTED  = 1
+CN_MODIFIED  = 2
+CN_VIEWING   = 4
