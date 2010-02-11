@@ -1,6 +1,6 @@
 diff -r 7a211173d33f scapy/fields.py
 --- a/scapy/fields.py	Mon Jan 11 17:59:00 2010 +0100
-+++ b/scapy/fields.py	Fri Jan 29 13:54:42 2010 +0100
++++ b/scapy/fields.py	Thu Feb 11 15:02:28 2010 +0100
 @@ -271,7 +271,7 @@
  
  class ShortField(Field):
@@ -59,7 +59,7 @@ diff -r 7a211173d33f scapy/fields.py
          Field.__init__(self, name, default)
 diff -r 7a211173d33f scapy/layers/netbios.py
 --- a/scapy/layers/netbios.py	Mon Jan 11 17:59:00 2010 +0100
-+++ b/scapy/layers/netbios.py	Fri Jan 29 13:54:42 2010 +0100
++++ b/scapy/layers/netbios.py	Thu Feb 11 15:02:28 2010 +0100
 @@ -199,8 +199,22 @@
  class NBTSession(Packet):
      name="NBT Session Packet"
@@ -94,8 +94,8 @@ diff -r 7a211173d33f scapy/layers/netbios.py
 +bind_layers( TCP,           NBTSession,       sport=445)
 diff -r 7a211173d33f scapy/layers/smb.py
 --- a/scapy/layers/smb.py	Mon Jan 11 17:59:00 2010 +0100
-+++ b/scapy/layers/smb.py	Fri Jan 29 13:54:42 2010 +0100
-@@ -7,6 +7,245 @@
++++ b/scapy/layers/smb.py	Thu Feb 11 15:02:28 2010 +0100
+@@ -7,6 +7,280 @@
  from scapy.fields import *
  from scapy.layers.netbios import NBTSession
  
@@ -124,13 +124,19 @@ diff -r 7a211173d33f scapy/layers/smb.py
 +
 +    def guess_payload_class(self, payload):
 +        index = self.Flags & 128 != 0 and 1 or 0
-+        secure = self.Flags2 & 2048 != 0 and 1 or 0
 +        protos = BINDER.get(self.Command, None)
 +
 +        if isinstance(protos, tuple):
-+            if isinstance(protos[index], tuple):
-+                return protos[index][secure]
-+            return protos[index]
++            proto = protos[index].get(ord(payload[0]))
++
++            if proto:
++                return proto
++
++        if self.Command == 0x72 and payload[0] == '\x11' and len(payload) > 23:
++            if ord(payload[23]) & 128: # SERVER_CAP_EXTENDED_SECURITY
++                return SMBNegociate_Response_Advanced_Security
++            else:
++                return SMBNegociate_Response
 +
 +        return Packet.guess_payload_class(self, payload)
 +
@@ -203,12 +209,18 @@ diff -r 7a211173d33f scapy/layers/smb.py
 +                 NBTStrField("PrimaryDomain",  ""),
 +                 NBTStrField("NativeOS","Windows 4.0"),
 +                 NBTStrField("NativeLanManager","Windows 4.0"),
-+                 StrLenField("ExtraBytes", "", length_from=lambda x:(x.ByteCount - x.ANSIPasswordLength - x.UnicodePasswordLength - (len(x.Account) + len(x.PrimaryDomain) + len(x.NativeOS) + len(x.NativeLanManager) + 4) * 2 + 1) / 2)]
++                 #StrLenField("ExtraBytes", "", length_from=lambda x:(x.ByteCount - x.ANSIPasswordLength - x.UnicodePasswordLength - (len(x.Account) + len(x.PrimaryDomain) + len(x.NativeOS) + len(x.NativeLanManager) + 4) * 2 + 1) / 2)]
++                 StrLenField("ExtraBytes", "", length_from=lambda x:(x.ByteCount - x.ANSIPasswordLength - x.UnicodePasswordLength - (len(x.Account) + len(x.PrimaryDomain) + len(x.NativeOS) + len(x.NativeLanManager) + 4) * 2) & ~1)]
 +
 +    def guess_payload_class(self, payload):
 +        protos = BINDER.get(self.AndXCommand, None)
-+        if protos:
-+            return protos[0]
++
++        if isinstance(protos, tuple):
++            proto = protos[0].get(ord(payload[0]))
++
++            if proto:
++                return proto
++
 +        return Packet.guess_payload_class(self, payload)
 +
 +class SMBSetup_AndX_Response_Advanced_Security(Packet):
@@ -216,15 +228,37 @@ diff -r 7a211173d33f scapy/layers/smb.py
 +    fields_desc = [ByteField("WordCount",4),
 +                   ByteEnumField("AndXCommand",0x75,{0x75:"SMB_COM_TREE_CONNECT_ANDX"}),
 +                   ByteField("Reserved",0),
-+                   ShortField("AndXOffset",0),
-+                   ByteField("Action",0),
-+                   ShortField("SecurityBlobLength",0),
-+                   ShortField("ByteCount",0),
++                   LEShortField("AndXOffset",0),
++                   LEShortField("Action",0),
++                   LEShortField("SecurityBlobLength",0),
++                   LEShortField("ByteCount",0),
 +                   StrLenField("SecurityBlob", "", length_from=lambda x:x.SecurityBlobLength),
 +                   NBTStrField("NativeOS","Windows 4.0"),
 +                   NBTStrField("NativeLanManager","Windows 4.0")]
 +
-+BINDER[0x73] = (SMBSetup_AndX_Request, (SMBSetup_AndX_Response, SMBSetup_AndX_Response_Advanced_Security))
++class SMBSetup_AndX_Request_Advanced_Security(Packet):
++    name="SMBNegociate Protocol Response Advanced Security"
++    fields_desc = [ByteField("WordCount",12),
++                   ByteEnumField("AndXCommand",0x75,{0x75:"SMB_COM_TREE_CONNECT_ANDX"}),
++                   ByteField("Reserved",0),
++                   LEShortField("AndXOffset",0),
++                   LEShortField("MaxBuffer",2920),
++                   LEShortField("MaxMPXCount",50),
++                   LEShortField("VCNumber",0),
++                   LEIntField("SessionKey",0x0000),
++                   LEShortField("SecurityBlobLength",0),
++                   LEIntField("Reserved2", 0),
++                   LEIntField("Capabilities", 0),
++                   LEShortField("ByteCount",0),
++                   StrLenField("SecurityBlob", "", length_from=lambda x:x.SecurityBlobLength),
++                   NBTStrField("NativeOS","Windows 4.0"),
++                   NBTStrField("NativeLanManager","Windows 4.0"),
++                   NBTStrField("PrimaryDomain", "")]
++
++BINDER[0x73] = ({13 : SMBSetup_AndX_Request,
++                 12 : SMBSetup_AndX_Request_Advanced_Security},
++                { 0 : SMBSetup_AndX_Response,
++                  4 : SMBSetup_AndX_Response_Advanced_Security})
 +
 +################################################################################
 +# (0x80) Query Information Disk
@@ -245,7 +279,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
 +                 LEShortField("Reserved", 0),
 +                 LEShortField("ByteCount",0)]
 +
-+BINDER[0x80] = (SMBQueryInformationDisk_Request, SMBQueryInformationDisk_Response)
++BINDER[0x80] = ({0 : SMBQueryInformationDisk_Request}, {5 : SMBQueryInformationDisk_Response})
 +
 +################################################################################
 +# (0x75) SMB Tree Connect AndX
@@ -275,7 +309,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
 +                 StrNullField("Service","IPC"),
 +                 NBTStrField("NativeFileSystem","")]
 +
-+BINDER[0x75] = (SMBTree_Connect_AndX_Request, SMBTree_Connect_AndX_Response)
++BINDER[0x75] = ({4 : SMBTree_Connect_AndX_Request}, {3 : SMBTree_Connect_AndX_Response})
 +
 +################################################################################
 +# (0x72) SMB Negociate
@@ -333,7 +367,8 @@ diff -r 7a211173d33f scapy/layers/smb.py
 +                   BitField("GUID",0,128),
 +                   StrLenField("SecurityBlob", "", length_from=lambda x:x.ByteCount+16)]
 +
-+BINDER[0x72] = (SMBDialect, (SMBNegociate_Response, SMBNegociate_Response_Advanced_Security))
++BINDER[0x72] = ({0 : SMBDialect}, {})
++                #{17 : SMBNegociate_Response})
 +
 +##################################################################################
 +# END HERE
@@ -341,7 +376,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
  
  # SMB NetLogon Response Header
  class SMBNetlogon_Protocol_Response_Header(Packet):
-@@ -106,32 +345,6 @@
+@@ -106,32 +380,6 @@
                     StrNullField("ServerName","WIN"),
                     LEShortField("LM20Token", 0xffff)]
  
@@ -374,7 +409,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
  # SMBNegociate Protocol Response Advanced Security
  class SMBNegociate_Protocol_Response_Advanced_Security(Packet):
      name="SMBNegociate Protocol Response Advanced Security"
-@@ -211,8 +424,8 @@
+@@ -211,8 +459,8 @@
                     ByteField("EncryptionKeyLength",8),
                     LEShortField("ByteCount",24),
                     BitField("EncryptionKey",0,64),
@@ -385,7 +420,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
      
  # SMBNegociate Protocol Response No Security No Key
  class SMBNegociate_Protocol_Response_No_Security_No_Key(Packet):
-@@ -290,10 +503,11 @@
+@@ -290,10 +538,11 @@
                   BitField("Reserved5",0,5),
                   LEShortField("ByteCount",35),
                   StrLenField("ANSIPassword", "Pass",length_from=lambda x:x.ANSIPasswordLength),
@@ -401,7 +436,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
                   ByteField("WordCount2",4),
                   ByteEnumField("AndXCommand2",0xFF,{0xFF:"SMB_COM_NONE"}),
                   ByteField("Reserved6",0),
-@@ -302,7 +516,7 @@
+@@ -302,7 +551,7 @@
                   LEShortField("PasswordLength",0x1),
                   LEShortField("ByteCount2",18),
                   ByteField("Password",0),
@@ -410,7 +445,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
                   StrNullField("Service","IPC")]
  
  # Session Setup AndX Response
-@@ -328,9 +542,9 @@
+@@ -328,9 +577,9 @@
                   LEShortField("AndXOffset",66),
                   LEShortField("Action",0),
                   LEShortField("ByteCount",25),
@@ -423,7 +458,7 @@ diff -r 7a211173d33f scapy/layers/smb.py
                   ByteField("WordCount2",3),
                   ByteEnumField("AndXCommand2",0xFF,{0xFF:"SMB_COM_NONE"}),
                   ByteField("Reserved3",0),
-@@ -340,11 +554,3 @@
+@@ -340,11 +589,3 @@
                   StrNullField("Service","IPC"),
                   StrNullField("NativeFileSystem","")]
  

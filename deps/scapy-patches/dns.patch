@@ -1,6 +1,6 @@
-diff -r f9b1019a270e scapy/layers/dns.py
---- a/scapy/layers/dns.py	Mon Dec 14 16:36:32 2009 +0100
-+++ b/scapy/layers/dns.py	Thu Jan 07 17:47:11 2010 +0100
+diff -r 7a211173d33f scapy/layers/dns.py
+--- a/scapy/layers/dns.py	Mon Jan 11 17:59:00 2010 +0100
++++ b/scapy/layers/dns.py	Thu Feb 11 15:03:04 2010 +0100
 @@ -10,14 +10,23 @@
  from scapy.ansmachine import *
  from scapy.layers.inet import UDP
