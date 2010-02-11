@@ -23,7 +23,6 @@ Session manager module.
 """
 
 import time
-from socket import inet_aton
 
 from umit.pm.core.logger import log
 from umit.pm.core.atoms import Singleton, defaultdict
@@ -31,39 +30,6 @@ from umit.pm.core.netconst import *
 
 class DissectIdent(object):
     magic = None
-
-    def __init__(self, l3src, l3dst, l4src, l4dst, proto):
-        self.l3_src = l3src
-        self.l3_dst = l3dst
-        self.l4_src = l4src
-        self.l4_dst = l4dst
-        self.proto = proto
-
-    def __eq__(self, other):
-        if self.magic != other.magic or self.proto != other.proto:
-            return False
-
-        if self.l3_src == other.l3_src and \
-           self.l3_dst == other.l3_dst and \
-           self.l4_src == other.l4_src and \
-           self.l4_dst == other.l4_dst:
-            return True
-
-        if self.l3_src == other.l3_dst and \
-           self.l3_dst == other.l3_src and \
-           self.l4_src == other.l4_dst and \
-           self.l4_dst == other.l4_src:
-            return True
-
-        return False
-
-    @classmethod
-    def mkhash(self, ident):
-        return hash(ident.l3_src) ^ hash(ident.l3_dst) ^ \
-               ident.l4_src ^ ident.l4_dst ^ hash(ident.proto)
-
-class TCPIdent(object):
-    magic = NL_TYPE_TCP
 
     def __init__(self, l3src, l3dst, l4src, l4dst):
         self.l3_src = l3src
@@ -90,14 +56,17 @@ class TCPIdent(object):
         return False
 
     @classmethod
+    def mkhash(self, ident):
+        return hash(ident.l3_src) ^ hash(ident.l3_dst) ^ \
+               ident.l4_src ^ ident.l4_dst
+
+    @classmethod
     def create(self, mpkt):
         return TCPIdent(mpkt.l3_src, mpkt.l3_dst,
                         mpkt.l4_src, mpkt.l4_dst)
 
-    @classmethod
-    def mkhash(self, ident):
-        return hash(ident.l3_src) ^ hash(ident.l3_dst) ^ \
-               ident.l4_src ^ ident.l4_dst
+class TCPIdent(DissectIdent):
+    magic = NL_TYPE_TCP
 
 INJ_FIN = 1
 INJ_FWD = 2
@@ -153,7 +122,7 @@ class SessionManager(Singleton):
 
     # Dissectors methods
 
-    def create_session(self, mpkt, ports, dissector):
+    def create_session_on_sack(self, mpkt, ports, dissector):
         """
         Check for SYN/ACK on mpkt and create a session
         @param mpkt a MetaPacket object
@@ -163,30 +132,30 @@ class SessionManager(Singleton):
 
         tcpflags = mpkt.l4_flags
 
-        if tcpflags & TH_SYN != 0 and tcpflags & TH_ACK != 0:
-            if mpkt.l4_src in ports:
-                log.debug('Creating sessions for dissector %s' % dissector)
-                ident = self.create_ident_from_mpkt(mpkt, dissector)
+        if tcpflags & TH_SYN != 0 and tcpflags & TH_ACK != 0 and \
+           mpkt.l4_src in ports:
 
-                sess = Session(ident)
-                self.put_session(sess)
+            log.debug('Creating sessions for dissector %s' % dissector)
+            ident = self.create_dissect_ident(mpkt, dissector)
 
-                return sess
+            sess = Session(ident)
+            self.put_session(sess)
+
+            return sess
 
         return None
 
-    def create_ident_from_mpkt(self, mpkt, magic):
+    def create_dissect_ident(self, mpkt, magic):
         """
         Create a session object starting from a mpkt instance
         """
-        ident = DissectIdent(inet_aton(mpkt.l3_src), inet_aton(mpkt.l3_dst),
-                             mpkt.l4_src, mpkt.l4_dst, mpkt.l4_proto)
+        ident = DissectIdent.create(mpkt)
         ident.magic = magic
 
         return ident
 
     def lookup_session(self, mpkt, ports, decoder, create_on_fail=False):
-        ident = self.create_ident_from_mpkt(mpkt, decoder)
+        ident = self.create_dissect_ident(mpkt, decoder)
         sess = self.get_session(ident)
 
         if create_on_fail and not sess:
@@ -195,12 +164,11 @@ class SessionManager(Singleton):
 
         return sess
 
-    def is_first_mpkt_from_server(self, mpkt, ports, decoder):
+    def is_first_pkt_from_server(self, mpkt, ports, decoder):
         if mpkt.l4_src in ports and \
            mpkt.l4_flags & TH_PSH != 0:
 
-            ident = self.create_ident_from_mpkt(mpkt, decoder)
-            return self.get_session(ident)
+            return self.get_session(self.create_dissect_ident(mpkt, decoder))
 
     # Standard methods
 

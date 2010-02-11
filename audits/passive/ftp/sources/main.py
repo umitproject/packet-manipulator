@@ -40,42 +40,31 @@ def ftp_dissector():
     sessions = SessionManager()
 
     def ftp(mpkt):
-        sess = sessions.create_session(mpkt, FTP_PORTS, FTP_NAME)
+        if sessions.create_session_on_sack(mpkt, FTP_PORTS, FTP_NAME):
+            return
 
-        # This is a SYN/ACK packet.
-        if sess:
-            return None
+        sess = sessions.is_first_pkt_from_server(mpkt, FTP_PORTS, FTP_NAME)
 
-        sess = sessions.is_first_mpkt_from_server(mpkt, FTP_PORTS, FTP_NAME)
+        if sess and not sess.data:
+            payload = mpkt.data
 
-        if sess:
-            if not sess.data:
-                payload = mpkt.get_field('raw.load')
+            # Ok we have an FTP banner over here
+            if payload and payload.startswith('220'):
+                banner = payload[4:].strip()
+                mpkt.set_cfield('banner', banner)
 
-                # Ok we have an FTP banner over here
-                if payload and payload.startswith('220'):
-                    banner = payload[4:].strip()
-                    mpkt.set_cfield('banner', banner)
+                manager.user_msg('FTP : %s:%d banner: %s' % \
+                                 (mpkt.l3_src, mpkt.l4_src, banner),
+                                 6, FTP_NAME)
 
-                    manager.user_msg('FTP : %s:%d banner: %s' % \
-                                     (mpkt.get_field('ip.src'),
-                                      mpkt.get_field('tcp.sport'),
-                                      banner),
-                                      6, 'dissector.ftp')
+            sessions.delete_session(sess)
+            return
 
-            if not sess.data:
-                sessions.delete_session(sess)
-                return None
+        # Skip empty and server packets
+        if mpkt.l4_dst not in FTP_PORTS or not mpkt.data:
+            return
 
-        if mpkt.get_field('tcp.dport') not in FTP_PORTS:
-            return None
-
-        payload = mpkt.get_field('raw.load')
-
-        if not payload:
-            return None
-
-        payload = payload.strip()
+        payload = mpkt.data.strip()
 
         if payload[:5].upper() == 'USER ':
             sess = sessions.lookup_session(mpkt, FTP_PORTS, FTP_NAME, True)
@@ -93,11 +82,10 @@ def ftp_dissector():
                 sess.data = [None, payload[5:]]
 
             manager.user_msg('FTP : %s:%d -> USER: %s PASS: %s' % \
-                             (mpkt.get_field('ip.dst'),
-                              mpkt.get_field('tcp.dport'),
+                             (mpkt.l3_dst, mpkt.l4_dst,
                               sess.data[0] or '',
                               sess.data[1] or ''),
-                              6, 'dissector.ftp')
+                              6, FTP_NAME)
 
             mpkt.set_cfield('username', sess.data[0])
             mpkt.set_cfield('password', sess.data[1])
@@ -117,11 +105,11 @@ class FTPDissector(Plugin, PassiveAudit):
         AuditManager().remove_dissector(APP_LAYER_TCP, 21, self.dissector)
 
 __plugins__ = [FTPDissector]
-__plugins_deps__ = [('FTPDissector', ['TCPDecoder'], ['FTPDecoder-1.0'], []),]
+__plugins_deps__ = [('FTPDissector', ['TCPDecoder'], ['FTPDissector-1.0'], []),]
 
 __audit_type__ = 0
 __protocols__ = (('tcp', 21), ('ftp', None))
-__vulnerabilities__ = (('HTTP dissector', {
+__vulnerabilities__ = (('FTP dissector', {
     'description' : 'File Transfer Protocol (FTP) is a standard network '
                     'protocol used to exchange and manipulate files over an '
                     'Internet Protocol computer network, such as the Internet. '
