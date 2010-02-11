@@ -23,9 +23,9 @@ SMB protocol dissector (Passive audit)
 
 >>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-t9 -f ppp,ip,tcp,smb -sdecoder.tcp.checksum_check=0', 'smb-ntlmssp-auth.pcap')
-dissector.smb.info SMB : 200.46.226.5:3989 -> USER: _appowner HASH: _appowner:"":"":dc94e2d626ec44c200000000000000000000000000000000:84ec1f4fc3a5b08df6ec858e25b2b9a121caa83c0e234897:118cd5f944f353d4 DOMAIN: AUTOCHAP1 (failed)
-dissector.smb.info SMB : 200.46.226.5:3989 -> USER: _appowner HASH: _appowner:"":"":b228016a5678070d00000000000000000000000000000000:ffdd852dcd17dc9ec0a7d9bd55656d094c504cdc2a94cefb:a1e96d8f82855097 DOMAIN: AUTOCHAP1 (failed)
-dissector.smb.info SMB : 200.46.226.5:3989 -> USER: _appowner HASH: _appowner:"":"":c1903dc4ceccd00c00000000000000000000000000000000:263f025e78368a8985aed22e7111cbd507bd2a71f5124784:5db22c042e46cfe0 DOMAIN: AUTOCHAP1 (failed)
+dissector.smb.info SMB : 92.41.24.187:445 -> USER: _appowner HASH: _appowner:"":"":dc94e2d626ec44c200000000000000000000000000000000:84ec1f4fc3a5b08df6ec858e25b2b9a121caa83c0e234897:118cd5f944f353d4 DOMAIN: AUTOCHAP1 (failed)
+dissector.smb.info SMB : 92.41.24.187:445 -> USER: _appowner HASH: _appowner:"":"":b228016a5678070d00000000000000000000000000000000:ffdd852dcd17dc9ec0a7d9bd55656d094c504cdc2a94cefb:a1e96d8f82855097 DOMAIN: AUTOCHAP1 (failed)
+dissector.smb.info SMB : 92.41.24.187:445 -> USER: _appowner HASH: _appowner:"":"":c1903dc4ceccd00c00000000000000000000000000000000:263f025e78368a8985aed22e7111cbd507bd2a71f5124784:5db22c042e46cfe0 DOMAIN: AUTOCHAP1 (failed)
 """
 
 import struct
@@ -110,7 +110,7 @@ class SMBSession(object):
                 mpkt.set_cfield('password', hash)
 
             manager.user_msg('SMB : %s:%d -> USER: %s HASH: %s%s' % \
-                             (mpkt.l3_dst, mpkt.l4_dst,
+                             (mpkt.l3_src, mpkt.l4_src,
                               username, hash, domain), 6, SMB_NAME)
 
 def smb_dissector():
