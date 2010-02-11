@@ -617,7 +617,7 @@ class AuditDispatcher(object):
 
         @param metapkt a MetaPacket object or None
         """
-        if not mpkt or not self._main_decoder:
+        if not mpkt:# or not self._main_decoder:
             return
 
         manager = AuditManager()

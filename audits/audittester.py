@@ -44,9 +44,12 @@ class Tester(object):
             print "I need a pcap file as input to work."
             sys.exit(-1)
 
-        tester = AuditTester(args[0], ((options.datalink is None) \
-                                       and IL_TYPE_ETH \
-                                       or options.datalink))
+        if options.datalink is None:
+            datalink = IL_TYPE_ETH
+        else:
+            datalink = options.datalink
+
+        tester = AuditTester(args[0], datalink)
 
         modules = []
         filters = []
@@ -145,8 +148,6 @@ class Tester(object):
                 print generate_traceback()
 
         AuditManager().global_conf['debug'] = True
-        tester.dispatcher.main_decoder = \
-              AuditManager().get_decoder(LINK_LAYER, IL_TYPE_ETH)
 
         tester.start()
         tester.join()
