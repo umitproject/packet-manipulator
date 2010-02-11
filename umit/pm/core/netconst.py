@@ -39,6 +39,7 @@ APP_LAYER_UDP = 7
 # IFACE_LAYER types
 IL_TYPE_ETH   = 0x01 # ethernet
 IL_TYPE_TR    = 0x06 # token ring
+IL_TYPE_PPP   = 0x09
 IL_TYPE_FDDI  = 0x0a # fiber distributed data interface
 IL_TYPE_RAWIP = 0x0c # raw ip dump file
 IL_TYPE_WIFI  = 0x69 # wireless

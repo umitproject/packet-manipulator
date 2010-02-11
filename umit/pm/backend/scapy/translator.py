@@ -24,6 +24,8 @@ from umit.pm.backend.scapy.wrapper import *
 
 global_trans = {
     'eth' : (Ether, None),
+    'hdlc' : (HDLC, None),
+    'ppp' : (PPP, None),
     'radiotap' : (RadioTap, None),
     'wifi' : (Dot11, None),
     'arp' : (ARP, None),
@@ -39,7 +41,10 @@ global_trans = {
         'smbneg_resp' : (SMBNegociate_Response, None),
 
         'smbsax_resp' : (SMBSetup_AndX_Response, None),
+        'smbsax_resp_as' : (SMBSetup_AndX_Response_Advanced_Security, None),
+
         'smbsax_req' : (SMBSetup_AndX_Request, None),
+        'smbsax_req_as' : (SMBSetup_AndX_Request_Advanced_Security, None),
 
         'smbtcax_req' : (SMBTree_Connect_AndX_Request, None),
 
