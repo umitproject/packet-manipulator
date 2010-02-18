@@ -38,7 +38,6 @@ from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
 from umit.pm.core.auditutils import is_ip, AuditOperation
 from umit.pm.core.const import STATUS_INFO
-from umit.pm.core.netconst import INJ_FORWARDED
 from umit.pm.manager.auditmanager import *
 from umit.pm.manager.sessionmanager import SessionManager
 from umit.pm.backend import MetaPacket

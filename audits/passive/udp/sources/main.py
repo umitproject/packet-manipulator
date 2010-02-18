@@ -34,105 +34,95 @@ from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import AuditManager, PassiveAudit
-from umit.pm.core.netconst import PROTO_LAYER, NET_LAYER, NL_TYPE_UDP, APP_LAYER_UDP
+from umit.pm.manager.sessionmanager import STATELESS_IP_MAGIC
+from umit.pm.core.netconst import *
 from umit.pm.core.auditutils import checksum
 
 from umit.pm.backend import MetaPacket
 
+UDP_LENGTH = 8
+UDP_NAME = 'decoder.udp'
+
 def udp_decoder():
     manager = AuditManager()
 
-    conf = manager.get_configuration('decoder.udp')
-    checksum_check, dissectors = conf['checksum_check'], \
-                                 conf['enable_dissectors']
+    conf = manager.get_configuration(UDP_NAME)
+    checksum_check = conf['checksum_check']
 
     def udp(mpkt):
+        mpkt.l4_len = UDP_LENGTH
+        mpkt.l4_src,
+        mpkt.l4_dst = mpkt.get_fields('udp', ('sport', 'dport'))
+
+        load = mpkt.get_field('udp')[mpkt.l4_len:]
+
+        if load:
+            mpkt.data = load
+
         if checksum_check:
             udpraw = mpkt.get_field('udp')
 
             if udpraw:
-                ln = mpkt.get_field('ip.len') - 20
-
-                if ln == len(udpraw):
-                    ip_src = mpkt.get_field('ip.src')
-                    ip_dst = mpkt.get_field('ip.dst')
-
+                if mpkt.payload_len == len(udpraw):
                     psdhdr = pack("!4s4sHH",
-                                  inet_aton(ip_src),
-                                  inet_aton(ip_dst),
-                                  mpkt.get_field('ip.proto'),
-                                  ln)
+                                  inet_aton(mpkt.l3_src),
+                                  inet_aton(mpkt.l3_dst),
+                                  mpkt.l4_proto,
+                                  mpkt.payload_len)
 
                     chksum = checksum(psdhdr + udpraw[:6] + \
-                                      "\x00\x00" + udpraw[8:])
+                                      '\x00\x00' + udpraw[8:])
 
                     if mpkt.get_field('udp.chksum') != chksum:
                         mpkt.set_cfield('good_checksum', hex(chksum))
                         manager.user_msg(
                             _("Invalid UDP packet from %s to %s : " \
                               "wrong checksum %s instead of %s") %  \
-                            (ip_src, ip_dst,                        \
+                            (mpkt.l3_src, mpkt.l3_dst,              \
                              hex(mpkt.get_field('udp.chksum', 0)),  \
                              hex(chksum)),                          \
-                            5, 'decoder.udp')
+                            5, UDP_NAME)
 
-            if not dissectors:
-                return None
+            manager.run_decoder(APP_LAYER, PL_DEFAULT, mpkt)
 
-            # TODO: Check for injectors (set l4proto and flags)
-            manager.run_decoder(APP_LAYER_UDP,
-                                mpkt.get_field('udp.dport'), mpkt)
-            manager.run_decoder(APP_LAYER_UDP,
-                                mpkt.get_field('udp.sport'), mpkt)
+            if mpkt.flags & MPKT_MODIFIED and \
+               mpkt.flags & MPKT_FORWARDABLE:
+
+                mpkt.set_field('udp.chksum', None)
 
             return None
 
     return udp
 
-def udp_injector(context, mpkt):
-    payload = mpkt.cfields.get('inj::payload', None)
+def udp_injector(context, mpkt, length):
+    mpkt.set_fields('udp', {
+        'sport' : mpkt.l4_src,
+        'dport' : mpkt.l4_dst,
+        'chksum' : None})
 
-    if not payload:
-        return INJ_FORWARD
-    else:
-        AuditManager().get_injector(0, LL_TYPE_IP)
+    length += UDP_LENGTH
+    mpkt.session = None
 
-        if injector(context, mpkt) == INJ_ERROR:
-            log.error('Error in underlayer injector')
-            return INJ_ERROR
+    injector = AuditManager().get_injector(0, STATELESS_IP_MAGIC)
+    is_ok, length = injector(context, mpkt, length)
 
-        pkt = mpkt.cfields.get('inj::data', None)
+    length = context.get_mtu() - length
 
-        if not pkt:
-            log.error('The underlayer injector returns None as mpkt')
-            return INJ_ERROR
+    if length > mpkt.inject_len:
+        length = mpkt.inject_len
 
-        plen = len(payload)
-        mtu = context.get_mtu() - pkt.get_size()
+    payload = mpkt.inject[:length]
+    payload_pkt = MetaPacket.new('raw')
+    payload_pkt.set_field('raw.load', payload)
+    mpkt.add_to('udp', payload_pkt)
 
-        if plen > mtu:
-            plen = mtu
-
-        pkt = pkt / MetaPacket.new('udp') / MetaPacket.new('raw')
-        pkt.set_field('udp.sport', mpkt.get_field('udp.sport'))
-        pkt.set_field('udp.dport', mpkt.get_field('udp.dport'))
-
-        pkt.set_field('raw.load', payload[:plen])
-
-        remaining = payload[plen:]
-
-        if remaining:
-            pkt.set_cfield('inj::payload', remaining)
-
-        mpkt.set_cfield('inj::data', pkt)
-
-        return INJ_FORWARD
+    return True, length
 
 class UDPDecoder(PassiveAudit):
     def register_decoders(self):
         manager = AuditManager()
         manager.add_decoder(PROTO_LAYER, NL_TYPE_UDP, self.decoder)
-        manager.add_injector(0, NL_TYPE_UDP, self.injector)
+        manager.add_injector(1, NL_TYPE_UDP, self.injector)
 
     def start(self, reader):
         self.decoder = udp_decoder()
@@ -141,7 +131,7 @@ class UDPDecoder(PassiveAudit):
     def stop(self):
         manager = AuditManager()
         manager.remove_decoder(PROTO_LAYER, NL_TYPE_UDP, self.decoder)
-        manager.remove_injector(0, NL_TYPE_UDP, self.injector)
+        manager.remove_injector(1, NL_TYPE_UDP, self.injector)
 
 __plugins__ = [UDPDecoder]
 __plugins_deps__ = [('UDPDecoder', ['IPDecoder'], ['=UDPDecoder-1.0'], [])]
@@ -150,7 +140,6 @@ __audit_type__ = 0
 __protocols__ = (('udp', None), )
 __configurations__ = (('decoder.udp', {
     'checksum_check' : [True, 'Enable checksum check for IP packets'],
-    'enable_dissectors' : [True, 'Enable UDP protocol dissectors'],
     }),
 )
 __vulnerabilities__ = (('UDP decoder', {

@@ -78,6 +78,8 @@ class TCPStatus(object):
         self.seq_adj = 0
         self.injectable = 0
 
+STATELESS_IP_MAGIC = 0x0304e77e
+
 class IPIdent(object):
     magic = LL_TYPE_IP
 

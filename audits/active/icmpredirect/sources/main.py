@@ -24,7 +24,6 @@ import gobject
 import time
 
 from umit.pm.core.i18n import _
-from umit.pm.core.netconst import INJ_FORWARDED
 from umit.pm.core.const import STATUS_ERR, STATUS_WARNING, STATUS_INFO
 from umit.pm.core.auditutils import AuditOperation, is_ip
 
@@ -61,11 +60,11 @@ class IcmpRedirect(Plugin, ActiveAudit):
         AuditManager().remove_decoder_hook(NET_LAYER, LL_TYPE_IP, self._ip_hook)
 
     def _ip_hook(self, mpkt):
-        if mpkt.cfields.get('inj::flags', None) == INJ_FORWARDED:
+        if mpkt.flags & MPKT_FORWARDED:
             return
 
-        sip = mpkt.get_field('ip.src')
-        dip = mpkt.get_field('ip.dst')
+        sip = mpkt.l3_src
+        dip = mpkt.l3_dst
 
         for op in self.active_redirects:
             if ((op.smask and op.smask.match(sip)) or not op.smask) and \
