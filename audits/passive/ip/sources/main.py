@@ -52,7 +52,7 @@ from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import AuditManager, PassiveAudit
 from umit.pm.manager.sessionmanager import *
-from umit.pm.core.netconst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP, INJ_FORWARD
+from umit.pm.core.netconst import PROTO_LAYER, NET_LAYER, LL_TYPE_IP
 from umit.pm.core.auditutils import checksum
 
 from umit.pm.backend import MetaPacket
@@ -253,6 +253,18 @@ def ip_decoder():
 
     return ip
 
+def stateless_ip_injector(context, mpkt, length):
+    ident = IPIdent.create(mpkt)
+    sess = SessionManager().get_session(ident)
+
+    if not sess:
+        return False, length
+
+    mpkt.session = sess
+
+    injector = AuditManager().get_injector(0, LL_TYPE_IP)
+    return injector(context, mpkt, length)
+
 def ip_injector(context, mpkt, length):
     if length + 20 > context.get_mtu():
         return False, length
@@ -304,11 +316,13 @@ class IPDecoder(Plugin, PassiveAudit):
         manager = AuditManager()
         manager.add_decoder(NET_LAYER, LL_TYPE_IP, self.ip_decoder)
         manager.add_injector(0, LL_TYPE_IP, ip_injector)
+        manager.add_injector(0, STATELESS_IP_MAGIC, stateless_ip_injector)
 
     def stop(self):
         manager = AuditManager()
         manager.remove_decoder(NET_LAYER, LL_TYPE_IP, self.ip_decoder)
         manager.remove_injector(0, LL_TYPE_IP, ip_injector)
+        manager.remove_injector(0, STATELESS_IP_MAGIC, stateless_ip_injector)
 
         self.decoder = None
 
