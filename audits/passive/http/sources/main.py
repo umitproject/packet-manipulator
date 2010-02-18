@@ -266,6 +266,8 @@ class HTTPRequest(object):
         if idx < 0:
             return
 
+        val = val[idx + 1:]
+
         username = form_extract(val)
         password = form_extract(val, FORM_PASSWORD)
 
@@ -448,10 +450,16 @@ class HTTPRequest(object):
             return True, len(payload) + end_ptr
 
     def report(self, mpkt, typ, username, password):
+        if self.http_type == HTTP_RESPONSE:
+            src = (mpkt.l3_src, mpkt.l4_src)
+            dst = (mpkt.l3_dst, mpkt.l4_dst)
+        else:
+            src = (mpkt.l3_dst, mpkt.l4_dst)
+            dst = (mpkt.l3_src, mpkt.l4_src)
+
         self.manager.user_msg(
             'HTTP %s : %s:%d <-> %s:%d USERNAME: %s PASSWORD: %s' % \
-            (typ, mpkt.l3_src, mpkt.l4_src,
-             mpkt.l3_dst, mpkt.l4_dst,
+            (typ, src[0], src[1], dst[0], dst[1],
              username, password),
             6, HTTP_NAME)
 
