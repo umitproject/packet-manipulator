@@ -144,6 +144,9 @@ class Core(Singleton, gobject.GObject):
                 if not attr or attr == "":
                     return
 
+                if isinstance(attr, (list, tuple)):
+                    attr = '\n'.join(attr)
+
                 if c:
                     attr = [attr, ]
 
