@@ -22,6 +22,9 @@
 HTTP protocol dissector (Passive audit).
 
 This module uses TCP reassembler exposed in TCP decoder.
+>>> from umit.pm.core.auditutils import audit_unittest
+>>> audit_unittest('-f ethernet,ip,tcp,http', 'http-digest.pcap')
+dissector.http.info HTTP DIGEST : 10.0.2.102:1093 <-> 10.0.1.101:80 USERNAME: Susan PASSWORD: realm=INS.COM, qop=auth, algorithm=MD5-sess, uri=/Security/Digest/, nonce=20d1da125f2fc6013eec4a6f4d1cf34133fffe449de04ce7f6b8e6110c0ee23867e01f774a96c8d5, nc=00000001, cnonce=52447499ed25edfa526e88d3623882ed, response=6e33ca77c2acbbc5ffc38df51b2f5702
 """
 
 from base64 import b64decode
@@ -45,12 +48,17 @@ HTTP_TRAILER = '\r\n\r\n'
 
 NTLM_WAIT_RESPONSE = 0
 
-FORM_USERNAME = HTTP_REQUEST  = 0
-FORM_PASSWORD = HTTP_RESPONSE = 1
+FORM_USERNAME = 0
+FORM_PASSWORD = 1
+
+HTTP_REQUEST  = 0
+HTTP_RESPONSE = 1
 
 g_fields = None
 
 def form_extract(data, type=FORM_USERNAME):
+    global g_fields
+
     if not g_fields:
         return None
 
@@ -63,9 +71,7 @@ def form_extract(data, type=FORM_USERNAME):
             pass
 
 class HTTPRequest(object):
-    http_type = HTTP_REQUEST
-
-    def __init__(self, sess):
+    def __init__(self, sess, manager):
         self.headers_complete = False
         self.content_length = -1
         self.chunked = False
@@ -74,6 +80,8 @@ class HTTPRequest(object):
         self.chunks = [(-1, '')]
 
         self.session = sess
+        self.manager = manager
+        self.http_type = HTTP_REQUEST
 
     def feed(self, mpkt, data):
         """
@@ -84,28 +92,40 @@ class HTTPRequest(object):
             end_ptr = self._parse_headers(mpkt, data)
 
             if self.headers_complete:
+                # If the body is missing continue processing
 
-                if self.content_length > 0 or self.chunked:
-                    if data[end_ptr:]:
-                        ret = self._parse_body(data[end_ptr:], end_ptr)
+                finished = self._check_finished()
 
-                        if ret[0]:
-                            self.analyze_headers(mpkt)
-                            self._parse_post(mpkt)
+                if not finished:
+                    remaining = data[end_ptr:]
 
-                            if self.http_type == HTTP_REQUEST:
-                                mpkt.set_cfield(HTTP_NAME + '.request',
-                                                self.body)
-                            else:
-                                mpkt.set_cfield(HTTP_NAME + '.response',
-                                                self.body)
+                    if not remaining:
+                        return False, end_ptr # Not finished. Body missing
 
-                        return ret
+                    ret = self._parse_body(remaining, end_ptr)
 
-                    return False, end_ptr
+                    if ret[0] == True:
+                        self.analyze_headers(mpkt)
+                        self._parse_post(mpkt)
+
+                        if self.http_type == HTTP_REQUEST:
+                            mpkt.set_cfield(HTTP_NAME + '.request',
+                                            self.body)
+                        else:
+                            mpkt.set_cfield(HTTP_NAME + '.response',
+                                            self.body)
+
+                        self.manager.run_hook_point('http', mpkt)
+
+                        # We have finished processing our response/request
+                        # at this stage.
+
+                    return ret
 
                 self.analyze_headers(mpkt)
-                return True, end_ptr
+                self.manager.run_hook_point('http', mpkt)
+
+                return finished, end_ptr
 
             return False, end_ptr
         else:
@@ -120,7 +140,21 @@ class HTTPRequest(object):
                 else:
                     mpkt.set_cfield(HTTP_NAME + '.response', self.body)
 
+                self.manager.run_hook_point('http', mpkt)
+
             return ret
+
+    def _check_finished(self):
+        if self.content_length > 0:
+            return self.content_length == len(self.body)
+
+        if self.chunked:
+            return False
+
+        if 'post' in self.headers:
+            return False
+
+        return True
 
     def _parse_headers(self, mpkt, payload):
         idx = payload.find(HTTP_TRAILER)
@@ -132,7 +166,7 @@ class HTTPRequest(object):
             last = payload.rfind('\r\n')
 
             if last == 0:
-                return 3
+                return 2
             if last == -1:
                 return 0
 
@@ -142,7 +176,13 @@ class HTTPRequest(object):
             if not line:
                 break
 
-            key, value = line.split(' ', 1)
+            try:
+                key, value = line.split(' ', 1)
+            except:
+                # FIXME: dirty hack.
+                # Handle headers like Host:127.0.0.1
+                key, value = line.split(':', 1)
+                key += ':'
 
             if key[-1] == ':':
                 key = key[:-1].lower()
@@ -157,7 +197,6 @@ class HTTPRequest(object):
                 try:
                     value = int(value)
                     self.content_length = value
-
                 except ValueError:
                     pass
 
@@ -168,7 +207,8 @@ class HTTPRequest(object):
                 mpkt.set_cfield(HTTP_NAME + '.response_protocol', key[5:])
                 mpkt.set_cfield(HTTP_NAME + '.response_status', value)
 
-            elif key == 'authorization':
+            elif key == 'authorization' or \
+                 key == 'www-authenticate':
                 if value[0:9].upper() == 'PASSPORT ':
                     self._parse_passport(mpkt, value[9:])
                 elif value[0:5].upper() == 'NTLM ' and self.session:
@@ -177,12 +217,11 @@ class HTTPRequest(object):
                     self._parse_basic(mpkt, value[6:])
                 elif value[0:7].upper() == 'DIGEST ':
                     self._parse_digest(mpkt, value[7:])
-
-            elif key == 'www-authenticate':
-                if value[0:5] == 'NTLM ':
+                elif value[0:5] == 'NTLM ':
                     self._parse_ntlm(mpkt, value[5:])
 
             self.headers[key].append(value)
+
 
         if self.headers_complete:
             return idx + 4
@@ -190,6 +229,9 @@ class HTTPRequest(object):
             return last
 
     def analyze_headers(self, mpkt):
+        if not self.headers:
+            return
+
         mpkt.set_cfield(HTTP_NAME + '.headers', self.headers)
 
         if self.http_type == HTTP_REQUEST:
@@ -231,7 +273,17 @@ class HTTPRequest(object):
             mpkt.set_cfield('username', username)
             mpkt.set_cfield('password', password)
 
+            self.report(mpkt, 'GET', username, password)
+
     def _parse_post(self, mpkt):
+        # Export chunked body as list instead as string
+        # and avoid parsing that
+
+        if self.chunked:
+            self.body = map(lambda x: x[1], self.chunks)
+            return
+
+        # No Post header in headers. Don't procede
         if not 'post' in self.headers:
             return
 
@@ -241,6 +293,8 @@ class HTTPRequest(object):
         if username and password:
             mpkt.set_cfield('username', username)
             mpkt.set_cfield('password', password)
+
+            self.report(mpkt, 'POST', username, password)
 
     def _parse_passport(self, mpkt, val):
         # TODO: implement me.
@@ -268,8 +322,12 @@ class HTTPRequest(object):
                         values.append(k + "=" + v)
         finally:
             if found:
+                password = ', '.join(values)
+
                 mpkt.set_cfield('username', user)
-                mpkt.set_cfield('password', ', '.join(values))
+                mpkt.set_cfield('password', password)
+
+                self.report(mpkt, 'DIGEST', user, password)
 
     def _parse_ntlm(self, mpkt, val):
         val = b64decode(val)
@@ -309,15 +367,19 @@ class HTTPRequest(object):
                 mpkt.set_cfield('username', username)
                 mpkt.set_cfield('password', password)
 
+                self.report(mpkt, 'NTLM', username, password)
+
                 self.session.data = None
 
-    def _parse_basic(self, val):
+    def _parse_basic(self, mpkt, val):
         val = b64decode(val)
         ret = val.split(':', 1)
 
         if isinstance(ret, tuple) and len(ret) == 2:
-            mpkt.set_cfield('user', ret[0])
+            mpkt.set_cfield('username', ret[0])
             mpkt.set_cfield('password', ret[1])
+
+            self.report(mpkt, 'BASIC', ret[0], ret[1])
 
     def _parse_body(self, payload, end_ptr=0):
         if self.chunked:
@@ -327,14 +389,17 @@ class HTTPRequest(object):
             if clen == -1:
                 idx = payload.find('\r\n')
 
-                if not idx:
+                if idx == 0:
+                    idx = payload.find('\r\n', 2)
+
+                if idx < 0:
                     return False, end_ptr
 
                 clen = int(payload[:idx], 16)
                 idx += 2
 
                 if clen == 0:
-                    self.body = '\r\n'.join(map(lambda x: x[1], self.chunks))
+                    #self.body = '\r\n'.join(map(lambda x: x[1], self.chunks))
                     return True, idx
 
             real = payload[idx:]
@@ -382,13 +447,25 @@ class HTTPRequest(object):
             self.body += payload
             return True, len(payload) + end_ptr
 
+    def report(self, mpkt, typ, username, password):
+        self.manager.user_msg(
+            'HTTP %s : %s:%d <-> %s:%d USERNAME: %s PASSWORD: %s' % \
+            (typ, mpkt.l3_src, mpkt.l4_src,
+             mpkt.l3_dst, mpkt.l4_dst,
+             username, password),
+            6, HTTP_NAME)
+
 class HTTPResponse(HTTPRequest):
-    http_type = HTTP_RESPONSE
+    def __init__(self, sess, manager):
+        HTTPRequest.__init__(self, sess, manager)
+
+        self.http_type = HTTP_RESPONSE
 
 class HTTPSession(object):
-    def __init__(self):
-        self.request = HTTPRequest(self)
-        self.response = HTTPResponse(self)
+    def __init__(self, manager):
+        self.manager = manager
+        self.request = HTTPRequest(self, manager)
+        self.response = HTTPResponse(self, manager)
 
         self.requests = [self.request]
         self.responses = [self.response]
@@ -408,8 +485,8 @@ class HTTPSession(object):
 
             self.req_last_len += idx
 
-            if ret:
-                self.request = HTTPRequest(self)
+            if ret == True:
+                self.request = HTTPRequest(self, self.manager)
                 self.requests.append(self.request)
 
     def feed_response(self, hlfstream, mpkt):
@@ -422,15 +499,17 @@ class HTTPSession(object):
 
             self.res_last_len += idx
 
-            if ret is True:
-                self.response = HTTPResponse(self)
+            if ret == True:
+                self.response = HTTPResponse(self, self.manager)
                 self.responses.append(self.response)
+
 
 class HTTPDissector(Plugin, PassiveAudit):
     def start(self, reader):
         self.sessions = {}
+        self.manager = AuditManager()
 
-        conf = AuditManager().get_configuration(HTTP_NAME)
+        conf = self.manager.get_configuration(HTTP_NAME)
 
         self.reassemble = conf['reassemble']
 
@@ -452,33 +531,39 @@ class HTTPDissector(Plugin, PassiveAudit):
 
         global g_fields
 
-        gflieds = dict(map(lambda x: (x, 0), ufields.split(',')) +  \
-                       map(lambda x: (x, 1), pfields.split(',')))
+        g_fields = dict(
+            map(lambda x: (x, FORM_USERNAME), ufields.split(',')) +  \
+            map(lambda x: (x, FORM_PASSWORD), pfields.split(','))
+        )
 
     def stop(self):
-        conf = AuditManager().get_configuration(HTTP_NAME)
+        conf = self.manager.get_configuration(HTTP_NAME)
 
         if not self.reassemble:
             for port in HTTP_PORTS:
-                AuditManager().remove_dissector(APP_LAYER_TCP, port,
-                                                self._http_decoder)
+                self.manager.remove_dissector(APP_LAYER_TCP, port,
+                                              self._http_decoder)
         else:
             self.tcpdecoder.remove_analyzer(self._tcp_callback)
 
+        self.manager.deregister_hook_point('http')
+
     def register_decoders(self):
-        if self.reassemble:
+        self.manager.register_hook_point('http')
+
+        if not self.reassemble:
             for port in HTTP_PORTS:
-                AuditManager().add_dissector(APP_LAYER_TCP, port,
-                                             self._http_decoder)
+                self.manager.add_dissector(APP_LAYER_TCP, port,
+                                           self._http_decoder)
 
     def _http_decoder(self, mpkt):
-        payload = mpkt.get_field('raw.load')
+        payload = mpkt.data
 
         if not payload:
             return None
 
         try:
-            obj = HTTPRequest(None)
+            obj = HTTPRequest(None, self.manager)
             obj.feed(mpkt, payload)
 
             found = False
@@ -491,32 +576,32 @@ class HTTPDissector(Plugin, PassiveAudit):
             if not found:
                 obj.http_type = HTTP_RESPONSE
                 obj.analyze_headers(mpkt)
-        except:
+        except Exception, exc:
             pass
 
     def _tcp_callback(self, stream, mpkt):
-        if stream.dport in HTTP_PORTS:
+        if stream.dport in HTTP_PORTS or \
+           stream.sport in HTTP_PORTS:
             stream.listeners.append(self._process_http)
 
     def _process_http(self, stream, mpkt, rcv):
-        if hash(stream) not in self.sessions:
-            sess = HTTPSession()
-            self.sessions[hash(stream)] = sess
+        if stream not in self.sessions:
+            sess = HTTPSession(self.manager)
+            self.sessions[stream] = sess
         else:
-            sess = self.sessions[hash(stream)]
+            sess = self.sessions[stream]
 
         sess.feed_response(stream.client, mpkt)
         sess.feed_request(stream.server, mpkt)
 
         if stream.state in (CONN_RESET, CONN_CLOSE, CONN_TIMED_OUT):
+            del self.sessions[stream]
 
-            del self.sessions[hash(stream)]
-
-        return INJ_COLLECT_DATA
+        return REAS_COLLECT_DATA
 
 
 __plugins__ = [HTTPDissector]
-__plugins_deps__ = [('HTTPDissector', ['TCPDecoder'], [], [])]
+__plugins_deps__ = [('HTTPDissector', ['TCPDecoder'], ['=HTTPDissector-1.0'], [])]
 
 __audit_type__ = 0
 __protocols__ = (('tcp', 80), ('tcp', 8080), ('http', None))
