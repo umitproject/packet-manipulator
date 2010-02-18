@@ -23,7 +23,7 @@ VNC protocol dissector (Passive audit)
 
 >>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp,vnc -sdecoder.tcp.checksum_check=0', 'vnc-session.pcap')
-dissector.vnc.info VNC : 172.27.17.2:5900 -> ad909a41fb0309fec3772f2860d946c3:985878519f9f7ecd7fb97aedaa912b10
+dissector.vnc.info VNC : 172.27.17.2:5900 -> 985878519f9f7ecd7fb97aedaa912b10:ad909a41fb0309fec3772f2860d946c3
 """
 
 from umit.pm.core.logger import log
@@ -40,11 +40,19 @@ LOGIN_OK       = 6
 LOGIN_FAILED   = 7
 LOGIN_TOOMANY  = 8
 
+RFB_3 = 0
+RFB_7 = 1
+RFB_8 = 2
+
 class VNCStatus(object):
-    def __init__(self):
+    def __init__(self, version):
         self.status = WAIT_AUTH
         self.challenge = ''
         self.response = ''
+        self.version = version
+
+        if version == RFB_7 or version == RFB_8:
+            self.status = WAIT_CHALLENGE
 
 def vnc_dissector():
     VNC_NAME = 'dissector.vnc'
@@ -60,10 +68,22 @@ def vnc_dissector():
 
             if not sess:
                 if mpkt.data and mpkt.data.startswith("RFB "):
-                    mpkt.set_cfield('banner', mpkt.data.strip())
+                    version = mpkt.data.strip()
+
+                    if version.endswith('003.003'):
+                        ver = RFB_3
+                    elif version.endswith('003.007'):
+                        ver = RFB_7
+                    elif version.endswith('003.008'):
+                        ver = RFB_8
+                    else:
+                        log.debug('No supported RFB protocol version %s' % version)
+                        return
+
+                    mpkt.set_cfield('banner', version)
 
                     newsess = sessions.lookup_session(mpkt, VNC_PORTS, VNC_NAME, True)
-                    newsess.data = VNCStatus()
+                    newsess.data = VNCStatus(ver)
             else:
                 conn_status = sess.data
 
@@ -75,9 +95,10 @@ def vnc_dissector():
                     elif mpkt.data.startswith("\x00\x00\x00\x02"):
                         conn_status.status = WAIT_CHALLENGE
 
-                if conn_status.status == WAIT_CHALLENGE and len(mpkt.data) >= 16:
+
+                if conn_status.status == WAIT_CHALLENGE and len(mpkt.data) == 16:
                     conn_status.status = WAIT_RESPONSE
-                    conn_status.challenge = mpkt.data[:16]
+                    conn_status.challenge = mpkt.data
                 elif conn_status.status == WAIT_RESULT and mpkt.data:
                     if mpkt.data.startswith("\x00\x00\x00\x00"):
                         conn_status.status = LOGIN_OK
@@ -104,8 +125,8 @@ def vnc_dissector():
                 elif conn_status.status >= LOGIN_OK:
                     convert = lambda x:"".join([hex(ord(c))[2:].zfill(2) for c in x])
 
-                    password = convert(conn_status.response) + ':' + \
-                               convert(conn_status.challenge)
+                    password = convert(conn_status.challenge) + ':' + \
+                               convert(conn_status.response)
 
                     if conn_status.status > LOGIN_OK:
                         manager.user_msg('VNC : %s:%d -> %s (failed)' % \
