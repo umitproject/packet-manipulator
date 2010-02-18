@@ -33,12 +33,13 @@ class StatusView(gtk.ScrolledWindow):
     def __init__(self):
         super(StatusView, self).__init__()
 
-        self.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         self.tag_table = gtk.TextTagTable()
         self.buffer = gtk.TextBuffer(self.tag_table)
         self.view = gtk.TextView(self.buffer)
+        self.view.set_wrap_mode(gtk.WRAP_WORD_CHAR)
         self.view.set_indent(4)
 
         Prefs()['gui.statustab.font'].connect(self.__modify_font)
