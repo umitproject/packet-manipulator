@@ -73,7 +73,7 @@ class SMBSession(object):
         #    return
 
         username = self.user or 'anonymous'
-        mpkt.set_cfield('user', username)
+        mpkt.set_cfield('username', username)
 
         domain = self.domain or ''
 
