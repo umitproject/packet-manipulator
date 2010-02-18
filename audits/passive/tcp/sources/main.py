@@ -99,13 +99,12 @@ class Buffer(object):
         self.fin = 0
         self.urg = 0
         self.seq = 0
-        self.ack = 0
 
         self.prev, self.next = None, None
 
     def __repr__(self):
-        return '<Buffer %.10s seq=%d ack=%d fin=%d>' \
-               % (self.data, self.seq, self.ack, self.fin)
+        return '<Buffer %.10s seq=%d fin=%d>' \
+               % (repr(self.data), self.seq, self.fin)
 
     def dump(self):
         """
@@ -125,7 +124,6 @@ class HalfStream(object):
         self.seq = 0
         self.first_data_seq = 0
         self.ack_seq = 0
-        self.seq_adj = 0 # For injection
         self.window = 0
 
         self.ts_on = 0
@@ -146,8 +144,8 @@ class HalfStream(object):
         self.plist_tail = None
 
     def __repr__(self):
-        return '<HalfStream(to=%s) seq=%d ack=%d adj=%d data=%.10s>' \
-               % (self.name, self.seq, self.ack_seq, self.seq_adj, self.data)
+        return '<HalfStream(to=%s) seq=%d ack=%d data=%.10s>' \
+               % (self.name, self.seq, self.ack_seq, self.data)
 
 class TCPStream(object):
     def __init__(self, source, dest, sport, dport):
@@ -180,9 +178,9 @@ class TCPStream(object):
         "@return the bytes collected of the session"
         return self.client.count + self.server.count
 
-    def __hash__(self):
-        return hash(self.source) ^ hash(self.sport) ^ \
-               hash(self.dest) ^ hash(self.dport)
+    def mkhash(self):
+        return hash(self.source) ^ hash(self.dest) ^ \
+               hash(self.sport ^ self.dport)
 
     def __repr__(self):
         return '%s:%d <-> %s:%d' % (
@@ -279,8 +277,7 @@ class Reassembler(object):
         """
 
         datalen = mpkt.get_field('ip.len') - \
-                  4 * mpkt.get_field('ip.ihl') - \
-                  4 * (mpkt.get_field('tcp.dataofs') or 0)
+                  mpkt.l3_len - mpkt.l4_len
 
         if datalen < 0:
             log.warning('Bogus TCP/IP header (datalen < 0)')
@@ -294,7 +291,7 @@ class Reassembler(object):
             log.warning('Bogus IP header (src or dst are NULL)')
             return
 
-        tcpflags = mpkt.get_field('tcp.flags')
+        tcpflags = mpkt.l4_flags
 
         if not tcpflags:
             return
@@ -314,8 +311,8 @@ class Reassembler(object):
         else:
             snd, rcv = stream.server, stream.client
 
-        tcpseq = mpkt.get_field('tcp.seq', 0)
-        tcpack = mpkt.get_field('tcp.ack', 0)
+        tcpseq = mpkt.l4_seq or 0
+        tcpack = mpkt.l4_ack or 0
 
         if tcpflags & TH_SYN:
             if is_client or stream.client.state != TCP_SYN_SENT or \
@@ -329,7 +326,7 @@ class Reassembler(object):
             stream.server.seq = \
             stream.server.first_data_seq = tcpseq + 1
             stream.server.ack_seq = tcpack
-            stream.server.window = mpkt.get_field('tcp.window')
+            stream.server.window = mpkt.get_field('tcp.window', 0)
 
             if stream.client.ts_on:
                 stream.server.ts_on, stream.server.curr_ts = get_ts(mpkt)
@@ -350,12 +347,10 @@ class Reassembler(object):
                 stream.server.wscale_on = 0
                 stream.server.wscale = 1
 
-        if not (not datalen and tcpseq == (rcv.ack_seq)) and \
-           (not (tcpseq - (rcv.ack_seq + rcv.window * rcv.wscale) <= 0) or \
-            (tcpseq + datalen) - rcv.ack_seq < 0):
-            #print "*" * 80
-            #print mpkt.get_field('raw.load')
-            #print "*" * 80
+        #if not (not datalen and tcpseq == (rcv.ack_seq)) and \
+        #   (not (tcpseq - (rcv.ack_seq + rcv.window * rcv.wscale) < 0) or \
+        #   (tcpseq + datalen) - rcv.ack_seq < 0):
+        if tcpseq + datalen - rcv.ack_seq < 0:
             return
 
         if tcpflags & TH_RST:
@@ -392,23 +387,8 @@ class Reassembler(object):
                     stream.state = CONN_DATA
 
         if tcpflags & TH_ACK:
-            log.debug('ACK recvd -> CACK: %d OACK: %d ADJ: %d' % \
-                      (tcpack, snd.ack_seq, rcv.seq_adj))
-
             if tcpack - snd.ack_seq > 0:
-                snd.ack_seq = tcpack# + rcv.seq_adj
-                print snd
-
-            # Handle ACK packets
-            if rcv.state == TCP_ESTABLISHED and not datalen and \
-               (rcv.seq_adj != 0 or snd.seq_adj != 0):
-
-                mpkt.set_cfield('inj::l4proto', NL_TYPE_TCP)
-                mpkt.set_cfield('inj::data', (stream, rcv))
-                mpkt.set_cfield('inj::flags', INJ_MODIFIED)
-
-                log.debug('Fixing ACK packet')
-
+                snd.ack_seq = tcpack
             if rcv.state == FIN_SENT:
                 rcv.state = FIN_CONFIRMED
             if rcv.state == FIN_CONFIRMED and snd.state == FIN_CONFIRMED:
@@ -421,16 +401,17 @@ class Reassembler(object):
                 return
 
         if (datalen + (tcpflags & TH_FIN)) > 0:
-            payload = mpkt.get_field('tcp')[mpkt.get_field('tcp.dataofs') * 4:]
+            payload = mpkt.data
 
             if payload:
                 self.tcp_queue(stream, mpkt, snd, rcv, payload, datalen)
 
-        snd.window = mpkt.get_field('tcp.window')
+        snd.window = mpkt.get_field('tcp.window', 0)
 
         if rcv.rmem_alloc > 65535:
             self.prune_queue(rcv)
 
+    #@trace
     def prune_queue(self, rcv):
         """
         Prune a pending queue by freeing all the data
@@ -456,46 +437,23 @@ class Reassembler(object):
         rcv.count += rcv.count_new
 
     def notify(self, mpkt, stream, rcv):
-        ret = INJ_SKIP_PACKET
+        ret = REAS_SKIP_PACKET
 
         for listener in stream.listeners:
             ret = max(ret,
                       listener(stream, mpkt, rcv))
 
-            if ret == INJ_MODIFIED or ret == INJ_FORWARD:
-
-                if ret == INJ_MODIFIED:
-                    mpkt.set_cfield('inj::l4proto', NL_TYPE_TCP)
-                    mpkt.set_cfield('inj::data', (stream, rcv))
-
-                mpkt.set_cfield('inj::flags', ret)
-                return
-
-        if ret == INJ_COLLECT_STATS:
+        if ret == REAS_COLLECT_STATS:
             log.debug('Collecting stats')
             rcv.data = ''
-        elif ret == INJ_SKIP_PACKET:
+        elif ret == REAS_SKIP_PACKET:
             log.debug('Skipping packet')
             rcv.count_new = 0
             rcv.data = ''
         else:
             log.debug('Collecting data')
-            pass
 
-        if rcv.seq_adj != 0:
-            # Ok this stream is a child of a previous injection so
-            # we have to modify the seq and ack to respect the flow
-
-            mpkt.set_cfield('inj::l4proto', NL_TYPE_TCP)
-            mpkt.set_cfield('inj::data', (stream, rcv))
-            mpkt.set_cfield('inj::flags', INJ_MODIFIED)
-
-            log.debug('Adjusting seq and ack')
-
-        #print inet_ntoa(stream.source), stream.sport, \
-        #      inet_ntoa(stream.dest), stream.dport
-
-    @trace
+    #@trace
     def add_from_skb(self, stream, mpkt, rcv, snd, payload, datalen, tcpseq, \
                      fin, urg, urg_ptr):
 
@@ -558,7 +516,7 @@ class Reassembler(object):
             if rcv.state == TCP_CLOSE:
                 self.add_tcp_closing_timeout(stream)
 
-    @trace
+    #@trace
     def tcp_queue(self, stream, mpkt, snd, rcv, payload, datalen):
         """
         Append a packet to a tcp queue
@@ -569,20 +527,12 @@ class Reassembler(object):
         @param payload the payload of the tcp packet as str
         @param datalen the datalen
         """
-        tcpseq = mpkt.get_field('tcp.seq')
-        tcpflags = mpkt.get_field('tcp.flags')
+        tcpseq = mpkt.l4_seq
+        tcpflags = mpkt.l4_flags
 
         exp_seq = (snd.first_data_seq + rcv.count + rcv.urg_count)
 
-        log.debug('Original TCP sequence: %d seq_adj: %d exp_seq: %d' \
-                  % (tcpseq, rcv.seq_adj, exp_seq))
-
-        #if tcpseq != exp_seq:# and tcpseq + rcv.seq_adj == exp_seq:
-        #    log.debug('Current TCP sequence adjusted to exp_seq (+ seq_adj)')
-        #    tcpseq += rcv.seq_adj
-
         if not tcpseq - exp_seq > 0:
-            log.debug('Before data')
 
             # This packet is old because seq < current
             if (tcpseq + datalen + (tcpflags & TH_FIN)) - exp_seq > 0:
@@ -643,7 +593,7 @@ class Reassembler(object):
 
             packet.seq = tcpseq
             packet.urg = tcpflags & TH_URG
-            packet.urg_ptr = mpkt.get_field('tcp.urgptr')
+            packet.urg_ptr = mpkt.get_field('tcp.urgptr', 0)
 
             while True:
                 if not p or not p.seq - tcpseq > 0:
@@ -675,7 +625,7 @@ class Reassembler(object):
                 else:
                     rcv.plist_tail = packet
 
-            log.debug('List: %s' % rcv.plist.dump())
+            #log.debug('List: %s' % rcv.plist.dump())
 
     def add_new_tcp(self, mpkt):
         """
@@ -685,7 +635,7 @@ class Reassembler(object):
                 inet_aton(mpkt.l3_dst),
                 mpkt.l4_src, mpkt.l4_dst)
 
-        hash_idx = ':'.join(ctup[0:2])
+        hash_idx = hash(ctup[0]) ^ hash(ctup[1]) ^ hash(ctup[2] ^ ctup[3])
 
         if self.n_streams >= self.max_streams:
             orig_client_state = self.oldest_stream.client.state
@@ -713,8 +663,8 @@ class Reassembler(object):
 
         new_stream.client.state = TCP_SYN_SENT
         new_stream.client.seq = \
-        new_stream.client.first_data_seq = mpkt.get_field('tcp.seq') + 1
-        new_stream.client.window = mpkt.get_field('tcp.window')
+        new_stream.client.first_data_seq = mpkt.l4_seq + 1
+        new_stream.client.window = mpkt.get_field('tcp.window', 0)
 
         new_stream.client.ts_on, new_stream.client.curr_ts = get_ts(mpkt)
         new_stream.client.wscale_on, new_stream.client.wscale = get_wscale(mpkt)
@@ -766,7 +716,10 @@ class Reassembler(object):
         @param tup a tuple (srcip, dstip, srport, dport)
         @return a TCPStream or None
         """
-        it = self.tcp_streams.get(':'.join(tup[0:2]), None)
+        hash_idx = hash(tup[0]) ^ hash(tup[1]) ^ \
+                   hash(tup[2] ^ tup[3])
+
+        it = self.tcp_streams.get(hash_idx, None)
 
         while it:
             if it.sport == tup[2] and it.dport == tup[3]:
@@ -837,12 +790,12 @@ class Reassembler(object):
         """
         @param stream TCPStream instance
         """
+        hash_idx = stream.mkhash()
+
         self.del_tcp_closing_timeout(stream)
 
         self.prune_queue(stream.server)
         self.prune_queue(stream.client)
-
-        hash_idx = stream.source + ":" + stream.dest
 
         if stream.next_node:
             stream.next_node.prev_node = stream.prev_node
@@ -982,16 +935,19 @@ class TCPDecoder(Plugin, PassiveAudit):
                                                 'seq', 'flags'))
         mpkt.l4_len = mpkt.get_field('tcp.dataofs', 5) * 4
 
+        if mpkt.l4_src is None:
+            return None
+
         tcpraw = mpkt.get_field('tcp')
 
         if tcpraw:
             mpkt.data_len = mpkt.payload_len - mpkt.l4_len
             mpkt.data = tcpraw[mpkt.l4_len:]
 
-        if self.checksum_check and tcpraw:
-            ln = mpkt.get_field('ip.len') - 20
+        wrong = False
 
-            if ln == len(tcpraw):
+        if self.checksum_check and tcpraw:
+            if mpkt.payload_len == len(tcpraw):
                 ip_src = mpkt.l3_src
                 ip_dst = mpkt.l3_dst
 
@@ -999,12 +955,13 @@ class TCPDecoder(Plugin, PassiveAudit):
                               inet_aton(ip_src),
                               inet_aton(ip_dst),
                               mpkt.l4_proto,
-                              ln)
+                              mpkt.payload_len)
 
                 chksum = checksum(psdhdr + tcpraw[:16] + \
                                   "\x00\x00" + tcpraw[18:])
 
                 if mpkt.get_field('tcp.chksum', 0) != chksum:
+                    wrong = True
                     mpkt.set_cfield('good_checksum', hex(chksum))
                     self.manager.user_msg(
                                 _("Invalid TCP packet from %s to %s : " \
@@ -1013,8 +970,13 @@ class TCPDecoder(Plugin, PassiveAudit):
                                  hex(mpkt.get_field('tcp.chksum', 0)),  \
                                  hex(chksum)),
                                 5, 'decoder.tcp')
-                elif self.reassembler:
-                    self.reassembler.process_tcp(mpkt)
+
+        if wrong:
+            self.manager.run_decoder(APP_LAYER, PL_DEFAULT, mpkt)
+            return None
+
+        if self.reassembler:
+            self.reassembler.process_tcp(mpkt)
 
         ident = TCPIdent.create(mpkt)
         sess = SessionManager().get_session(ident)
