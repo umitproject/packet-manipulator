@@ -51,7 +51,7 @@ def udp_decoder():
 
     def udp(mpkt):
         mpkt.l4_len = UDP_LENGTH
-        mpkt.l4_src,
+        mpkt.l4_src, \
         mpkt.l4_dst = mpkt.get_fields('udp', ('sport', 'dport'))
 
         load = mpkt.get_field('udp')[mpkt.l4_len:]
@@ -83,14 +83,14 @@ def udp_decoder():
                              hex(chksum)),                          \
                             5, UDP_NAME)
 
-            manager.run_decoder(APP_LAYER, PL_DEFAULT, mpkt)
+        manager.run_decoder(APP_LAYER, PL_DEFAULT, mpkt)
 
-            if mpkt.flags & MPKT_MODIFIED and \
-               mpkt.flags & MPKT_FORWARDABLE:
+        if mpkt.flags & MPKT_MODIFIED and \
+           mpkt.flags & MPKT_FORWARDABLE:
 
-                mpkt.set_field('udp.chksum', None)
+            mpkt.set_field('udp.chksum', None)
 
-            return None
+        return None
 
     return udp
 
