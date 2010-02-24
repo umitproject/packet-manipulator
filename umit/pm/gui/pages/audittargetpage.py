@@ -256,9 +256,10 @@ class AuditTargetPage(Perspective):
 
             if errs and not func:
                 errs.append(
-                    _('Neither get_target could be used to autopopulate'
-                      'target. Please load at least an appropriate plugin and '
-                      'make an ARP scan, or add targets MAC by hand.'))
+                    _('Neither get_target can be used to autopopulate the targ'
+                      'ets. Please load at least an appropriate plugin (like '
+                      'Profiler) and make an ARP scan, or add targets MAC by '
+                      'hand.'))
 
             if errs:
                 dialog = gtk.MessageDialog(self.get_toplevel(),
