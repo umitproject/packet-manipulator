@@ -139,7 +139,7 @@ class SnoopTab(UmitView):
         out = ''
 
         for row in self.store:
-            out += "[%s] %s (%d)\n" % (row[0] and 'YES' or 'NO',
+            out += "[%s] %s (%d)\n" % (row[0] and '+' or '-',
                                        row[1], row[2])
 
         if out:
@@ -215,7 +215,10 @@ class SnoopTab(UmitView):
                 self.store.clear()
 
                 for line in contents.splitlines():
-                    self.store.append((False, line.strip(), 0))
+                    line = line.strip()
+
+                    if line:
+                        self.store.append((False, line, 0))
 
         dialog.hide()
         dialog.destroy()
