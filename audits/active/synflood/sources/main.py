@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2008 Adriano Monteiro Marques
+# Copyright (C) 2008,2010 Adriano Monteiro Marques
 #
 # Author: Francesco Piccinno <stack.box@gmail.com>
 #
@@ -170,19 +170,25 @@ class SynFloodOperation(AuditOperation):
             while probes != 0 and self.internal:
                 pkt = MetaPacket.new('ip') / MetaPacket.new('tcp')
 
-                pkt.set_field('ip.dst', self.dip)
-                pkt.set_field('tcp.dport', self.dport)
-                pkt.set_field('tcp.flags', TH_SYN)
-
                 if self.sip is True:
-                    pkt.set_field('ip.src', random_ip())
-                elif sip != '0.0.0.0':
-                    pkt.set_field('ip.src', self.sip)
+                    sip = random_ip()
+                elif self.sip != '0.0.0.0':
+                    sip = self.sip
 
                 if self.sport is True:
-                    pkt.set_field('tcp.sport', randint(1, 65535))
+                    sport = randint(1, 65535)
                 else:
-                    pkt.set_field('tcp.sport', self.sport)
+                    sport = self.sport
+
+                pkt.set_fields('ip', {
+                    'dst' : self.dip,
+                    'src' : sip})
+
+                pkt.set_fields('tcp', {
+                    'sport' : sport,
+                    'dport' : self.dport,
+                    'flags' : TH_SYN,
+                    'seq' : randint(0, 2L**32-1)})
 
                 self.context.si_l3(pkt)
                 sleep(self.delay)
