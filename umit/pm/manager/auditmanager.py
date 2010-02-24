@@ -282,12 +282,6 @@ class AuditManager(Singleton):
                                ' has a wrong checksum'],
             'reassembled_payload' : [PM_TYPE_STR, 'Used by audits that can '
                                      'treassemble fragments of packets'],
-
-            'inj::l4proto' : [PM_TYPE_INT, 'Used to track down L4 protocol for '
-                             'injection'],
-            'inj::flags' : [PM_TYPE_INT, 'Used for injection'],
-            'inj::payload' : [PM_TYPE_STR, 'Data for injection'],
-            'inj::data' : [PM_TYPE_INSTANCE, 'General objects'],
         })
 
         self.add_decoder(APP_LAYER, PL_DEFAULT, self.__run_dissectors)
@@ -305,9 +299,9 @@ class AuditManager(Singleton):
             return
 
         if mpkt.l4_proto == NL_TYPE_TCP:
-            ret = NL_TYPE_TCP
+            ret = APP_LAYER_TCP
         elif mpkt.l4_proto == NL_TYPE_UDP:
-            ret = NL_TYPE_UDP
+            ret = APP_LAYER_UDP
         else:
             ret = None
 
@@ -549,6 +543,7 @@ class AuditManager(Singleton):
         while level is not None and type is not None:
             decoder, pre, post = self.get_decoder(level, type)
 
+
             if not decoder and not pre and not post:
                 return
 
@@ -658,13 +653,12 @@ class AuditDispatcher(object):
             else:
                 break
 
-        self._conn_manager.parse(mpkt)
+        if not mpkt.flags & MPKT_FORWARDED:
+            self._conn_manager.parse(mpkt)
 
-        if mpkt.flags & MPKT_FORWARDABLE and \
-           not mpkt.flags & MPKT_FORWARDED:
-
-            manager.run_hook_point('pm::pre-forward', mpkt)
-            self._context.forward(mpkt)
+            if mpkt.flags & MPKT_FORWARDABLE:
+                manager.run_hook_point('pm::pre-forward', mpkt)
+                self._context.forward(mpkt)
 
         mpkt.context = None
         mpkt.data = ''
