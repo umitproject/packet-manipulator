@@ -23,6 +23,7 @@ import gtk
 from umit.pm import backend
 from umit.pm.core.i18n import _
 from umit.pm.core.atoms import defaultdict
+from umit.pm.core.bus import ServiceBus
 
 from umit.pm.gui.core.app import PMApp
 from umit.pm.gui.core.views import UmitView
