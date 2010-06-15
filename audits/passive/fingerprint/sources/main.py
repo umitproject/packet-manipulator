@@ -72,7 +72,7 @@ def tcp_fp(finger):
                 opt_start = 20
                 opt_end = mpkt.get_field('tcp.dataofs') * 4
 
-                finger.push(mpkt, finger.WINDOW, mpkt.get_field('tcp.window'))
+                finger.push(mpkt, finger.WINDOW, mpkt.get_field('tcp.window', 0))
                 finger.push(mpkt, finger.TCPFLAG, (flags & TH_ACK) and 1 or 0)
                 finger.push(mpkt, finger.LT, opt_end)
 
