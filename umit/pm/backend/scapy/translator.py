@@ -35,6 +35,11 @@ global_trans = {
     'udp' : (UDP, None),
         'bootp' : (BOOTP, None),
             'dhcp' : (DHCP, None),
+    'raw' : (Raw, None),
+}
+
+if "SMBHeader" in globals():
+    global_trans_smb = {
         'nbt' : (NBTSession, None),
         'smb' : (SMBHeader, None),
 
@@ -45,11 +50,11 @@ global_trans = {
 
         'smbsax_req' : (SMBSetup_AndX_Request, None),
         'smbsax_req_as' : (SMBSetup_AndX_Request_Advanced_Security, None),
-
         'smbtcax_req' : (SMBTree_Connect_AndX_Request, None),
 
         'dns' : (DNS, None),
         'dnsqr' : (DNSQR, None),
         'dnsrr' : (DNSRR, None),
-    'raw' : (Raw, None),
-}
+    }
+    global_trans.update(global_trans_smb)
+
