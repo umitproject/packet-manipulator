@@ -55,7 +55,6 @@ class Chart(gtk.DrawingArea):
         self.sniff_context = session.context
         self.sniff_context.callback = self.update_drawing_clbk
         self.scalingfactor = 10
-        self.max_nodes = 10
         self.max_packets = 50
         self.left_margin = 180
         self.time_margin = 30
@@ -86,6 +85,7 @@ class Chart(gtk.DrawingArea):
         self.sniffing_frozen = False
         self.current_filter_index = 0
         self.timeout = gobject.timeout_add(300, self.__check_for_packets)
+        self.time_diff = 1
         #add host IP
         #TODO: Need to find a way of finding the IP without using scapy
 #        for x in scapy.all.conf.route.routes:
@@ -93,7 +93,12 @@ class Chart(gtk.DrawingArea):
 #                self.IPs.append(x[4])
         for x in self.filter_ips:
             self.__add_node_to_list(x)
-              
+    
+    def set_time_diff(self):
+        if self.time_diff != 0:
+	    self.time_diff = 0
+	else:
+	    self.time_diff = 1          
         
     def scan_from_list(self, list):
         self.IPs = []
@@ -141,15 +146,22 @@ class Chart(gtk.DrawingArea):
         for ip in self.IPs:
             cr.set_source_rgb(0.5, 0.5, 0.5)
             x_bearing, y_bearing, width, height = cr.text_extents(ip)[:4]
-            cr.move_to(margin, self.top_margin-height)
-            cr.show_text(ip)
-            cr.set_source_rgb(0,0,0)
-            cr.move_to(margin+width/2, self.top_margin)
-            cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
-            vline_positions.append(margin+width/2)
-            cr.stroke()
-            margin = margin+width+20
-            i=i+1
+            cur_ip_xpos = self.left_margin + width
+	    	#Draw if the ip drawing does not cross the right bound of the drawingArea
+            if cur_ip_xpos < self.window.get_size()[0]-self.right_margin :
+            	cr.move_to(margin, self.top_margin-height)
+            	cr.show_text(ip)
+            	cr.set_source_rgb(0,0,0)
+            	cr.move_to(margin+width/2, self.top_margin)
+            	cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
+            	vline_positions.append(margin+width/2)
+            	cr.stroke()
+            	margin = margin+width+20
+            	i=i+1
+            elif not self.sniffing_frozen:
+                self.sniffing_frozen =True
+                print "Area overflow"
+                break
             
         
         #draw packets   
@@ -157,7 +169,7 @@ class Chart(gtk.DrawingArea):
         pkts_this_timestamp = 1
         for i in range(len(self.Packets)):
             packet = self.Packets[i]
-            if self.filters == []:
+            if self.filters == [] and self.time_diff == 1:
                 time_passed = self.__get_time_passed(packet.get_datetime())
             else:
                 time_passed = (i+1)*200
@@ -257,7 +269,7 @@ class Chart(gtk.DrawingArea):
         
     def __add_node_to_list(self, address):
         #Add only IP addresses
-        if(address == "N/A" or address.find(":") != -1 or len(self.IPs) >= self.max_nodes):
+        if(address == "N/A" or address.find(":") != -1 ):
             #TODO: Find a better way instead of hard-coding the bound on the number of nodes
             return False
         try:

@@ -30,6 +30,7 @@ from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.gui.sessions.base import Session
 from umit.pm.gui.widgets.interfaces import InterfacesCombo
 from umit.pm.gui.pages.base import Perspective
+#from umit.pm.gui.pages.packetpage import packetpage
 from umit.pm.core.errors import PMErrorException
 from umit.pm.manager.preferencemanager import Prefs
 from umit.pm.higwidgets.higdialogs import HIGAlertDialog
@@ -47,7 +48,7 @@ glocator = None
 class MSC(Perspective):
     icon = gtk.STOCK_INFO
     title = _('MSC')
-
+    
     def create_ui(self):
         
         self.chart = Chart(self.session)
@@ -63,7 +64,8 @@ class MSC(Perspective):
         self.filter_button = gtk.Action(None, None, _('Sequential Filter'),gtk.STOCK_PREFERENCES)
         self.zoom_in_button= gtk.Action(None, None, _('Zoom in'), gtk.STOCK_ZOOM_IN)        
         self.zoom_out_button= gtk.Action(None, None, _('Zoom out'), gtk.STOCK_ZOOM_OUT)
-
+        self.fullscreen_button= gtk.Action(None, None, _('fullscreen'), gtk.STOCK_FULLSCREEN)
+        self.time_diff_button=gtk.Action(None, None, _('Time scaling'), gtk.STOCK_JUMP_TO)
 
 
         self.toolbar.insert(self.pcap_button.create_tool_item(), -1)
@@ -72,23 +74,32 @@ class MSC(Perspective):
         self.toolbar.insert(self.filter_button.create_tool_item(), -1)
 
         self.toolbar.insert(self.zoom_out_button.create_tool_item(), -1)
-        self.toolbar.insert(self.zoom_in_button.create_tool_item(), -1)        
-
+        self.toolbar.insert(self.zoom_in_button.create_tool_item(), -1)
+        self.toolbar.insert(self.time_diff_button.create_tool_item(),-1)  
+        self.toolbar.insert(self.fullscreen_button.create_tool_item(), -1)      
+        
 
         self.zoom_in_button.connect('activate', self.__zoom_in)
         self.filter_button.connect('activate', self.__open_prefs)
         self.zoom_out_button.connect('activate', self.__zoom_out)
         self.png_button.connect('activate', self.__save_as_png)  
-        self.pcap_button.connect('activate', self.__open_pcap)  
-        
-        sw = gtk.ScrolledWindow()
-        sw.set_policy(gtk.POLICY_ALWAYS, gtk.POLICY_ALWAYS)
-        sw.set_shadow_type(gtk.SHADOW_NONE)
-        sw.add_with_viewport(self.chart)
-        
-        self.pack_start(self.toolbar, False, False)
-        self.pack_start(sw)
-     
+        self.pcap_button.connect('activate', self.__open_pcap)
+        self.fullscreen_button.connect('activate', self.__create_fullscreen)
+        self.time_diff_button.connect('activate', self.__time_diff_change)
+	
+        self.sw = gtk.ScrolledWindow()
+        self.sw.set_policy(gtk.POLICY_ALWAYS, gtk.POLICY_ALWAYS)
+        self.sw.set_shadow_type(gtk.SHADOW_NONE)
+        self.sw.add_with_viewport(self.chart)
+	
+	self.box = gtk.VBox()
+        self.btn_fullscreen = gtk.Button()
+        self.btn_fullscreen.set_label("FullScreen Mode")
+        self.sw.add(self.box)
+	self.box.pack_start(self.toolbar, False, False)
+        self.box.pack_start(self.sw)
+	self.pack_start(self.box)
+	     
         self.show_all()
         
         # Register the lock/unlock callback
@@ -199,7 +210,50 @@ class MSC(Perspective):
         if alloc.y < adj.value or alloc.y > adj.value + adj.page_size:
             adj.set_value(min(alloc.y, adj.upper-adj.page_size))
 
+    def __time_diff_change(self, action):
+	self.chart.set_time_diff()
+	
 
+    def __create_fullscreen(self, widget=None):
+        print ".."
+	if self.get_children() != []:
+	    self.remove(self.get_children()[0])
+	self.fullscreen_button.set_visible(False)
+        self.box_full = gtk.VBox()
+        
+        self.btn_fullscreen2 = gtk.Button()
+	self.set_size_request(96,36)
+        self.btn_fullscreen2.set_label("Leave FullScreen Mode")
+        self.btn_fullscreen2.connect("clicked", self.__fullscreen_exit)
+        
+        self.__fullscreen_window = gtk.Window()
+        
+            
+        self.box_full.pack_start(self.box)
+	self.box_full.pack_start(self.btn_fullscreen2,False)
+	
+        self.box.show()
+	self.box_full.show()
+        self.btn_fullscreen2.show()
+
+        self.__fullscreen_window.add(self.box_full)
+        self.__fullscreen_window.connect('delete-event', self.__fullscreen_exit)
+        self.__fullscreen_window.show()
+        self.__fullscreen_window.fullscreen()
+
+        
+        
+    def __fullscreen_exit(self, widget):
+        self.__fullscreen_window.hide()
+        if self.box_full.get_children() != []:
+	    self.box_full.remove(self.box_full.get_children()[0])
+	self.fullscreen_button.set_visible(True)    
+	self.pack_start(self.box, True)    
+	self.box.show()
+	self.show_all()
+        
+        
+        
     
 class MSCSession(Session):
     session_name = "MSC"

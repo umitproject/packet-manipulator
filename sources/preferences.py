@@ -38,7 +38,8 @@ class MSCPreferenceDialog(gtk.Dialog):
         super(MSCPreferenceDialog, self).__init__(
             _('Preferences - MSC'), PMApp().main_window,
             gtk.DIALOG_DESTROY_WITH_PARENT,
-            (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE,
+            (gtk.STOCK_ADD, gtk.RESPONSE_ACCEPT,
+             gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE,
              gtk.STOCK_APPLY, gtk.RESPONSE_APPLY,
              gtk.STOCK_OK, gtk.RESPONSE_OK)
         )
@@ -46,7 +47,7 @@ class MSCPreferenceDialog(gtk.Dialog):
         self.chart = chart
         self.store = gtk.ListStore(str, str)
         self.tree = gtk.TreeView(self.store)
-
+        self.count = 4 
         self.tree.append_column(
             gtk.TreeViewColumn('', gtk.CellRendererPixbuf(), stock_id=0))
 
@@ -76,7 +77,7 @@ class MSCPreferenceDialog(gtk.Dialog):
         sw.set_shadow_type(gtk.SHADOW_NONE)
         
 
-        self.filter_page = FilterView()
+        self.filter_page = FilterView(self.count)
         i =0 
         print self.chart.filters
         for f in  self.chart.filters:
@@ -106,14 +107,16 @@ class MSCPreferenceDialog(gtk.Dialog):
             self.__apply_changes()
             self.hide()
             self.destroy()
-
+        elif id == gtk.RESPONSE_ACCEPT:
+            self.count = self.count + 1
+            self.filter_page.add_filter(self.count)
 
             
             
     def __apply_changes(self):
         self.chart.filters = []
         self.chart.filter_ips = []
-        for i in range(0,4):
+        for i in range(0,self.count):
             filter_text = self.filter_page.filter_strings[i].get_text()
             if filter_text == '':
                 break
@@ -133,31 +136,33 @@ class MSCPreferenceDialog(gtk.Dialog):
 class FilterView(gtk.VBox):
     
      
-    def __init__(self):
+    def __init__(self, count):
         super(FilterView, self).__init__(False, 0)
         
-        vbox = gtk.VBox(True,0)        
+        self.vbox = gtk.VBox(True,20)        
         frame = gtk.Frame(None)
-        frame.add(vbox)
-        
-        
-        
+        frame.add(self.vbox)
+
         self.filter_strings = []
 
         
-        for i in range(0,4):
+        for i in range(0, count):
             hb = gtk.HBox(False, 0)
             self.filter_strings.append(gtk.Entry(100))
             hb.add(self.filter_strings[i])
 
-            vbox.add(hb)
-            
-         
-
+            self.vbox.add(hb)
             
         self.add(frame)
         
-  
-    
-    
-    
+    def add_filter(self, count):
+                
+        hb = gtk.HBox(False, 0)
+        self.filter_strings.append(gtk.Entry(100))
+        hb.add(self.filter_strings[count - 1])
+
+        self.vbox.add(hb)
+        self.vbox.show_all()
+        
+
+
