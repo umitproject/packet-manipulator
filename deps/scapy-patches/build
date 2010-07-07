@@ -1,0 +1,20 @@
+#!/bin/bash
+
+if [ -d scapy ]; then
+    cd scapy
+    echo "[+] Updating scapy..."
+    hg pull
+    hg update --clean
+else
+    echo "[+] Checking out scapy..."
+    hg clone http://hg.secdev.org/scapy/ scapy
+    cd scapy
+fi
+
+for i in ../*.patch; do
+    echo "[+] Applying patchset $(basename $i)..."
+    patch -Np1 < $i || return 1
+done
+
+echo "[+] Just export scapy/ to PYTHONPATH"
+
