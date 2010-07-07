@@ -109,7 +109,7 @@ class BtCaptureOptions(CaptureOptions):
         btn = gtk.Button()
         btn.add(gtk.image_new_from_stock(gtk.STOCK_INFO, gtk.ICON_SIZE_BUTTON))
         btn.set_relief(gtk.RELIEF_NONE)
-        btn.set_tooltip_markup(_('Pin-cracking may be time-intensive depending on'
+        btn.set_tooltip_markup(_('Pin-cracking may be time-intensive depending on '
                                  'the length of PIN.'))
 
         hbox = gtk.HBox(0, False)

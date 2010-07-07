@@ -150,7 +150,7 @@ class MainWindow(gtk.Window):
             ('Interface', gtk.STOCK_CONNECT, _('_Interface'), '<Control>i',
                 _('Capture from interface'), self.__on_select_iface),
 
-            ('Bluetooth', gtk.STOCK_CONNECT, _('Bluetooth'), None,
+            ('Bluetooth', gtk.STOCK_CONNECT, _('Bluetooth'), '<Control>b',
             _('Capture from Bluetooth interface'), self.__on_select_btiface),
 
             ('Audits', None, _('Audits'), None),
