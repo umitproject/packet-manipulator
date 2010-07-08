@@ -16,10 +16,10 @@ PATH_BUILD			= 'build/'
 WANTED_FILE_EXTS 	= ['py', 'so']
 PATH_BT_BACKEND 	= 'PM_copy/umit/pm/backend/bt_sniffer/'
 PATH_BT_PINCRACK	= 'PM_copy/btpincrack-v0.3'
-
+PATH_LIB_PREFIX		= '%slib.linux' % PATH_BUILD
 
 def _cpfunc(arg, dirname, flist):
-	if dirname.startswith('lib.linux'):
+	if PATH_LIB_PREFIX in dirname:
 		#gotcha
 		for f in flist:
 			#print '_cpfunc: looking at %s' % f
@@ -27,6 +27,7 @@ def _cpfunc(arg, dirname, flist):
 				srcfile = os.path.join(dirname, f)
 				shutil.copy2(srcfile, PATH_BT_BACKEND)
 				#print 'Copied %s to %s' % (srcfile, PATH_BT_BACKEND)
+		
 
 # Only runs on Linux
 if sys.platform == 'linux2':
@@ -40,8 +41,8 @@ if sys.platform == 'linux2':
 	if not os.path.exists(PATH_BT_PINCRACK):
 		os.system(CMD_CP_PINCRACK)
 else:
-	print 	'Many apologies. This is not possible at this stage.'
-			'Devt of BTSniffer is still limited to Linux. Thank '
+	print 	'Many apologies. This is not possible at this stage.'\
+			'Devt of BTSniffer is still limited to Linux. Thank' \
 			'you for trying nonetheless.'
 
 
