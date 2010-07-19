@@ -42,7 +42,7 @@ if sys.platform == 'linux2':
 		os.system(CMD_CP_PINCRACK)
 else:
 	print 	'Many apologies. This is not possible at this stage.'\
-			'Devt of BTSniffer is still limited to Linux. Thank' \
+			'Devt of BTSniffer is still limited to Linux. Thank ' \
 			'you for trying nonetheless.'
 
 
