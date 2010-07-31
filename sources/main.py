@@ -38,6 +38,7 @@ from umit.pm.gui.sessions import SessionType
 
 from chart import Chart
 from preferences import MSCPreferenceDialog
+from preferences import removed_IP_Dialog
 
 if Prefs()['backend.system'].value.lower() != 'scapy':
     raise PMErrorException("I need scapy to work!")
@@ -62,6 +63,7 @@ class MSC(Perspective):
         self.reload_button= gtk.Action(None, None, _('Reload'), gtk.STOCK_REFRESH)
         self.stop_button= gtk.Action(None, None, _('Stop'), gtk.STOCK_MEDIA_STOP)
         self.filter_button = gtk.Action(None, None, _('Sequential Filter'),gtk.STOCK_PREFERENCES)
+        self.restore_ip_button = gtk.Action(None, None, _('Resotre IPs'),gtk.STOCK_UNDELETE)
         self.zoom_in_button= gtk.Action(None, None, _('Zoom in'), gtk.STOCK_ZOOM_IN)        
         self.zoom_out_button= gtk.Action(None, None, _('Zoom out'), gtk.STOCK_ZOOM_OUT)
         self.fullscreen_button= gtk.Action(None, None, _('fullscreen'), gtk.STOCK_FULLSCREEN)
@@ -72,6 +74,7 @@ class MSC(Perspective):
         self.toolbar.insert(self.png_button.create_tool_item(), -1)
         self.toolbar.insert(self.svg_button.create_tool_item(), -1)
         self.toolbar.insert(self.filter_button.create_tool_item(), -1)
+        self.toolbar.insert(self.restore_ip_button.create_tool_item(), -1)
 
         self.toolbar.insert(self.zoom_out_button.create_tool_item(), -1)
         self.toolbar.insert(self.zoom_in_button.create_tool_item(), -1)
@@ -81,6 +84,7 @@ class MSC(Perspective):
 
         self.zoom_in_button.connect('activate', self.__zoom_in)
         self.filter_button.connect('activate', self.__open_prefs)
+        self.restore_ip_button.connect('activate', self.__list_IPs)
         self.zoom_out_button.connect('activate', self.__zoom_out)
         self.png_button.connect('activate', self.__save_as_png)  
         self.pcap_button.connect('activate', self.__open_pcap)
@@ -195,6 +199,11 @@ class MSC(Perspective):
     def __open_prefs(self, action):
         
         dialog = MSCPreferenceDialog(self.chart)
+        dialog.set_transient_for(PMApp().main_window)
+        dialog.show()
+
+    def __list_IPs(self, action):
+        dialog = removed_IP_Dialog(self.chart)
         dialog.set_transient_for(PMApp().main_window)
         dialog.show()
         

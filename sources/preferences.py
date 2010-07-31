@@ -163,6 +163,78 @@ class FilterView(gtk.VBox):
 
         self.vbox.add(hb)
         self.vbox.show_all()
-        
 
+class removed_IP_Dialog(gtk.Dialog):
+    def __init__(self, chart):
+        super(removed_IP_Dialog, self).__init__(
+            _('Restore IPs - MSC'), PMApp().main_window,
+            gtk.DIALOG_DESTROY_WITH_PARENT,
+            (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE,
+             gtk.STOCK_APPLY, gtk.RESPONSE_APPLY,
+             gtk.STOCK_OK, gtk.RESPONSE_OK)
+        )
+        self.set_resizable(False)
+        self.chart = chart
+        self.store = gtk.ListStore(str, gobject.TYPE_BOOLEAN)
+        self.tree = gtk.TreeView(self.store)
 
+        self.tree.append_column(
+            gtk.TreeViewColumn('IPS', gtk.CellRendererText(), text=0))
+
+        self.tree.set_headers_visible(False)
+        self.tree.set_rules_hint(True)
+
+        self.checkBox=gtk.CellRendererToggle()
+        self.checkBox.set_property('activatable', True)
+        self.checkBox.set_property('visible',True)
+        self.checkBox.connect('toggled',self.col1_toggled_cb,self.store)
+        self.addColumn = gtk.TreeViewColumn("show", self.checkBox)
+        self.addColumn.add_attribute( self.checkBox, "active", 1)
+        self.tree.append_column( self.addColumn )
+
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        sw.add(self.tree)
+
+        hbox = gtk.HBox(False, 2)
+        hbox.pack_start(sw, False, False)
+
+        self.refresh()
+        hbox.show_all()
+
+        self.vbox.pack_start(hbox)
+        self.vbox.set_border_width(4)
+        self.vbox.set_spacing(6)
+        self.connect('response', self.__on_response)
+
+    def __on_response(self, dialog, id):
+        if  id == gtk.RESPONSE_CLOSE:
+            self.hide()
+            self.destroy()
+        elif id == gtk.RESPONSE_APPLY:
+            self.__apply_changes()
+        elif id == gtk.RESPONSE_OK:
+            self.__apply_changes()
+            self.hide()
+            self.destroy()
+
+    def __apply_changes(self):
+        itr = self.store.get_iter_first()
+        while itr != None:
+            if self.store[itr][1] == True :
+                try:
+                    self.chart.dont_show_IPs.remove(self.store[itr][0])
+                except :
+                    pass
+            itr=self.store.iter_next(itr)
+        self.refresh()
+
+    def refresh(self):
+        self.store.clear()
+        for ip in self.chart.dont_show_IPs:
+            self.store.append([ip,None])
+
+    def col1_toggled_cb(self, cell, path, model):
+        model[path][1] = not model[path][1]
+        return

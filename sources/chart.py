@@ -51,7 +51,12 @@ class Chart(gtk.DrawingArea):
     def __init__(self, session):
         
         super(Chart, self).__init__()
-        self.connect('expose_event', self.do_expose_event)
+#       self.connect('expose_event', self.do_expose_event)
+        self.connect("configure_event", self.configure_event)
+        self.connect("button_press_event", self.button_press_event)
+        self.set_events(gtk.gdk.EXPOSURE_MASK
+                            | gtk.gdk.BUTTON_PRESS_MASK)
+
         self.sniff_context = session.context
         self.sniff_context.callback = self.update_drawing_clbk
         self.scalingfactor = 10
@@ -81,11 +86,14 @@ class Chart(gtk.DrawingArea):
         
         self.IPs = []
         self.Packets = []
+        self.rm_ip = []
+        self.dont_show_IPs = []
         self.start_time = datetime.now()
         self.sniffing_frozen = False
         self.current_filter_index = 0
         self.timeout = gobject.timeout_add(300, self.__check_for_packets)
         self.time_diff = 1
+        self.pixmap = None
         #add host IP
         #TODO: Need to find a way of finding the IP without using scapy
 #        for x in scapy.all.conf.route.routes:
@@ -94,11 +102,25 @@ class Chart(gtk.DrawingArea):
         for x in self.filter_ips:
             self.__add_node_to_list(x)
     
+    def configure_event(self, widget, event):
+        x, y, width, height = widget.get_allocation()
+        self.pixmap = gtk.gdk.Pixmap(widget.window, width, height)
+        return True
+
+    def button_press_event(self, widget, event):
+        if event.button == 1 and self.pixmap != None:
+            for x in self.rm_ip:
+                if event.x < x :
+                    print self.IPs[self.rm_ip.index(x)]
+                    self.dont_show_IPs.append(self.IPs[self.rm_ip.index(x)])
+                    return True
+   
+    
     def set_time_diff(self):
         if self.time_diff != 0:
-	    self.time_diff = 0
+		self.time_diff = 0
 	else:
-	    self.time_diff = 1          
+		self.time_diff = 1          
         
     def scan_from_list(self, list):
         self.IPs = []
@@ -108,8 +130,7 @@ class Chart(gtk.DrawingArea):
             self.update_drawing_clbk(packet)
         self.queue_draw()
             
-   
-    def do_expose_event(self, widget, evt):
+    def do_expose_event(self, evt):
         self.cr = self.window.cairo_create()
         self.__cairo_draw()
         return gtk.DrawingArea.do_expose_event
@@ -120,6 +141,7 @@ class Chart(gtk.DrawingArea):
         cr.save()
                 
         vline_positions = []
+        self.rm_ip = []
         
         #set background
         cr.set_source_rgb(1, 1, 1)
@@ -144,24 +166,29 @@ class Chart(gtk.DrawingArea):
         #draw IPs
         i=0
         for ip in self.IPs:
-            cr.set_source_rgb(0.5, 0.5, 0.5)
-            x_bearing, y_bearing, width, height = cr.text_extents(ip)[:4]
-            cur_ip_xpos = self.left_margin + width
-	    	#Draw if the ip drawing does not cross the right bound of the drawingArea
-            if cur_ip_xpos < self.window.get_size()[0]-self.right_margin :
-            	cr.move_to(margin, self.top_margin-height)
-            	cr.show_text(ip)
-            	cr.set_source_rgb(0,0,0)
-            	cr.move_to(margin+width/2, self.top_margin)
-            	cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
-            	vline_positions.append(margin+width/2)
-            	cr.stroke()
-            	margin = margin+width+20
-            	i=i+1
-            elif not self.sniffing_frozen:
-                self.sniffing_frozen =True
-                print "Area overflow"
-                break
+            if self.__dont_show_nodes(ip):
+                cr.set_source_rgb(0.5, 0.5, 0.5)
+                x_bearing, y_bearing, width, height = cr.text_extents(ip)[:4]
+                cur_ip_xpos = self.left_margin + width
+                #Draw if the ip drawing does not cross the right bound of the drawingArea
+                if cur_ip_xpos < self.window.get_size()[0]-self.right_margin :
+                    cr.move_to(margin, self.top_margin-height)
+                    cr.show_text(ip)
+                    cr.set_source_rgb(0,0,0)
+                    cr.move_to(margin+width/2, self.top_margin)
+                    cr.line_to(margin+width/2, self.window.get_size()[1]-self.bottom_margin)
+                    vline_positions.append(margin+width/2)
+                    self.rm_ip.append(margin+width)
+                    cr.stroke()
+                    margin = margin+width+20
+                    i=i+1
+                elif not self.sniffing_frozen:
+                    self.sniffing_frozen =True
+                    print "Area overflow"
+                    break
+            else:
+                self.rm_ip.append(0)
+                vline_positions.append(0)
             
         
         #draw packets   
@@ -169,61 +196,62 @@ class Chart(gtk.DrawingArea):
         pkts_this_timestamp = 1
         for i in range(len(self.Packets)):
             packet = self.Packets[i]
-            if self.filters == [] and self.time_diff == 1:
-                time_passed = self.__get_time_passed(packet.get_datetime())
-            else:
-                time_passed = (i+1)*200
-            cur_packet_ypos = time_passed/self.scalingfactor + self.top_margin
-            #Draw if the packet drawing does not cross the lower bound of the drawingArea
-            if cur_packet_ypos < self.window.get_size()[1]-self.bottom_margin :
-                x_bearing, y_bearing, width, height = cr.text_extents(str(time_passed) + "ms")[:4]  
-                
-                #Draw the text if it doesnt clash with the previous timestamp text
-                if prev_timestamp_lower+5 < cur_packet_ypos - height:
-                    pkts_this_timestamp = 1
-                    text = str(self.__get_time_passed(packet.get_datetime())) + "ms"
-                    cr.set_source_rgb(*self.__get_color(packet))
-                    cr.move_to(self.time_margin, cur_packet_ypos)
-                    cr.show_text(text)
-                    prev_timestamp_lower = cur_packet_ypos
-                    prev_timestamp = text
-                else :
-                    pkts_this_timestamp = pkts_this_timestamp + 1
-                    cr.set_source_rgb(1.0, 1.0, 1.0)
-                    text = prev_timestamp+'('+str(pkts_this_timestamp)+')'
-                    cr.rectangle(self.time_margin, prev_timestamp_lower -
-                        cr.text_extents(text)[3], cr.text_extents(text)[2],
-                        cr.text_extents(text)[3] )
-                    cr.fill()
-                    cr.set_source_rgb(*self.__get_color(packet))
-                    cr.move_to(self.time_margin, prev_timestamp_lower)
-                    cr.show_text(text)
-                
-                #Draw a small marker on the time axis
-                cr.move_to(self.left_margin-13, cur_packet_ypos-height/2)
-                cr.line_to(self.left_margin-7, cur_packet_ypos-height/2)                
-                cr.stroke()
-                
-                #Draw the arrow from source to destination
-                cr.select_font_face("Sans Serif",\
-                    cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-                cr.set_font_size(14)
-                cr.move_to(vline_positions[self.IPs.index(packet.get_source())], cur_packet_ypos-height/2)
-                cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2)
-                if self.IPs.index(packet.get_source()) > self.IPs.index(packet.get_dest()):
-                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())],\
-                        cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
-                    cr.show_text("<")
+            if self.__dont_show_nodes(packet.get_source()) and self.__dont_show_nodes(packet.get_dest()) :
+                if self.filters == [] and self.time_diff == 1:
+                    time_passed = self.__get_time_passed(packet.get_datetime())
                 else:
-                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())]\
-                        - cr.text_extents("<")[2], cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
-                    cr.show_text(">")
-                cr.stroke()
-            elif not self.sniffing_frozen:
-                self.sniffing_frozen =True
-                print "Area overflow"
-                break
-            
+                    time_passed = (i+1)*200
+                cur_packet_ypos = time_passed/self.scalingfactor + self.top_margin
+                #Draw if the packet drawing does not cross the lower bound of the drawingArea
+                if cur_packet_ypos < self.window.get_size()[1]-self.bottom_margin :
+                    x_bearing, y_bearing, width, height = cr.text_extents(str(time_passed) + "ms")[:4]  
+                    
+                    #Draw the text if it doesnt clash with the previous timestamp text
+                    if prev_timestamp_lower+5 < cur_packet_ypos - height:
+                        pkts_this_timestamp = 1
+                        text = str(self.__get_time_passed(packet.get_datetime())) + "ms"
+                        cr.set_source_rgb(*self.__get_color(packet))
+                        cr.move_to(self.time_margin, cur_packet_ypos)
+                        cr.show_text(text)
+                        prev_timestamp_lower = cur_packet_ypos
+                        prev_timestamp = text
+                    else :
+                        pkts_this_timestamp = pkts_this_timestamp + 1
+                        cr.set_source_rgb(1.0, 1.0, 1.0)
+                        text = prev_timestamp+'('+str(pkts_this_timestamp)+')'
+                        cr.rectangle(self.time_margin, prev_timestamp_lower -
+                            cr.text_extents(text)[3], cr.text_extents(text)[2],
+                            cr.text_extents(text)[3] )
+                        cr.fill()
+                        cr.set_source_rgb(*self.__get_color(packet))
+                        cr.move_to(self.time_margin, prev_timestamp_lower)
+                        cr.show_text(text)
+                    
+                    #Draw a small marker on the time axis
+                    cr.move_to(self.left_margin-13, cur_packet_ypos-height/2)
+                    cr.line_to(self.left_margin-7, cur_packet_ypos-height/2)                
+                    cr.stroke()
+                    
+                    #Draw the arrow from source to destination
+                    cr.select_font_face("Sans Serif",\
+                        cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+                    cr.set_font_size(14)
+                    cr.move_to(vline_positions[self.IPs.index(packet.get_source())], cur_packet_ypos-height/2)
+                    cr.line_to(vline_positions[self.IPs.index(packet.get_dest())], cur_packet_ypos-height/2)
+                    if self.IPs.index(packet.get_source()) > self.IPs.index(packet.get_dest()):
+                        cr.line_to(vline_positions[self.IPs.index(packet.get_dest())],\
+                            cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
+                        cr.show_text("<")
+                    else:
+                        cr.line_to(vline_positions[self.IPs.index(packet.get_dest())]\
+                            - cr.text_extents("<")[2], cur_packet_ypos-height/2+cr.text_extents("<")[3]/2)
+                        cr.show_text(">")
+                    cr.stroke()
+                elif not self.sniffing_frozen:
+                    self.sniffing_frozen =True
+                    print "Area overflow"
+                    break
+                
         cr.restore()
 
     def __get_color(self, packet):
@@ -278,6 +306,13 @@ class Chart(gtk.DrawingArea):
             self.IPs.append(address)   
             print "(NEW): " + address
 
+    def __dont_show_nodes(self, address):
+        try:
+            x = self.dont_show_IPs.index(address)
+        except :
+            print address
+            return True
+        return False
 
     def __check_for_packets(self):
         self.sniff_context.check_finished()
