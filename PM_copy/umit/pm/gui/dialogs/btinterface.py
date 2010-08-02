@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import gtk
+import gobject
 from sys import maxint
 
 from umit.pm import backend
@@ -66,8 +67,8 @@ class BtCaptureOptions(CaptureOptions):
                    0, 1, 5, 6, yoptions=gtk.SHRINK)
 
 
-        self.master_entries = self.__new_add_entry()
-        self.slave_entries = self.__new_add_entry() 
+        self.master_entries = MacEntry()
+        self.slave_entries = MacEntry()
 
         tbl.attach(self.master_entries, 1, 2, 0, 1, yoptions=gtk.SHRINK)
         tbl.attach(self.slave_entries, 1, 2, 1, 2, yoptions=gtk.SHRINK)
@@ -136,19 +137,6 @@ class BtCaptureOptions(CaptureOptions):
 
         self.add(tbl)
     
-    def __new_add_entry(self):
-        
-        hbox = gtk.HBox(0, False)
-   
-        for i in range(6):
-            entry = gtk.Entry()
-            entry.set_max_length(2)
-            entry.set_width_chars(2)
-            hbox.pack_start(entry, False, False)
-            if i < 5: 
-                hbox.pack_start(self.new_label(_(':')), False, False)
-        
-        return hbox
     
     def __clear_children(self):
         """
@@ -230,11 +218,42 @@ class BtCaptureOptions(CaptureOptions):
         for i in range(0, len(children) + 1, 2):
             spart = children[i].get_text()
             if spart=='': spart = '00'
-            # TODO: We should validate input here
             part = int(spart, 16)
             lst.append(part)
         return lst
         
+class MacEntry(gtk.HBox):
+
+    def __init__(self):
+
+        gtk.HBox.__init__(self,False,0)
+   
+        for i in xrange(6):
+            entry = gtk.Entry()
+            entry.set_max_length(2)
+            entry.set_width_chars(2)
+            self.pack_start(entry, False, False)
+            _handlerid = entry.connect("insert-text", self.entry_insert_text)
+            entry.set_data('handlerid', _handlerid)
+            if i < 5: 
+                self.pack_start(gtk.Label(_(':')), False, False)
+
+    
+    def move_cursor(self,entry):
+        entry.set_position(-1)
+        return False
+
+    def entry_insert_text(self,entry, new_text, new_text_length, position):
+        if new_text.isdigit() or 'a' <= new_text <= 'f' or 'A' <= new_text <= 'F' :
+            _string = entry.get_chars(0, -1) + new_text
+            _hid = entry.get_data('handlerid')
+            entry.handler_block(_hid)
+            _pos = entry.get_position()
+            _move = True
+            _pos = entry.insert_text(new_text, _pos)
+            entry.handler_unblock(_hid)
+            gobject.idle_add(self.move_cursor, entry)
+        entry.stop_emission("insert-text")
 
 class BtInterfaceList(InterfaceList):
     def __init__(self):
