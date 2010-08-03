@@ -270,7 +270,7 @@ class HostListTab(UmitView):
 
         act = gtk.Action('target2-add', _("Add '%s' to target2") % info_str,
                          None, gtk.STOCK_ADD)
-        act.connect('activate', lambda a, (s, selected): \
+        act.connect('activate', lambda a, (s, ip): \
                     s.target_page.target2_tree.append(ip), (session, selected))
 
         item = act.create_menu_item()
