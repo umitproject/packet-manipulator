@@ -1,0 +1,49 @@
+To run btpincrack you will need to first get either a capture file from a Merlin
+bluetooth protocol analyzer or determine the following values from the pairing:
+
+m_bd_addr  - Master Bluetooth MAC Address
+s_bd_addr  - Slave Bluetooth MAC Address
+in_rand    - The initial random nonce
+m_comb_key - The initial encrypted master combination key used for key agreement
+s_comb_key - The initial encrypted slave combination key used for key agreement
+m_au_rand  - The random number sent across by the master for key verification
+s_au_rand  - The random number sent across by the slave for key verification
+m_sres     - The result hash used to verify the master has the right key
+s_sres     - The result hash used to verify the slave has the right key
+
+You can feed in these values along with a PIN to determine what the link key is
+or have btpincrack brute force the PIN and link key by itsself. To do this you
+use the Go or Imp options. For example to crack one of the supplied Merlin
+files simply run:
+
+# cat tests/testimp.sh
+date
+./btpincrack Imp BTCaptures/phonepair_1.txt 0002ee6aff2a 0002ee790b5d
+date
+
+# ./tests/testimp.sh
+Wed Jan 31 14:57:10 PST 2007
+m_bd_addr:  00 02 ee 6a ff 2a 
+s_bd_addr:  00 02 ee 79 0b 5d 
+in_rand:    74 ad c1 8a e0 a8 b5 7b 5c 23 d2 f0 b5 62 ce c7 
+m_comb_key: 15 eb 50 28 5a 9d f9 3e 27 3d d9 e5 6b eb 06 cd 
+s_comb_key: 5b b8 84 5b 9b ff b9 e1 fe 26 f4 6d 5a b6 e2 90 
+m_au_rand:  8f cb df 04 39 7b 74 70 b4 d6 7c 0a ad c4 3e 2d 
+s_au_rand:  b0 d2 73 72 83 05 af 5d 77 db 92 0d a2 61 86 24 
+m_sres:     a2 ec 89 16 
+s_sres:     f7 93 d2 88 
+Kab:        82 e5 30 53 df 6f b1 ec 6a 83 68 0d eb 68 06 e0 
+pin:        712983
+Wed Jan 31 14:57:23 PST 2007
+
+To test this with an FPGA, you must first load the E12LX-BTPinCrack image onto
+the E-12 you have with PicoUtil. Then you can run the tests/testimpfpga.sh
+script which will crack all of the files in the BTCaptures directory since the
+first capture only takes a split second to crack. The only difference in the
+usage is that you specify the card number as an extra -f option in the command
+line:
+
+# cat tests/testimpfpga.sh
+date
+./btpincrack -f 0 Imp BTCaptures/phonepair_1.txt 0002ee6aff2a 0002ee790b5d
+...

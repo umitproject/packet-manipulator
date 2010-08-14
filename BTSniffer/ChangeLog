@@ -1,0 +1,106 @@
+2009-09-23 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Modified CaptureState object to store role (master/slave) for initiating pairing device.
+            - basesniffmodule.h
+            - basesniffmodule.c
+    * Added register_pincrack_handler in BtCollectPinCrackHandler for callbacks once pincracking is completed. 
+            - handlers.py
+    * Added tagger for adding descriptions to captured packets
+            - tagger.py
+    * Added packet.py containing PM BtMetaPacket class definition
+            - packet.py
+    * Added cppm script for doing svn move of built btsniff modules to PM_copy
+    * Integrated pincrack into PM_copy. Try it now!
+
+
+2009-09-08 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Solved bugs in layers.c
+	* Refactored btsniff_fileio as a result of changes in layers.c
+	* Added experimental methods for reading from hcidump files. 
+		- sniffio.c
+		- sniffio.h
+	* Pincracker runs in separate process.  Refactored for integration with PM.
+	   Rewrote some of the method documentation.
+		- crack.py
+	* Added LMP and L2CAP BtLayerUnit objects for convenient representation.
+		- sniffer.py
+	
+
+
+2009-08-07 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added an svncopy of PacketManipulator for integration purposes.
+	* Refactoring of Bluetooth packet data structures. Better formal definitions.
+		- layers.c
+		- layers.h
+
+2009-07-30 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added simple testing harness; makes use of nosetests. Tests PinCrackRunner in module crack
+		- tests/run_all.py
+		- tests/testcrack.py
+
+2009-07-28 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added second example (test_pincrackrunner()) to illustrate pin-cracking use. Does not do real-time sniffing as part 
+		of pin-cracking. Added example (mainI()) that does pin-cracking with sniffing.
+		- eg2runner.py
+	* Added PinCrackData data structure (attribute of SniffSession) to store relevant LMP data for pin-cracking. 
+	Pin-cracking designed to be done asynchronous to sniffing.
+		- sniffcommon.py
+	* PinCrackRunner Thread subclass for pincracking.
+		- crack.py
+	* Added script to setup examples for running in build directory. Copies btpincrack-v0.3 into build directory.
+		- examples/setupegs
+
+2009-07-21 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added module for all cracks. Contains private function that does legwork for computation of pin.
+		- sniffcrack.c/h
+		- crack.py
+	* Added SniffSession class as blanket structure for details that might be needed for sniffing.
+		- sniffcommon.py
+	* handlers module added. Refactoring: BTSniffHandler added to handlers. New handler: FrontlineHandler 
+	which duplicates the functionality of the original frontline tool.
+		- handlers.py
+
+2009-07-15 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added module for hcidump write functionality. Set up protocol for future write formats
+		- sniffio.c/h
+	* Added examples folder
+		- eg1hcidump.py makes use of hcidump functionality
+			- has class HCIDumpHandler sample of writing on receipt
+
+2009-07-11 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+	* Added garbage collection functionality to objects
+		- bthandler.c
+		- baseniffmodule.c
+	* Refined error handling in baseniffmodule.c
+	* Added SniffError in sniff module and removed from sniffer.py
+
+
+2009-07-07 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Added data structures to represent a packet received on HCI from the hardware
+        - SniffPacket
+        - _LMPPacket
+        - LMPPacket (wraps _LMPPacket in Python)
+    * Added callback mechanism when packet is received in sniffer
+        - SniffHandler base class to be subclassed 
+        - SniffHandler contains recvpacket method to be overriden. Callback method.
+    * Duplicated printout functionality in sniffer.py as example of usage of callback mechanism
+    * Added runner btsniffer to BTSniff/
+    * Added scripts/devrun for easier building and running of development version
+
+2009-07-05 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Working port of the C-based "frontline" Bluetooth sniffing tool
+
+2009-06-30 Quek Shu Yang (quekshuy@gmail.com)
+==============================================
+    * Init ChangeLog
+    * To reduce the dependence on PyBluez, we use Python to wrap the original C code
+    * Changed the structure of the package to umit.bluetooth.sniff

@@ -1,0 +1,34 @@
+Umit Bluetooth Sniffer - A Google Summer of Code 2009 project
+==========================
+
+Dependencies
+=================
+
+Umit Bluetooth Sniffer has the following dependencies:
+    1. BlueZ the Linux Bluetooth stack
+    2. btpincrack from the OpenCipher project
+    3. libbluetooth-dev
+    4. bluetooth
+
+btpincrack has already been extractd in branch/BtSniff.
+Umit would like to thank the authors of the above for their work.
+
+Instructions
+=================
+
+This version of Umit Bluetooth Sniffer was developed and tested on Backtrack 3. It is recommended that the user does development and testing on the same distro.
+This is install ready version(0.1), but testing is going on in Ubuntu 10.04
+
+To install :-
+    
+    1. Run ./scripts/cppm
+    2. cd PM_copy
+    3. sudo python setup.py install
+
+To run development build in PacketManipulator interface:
+    1. Run './scripts/cppm'
+    2. Change directory to PM_copy
+    3. Run 'sudo python PacketManipulator'
+    
+
+

@@ -1,0 +1,29 @@
+#! /usr/bin/env python
+
+import os, sys
+
+RUNNER_FILENAME = 'btsniffer'
+
+if not sys.platform == 'linux2':
+    print "Sorry only runs on linux for now."
+else:
+    build_dir = './build'
+    build_subdirs = os.listdir('./build')
+    import re
+    libp = re.compile(r'^lib.')
+    for dir in build_subdirs:
+        if libp.match(dir):
+            run_dir = ''.join([build_dir, os.sep, dir])
+            run_tgt = ''.join([run_dir, os.sep, RUNNER_FILENAME])
+            
+            if not os.path.exists(run_tgt):
+                cmd = 'cp %s %s' % (RUNNER_FILENAME, run_dir)
+                os.system(cmd) 
+            
+            os.chdir(run_dir)
+            #print "%s%s%s" % (os.getcwd(), os.sep, RUNNER_FILENAME)
+            #Requires sudo to run
+            os.system('sudo %sbtsniffer %s' % (''.join([os.getcwd(), os.sep]), ' '.join(sys.argv[1:])))
+            break
+            
+            

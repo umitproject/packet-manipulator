@@ -1,0 +1,52 @@
+#! /usr/bin/env python
+
+## 	This file contains a hacked version of a build script for now
+#	TODO: write the equivalent in bash script or find a good build tool
+#	like make that works well with Python to accomplish the same
+import os, sys
+import shutil
+
+# build and setup commands
+CMD_BUILD 		= 'python setup.py build'
+CMD_DEL_OLD		= 'svn del PM_copy/umit/pm/backend/bt_sniffer/* --force'
+CMD_ADD_NEW		= 'svn add PM_copy/umit/pm/backend/bt_sniffer/*'
+CMD_CP_PINCRACK	= 'svn copy btpincrack-v0.3 PM_copy/'
+
+PATH_BUILD			= 'build/'
+WANTED_FILE_EXTS 	= ['py', 'so']
+PATH_BT_BACKEND 	= 'PM_copy/umit/pm/backend/bt_sniffer/'
+PATH_BT_PINCRACK	= 'PM_copy/btpincrack-v0.3'
+PATH_LIB_PREFIX		= '%slib.linux' % PATH_BUILD
+
+def _cpfunc(arg, dirname, flist):
+	if PATH_LIB_PREFIX in dirname:
+		#gotcha
+		for f in flist:
+			#print '_cpfunc: looking at %s' % f
+			if f[f.rfind('.') + 1:] in WANTED_FILE_EXTS:
+				srcfile = os.path.join(dirname, f)
+				shutil.copy2(srcfile, PATH_BT_BACKEND)
+				#print 'Copied %s to %s' % (srcfile, PATH_BT_BACKEND)
+		
+
+# Only runs on Linux
+if sys.platform == 'linux2':
+
+	os.system(CMD_BUILD)
+	os.system(CMD_DEL_OLD)
+	#print 'Walking %s' % PATH_BUILD
+	os.path.walk(PATH_BUILD, _cpfunc, None)
+		
+	os.system(CMD_ADD_NEW)	
+	if not os.path.exists(PATH_BT_PINCRACK):
+		os.system(CMD_CP_PINCRACK)
+else:
+	print 	'Many apologies. This is not possible at this stage.'\
+			'Devt of BTSniffer is still limited to Linux. Thank ' \
+			'you for trying nonetheless.'
+
+
+
+
+
+
