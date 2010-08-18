@@ -208,6 +208,14 @@ class Prefs(Singleton):
         'gui.views.property_tab' : True,
         'gui.views.property_tab.font' : 'Monospace 8',
 
+        #For BTsniffer
+        'gui.maintab.btsniffview.columns' : 'No.|50|%number%,'          \
+                                            'Channel|150|%channel%,'    \
+                                            'Clock|120|%clock%,'        \
+                                            'Role|50|%role%,'           \
+                                            'Summary|80|%summary%',
+	
+
         'gui.views.status_tab' : True,
         'gui.views.operations_tab' : True,
         'gui.views.vte_tab' : False,
