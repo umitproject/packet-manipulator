@@ -5,12 +5,14 @@
 #	like make that works well with Python to accomplish the same
 import os, sys
 import shutil
+import re
 
 # build and setup commands
 CMD_BUILD 		= 'python setup.py build'
 
 PATH_PM             = '../'
 PATH_BUILD			= 'build/'
+PATH_BT_INTERNALS   = 'internals'
 WANTED_FILE_EXTS 	= ['py', 'so']
 PATH_BT_BACKEND 	= PATH_PM + 'umit/pm/backend/bt_sniffer/'
 PATH_BT_PINCRACK	= PATH_PM + 'btpincrack-v0.3'
@@ -22,7 +24,21 @@ def _cpfunc(arg, dirname, flist):
 			if f[f.rfind('.') + 1:] in WANTED_FILE_EXTS:
 				srcfile = os.path.join(dirname, f)
 				shutil.copy2(srcfile, PATH_BT_BACKEND)
-		
+
+#list all files 
+def files_copy(directory):
+    stack = [directory]
+    while stack:
+        directory = stack.pop()
+        for file in os.listdir(directory):
+            fullname = os.path.join(directory, file)
+            if os.path.isdir(fullname) and not os.path.islink(fullname):
+                stack.append(fullname)
+            else:
+                src_file_name=fullname
+                dst_file_name='../'+fullname.replace(PATH_BT_INTERNALS+'/','')
+                if re.search('.*svn.*',src_file_name) is None :
+                    shutil.copy2(src_file_name,dst_file_name)
 
 # Only runs on Linux
 if sys.platform == 'linux2':
@@ -39,7 +55,7 @@ if sys.platform == 'linux2':
     shutil.copytree('btpincrack-v0.3',PATH_BT_PINCRACK)
 
     #Copy Internals to respective location
-        
+    files_copy(PATH_BT_INTERNALS)
 	
 else:
 	print 	'Many apologies. This is not possible at this stage.'\
