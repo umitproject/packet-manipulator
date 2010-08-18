@@ -1,0 +1,53 @@
+#! /usr/bin/env python
+
+## 	This file contains a hacked version of a build script for now
+#	TODO: write the equivalent in bash script or find a good build tool
+#	like make that works well with Python to accomplish the same
+import os, sys
+import shutil
+
+# build and setup commands
+CMD_BUILD 		= 'python setup.py build'
+
+PATH_PM             = '../'
+PATH_BUILD			= 'build/'
+WANTED_FILE_EXTS 	= ['py', 'so']
+PATH_BT_BACKEND 	= PATH_PM + 'umit/pm/backend/bt_sniffer/'
+PATH_BT_PINCRACK	= PATH_PM + 'btpincrack-v0.3'
+PATH_LIB_PREFIX		= '%slib.linux' % PATH_BUILD
+
+def _cpfunc(arg, dirname, flist):
+	if PATH_LIB_PREFIX in dirname:
+		for f in flist:
+			if f[f.rfind('.') + 1:] in WANTED_FILE_EXTS:
+				srcfile = os.path.join(dirname, f)
+				shutil.copy2(srcfile, PATH_BT_BACKEND)
+		
+
+# Only runs on Linux
+if sys.platform == 'linux2':
+
+    #Compile and copy the C files for BTSniffer to PATH_BT_BACKEND
+    os.system(CMD_BUILD)
+    if not os.path.exists(PATH_BT_BACKEND):
+        os.makedirs(PATH_BT_BACKEND) 
+	os.path.walk(PATH_BUILD, _cpfunc, None)
+
+    #Delete old btpincrack in PM, copy it again
+    if os.path.exists(PATH_BT_PINCRACK):
+        shutil.rmtree(PATH_BT_PINCRACK)
+    shutil.copytree('btpincrack-v0.3',PATH_BT_PINCRACK)
+
+    #Copy Internals to respective location
+        
+	
+else:
+	print 	'Many apologies. This is not possible at this stage.'\
+			'Devt of BTSniffer is still limited to Linux. Thank ' \
+			'you for trying nonetheless.'
+
+
+
+
+
+
