@@ -21,7 +21,7 @@
 import gtk
 import gobject
 from sys import maxint
-
+import subprocess,re
 from umit.pm import backend
 
 from umit.pm.core.i18n import _
@@ -266,6 +266,7 @@ class BtInterfaceList(InterfaceList):
 
         lbl = gtk.Label(_('<b>Available Interfaces:</b>'))
         lbl.set_use_markup(True)
+        lbl.set_tooltip_markup(_('RAW MODES ONLY'))
 
         self.frame.set_label_widget(lbl)
 
@@ -365,14 +366,18 @@ class BtInterfaceDialog(InterfaceDialog):
     def __populate(self):
     
         self.if_list.store.clear()
-        
-        #TODO: check if any of the interfaces are in RAW
-        # mode. If not, display error
-        
+            
         for iface in backend.get_device_list():
-            self.if_list.store.append(
-                [gtk.STOCK_CONNECT, iface.name, iface.btadd]
-            )
+            proc = subprocess.Popen('/usr/sbin/hciconfig ' + iface.name,
+                                    shell=True,
+                                    stdout=subprocess.PIPE
+                                   )
+            hciconfig_output=proc.communicate()[0]
+            #make certain if in raw mode or not 
+            if re.search('UP RUNNING.*[rR][aA][wW].*',hciconfig_output) is not None :             
+                self.if_list.store.append(
+                    [gtk.STOCK_CONNECT, iface.name, iface.btadd]
+                )
 
     def __on_method_changed(self, combo, btn):
         
