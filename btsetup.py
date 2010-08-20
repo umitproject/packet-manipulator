@@ -170,6 +170,12 @@ class pm_build(build):
 
 class pm_install(install):
     def run(self):
+        if sys.platform != 'linux2':
+            print 'Many apologies. This is not possible at this stage.'\
+			'BTSniffer is still limited to Linux. Thank ' \
+			'you for trying nonetheless. Run setup.py for '\
+            'regular PM'
+            return None
         print
         print "#" * 80
         print "# Installing PacketManipulator"
