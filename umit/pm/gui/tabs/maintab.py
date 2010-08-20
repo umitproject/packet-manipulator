@@ -37,6 +37,13 @@ from umit.pm.gui.sessions.sequencesession import SequenceSession
 
 from umit.pm.manager.preferencemanager import Prefs
 
+from umit.pm.core.utlis import BTSniffer_Available
+
+try:
+    from umit.pm.gui.sessions.btsniffsession import BtSniffSession
+except ImportError:
+    BtSniffSession = None
+
 class IntroPage(gtk.HBox):
     def __init__(self):
         gtk.HBox.__init__(self, False, 2)
@@ -154,6 +161,13 @@ class SessionNotebook(gtk.Notebook):
     def __impl_create_sniff_session(self, ctx):
         session = SniffSession(ctx)
         return self.__append_session(session)
+    
+    def __impl_create_btsniff_session(self,ctx):
+        if BTSniffSession:
+            session = BtSniffSession(ctx)
+            return self.__append_session(session)
+        else:
+            return None
 
     def __impl_create_audit_session(self, ctx):
         session = AuditSession(ctx)
