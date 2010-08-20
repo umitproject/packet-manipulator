@@ -41,6 +41,12 @@ from abstract.basecontext.audit import AuditContext
 
 from umit.pm.manager.preferencemanager import Prefs
 
+try:
+    from abstract.basecontext.btsniff import BtSniffContext
+    from bt_sniffer import *
+except ImportError:
+    pass
+
 if Prefs()['backend.system'].value.lower() == 'umpa':
     from umpa import *
 else:
