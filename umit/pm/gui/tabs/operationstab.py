@@ -387,6 +387,50 @@ class SniffOperation(backend.SniffContext, Operation):
         if not self.SKIP_UPDATE:
             self.notify_parent()
 
+try:
+    class BtSniffOperation(backend.BtSniffContext, Operation):
+        
+        def __init__(self, iface, capfile = None, scount = 0, stime = 0, 
+                     master_add = None, slave_add = None, pinmethod = False, 
+                     set_timeout = 30):
+            
+            Operation.__init__(self)
+            backend.BtSniffContext.__init__(self, iface, 
+                                            self.__change_status_label, # pin-callback 
+                                            capfile, scount, stime,
+                                            master_add, slave_add, pinmethod, 
+                                            set_timeout)
+            
+            nb = PMApp().main_window.get_tab('MainTab').session_notebook
+            self.session = nb.create_btsniff_session(self)
+            self.__change_status_label('__change_status_label_test')
+        
+        def _start(self):
+            log.debug('BtSniffOperation.start')
+            backend.BtSniffContext._start(self)
+            
+            if self.session:
+                self.session.sniff_page.clear()
+                self.session.sniff_page.reload()
+        
+        def __change_status_label(self, label_text):
+            '''
+                Changes the text shown as Status
+                @param label_text    New text to be shown as status
+            '''
+            if self.session:
+                self.session.sniff_page.statusbar.label = '<b>%s</b>' % label_text
+        
+        def activate(self):
+            if not self.session:
+                nb = PMApp().main_window.get_tab('MainTab').session_notebook
+                self.session = nb.create_btsniff_session(self)
+            
+        def __recv_callback(self, packet, udata):
+            if not self.SKIP_UPDATE:
+                self.notify_parent()
+except AttributeError:
+    pass
 
 class SequenceOperation(backend.SequenceContext, Operation):
     def __init__(self, seq, count, inter, iface=None, strict=True, \
