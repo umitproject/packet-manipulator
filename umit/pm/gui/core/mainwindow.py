@@ -69,6 +69,13 @@ from umit.pm.gui.tabs.operationstab import FileOperation
 from umit.pm.gui.tabs.protocolselectortab import ProtocolSelectorTab
 from umit.pm.gui.tabs.operationstab import OperationsTab, SniffOperation, \
      AuditOperation
+FlagBTCheck=False
+try:
+    from umit.pm.gui.tabs.operationstab import BtSniffOperation
+    from umit.pm.gui.dialogs.btinterface import BtInterfaceDialog
+    FlagBTCheck=True
+except ImportError:
+    pass
 
 from umit.pm.gui.dialogs.interface import InterfaceDialog
 from umit.pm.gui.dialogs.preferences import PreferenceDialog
@@ -171,6 +178,9 @@ class MainWindow(gtk.Window):
 
             ('About', gtk.STOCK_ABOUT, _('About'), None, None, self.__on_about),
         ]
+        if FlagBTCheck:
+               self.main_actions.append(('Bluetooth', gtk.STOCK_CONNECT, _('Bluetooth'), '<Control>b',
+                _('Capture from Bluetooth interface'), self.__on_select_btiface))
 
         self.default_ui = """<menubar>
             <menu action='File'>
@@ -184,7 +194,11 @@ class MainWindow(gtk.Window):
                 <menuitem action='Quit'/>
             </menu>
             <menu action='Capture'>
-                <menuitem action='Interface'/>
+                <menuitem action='Interface'/>"""
+        if FlagBTCheck:
+            self.default_ui=self.default_ui + """
+                <menuitem action='Bluetooth'/> """
+        self.default_ui=self.default_ui + """
             </menu>
             <menu action='Audits'/>
             <menu action='Mitm'/>
@@ -216,7 +230,6 @@ class MainWindow(gtk.Window):
                 <separator/>
             </toolbar>
             """
-
         self.ui_manager = gtk.UIManager()
 
         self.main_accel_group = gtk.AccelGroup()
@@ -782,6 +795,25 @@ class MainWindow(gtk.Window):
 
         dialog.hide()
         dialog.destroy()
+
+    def __on_select_btiface(self, action):
+        try:        
+            log.debug('On_select_btiface')
+            dialog = BtInterfaceDialog(self)
+
+            if dialog.run() == gtk.RESPONSE_ACCEPT:    
+                iface = dialog.get_selected()
+                args = dialog.get_options()
+                
+                if iface:
+                    log.debug('MainWindow: BtSniff: %s selected' % iface)
+                    tab = self.get_tab('OperationsTab')
+                    tab.tree.append_operation(BtSniffOperation(iface, **args))
+            
+            dialog.hide()
+            dialog.destroy()
+        except:
+            pass
 
     def start_new_audit(self, dev1, dev2, bpf_filter, skipfwd, unoffensive):
         log.debug('Creating a new AuditOperation using dev1: %s dev2: %s '
