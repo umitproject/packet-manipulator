@@ -19,15 +19,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 
-import os,imp
-#list of modules that must be present to test presence of Btsniffer
-#backed/bt_sniffer is a package
+import os
+import imp
 
-class BTSniffer_Available():
 
-    def __init__(self):
-        modules = ['umit/pm/backend/abstract/basecontext/btsniff',
-                   'umit/pm/backend/bt_sniffer',
+class BTAvail():
+
+    @staticmethod
+    def check():
+        #list of modules that must be present to test presence of Btsniffer
+        #backed/bt_sniffer is a package
+        modules = ['umit/pm/backend/bt_sniffer',
                    'umit/pm/backend/bt_sniffer/crack',
                    'umit/pm/backend/bt_sniffer/handlers',
                    'umit/pm/backend/bt_sniffer/sniffcommon',
@@ -39,28 +41,20 @@ class BTSniffer_Available():
                    'umit/pm/backend/bt_sniffer/harness',
                    'umit/pm/backend/bt_sniffer/btsniff_fileio',
                    'umit/pm/backend/bt_sniffer/_crack',
-                   'umit/pm/gui/sessions/btsniffsession',
-                   'umit/pm/gui/dialogs/btinterface',
-                   'umit/pm/gui/pages/btpacketpage',
-                   'umit/pm/gui/pages/btsniffpage']
-        self.flag_bt_check=True
+                   ]
+        flag=True;
         try:
             if os.name=='posix' :
                 #find_module don't work with . notations.
                 for module_name in modules:
                     if imp.find_module(module_name) is None:
-                        self.flag_bt_check=False
+                        flag=False
                         break
             else:
-                self.flag_bt_check=False
+                flag=False
                 #There are many more files which must be present for BTSniffer to work
                 #These are the minimum files requried in the PM code(BTSniffer and PM together)
                 #to precent crashes from happening(till btsniff is not invoked)
         except ImportError:
-            self.flag_bt_check=False
-    
-    def Check(self):
-        """
-        Return True if BTsniffer is installed    
-        """
-        return self.flag_bt_check
+            flag=False
+        return flag
