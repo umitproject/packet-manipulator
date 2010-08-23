@@ -12,7 +12,7 @@ CMD_BUILD 		= 'python setup.py build'
 
 PATH_PM             = '../'
 PATH_BUILD			= 'build/'
-WANTED_FILE_EXTS 	= ['py', 'so']
+WANTED_FILE_EXTS 	= ['so']
 PATH_BT_BACKEND 	= PATH_PM + 'umit/pm/backend/bt_sniffer/'
 PATH_BT_PINCRACK	= PATH_PM + 'btpincrack-v0.3'
 PATH_LIB_PREFIX		= '%slib.linux' % PATH_BUILD
@@ -30,7 +30,7 @@ if sys.platform == 'linux2':
     #Compile and copy the C files for BTSniffer to PATH_BT_BACKEND
     os.system(CMD_BUILD)
     if os.path.exists(PATH_BT_BACKEND):
-	    shutil.rmtree(PATH_BT_BACKEND):        
+	    shutil.rmtree(PATH_BT_BACKEND)        
     os.makedirs(PATH_BT_BACKEND)
     os.path.walk(PATH_BUILD, _cpfunc, None)
 
