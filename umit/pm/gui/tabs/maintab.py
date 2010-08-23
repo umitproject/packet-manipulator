@@ -37,11 +37,13 @@ from umit.pm.gui.sessions.sequencesession import SequenceSession
 
 from umit.pm.manager.preferencemanager import Prefs
 
-from umit.pm.core.utlis import BTSniffer_Available
+from umit.pm.core.utlis import BTAvail
 
 try:
+    if BTAvail.check() is False:
+        raise
     from umit.pm.gui.sessions.btsniffsession import BtSniffSession
-except ImportError:
+except:
     BtSniffSession = None
 
 class IntroPage(gtk.HBox):

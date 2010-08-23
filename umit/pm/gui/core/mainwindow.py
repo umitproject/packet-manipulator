@@ -69,12 +69,17 @@ from umit.pm.gui.tabs.operationstab import FileOperation
 from umit.pm.gui.tabs.protocolselectortab import ProtocolSelectorTab
 from umit.pm.gui.tabs.operationstab import OperationsTab, SniffOperation, \
      AuditOperation
+
+from umit.pm.core.utlis import BTAvail
+
 FlagBTCheck=False
 try:
+    if BTAvail.check() is False:
+        raise
     from umit.pm.gui.tabs.operationstab import BtSniffOperation
     from umit.pm.gui.dialogs.btinterface import BtInterfaceDialog
     FlagBTCheck=True
-except ImportError:
+except:
     pass
 
 from umit.pm.gui.dialogs.interface import InterfaceDialog
@@ -797,7 +802,9 @@ class MainWindow(gtk.Window):
         dialog.destroy()
 
     def __on_select_btiface(self, action):
-        try:        
+        try:  
+            if BTAvail.check() is False:
+                raise      
             log.debug('On_select_btiface')
             dialog = BtInterfaceDialog(self)
 

@@ -35,6 +35,8 @@ from umit.pm.gui.core.icons import get_pixbuf
 
 from umit.pm.manager.preferencemanager import Prefs
 
+from umit.pm.core.utlis import BTAvail
+
 class Operation(object):
     """
     This is an abstract class representing a network operation
@@ -388,6 +390,8 @@ class SniffOperation(backend.SniffContext, Operation):
             self.notify_parent()
 
 try:
+    if BTAvail.check() is False:
+        raise
     class BtSniffOperation(backend.BtSniffContext, Operation):
         
         def __init__(self, iface, capfile = None, scount = 0, stime = 0, 
@@ -429,7 +433,7 @@ try:
         def __recv_callback(self, packet, udata):
             if not self.SKIP_UPDATE:
                 self.notify_parent()
-except AttributeError:
+except:
     pass
 
 class SequenceOperation(backend.SequenceContext, Operation):
