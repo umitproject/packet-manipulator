@@ -61,6 +61,14 @@ PACKAGES = ['umit',
 PACKAGE_DATA = {}
 #conditional append in both of these
 
+Btsniff_no_install=False
+
+CUSTOM_MACROS=[]
+cmd_args=sys.argv[1:]
+if '--no-btsniffer' in cmd_args:
+  BtSniff_no_install=True
+  cmd_args.remove('--no-btsniffer')
+
 def getoutput(cmd):
     """Return output (stdout or stderr) of executing cmd in a shell."""
     return getstatusoutput(cmd)[1]
@@ -202,7 +210,7 @@ class pm_install(install):
         print
         
         #If linux, default is install btsniffer and pm
-        if sys.platform == 'linux2':
+        if (sys.platform == 'linux2') and (not Btsniff_no_install):
             os.chdir('BTSniffer')
 
             if btcompile().make():
@@ -352,7 +360,8 @@ setup(name         = 'PacketManipulator',
                           glob.glob(os.path.join(DOCS_DIR, '_static', '*'))),
                      ] + mo_files,
       scripts      = [os.path.join(ROOT_DIR, 'umit', 'pm',
-                                   'PacketManipulator')],
+                                   'PacketManipulator')], 
+      script_args  = cmd_args,
       ext_modules  = modules,
       cmdclass     = {'install' : pm_install,
                       'build' : pm_build}
