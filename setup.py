@@ -30,11 +30,36 @@ from distutils.core import setup, Extension
 from distutils.command.install import install
 from distutils.command.build import build
 from umit.pm.core.const import PM_VERSION, PM_SITE
+from BTSniffer.btcompile import btcompile as btcompile
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 BASE_DOCS_DIR = os.path.join('share', 'doc',
                              'PacketManipulator-%s' % PM_VERSION)
 DOCS_DIR = os.path.join(ROOT_DIR, 'generated-doc', 'html')
+PACKAGES = ['umit',
+           'umit.pm',
+           'umit.pm.backend',
+           'umit.pm.backend.abstract',
+           'umit.pm.backend.abstract.basecontext',
+           'umit.pm.backend.abstract.context',
+           'umit.pm.backend.scapy',
+           'umit.pm.backend.scapy.context',
+           'umit.pm.backend.umpa',
+           'umit.pm.backend.umpa.context',
+           'umit.pm.manager',
+           'umit.pm.core',
+           'umit.pm.gui',
+           'umit.pm.gui.core',
+           'umit.pm.gui.tabs',
+           'umit.pm.gui.pages',
+           'umit.pm.gui.sessions',
+           'umit.pm.gui.dialogs',
+           'umit.pm.gui.widgets',
+           'umit.pm.gui.plugins',
+           'umit.pm.higwidgets'
+           ]
+PACKAGE_DATA = {}
+#conditional append in both of these
 
 def getoutput(cmd):
     """Return output (stdout or stderr) of executing cmd in a shell."""
@@ -175,6 +200,27 @@ class pm_install(install):
         print "# Installing PacketManipulator"
         print "#" * 80
         print
+        
+        #If linux, default is install btsniffer and pm
+        if sys.platform == 'linux2':
+            os.chdir('BTSniffer')
+
+            if btcompile().make():
+
+                PACKAGES.append('umit.pm.backend.bt_sniffer')
+                PACKAGE_DATA['umit.pm.backend.bt_sniffer'] = ['*.so']
+
+                of.chdir('../')
+
+            else:
+                print "\nInstall above listed libraries or run with --no-btsniffer argument\n"
+                print
+                print "#" * 80
+                print "# Installation Halted"
+                print "#" * 80
+                print
+                return False
+                
 
         install.run(self)
         self.build_plugins()
@@ -287,28 +333,8 @@ setup(name         = 'PacketManipulator',
       license      = 'GNU GPL 2',
       requires     = ['gtk'],
       platforms    = ['Platform Independent'],
-      packages     = ['umit',
-                      'umit.pm',
-                      'umit.pm.backend',
-                      'umit.pm.backend.abstract',
-                      'umit.pm.backend.abstract.basecontext',
-                      'umit.pm.backend.abstract.context',
-                      'umit.pm.backend.scapy',
-                      'umit.pm.backend.scapy.context',
-                      'umit.pm.backend.umpa',
-                      'umit.pm.backend.umpa.context',
-                      'umit.pm.manager',
-                      'umit.pm.core',
-                      'umit.pm.gui',
-                      'umit.pm.gui.core',
-                      'umit.pm.gui.tabs',
-                      'umit.pm.gui.pages',
-                      'umit.pm.gui.sessions',
-                      'umit.pm.gui.dialogs',
-                      'umit.pm.gui.widgets',
-                      'umit.pm.gui.plugins',
-                      'umit.pm.higwidgets'
-                     ],
+      packages     = PACKAGES,
+      package_data = PACKAGE_DATA,
       package_dir  = {'umit' : os.path.join(ROOT_DIR, 'umit')},
       data_files   = [
                       (os.path.join('share', 'pixmaps', 'pm'),
