@@ -210,7 +210,7 @@ class pm_install(install):
                 PACKAGES.append('umit.pm.backend.bt_sniffer')
                 PACKAGE_DATA['umit.pm.backend.bt_sniffer'] = ['*.so']
 
-                of.chdir('../')
+                os.chdir('../')
 
             else:
                 print "\nInstall above listed libraries or run with --no-btsniffer argument\n"

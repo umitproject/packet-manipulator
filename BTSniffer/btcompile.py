@@ -39,17 +39,14 @@ class btcompile():
 
     
     def gcc(self):#check if gcc is present
+        proc = subprocess.Popen('which gcc',
+                                shell=True,
+                                stdout=subprocess.PIPE
+                               )      
+        if len(proc.communicate()[0])==0:
+            print "gcc"
+            return False            
         return True
-
-    def python_dev(self):
-        proc = subprocess.Popen('gcc ' + self.python_dev_file,
-                                    shell=True,
-                                    stderr=subprocess.PIPE
-                                   )
-        # Need to pass -I/usr/include/python2.6 as compile time argument, find better way
-        for dep in self.python_deps:
-            print dep
-        return False
 
     def blue_dev(self):
         proc = subprocess.Popen('gcc ' + self.bluetooth_dev_file,
@@ -66,14 +63,21 @@ class btcompile():
 
     def make(self):
         if self.gcc():
-            blue_check=self.blue_dev()
-            python_check=self.python_dev()
-        
-            if blue_check or python_check:
+            if not self.blue_dev():
                 return False
 
             #Compile and copy the C files for BTSniffer to PATH_BT_BACKEND
-            os.system(self.CMD_BUILD)
+            proc = subprocess.Popen(self.CMD_BUILD,
+                                    shell=True,
+                                    stderr=subprocess.PIPE
+                                   )
+            check=proc.communicate()[1]
+        
+            if re.search('[eE][rR][rR][oO][rR]',check) is not None :
+                for dep in self.python_deps:
+                    print dep
+                return False
+
             if os.path.exists(self.PATH_BT_BACKEND):
                 shutil.rmtree(self.PATH_BT_BACKEND)        
             os.makedirs(self.PATH_BT_BACKEND)
@@ -84,7 +88,8 @@ class btcompile():
                 shutil.rmtree(self.PATH_BT_PINCRACK)
             shutil.copytree('btpincrack-v0.3',self.PATH_BT_PINCRACK)
 
+            return True
+
         else:
             return False
 
-#btcompile().make()
