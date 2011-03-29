@@ -32,6 +32,8 @@ from umit.pm.manager.auditmanager import AuditDispatcher, AuditManager, \
                                          IL_TYPE_ETH
 from umit.pm.backend.scapy import *
 
+import select
+
 # These should be moved outside.
 
 ERR_TIMEOUT   = 0
