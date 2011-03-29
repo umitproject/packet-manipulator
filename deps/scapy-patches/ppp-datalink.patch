@@ -1,7 +1,7 @@
-diff -r 7a211173d33f scapy/layers/ppp.py
---- a/scapy/layers/ppp.py	Mon Jan 11 17:59:00 2010 +0100
-+++ b/scapy/layers/ppp.py	Thu Feb 11 14:05:20 2010 +0100
-@@ -339,3 +339,5 @@
+diff -r 2c99fb37d83d scapy/layers/ppp.py
+--- a/scapy/layers/ppp.py	Fri Mar 11 19:37:19 2011 +0100
++++ b/scapy/layers/ppp.py	Tue Mar 29 15:24:12 2011 +0200
+@@ -345,3 +345,5 @@
  bind_layers( PPP,           PPP_ECP,       proto=0x8053)
  bind_layers( Ether,         PPP_IPCP,      type=0x8021)
  bind_layers( Ether,         PPP_ECP,       type=0x8053)

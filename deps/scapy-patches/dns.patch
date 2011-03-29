@@ -1,7 +1,7 @@
-diff -r 7a211173d33f scapy/layers/dns.py
---- a/scapy/layers/dns.py	Mon Jan 11 17:59:00 2010 +0100
-+++ b/scapy/layers/dns.py	Thu Feb 11 15:03:04 2010 +0100
-@@ -10,14 +10,23 @@
+diff -r 2c99fb37d83d scapy/layers/dns.py
+--- a/scapy/layers/dns.py	Fri Mar 11 19:37:19 2011 +0100
++++ b/scapy/layers/dns.py	Tue Mar 29 15:23:05 2011 +0200
+@@ -14,6 +14,23 @@
  from scapy.ansmachine import *
  from scapy.layers.inet import UDP
  
@@ -12,7 +12,10 @@ diff -r 7a211173d33f scapy/layers/dns.py
 +        yield '.'.join(splitted[0:i]), '.'.join(splitted[i:])
 +
 +def convert(x):
-+    x = [k[:63] for k in x.split(".")] # Truncate chunks that cannont be encoded (more than 63 bytes..)
++    if x == ".":
++      return "\x00"
++
++    x = [k[:63] for k in x.split(".")] # Truncate chunks that cannot be encoded (more than 63 bytes..)
 +    x = map(lambda y: chr(len(y))+y, x)
 +    x = "".join(x)
 +    if x[-1] != "\x00":
@@ -20,18 +23,26 @@ diff -r 7a211173d33f scapy/layers/dns.py
 +    return x
 +
  class DNSStrField(StrField):
+ 
+     def h2i(self, pkt, x):
+@@ -22,15 +39,7 @@
+       return x
+ 
      def i2m(self, pkt, x):
--        x = [k[:63] for k in x.split(".")] # Truncate chunks that cannont be encoded (more than 63 bytes..)
+-        if x == ".":
+-          return "\x00"
+-
+-        x = [k[:63] for k in x.split(".")] # Truncate chunks that cannot be encoded (more than 63 bytes..)
 -        x = map(lambda y: chr(len(y))+y, x)
 -        x = "".join(x)
 -        if x[-1] != "\x00":
 -            x += "\x00"
 -        return x
 +        return convert(x)
+ 
      def getfield(self, pkt, s):
          n = ""
-         while 1:
-@@ -45,7 +54,7 @@
+@@ -63,7 +72,7 @@
              x = x.payload
              i += 1
          return i
@@ -40,7 +51,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
      def i2m(self, pkt, x):
          if x is None:
              x = self._countRR(pkt)
-@@ -54,10 +63,12 @@
+@@ -72,10 +81,12 @@
          if x is None:
              x = self._countRR(pkt)
          return x
@@ -55,7 +66,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
      q = 0
      jpath = [p]
      while 1:
-@@ -67,26 +78,31 @@
+@@ -85,26 +96,31 @@
          l = ord(s[p])
          p += 1
          if l & 0xc0:
@@ -90,7 +101,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
  
  class DNSRRField(StrField):
      holds_packets=1
-@@ -98,18 +114,20 @@
+@@ -116,18 +132,20 @@
          if x is None:
              return ""
          return str(x)
@@ -115,7 +126,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
          return rr,p
      def getfield(self, pkt, s):
          if type(s) is tuple :
-@@ -123,28 +141,28 @@
+@@ -141,28 +159,28 @@
              return s,""
          while c:
              c -= 1
@@ -151,7 +162,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
  
  class RDataField(StrLenField):
      def m2i(self, pkt, s):
-@@ -155,7 +173,7 @@
+@@ -173,7 +191,7 @@
              family = socket.AF_INET6
          elif pkt.type == 12:
              s = DNSgetstr(s, 0)[0]
@@ -160,7 +171,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
              s = inet_ntop(family, s)
          return s
      def i2m(self, pkt, s):
-@@ -165,26 +183,35 @@
+@@ -183,26 +201,35 @@
          elif pkt.type == 28:
              if s:
                  s = inet_pton(socket.AF_INET6, s)
@@ -205,7 +216,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
  
  class DNS(Packet):
      name = "DNS"
-@@ -210,7 +237,7 @@
+@@ -228,7 +255,7 @@
                  and self.id == other.id
                  and self.qr == 1
                  and other.qr == 0)
@@ -214,7 +225,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
      def mysummary(self):
          type = ["Qry","Ans"][self.qr]
          name = ""
-@@ -224,24 +251,152 @@
+@@ -242,24 +269,152 @@
                  name = ' "%s"' % self.qd.qname
          return 'DNS %s%s ' % (type, name)
  
@@ -369,7 +380,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
  
  class DNSRR(Packet):
      name = "DNS Resource Record"
-@@ -251,7 +406,9 @@
+@@ -269,7 +424,9 @@
                      ShortEnumField("rclass", 1, dnsclasses),
                      IntField("ttl", 0),
                      RDLenField("rdlen"),
@@ -380,7 +391,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
  
  bind_layers( UDP,           DNS,           dport=53)
  bind_layers( UDP,           DNS,           sport=53)
-@@ -275,9 +432,7 @@
+@@ -293,9 +450,7 @@
          return r.getlayer(DNS).rcode
      else:
          return -1
@@ -391,7 +402,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
  
  @conf.commands.register
  def dyndns_del(nameserver, name, type="ALL", ttl=10):
-@@ -297,7 +452,7 @@
+@@ -315,7 +470,7 @@
          return r.getlayer(DNS).rcode
      else:
          return -1
@@ -400,7 +411,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
  
  class DNS_am(AnsweringMachine):
      function_name="dns_spoof"
-@@ -312,7 +467,7 @@
+@@ -330,7 +485,7 @@
  
      def is_request(self, req):
          return req.haslayer(DNS) and req.getlayer(DNS).qr == 0
@@ -409,7 +420,7 @@ diff -r 7a211173d33f scapy/layers/dns.py
      def make_reply(self, req):
          ip = req.getlayer(IP)
          dns = req.getlayer(DNS)
-@@ -322,4 +477,3 @@
+@@ -340,4 +495,3 @@
                      an=DNSRR(rrname=dns.qd.qname, ttl=10, rdata=rdata))
          return resp
  
