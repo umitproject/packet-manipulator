@@ -31,6 +31,8 @@ from umit.pm.manager.auditmanager import AuditDispatcher
 
 from umit.pm.backend.scapy import *
 
+import select
+
 def register_sniff_context(BaseSniffContext):
     class SniffContext(BaseSniffContext):
         """
@@ -310,7 +312,7 @@ def register_sniff_context(BaseSniffContext):
                         except PcapTimeoutElapsed:
                             continue
                     else:
-                        inp, out, err = select(inmask, inmask, inmask, None)
+                        inp, out, err = select.select(inmask, inmask, inmask, None)
                         if self.socket in inp:
                             r = self.socket.recv(MTU)
                     if r is None:
@@ -318,7 +320,6 @@ def register_sniff_context(BaseSniffContext):
 
                     self.priv.append(r)
                 except Exception, err:
-
                     # Ok probably this is an exception raised when the select
                     # is runned on already closed socket (see also _stop)
                     # so avoid throwing this exception.

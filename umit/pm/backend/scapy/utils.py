@@ -38,6 +38,8 @@ from umit.pm.backend import VirtualIFace
 from umit.pm.backend.scapy.wrapper import *
 from umit.pm.backend.scapy.packet import MetaPacket
 
+import select
+
 if not WINDOWS:
     import fcntl
 else:
@@ -208,9 +210,9 @@ def get_n_packets(process):
     """
     if not WINDOWS:
         try:
-            inp, out, err = select([process.stderr],
-                                   [process.stderr],
-                                   [process.stderr])
+            inp, out, err = select.select([process.stderr],
+                                          [process.stderr],
+                                          [process.stderr])
         except:
             # Here we could have select that hangs after a kill in stop
             return -1

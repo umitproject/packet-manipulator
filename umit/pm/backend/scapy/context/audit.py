@@ -493,7 +493,7 @@ def register_audit_context(BaseAuditContext):
                             continue
                     else:
                         inmask = [obj]
-                        inp, out, err = select(inmask, inmask, inmask, None)
+                        inp, out, err = select.select(inmask, inmask, inmask, None)
 
                         if obj in inp:
                             r = obj.recv(MTU)
