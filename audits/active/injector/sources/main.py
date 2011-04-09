@@ -430,7 +430,7 @@ class ConnectionsWindow(gtk.Dialog):
         self.notebook.remove_page(pagenum)
 
         if tab.conn in self.following:
-            tab.conn &= ~CN_VIEWING
+            tab.conn.flags &= ~CN_VIEWING
             del self.following[tab.conn]
 
     def get_extern_iter(self, top=True):

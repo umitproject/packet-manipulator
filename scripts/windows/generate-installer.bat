@@ -12,11 +12,11 @@ rem C:\gtk\bin;C:\mingw\bin;c:\python25;$PATH
 
 echo Setting installation variables...
 set PM_DOCKING=1
-set PythonEXE=C:\Python25\python.exe
+set PythonEXE=C:\Python26\python.exe
 set PMOrig=.
 set PMDir=C:\PMTemp
 set DistDir=%PMDir%\dist
-set GTKDir=C:\GTK
+set GTKDir=C:\Python26\Lib\site-packages\gtk-2.0\runtime
 set WinInstallDir=%PMDir%\scripts\windows
 set Output=%PMDir%\win_install.log
 set MakeNSIS="C:\Program Files\NSIS\makensis.exe"

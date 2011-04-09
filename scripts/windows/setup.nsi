@@ -9,8 +9,8 @@
 !define DOC_OUTPUTDIR 'generated-doc'
 !define EXE_OUTFILE '${APPLICATION_NAME}-${APPLICATION_VERSION}-installer.exe'
 
-!define APPLICATION_ICON 'C:\PacketManipulator\PM\share\pixmaps\pm\pm-icon48.ico'
-!define APPLICATION_LOGO 'C:\PacketManipulator\PM\share\pixmaps\pm\splash.bmp'
+!define APPLICATION_ICON 'C:\PacketManipulator\umit\pm\share\pixmaps\pm\pm-icon48.ico'
+!define APPLICATION_LOGO 'C:\PacketManipulator\umit\pm\share\pixmaps\pm\splash.bmp'
 
 !define AddRemKey "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPLICATION_NAME} ${APPLICATION_VERSION}"
 

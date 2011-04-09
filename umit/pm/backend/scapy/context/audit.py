@@ -33,6 +33,7 @@ from umit.pm.manager.auditmanager import AuditDispatcher, AuditManager, \
 from umit.pm.backend.scapy import *
 
 import select
+from struct import pack, unpack_from
 
 # These should be moved outside.
 
@@ -44,7 +45,6 @@ SIOCGIFMTU = 0x8921
 
 if os.name != 'nt':
     from fcntl import ioctl
-    from struct import pack, unpack_from
 
     def get_mtu(iface):
         s = socket.socket(PF_INET, socket.SOCK_DGRAM, 0)

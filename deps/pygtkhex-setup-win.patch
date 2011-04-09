@@ -1,0 +1,23 @@
+Index: setup.py
+===================================================================
+--- setup.py	(revision 29)
++++ setup.py	(working copy)
+@@ -60,8 +60,8 @@
+         ('LIBGTKHEX_RELEASE_STRING', '\"%s\"' % LIBGTK_HEX_VERSION)
+     ]
+ else:
+-    PYDIR = 'C:\\Python25'
+-    GTKDIR = 'C:\\GTK'
++    PYDIR = r'C:\Python26'
++    GTKDIR = r'C:\Python26\Lib\site-packages\gtk-2.0\runtime'
+     
+     deps = {
+         'include_dirs' : [
+@@ -73,6 +73,7 @@
+             '%s\\include\\cairo' % GTKDIR,
+             '%s\\include\\glib-2.0' % GTKDIR,
+             '%s\\include\\gtk-2.0' % GTKDIR,
++            '%s\\include\\gdk-pixbuf-2.0' % GTKDIR,
+             '%s\\include\\pango-1.0' % GTKDIR,
+             '%s\\lib\\glib-2.0\\include' % GTKDIR,
+             '%s\\lib\\gtk-2.0\\include' % GTKDIR,

@@ -128,6 +128,10 @@ if os.getenv('PM_DOCKING', False):
             library_dirs=pkc_get_library_dirs('gtk+-2.0 pygtk-2.0'),
         )
     else:
+        gtk = "C:\\Python26\\Lib\\site-packages\\gtk-2.0\\runtime"
+        inc = "%s\\include" % gtk
+        lib = "%s\\lib" % gtk
+        
         moo = Extension(
             'umit.pm.gui.moo_stub',
             [
@@ -139,13 +143,13 @@ if os.getenv('PM_DOCKING', False):
                 'umit/pm/moo/moo-stub.c',
             ],
             include_dirs=[
-                "C:\\GTK\\include\\gtk-2.0", "C:\\GTK\\include\\glib-2.0",
-                "C:\\GTK\\include\\atk-1.0", "C:\\GTK\\include\\pango-1.0",
-                "C:\\GTK\\include\\cairo",
-                "C:\\GTK\\lib\\gtk-2.0\\include", "C:\\GTK\\lib\\glib-2.0\\include",
-                "C:\\Python25\\include\\pycairo", "C:\\Python25\\include\\pygtk-2.0"
+                "%s\\gtk-2.0" % inc, "%s\\glib-2.0" % inc,
+                "%s\\atk-1.0" % inc, "%s\\pango-1.0" % inc,
+                "%s\\gdk-pixbuf-2.0" % inc, "%s\\cairo" % inc,
+                "%s\\gtk-2.0\\include" % lib, "%s\\glib-2.0\\include" % lib,
+                "C:\\Python26\\include\\pycairo", "C:\\Python26\\include\\pygtk-2.0"
                 ],
-            library_dirs=["C:\\GTK\\lib"],
+            library_dirs=[lib],
             libraries=["gtk-win32-2.0", "gthread-2.0", "glib-2.0", "gobject-2.0", "gdk-win32-2.0", "gdk_pixbuf-2.0"]
         )
 
@@ -232,8 +236,8 @@ class pm_install(BuildExe):
         os.chdir(plugins_dir)
 
         if os.name =="nt":
-            os.system("C:\\python25\\python.exe setup-autogen.py passive")
-            os.system("C:\\python25\\python.exe setup-autogen.py active")
+            os.system("C:\\python26\\python.exe setup-autogen.py passive")
+            os.system("C:\\python26\\python.exe setup-autogen.py active")
         else:
             os.system("python setup-autogen.py passive")
             os.system("python setup-autogen.py active")
@@ -245,9 +249,9 @@ class pm_install(BuildExe):
         print
 
         if os.name =="nt":
-            os.system("C:\\python25\\python.exe setup-autogen.py "
+            os.system("C:\\python26\\python.exe setup-autogen.py "
                       "-o %s -b passive" % dest_dir)
-            os.system("C:\\python25\\python.exe setup-autogen.py "
+            os.system("C:\\python26\\python.exe setup-autogen.py "
                       "-o %s -b active" % dest_dir)
         else:
             os.system("python setup-autogen.py -o %s -b passive" % dest_dir)
@@ -297,7 +301,7 @@ class pm_install(BuildExe):
         os.chdir(os.path.join(plugins_dir, dir_entry))
 
         if os.name =="nt":
-            os.system("C:\\python25\\python.exe setup.py build_ext -c mingw32 install")
+            os.system("C:\\python26\\python.exe setup.py build_ext -c mingw32 install")
         else:
             os.system("python setup.py install")
 
@@ -366,13 +370,16 @@ setup(name         = 'PacketManipulator',
                           glob.glob(os.path.join(DOCS_DIR, '_static', '*'))),
                      ] + mo_files,
       scripts      = [os.path.join('umit', 'pm', 'PacketManipulator')],
-      windows      = [{'script' : r'PM\PacketManipulator',
-                       'icon_resources' : [(1, r'PM\share\pixmaps\pm\pm-icon48.ico')],
-                       'other_resources' : [(24, 1, uac_manifest)]}],
+      windows      = [{'script' : r'umit\pm\PacketManipulator',
+                       'icon_resources' : [(1, r'umit\pm\share\pixmaps\pm\pm-icon48.ico')],
+					   'uac_info' : 'requireAdministrator',
+                      # 'other_resources' : [(24, 1, uac_manifest)]}],
+                      }],
       options      = {'py2exe' : {
                           'compressed' : 1,
                           'packages' : 'encodings,scapy',
-                          'includes' : 'umit.pm.gui.moo_stub,gtk.keysyms,gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk,gtkhex'},
+						  'excludes' : 'psyco,Crypto',
+                          'includes' : 'umit.pm.gui.moo_stub,gtk.keysyms,gtk,pango,atk,gobject,encodings,encodings.*,cairo,pangocairo,atk,gtkhex,gio,glib,gobject'},
                       'build': {'compiler' : 'mingw32'}},
       ext_modules  = modules,
       cmdclass     = {'py2exe' : pm_install,
