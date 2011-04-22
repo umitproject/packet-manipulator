@@ -289,7 +289,7 @@ class MetaPacket(object):
                 # proto filtering is active and the current is not
                 # the target protocol.
 
-                current = find.payload
+                current = current.payload
                 continue
 
             if field is not None:
@@ -301,7 +301,7 @@ class MetaPacket(object):
                     # Ok. Let's return because we have reached our
                     # field!
 
-                    return
+                    return True
             else:
                 # If we are here we should reset all the fields!
                 # kill them all man!
@@ -314,9 +314,11 @@ class MetaPacket(object):
             # at this point so it's safe to return
 
             if protocol_found:
-                return
+                return True
 
             current = current.payload
+
+        return False
 
     def haslayer(self, layer):
         return bool(self.root.haslayer(layer))
