@@ -37,6 +37,8 @@ class TerminalWidget(gtk.Bin):
 
             self.term = vte.Terminal()
             self.term.fork_command()
+            self.term.connect('child-exited',
+                              lambda *w: self.term.fork_command())
 
             self.__scroll = gtk.VScrollbar(self.term.get_adjustment())
             border = gtk.Frame()
