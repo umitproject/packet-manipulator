@@ -1,4 +1,10 @@
-include README AUTHORS COPYING COPYING_HIGWIDGETS ChangeLog
+# Actually PacketManipulator script in the root directory
+# is not needed since it is just a development script that
+# uses the official launcher inside umit/pm. It is just
+# included in the sdist for the sake of completeness.
+
+include README AUTHORS COPYING COPYING_HIGWIDGETS ChangeLog PacketManipulator
+include umit/pm/PacketManipulator
 
 include umit/pm/moo/moopane.c
 include umit/pm/moo/moopaned.override
@@ -26,6 +32,7 @@ include umit/pm/moo/dsutils.py
 recursive-include umit/pm/share/pixmaps/pm *.png *.ico
 recursive-include umit/pm/share/locale/it/LC_MESSAGES/ *.mo
 recursive-include umit/pm/share/doc *
+recursive-include umit *.py
 
 recursive-include plugins *
 recursive-include audits *
