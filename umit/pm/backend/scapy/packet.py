@@ -457,7 +457,10 @@ class MetaPacket(object):
                 if isinstance(val, Packet):
                     return MetaPacket(val)
 
-                return val != None and val or default
+                if val is None:
+                    return default
+
+                return val
             else:
                 return str(layer)
         except Exception, err:
