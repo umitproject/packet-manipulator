@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import os
+import sys
 import time
 import socket
 
@@ -40,11 +41,11 @@ from struct import pack, unpack_from
 ERR_TIMEOUT   = 0
 ERR_EXCEPTION = 1
 
-PF_INET = socket.AF_INET
-SIOCGIFMTU = 0x8921
-
 if os.name != 'nt':
     from fcntl import ioctl
+
+    PF_INET = socket.AF_INET
+    SIOCGIFMTU = (sys.platform == 'darwin') and (0xC0206933) or (0x8921)
 
     def get_mtu(iface):
         s = socket.socket(PF_INET, socket.SOCK_DGRAM, 0)
