@@ -394,8 +394,8 @@ def find_all_devs(capmethod=0):
                 ret.append(VirtualIFace(name, desc, 'N/A'))
 
             return ret
-        except Except, err:
-            print err
+        except Exception, err:
+            log.error("Error in running the helper: %s" % str(err))
             return []
 
 
