@@ -83,7 +83,7 @@ __plugins__ = [ICMPDecoder]
 __audit_type__ = 0
 __protocols__ = (('icmp', None), )
 __configurations__ = (('decoder.icmp', {
-    'checksum_check' : ['True', 'Check for correct checksum of ICMP packets'],}),
+    'checksum_check' : [True, 'Check for correct checksum of ICMP packets'],}),
 )
 __vulnerabilities__ = (('ICMP decoder', {
     'description' : 'The Internet Control Message Protocol (ICMP) is one of '
