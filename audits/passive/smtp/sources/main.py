@@ -2,6 +2,7 @@ from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 from umit.pm.manager.sessionmanager import SessionManager
+import base64
 
 def smtp_dissector():
     SMTP_NAME = 'dissector.smtp'
@@ -42,6 +43,30 @@ def smtp_dissector():
         payload = mpkt.data.strip()
 
         #auth Login
+        if payload[:10].upper() == 'AUTH PLAIN':
+            sess = sessions.lookup_session(mpkt, SMTP_PORTS, SMTP_NAME, True)
+            login=base64.decodestring((payload[11:]))
+            login=login.split('\x00')
+            
+             for str in login:
+                
+                if sess.data == None and str!='':
+                    sess.data=[str,None]
+                   
+                if sess.data != None and str!='':
+                    sess.data[1]=str
+                    
+            
+            manager.user_msg('SMTP : %s:%d -> USER: %s PASS: %s' % \
+                             (mpkt.l3_dst, mpkt.l4_dst,
+                              sess.data[0] or '',
+                              sess.data[1] or ''),
+                              6, SMTP_NAME)
+
+            mpkt.set_cfield('username', sess.data[0])
+            mpkt.set_cfield('password', sess.data[1])
+
+            sessions.delete_session(sess)
     return smtp
 
 
@@ -62,27 +87,8 @@ __plugins_deps__ = [('SMTPDissector', ['TCPDecoder'], ['SMTPDissector-1.0'], [])
 
 __audit_type__ = 0
 __protocols__ = (('tcp', 25), ('smtp', None))
-__vulnerabilities__ = (('FTP dissector', {
-    'description' : 'File Transfer Protocol (FTP) is a standard network '
-                    'protocol used to exchange and manipulate files over an '
-                    'Internet Protocol computer network, such as the Internet. '
-                    'FTP is built on a client-server architecture and utilizes '
-                    'separate control and data connections between the client '
-                    'and server applications. Client applications were '
-                    'originally interactive command-line tools with a '
-                    'standardized command syntax, but graphical user '
-                    'interfaces have been developed for all desktop operating '
-                    'systems in use today. FTP is also often used as an '
-                    'application component to automatically transfer files for '
-                    'program internal functions. FTP can be used with '
-                    'user-based password a While data is being transferred via '
-                    'the data stream, the control stream sits idle. This can '
-                    'cause problems with large data transfers through '
-                    'firewalls which time out sessions after lengthy periods '
-                    'of idleness. While the file may well be successfully '
-                    'transferred, the control session can be disconnected by '
-                    'the firewall, causing an error to be generated.',
-    'references' : ((None, 'http://en.wikipedia.org/wiki/'
-                            'File_Transfer_Protocol'), )
+__vulnerabilities__ = (('SMTP dissector', {
+    'description' : 'Simple Mail Transfer Protocol (SMTP) is an Internet standard for electronic mail (e-mail) transmission across Internet Protocol (IP) networks.',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol'), )
     }),
 )
