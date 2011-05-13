@@ -49,10 +49,10 @@ def smtp_dissector():
             
             for str in login:
                 
-                if sess.data == None and str!='':
+                if not sess.data  and not str =='':
                     sess.data=[str,None]
                    
-                if sess.data != None and str!='':
+                if sess.data  and not str =='':
                     sess.data[1]=str
                     
             

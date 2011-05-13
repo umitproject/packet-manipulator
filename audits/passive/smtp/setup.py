@@ -5,11 +5,11 @@ from umit.pm.gui.plugins.containers import setup
 
 setup(
     name='SMTPDissector',
-    version='0.5',
-    author=['Tiago Serra'],
+    version='1.0',
+    author=['Francesco Piccinno'],
     license=['GPL'],
     copyright=['2009 Adriano Monteiro Marques'],
-    url='http://www.umitproject.org/',
+    url='http://blog.archpwn.org',
     scripts=['sources/main.py'],
     start_file='main',
     data_files=[],
@@ -20,5 +20,5 @@ setup(
     output='smtpdissector.ump',
     audit_type=0,
     protocols=(('tcp', 25), ('smtp', None)),
-    vulnerabilities=(('SMTP dissector', {'references': ((None, 'http://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol'),), 'description': ' Simple Mail Transfer Protocol (SMTP) is an Internet standard for electronic mail (e-mail) transmission across Internet Protocol (IP) networks.'}),),
+    vulnerabilities=(('SMTP dissector', {'references': ((None, 'http://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol'),), 'description': 'Simple Mail Transfer Protocol (SMTP) is an Internet standard for electronic mail (e-mail) transmission across Internet Protocol (IP) networks.'}),),
 )
