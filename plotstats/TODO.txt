@@ -1,0 +1,5 @@
+- Write donut graph in gtk to break dependence
+    > add animation in the graph, for instance in mouse-over event, change colour
+- Write line graph in gtk
+- Write a throughput rate graphic
+-
