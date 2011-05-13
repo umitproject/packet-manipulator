@@ -1,3 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2008 Adriano Monteiro Marques
+#
+# Author: Tiago Serra <pwerspire@gmail.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
 from umit.pm.core.logger import log    
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
@@ -67,7 +87,7 @@ def smtp_dissector():
 
             sessions.delete_session(sess)
             
-        if payload.upper() == 'AUTH LOGIN':
+        elif payload.upper() == 'AUTH LOGIN':
             sess.data = ['AUTH LOGIN',None,None]
         
         elif sess.data  and sess.data[0] == 'AUTH LOGIN' and not sess.data[1] :
