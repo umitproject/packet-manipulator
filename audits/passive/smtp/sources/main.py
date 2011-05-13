@@ -41,14 +41,13 @@ def smtp_dissector():
             return
 
         payload = mpkt.data.strip()
-
-        #auth Login
+        sess = sessions.lookup_session(mpkt, SMTP_PORTS, SMTP_NAME, True)
+        
         if payload[:10].upper() == 'AUTH PLAIN':
-            sess = sessions.lookup_session(mpkt, SMTP_PORTS, SMTP_NAME, True)
             login=base64.decodestring((payload[11:]))
             login=login.split('\x00')
             
-             for str in login:
+            for str in login:
                 
                 if sess.data == None and str!='':
                     sess.data=[str,None]
@@ -67,6 +66,30 @@ def smtp_dissector():
             mpkt.set_cfield('password', sess.data[1])
 
             sessions.delete_session(sess)
+            
+        if payload.upper() == 'AUTH LOGIN':
+            sess.data = ['AUTH LOGIN',None,None]
+        
+        elif sess.data  and sess.data[0] == 'AUTH LOGIN' and not sess.data[1] :
+            sess.data[1]=base64.decodestring(payload)
+           
+            
+        elif sess.data  and sess.data[0] == 'AUTH LOGIN' and  sess.data[1] : 
+            sess.data[2]=base64.decodestring(payload)
+            
+            manager.user_msg('SMTP : %s:%d -> USER: %s PASS: %s' % \
+                             (mpkt.l3_dst, mpkt.l4_dst,
+                              sess.data[1] or '',
+                              sess.data[2] or ''),
+                              6, SMTP_NAME)
+                
+            mpkt.set_cfield('username', sess.data[1])
+            mpkt.set_cfield('password', sess.data[2])    
+                
+            sessions.delete_session(sess)
+                
+            
+            
     return smtp
 
 

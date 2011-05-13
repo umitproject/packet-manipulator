@@ -5,7 +5,7 @@ from umit.pm.gui.plugins.containers import setup
 
 setup(
     name='SMTPDissector',
-    version='0.2',
+    version='0.5',
     author=['Tiago Serra'],
     license=['GPL'],
     copyright=['2009 Adriano Monteiro Marques'],
