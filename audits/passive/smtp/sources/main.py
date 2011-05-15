@@ -127,7 +127,7 @@ class SMTPDissector(Plugin, PassiveAudit):
         
 __plugins__ = [SMTPDissector]
 __plugins_deps__ = [('SMTPDissector', ['TCPDecoder'], ['SMTPDissector-1.0'], []),]
-
+__author__ = ['Tiago Serra']
 __audit_type__ = 0
 __protocols__ = (('tcp', 25), ('smtp', None))
 __vulnerabilities__ = (('SMTP dissector', {
