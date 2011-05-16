@@ -1,5 +1,4 @@
 from collections import deque
-from operator import attrgetter
 #from umit.pm.gui.plugins.atoms import Version
 from atoms import Version
 
@@ -28,6 +27,16 @@ class Graph():
         prov_str, prov_op, prov_ver = provide
 
         return need_op(prov_ver, need_ver)
+    
+    def _check_major_version(self, node1, node2):
+        first = node1.provides        
+        second = node2.provides
+        print "\tChecking", first, second
+
+        first_str, first_op, first_ver = first[0]
+        second_str, second_op, second_ver = second[0]
+        
+        return (first_ver.__cmp__(second_ver))
 
     def _has_conflicts(self, load_list, target):
         for conf in target.conflicts:
@@ -107,13 +116,14 @@ class Graph():
                 elif len(first_stage) > 1:
                     print "Multiple dep matching your needs", need
                     print "\t", first_stage
-
-
-                    # TODO: Create a sort function that uses atoms.py to replace sorted.
                     
-                    first_stage = sorted(first_stage, key=attrgetter('provides'), reverse=True)
+                    def check_major_version(node1, node2):
+                        return Version.__cmp__(node1.provides[0][2],node2.provides[0][2])                    
                     
-                    print "Sorted", first_stage
+                    first_stage.sort(check_major_version)
+                    first_stage.reverse()
+                    
+                    print "Sorted: ", first_stage
 
                     for target in first_stage:
                         fake_graph = Graph(lst=list(self._list))
@@ -146,7 +156,6 @@ class Node(object):
 
     def __repr__(self):
         return "Node: %s %s" % (self.name, str(self.provides))
-
 class DepSolver(object):
     """
     This class solve plugin dependencies and conflicts.
@@ -155,13 +164,11 @@ class DepSolver(object):
     Is only for test
     """
     def __init__(self):
-        self.dep_path = []
-
         # This graph should be static so you cannot call at any time remove_*
         # stuff.
         self.graph = Graph()
 
-    def load_dependences(self, path):
+    def load_dependences(self):
         self.graph.append(
             Node('SMBDissector', ['=vnc-1.0', '>mysql-1.0'], ['>tcp-1.0', '<udp-2.0'], [])
         )
@@ -192,10 +199,9 @@ class DepSolver(object):
         self.graph.append(
             Node('EthDecoder', [], [], ['=eth-1.7'])
         )
-
-        self.graph.append(
-            Node('ShinyETH', [], [], ['>eth-1.7'])
-        )
+        #self.graph.append(
+            #Node('ShinyETH', [], [], ['=eth-1.8'])
+        #)
 
     def get_dep_for(self, start):
         orig = self.graph.clone()
@@ -207,5 +213,5 @@ class DepSolver(object):
 #main
 if __name__ == '__main__':
     dep = DepSolver()
-    dep.load_dependences("/usr/src/umit/packet-manipulator/audits/compiled")
+    dep.load_dependences()
     dep.get_dep_for("SMBDissector")
