@@ -193,9 +193,9 @@ class DepSolver(object):
             Node('EthDecoder', [], [], ['=eth-1.7'])
         )
 
-#       self.graph.append(
-#           Node('ShinyETH', [], [], ['>eth-1.7'])
-#       )
+        self.graph.append(
+            Node('ShinyETH', [], [], ['>eth-1.7'])
+        )
 
     def get_dep_for(self, start):
         orig = self.graph.clone()
