@@ -28,16 +28,6 @@ class Graph():
 
         return need_op(prov_ver, need_ver)
     
-    def _check_major_version(self, node1, node2):
-        first = node1.provides        
-        second = node2.provides
-        print "\tChecking", first, second
-
-        first_str, first_op, first_ver = first[0]
-        second_str, second_op, second_ver = second[0]
-        
-        return (first_ver.__cmp__(second_ver))
-
     def _has_conflicts(self, load_list, target):
         for conf in target.conflicts:
             conf_str, conf_op, conf_ver = conf
