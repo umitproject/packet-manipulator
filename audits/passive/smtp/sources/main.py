@@ -26,7 +26,7 @@ import base64
 
 def smtp_dissector():
     SMTP_NAME = 'dissector.smtp'
-    SMTP_PORTS = (25, )
+    SMTP_PORTS = (25,)
 
     manager = AuditManager()
     sessions = SessionManager()
@@ -52,9 +52,10 @@ def smtp_dissector():
                 manager.user_msg('SMTP : %s:%d banner: %s' % \
                                  (mpkt.l3_src, mpkt.l4_src, banner),
                                  6, SMTP_NAME)
-
-            sessions.delete_session(sess)
-            return
+                
+                
+                sessions.delete_session(sess)
+                return
 
         # Skip empty and server packets
         if mpkt.l4_dst not in SMTP_PORTS or not mpkt.data:
@@ -63,17 +64,41 @@ def smtp_dissector():
         payload = mpkt.data.strip()
         sess = sessions.lookup_session(mpkt, SMTP_PORTS, SMTP_NAME, True)
         
+       
+        if payload.upper() == 'AUTH CRAM-MD5' :
+            sess.data = ['AUTH CRAM-MD5', None,None]
+            return
+       
+        if sess.data and sess.data[0] == 'AUTH CRAM-MD5' :
+            str = base64.decodestring(payload)
+            str = str.split(' ')
+            sess.data[1] = str[0]
+            manager.user_msg('SMTP CRAM-MD5: %s:%d -> USER: %s PASS: %s' % \
+                             (mpkt.l3_dst, mpkt.l4_dst,
+                              sess.data[1] or '',
+                              sess.data[2] or ''),
+                              6, SMTP_NAME)
+            mpkt.set_cfield('username', sess.data[1])
+            sessions.delete_session(sess)
+            return
+       
+       
+       
+       
+       
+       
+       
         if payload[:10].upper() == 'AUTH PLAIN':
-            login=base64.decodestring((payload[11:]))
-            login=login.split('\x00')
+            login = base64.decodestring((payload[11:]))
+            login = login.split('\x00')
             
             for str in login:
                 
-                if not sess.data  and not str =='':
-                    sess.data=[str,None]
+                if not sess.data  and not str == '':
+                    sess.data = [str, None]
                    
-                if sess.data  and not str =='':
-                    sess.data[1]=str
+                if sess.data  and not str == '':
+                    sess.data[1] = str
                     
             
             manager.user_msg('SMTP : %s:%d -> USER: %s PASS: %s' % \
@@ -88,14 +113,16 @@ def smtp_dissector():
             sessions.delete_session(sess)
             
         elif payload.upper() == 'AUTH LOGIN':
-            sess.data = ['AUTH LOGIN',None,None]
+            sess.data = ['AUTH LOGIN', None, None]
+            return
         
         elif sess.data  and sess.data[0] == 'AUTH LOGIN' and not sess.data[1] :
-            sess.data[1]=base64.decodestring(payload)
+            sess.data[1] = base64.decodestring(payload)
+            return
            
             
         elif sess.data  and sess.data[0] == 'AUTH LOGIN' and  sess.data[1] : 
-            sess.data[2]=base64.decodestring(payload)
+            sess.data[2] = base64.decodestring(payload)
             
             manager.user_msg('SMTP : %s:%d -> USER: %s PASS: %s' % \
                              (mpkt.l3_dst, mpkt.l4_dst,
@@ -107,6 +134,9 @@ def smtp_dissector():
             mpkt.set_cfield('password', sess.data[2])    
                 
             sessions.delete_session(sess)
+            return
+            
+        
                 
             
             
@@ -116,7 +146,7 @@ def smtp_dissector():
 class SMTPDissector(Plugin, PassiveAudit):
     
     def start(self, reader):
-        self.dissector =smtp_dissector()
+        self.dissector = smtp_dissector()
 
     def register_decoders(self):
         AuditManager().add_dissector(APP_LAYER_TCP, 25, self.dissector)
@@ -126,12 +156,12 @@ class SMTPDissector(Plugin, PassiveAudit):
         
         
 __plugins__ = [SMTPDissector]
-__plugins_deps__ = [('SMTPDissector', ['TCPDecoder'], ['SMTPDissector-1.0'], []),]
+__plugins_deps__ = [('SMTPDissector', ['TCPDecoder'], ['SMTPDissector-1.0'], []), ]
 __author__ = ['Tiago Serra']
 __audit_type__ = 0
 __protocols__ = (('tcp', 25), ('smtp', None))
 __vulnerabilities__ = (('SMTP dissector', {
     'description' : 'Simple Mail Transfer Protocol (SMTP) is an Internet standard for electronic mail (e-mail) transmission across Internet Protocol (IP) networks.',
-    'references' : ((None, 'http://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol'), )
+    'references' : ((None, 'http://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol'),)
     }),
 )
