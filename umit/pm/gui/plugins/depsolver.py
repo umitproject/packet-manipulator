@@ -14,7 +14,7 @@ class Graph():
     ... )
     >>> graph.append(
     ...       Node('MySQLDissector', [], [], ['=mysql-1.1'])
-    ... )
+    ...  )
     >>> graph.append(
     ...       Node('TCPDecoder', [], ['>ip-1.0'], ['=tcp-1.1'])
     ... )
@@ -36,11 +36,16 @@ class Graph():
     >>> print graph.get_dep_for("SMBDissector")
     [Node: SMBDissector [], Node: TCPDecoder [('tcp', '=', 1.1.0)], Node: UDPDecoder [('udp', '=', 1.5.0)], Node: IPDecoder [('ip', '=', 1.5.0)], Node: EthDecoder [('eth', '=', 1.7.0)]]
     >>> 
+    >>> print graph._list
+    [Node: SMBDissector [], Node: TCPDecoder [('tcp', '=', 1.1.0)], Node: ShinyTCP [('tcp', '=', 1.6.0)], Node: UDPDecoder [('udp', '=', 1.5.0)], Node: IPDecoder [('ip', '=', 1.5.0)], Node: EthDecoder [('eth', '=', 1.7.0)]]
+    >>> 
     >>> graph.remove("TCPDecoder")
     >>> 
     >>> print graph.get_dep_for("SMBDissector")
     []
-
+    >>> 
+    >>> print graph._list
+    [Node: SMBDissector [], Node: ShinyTCP [('tcp', '=', 1.6.0)], Node: UDPDecoder [('udp', '=', 1.5.0)], Node: IPDecoder [('ip', '=', 1.5.0)]]
     """
 
     def __init__(self, lst=[]):
