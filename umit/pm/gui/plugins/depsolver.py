@@ -1,8 +1,48 @@
 from collections import deque
-#from umit.pm.gui.plugins.atoms import Version
-from atoms import Version
+from umit.pm.core.logger import log
+from umit.pm.gui.plugins.atoms import Version
+
 
 class Graph():
+    """
+    A class for storage plugin information and resolve dependencies.
+
+    >>> graph = Graph()
+    >>> 
+    >>> graph.append(
+    ...       Node('SMBDissector', ['=vnc-1.0', '>mysql-1.0'], ['>tcp-1.0', '<udp-2.0'], [])
+    ... )
+    >>> graph.append(
+    ...       Node('MySQLDissector', [], [], ['=mysql-1.1'])
+    ... )
+    >>> graph.append(
+    ...       Node('TCPDecoder', [], ['>ip-1.0'], ['=tcp-1.1'])
+    ... )
+    >>> graph.append(
+    ...       Node('ShinyTCP', ['=eth-1.7'], ['>ip-1.0'], ['=tcp-1.6'])
+    ... )
+    >>> graph.append(
+    ...       Node('UDPDecoder', [], ['>ip-1.0'], ['=udp-1.5'])
+    ... )
+    >>> graph.append(
+    ...       Node('IPDecoder', [], ['>eth-1.0'], ['=ip-1.5'])
+    ... )
+    >>> graph.append(
+    ...       Node('EthDecoder', [], [], ['=eth-1.7'])
+    ... )
+    >>> print graph._list
+    [Node: SMBDissector [], Node: MySQLDissector [('mysql', '=', 1.1.0)], Node: TCPDecoder [('tcp', '=', 1.1.0)], Node: ShinyTCP [('tcp', '=', 1.6.0)], Node: UDPDecoder [('udp', '=', 1.5.0)], Node: IPDecoder [('ip', '=', 1.5.0)], Node: EthDecoder [('eth', '=', 1.7.0)]]
+    >>> 
+    >>> print graph.get_dep_for("SMBDissector")
+    [Node: SMBDissector [], Node: TCPDecoder [('tcp', '=', 1.1.0)], Node: UDPDecoder [('udp', '=', 1.5.0)], Node: IPDecoder [('ip', '=', 1.5.0)], Node: EthDecoder [('eth', '=', 1.7.0)]]
+    >>> 
+    >>> graph.remove("TCPDecoder")
+    >>> 
+    >>> print graph.get_dep_for("SMBDissector")
+    []
+
+    """
+
     def __init__(self, lst=[]):
         self._list = lst
 
@@ -10,7 +50,11 @@ class Graph():
         return Graph(self._list[:])
     
     def append(self,node):
-        self._list.append(node)        
+        self._list.append(node)  
+    
+    def remove(self,name):
+        node = self.get_by_name(name)
+        self._list.remove(node)
 
     def get_by_name(self, value):
         for node in self._list:
@@ -21,8 +65,6 @@ class Graph():
         if provide[0] != need[0]:
             return False
 
-        print "\tChecking", provide, need
-
         need_str, need_op, need_ver = need
         prov_str, prov_op, prov_ver = provide
 
@@ -32,14 +74,10 @@ class Graph():
         for conf in target.conflicts:
             conf_str, conf_op, conf_ver = conf
 
-            print conf
-
             for node in load_list:
                 for provide in node.provides:
                     prov_str, prov_op, prov_ver = provide
-
-                    print conf_str, prov_str
-
+                    
                     if conf_str != prov_str:
                         continue
 
@@ -47,25 +85,19 @@ class Graph():
                         return True
         return False
 
-
-
     def remove_conflicts_for(self, target):
         for conf in target.conflicts:
             conf_str, conf_op, conf_ver = conf
-
-            print conf
 
             for node in self._list:
                 for provide in node.provides:
                     prov_str, prov_op, prov_ver = provide
 
-                    print conf_str, prov_str
-
                     if conf_str != prov_str:
                         continue
 
                     if conf_op(prov_ver, conf_ver):
-                        print "Removing Conflict Node: ",node
+                        log.info("Removing Conflict Node: ",node)
                         self._list.remove(node)
 
     def _add_to_queue(self, target, queue):
@@ -75,7 +107,6 @@ class Graph():
     def get_dep_for(self, start, queue=None, load_list=None):
         if queue is None:
             node = self.get_by_name(start)
-
             queue = deque()
             queue.append(node)
 
@@ -97,30 +128,25 @@ class Graph():
                             continue
 
                 if not first_stage:
-                    print "No dep matching your needs", need
+                    log.info("No dep matching your needs", need)
                     return []
 
                 elif len(first_stage) == 1:
                     self._add_to_queue(first_stage[0],queue)
 
                 elif len(first_stage) > 1:
-                    print "Multiple dep matching your needs", need
-                    print "\t", first_stage
-                    
                     def check_major_version(node1, node2):
                         return Version.__cmp__(node1.provides[0][2],node2.provides[0][2])                    
-                    
                     first_stage.sort(check_major_version)
                     first_stage.reverse()
-                    
-                    print "Sorted: ", first_stage
+                    log.info("First_stage sorted: ", first_stage)
 
+                    
                     for target in first_stage:
                         fake_graph = Graph(lst=list(self._list))
                         fake_graph.remove_conflicts_for(target)
                         part_list = fake_graph.get_dep_for(target.name)
 
-                        print "Partial: ", part_list
                         if not part_list:
                             continue
 
@@ -146,62 +172,8 @@ class Node(object):
 
     def __repr__(self):
         return "Node: %s %s" % (self.name, str(self.provides))
-class DepSolver(object):
-    """
-    This class solve plugin dependencies and conflicts.
-    Is called before the startup of plugins and generate a DAG with dependencie of each plugin loaded.
 
-    Is only for test
-    """
-    def __init__(self):
-        # This graph should be static so you cannot call at any time remove_*
-        # stuff.
-        self.graph = Graph()
-
-    def load_dependences(self):
-        self.graph.append(
-            Node('SMBDissector', ['=vnc-1.0', '>mysql-1.0'], ['>tcp-1.0', '<udp-2.0'], [])
-        )
-        self.graph.append(
-            Node('MySQLDissector', [], [], ['=mysql-1.1'])
-        )
-        self.graph.append(
-            Node('TCPDecoder', [], ['>ip-1.0'], ['=tcp-1.1'])
-        )
-        self.graph.append(
-            Node('TCPDecoder2', [], ['>ip-1.0'], ['=tcp-1.1.2'])
-        )
-        self.graph.append(
-            Node('TCPDecoder3', [], ['>ip-1.0'], ['=tcp-2.0'])
-        )
-        self.graph.append(
-            Node('TCPDecoder4', [], ['>ip-1.0'], ['=tcp-2.0.1'])
-        )
-        self.graph.append(
-            Node('ShinyTCP', ['=eth-1.7'], ['>ip-1.0'], ['=tcp-1.6'])
-        )
-        self.graph.append(
-            Node('UDPDecoder', ['=tcp-1.1'], ['>ip-1.0'], ['=udp-1.5'])
-        )
-        self.graph.append(
-            Node('IPDecoder', [], ['>eth-1.0'], ['=ip-1.5'])
-        )
-        self.graph.append(
-            Node('EthDecoder', [], [], ['=eth-1.7'])
-        )
-        #self.graph.append(
-            #Node('ShinyETH', [], [], ['=eth-1.8'])
-        #)
-
-    def get_dep_for(self, start):
-        orig = self.graph.clone()
-        print orig.get_dep_for(start)
-        
-        print "Cloned Graph: ", orig._list
-        print "Main Graph: ", self.graph._list
-
-#main
+#doctest    
 if __name__ == '__main__':
-    dep = DepSolver()
-    dep.load_dependences()
-    dep.get_dep_for("SMBDissector")
+    import doctest
+    doctest.testmod()
