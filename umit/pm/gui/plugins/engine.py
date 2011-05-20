@@ -38,6 +38,8 @@ from umit.pm.manager.auditmanager import AuditManager
 
 from umit.pm.manager.preferencemanager import Prefs
 
+from umit.pm.gui.plugins.depsolver import Graph, Node
+
 class Plugin(object):
     """
     Plugin base class
@@ -168,6 +170,7 @@ class PluginEngine(Singleton):
         self.plugins = PluginsPrefs()
         self.tree = PluginsTree()
         self.core = Core()
+        self.graph = Graph()
 
         self.available_plugins = None
         self.paths = None
@@ -219,18 +222,23 @@ class PluginEngine(Singleton):
 
         self.available_plugins = []
         self.paths = {}
+        self.graph = Graph()
 
         idx = 0
         for path in self.plugins.paths:
             plug_path = PluginPath(path)
             self.paths[path] = (idx, plug_path)
-
-            self.available_plugins.extend(
-                [v for k, v in plug_path.plugins.items()]
-            )
+            
+            for k, v in plug_path.plugins.items():
+                self.available_plugins.append(v)
+                print " Ureu ", v.name, v.conflict, v.need, v.provide
+                self.graph.append(
+                    Node(v.name, v.conflict, v.need, v.provide)
+                )
 
             idx += 1
-
+        print self.graph._list
+        self.tree.workgraph = self.graph.clone()
     def load_selected_plugins(self):
         """
         Load the selected plugins specified in config file
