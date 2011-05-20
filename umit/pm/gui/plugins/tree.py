@@ -33,6 +33,9 @@ from umit.pm.manager.auditmanager import PassiveAudit, ActiveAudit
 
 from distutils.sysconfig import get_config_vars
 
+from umit.pm.gui.plugins.depsolver import Graph, Node
+
+
 import __builtin__
 original_import = __builtin__.__import__
 
@@ -112,6 +115,7 @@ class PluginsTree(object):
         # A dict to trace plugin instances
         self.instances = {}
         self.modules = {}
+        self.workgraph = Graph()
 
         self.who_conflicts, \
             self.who_provides, \
@@ -278,7 +282,7 @@ class PluginsTree(object):
 
         # Adds plugin to global list
         self.pkg_lst.append(pkg)
-
+       
     def load_plugin(self, pkg, force=False):
         """
         Load a plugin
@@ -293,6 +297,9 @@ class PluginsTree(object):
 
         if not force:
 
+            # First check in graph if have conflicts
+            print self.workgraph.get_dep_for(pkg.name)
+            
             # 1) Check for conflicts
             ret = self.check_conflicts(pkg)
 
@@ -571,6 +578,8 @@ class PluginsTree(object):
                         inst.register_hooks()
 
                     ret.append(inst)
+
+
                 except Exception, err:
                     log.critical("Error while starting %s from %s:" % (plug,
                                                                        pkg))
@@ -582,6 +591,7 @@ class PluginsTree(object):
                               "No startablePlugin subclass in %s" % pkg)
 
             self.instances[pkg] = ret
+
         else:
             raise PluginException(pkg, "No Plugin subclass in %s" % pkg)
 
