@@ -1,0 +1,3 @@
+[submodule "deps/pygtkhex"]
+	path = deps/pygtkhex
+	url = git://github.com/nopper/pygtkhex.git
