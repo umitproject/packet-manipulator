@@ -21,6 +21,7 @@ from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 from umit.pm.manager.sessionmanager import SessionManager
+import base64
 
 def pop3_dissector():
     POP3_NAME = 'dissector.pop3'
@@ -38,16 +39,38 @@ def pop3_dissector():
             return
 
         payload = mpkt.data.strip()
+        
+        sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
+        manager.user_msg(payload)
+        
+        if payload.upper() == 'AUTH CRAM-MD5' :
+            sess.data = ['AUTH CRAM-MD5', None,None]
+            return
+       
+       
+        if sess.data and sess.data[0] == 'AUTH CRAM-MD5' :
+            str = base64.decodestring(payload)
+            str = str.split(' ')
+            sess.data[1] = str[0]
+            
+            manager.user_msg('POP3 CRAM-MD5: %s:%d -> USER: %s PASS: %s' % \
+                             (mpkt.l3_dst, mpkt.l4_dst,
+                              sess.data[1] or '',
+                              sess.data[2] or ''),
+                              6, POP3_NAME)
+            mpkt.set_cfield('username', sess.data[1])
+            sessions.delete_session(sess)
+            return
 
         if payload[:5].upper() == 'USER ':
-            sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
+            #sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
 
             if isinstance(sess.data, list):
                 sess.data[0] = payload[5:]
             else:
                 sess.data = [payload[5:], None]
         elif payload[:5].upper() == 'PASS ':
-            sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
+            #sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
 
             if isinstance(sess.data, list):
                 sess.data[1] = payload[5:]
