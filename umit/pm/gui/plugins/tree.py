@@ -33,8 +33,6 @@ from umit.pm.manager.auditmanager import PassiveAudit, ActiveAudit
 
 from distutils.sysconfig import get_config_vars
 
-from umit.pm.gui.plugins.depsolver import Graph, Node
-
 
 import __builtin__
 original_import = __builtin__.__import__
@@ -115,7 +113,6 @@ class PluginsTree(object):
         # A dict to trace plugin instances
         self.instances = {}
         self.modules = {}
-        self.workgraph = Graph()
 
         self.who_conflicts, \
             self.who_provides, \
@@ -282,8 +279,8 @@ class PluginsTree(object):
 
         # Adds plugin to global list
         self.pkg_lst.append(pkg)
-       
-    def load_plugin(self, pkg, force=False):
+
+    def load_plugin(self, pkg, force=False, graph=None):
         """
         Load a plugin
 
@@ -298,8 +295,10 @@ class PluginsTree(object):
         if not force:
 
             # First check in graph if have conflicts
-            print self.workgraph.get_dep_for(pkg.name)
-            
+            if graph:
+                log.debug("Dependences are %s" % \
+                          str(graph.get_dep_for(pkg.name)))
+
             # 1) Check for conflicts
             ret = self.check_conflicts(pkg)
 

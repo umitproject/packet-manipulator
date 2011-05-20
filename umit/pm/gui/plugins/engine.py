@@ -170,7 +170,9 @@ class PluginEngine(Singleton):
         self.plugins = PluginsPrefs()
         self.tree = PluginsTree()
         self.core = Core()
-        self.graph = Graph()
+
+        # It will be initialized in recache
+        self.graph = None
 
         self.available_plugins = None
         self.paths = None
@@ -228,17 +230,15 @@ class PluginEngine(Singleton):
         for path in self.plugins.paths:
             plug_path = PluginPath(path)
             self.paths[path] = (idx, plug_path)
-            
+
             for k, v in plug_path.plugins.items():
                 self.available_plugins.append(v)
-                print " Ureu ", v.name, v.conflict, v.need, v.provide
                 self.graph.append(
                     Node(v.name, v.conflict, v.need, v.provide)
                 )
 
             idx += 1
-        print self.graph._list
-        self.tree.workgraph = self.graph.clone()
+
     def load_selected_plugins(self):
         """
         Load the selected plugins specified in config file
@@ -271,11 +271,12 @@ class PluginEngine(Singleton):
         log.debug("Loading source files from plugin directory: %s" % path)
         self.tree.load_directory(path)
 
-    def load_plugin_from_path(self, plugin, force=False):
+    def load_plugin_from_path(self, plugin, force=False, graph=None):
         """
         Load a plugin from a full path
 
         @param force True to not check plugin deps
+        @param graph a Graph structure to handle dependences checking
 
         @return (True, None) if is ok OR
                 (False, errmsg) if something went wrong
@@ -302,7 +303,7 @@ class PluginEngine(Singleton):
             if file not in d:
                 return (False, "Plugin does not exists anymore (%s)" % plugin)
 
-            self.tree.load_plugin(d[file], force)
+            self.tree.load_plugin(d[file], force, graph=graph)
 
             # Setting enabled field for PluginReader to
             # mark a clean startup
@@ -335,7 +336,8 @@ class PluginEngine(Singleton):
         @param reader a PluginReader
         @param force True to not check depends
         """
-        return self.load_plugin_from_path(reader.get_path(), force)
+        return self.load_plugin_from_path(reader.get_path(), force,
+                                          graph=self.graph.clone())
 
     def unload_plugin(self, reader, force=False):
         """
