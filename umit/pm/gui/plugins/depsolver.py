@@ -96,7 +96,10 @@ class Graph():
 
         need_str, need_op, need_ver = need
         prov_str, prov_op, prov_ver = provide
-
+        
+        if need_op.op_str == ".":
+            return True
+        
         return need_op(prov_ver, need_ver)
 
     def _has_conflicts(self, load_list, target):
@@ -203,5 +206,14 @@ class Node(object):
         return "Node: %s %s" % (self.name, str(self.provides))
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    #import doctest
+    #doctest.testmod()
+    graph = Graph()
+    graph.append(
+        Node('ETHDissector', [], ['ipdissector'], ['=ethdissector-1.1'])
+    )
+    graph.append(
+        Node('IPDissector', [], [], ['=ipdissector-1.1'])
+    )
+    
+    graph.get_dep_for("ETHDissector")
