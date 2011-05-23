@@ -405,7 +405,7 @@ class SniffPage(Perspective):
                           self.get_selected_packets(True))
 
     def __on_save_selection(self, action):
-        dialog = self.__create_save_dialog()
+        dialog = self.session.create_save_dialog()
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             ctx = backend.StaticContext('', dialog.get_filename())

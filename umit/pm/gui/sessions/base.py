@@ -236,7 +236,7 @@ class Session(gtk.VBox):
             return False
 
         ret = False
-        dialog = self.__create_save_dialog()
+        dialog = self.create_save_dialog()
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
             ret = self.save_session(dialog.get_filename())
@@ -246,7 +246,7 @@ class Session(gtk.VBox):
 
         return ret
 
-    def __create_save_dialog(self):
+    def create_save_dialog(self):
         dialog = gtk.FileChooserDialog(_('Save session file to'),
                 self.get_toplevel(), gtk.FILE_CHOOSER_ACTION_SAVE,
                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
