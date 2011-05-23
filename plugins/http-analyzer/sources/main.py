@@ -146,6 +146,7 @@ class CookieChooserDialog(gtk.Dialog):
         self.store.set_sort_column_id(1, gtk.SORT_DESCENDING)
 
         self.tree.set_headers_clickable(True)
+        self.tree.get_selection().connect('changed', self.__on_sel_changed)
 
         sw = gtk.ScrolledWindow()
         sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -172,6 +173,20 @@ class CookieChooserDialog(gtk.Dialog):
 
         self.vbox.set_border_width(4)
         self.set_size_request(350, 200)
+
+        self.get_action_area().get_children()[0].set_sensitive(False)
+
+    def __on_sel_changed(self, sel):
+        ret = sel.get_selected()
+
+        if not ret:
+            return
+
+        model, iter = ret
+
+        if iter:
+            self.get_action_area().get_children()[0].set_sensitive(True)
+
 
 class HTTPage(Perspective):
     icon = gtk.STOCK_INFO
