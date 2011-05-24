@@ -21,6 +21,7 @@ from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 from umit.pm.manager.sessionmanager import SessionManager
+import base64
 
 
 def imap_dissector():
@@ -31,6 +32,8 @@ def imap_dissector():
     sessions = SessionManager()
     
     def imap(mpkt):
+        
+        
         if sessions.create_session_on_sack(mpkt, IMAP_PORTS, IMAP_NAME):
             return
 
@@ -40,21 +43,43 @@ def imap_dissector():
         
         payload = mpkt.data.strip()
         str = payload.split(' ')
-        if str[0] == 'A0001' or str[0] == 'A001':
-            sess = sessions.lookup_session(mpkt, IMAP_PORTS, IMAP_NAME, True)
-            sess.data = [str[2],str[3]]
-            
-            manager.user_msg('IMAP : %s:%d -> USER: %s PASS: %s' % \
-                             (mpkt.l3_dst, mpkt.l4_dst,
-                              sess.data[0] or '',
-                              sess.data[1] or ''),
-                              6, IMAP_NAME)
-            
-            mpkt.set_cfield('username', sess.data[0])
-            mpkt.set_cfield('password', sess.data[1])
-
-            sessions.delete_session(sess)
         
+        sess = sessions.lookup_session(mpkt, IMAP_PORTS, IMAP_NAME, True)
+        
+        if str[0].upper() == 'A0001' or str[0].upper() == 'A001' or str[0].upper() == 'A00001':
+            
+            if str[1] == 'AUTHENTICATE' and str[2] == 'CRAM-MD5' :
+                sess.data = ['AUTHENTICATE CRAM-MD5', None,None]
+                return
+            
+            elif str[1].upper()  =='LOGIN':
+                sess.data = [str[2],str[3]]
+                manager.user_msg('IMAP : %s:%d -> USER: %s PASS: %s' % \
+                                 (mpkt.l3_dst, mpkt.l4_dst,
+                                  sess.data[0] or '',
+                                  sess.data[1] or ''),
+                                  6, IMAP_NAME)
+                
+                mpkt.set_cfield('username', sess.data[0])
+                mpkt.set_cfield('password', sess.data[1])
+        
+                sessions.delete_session(sess)
+            
+        elif isinstance(sess.data, list) and sess.data[0] == 'AUTHENTICATE CRAM-MD5':
+            str = base64.decodestring(payload)
+            str = str.split(' ')
+            sess.data[1] = str[0]
+            manager.user_msg('IMAP CRAM-MD5 : %s:%d -> USER: %s PASS: %s' % \
+                              (mpkt.l3_dst, mpkt.l4_dst,
+                               sess.data[1] or '',
+                               sess.data[2] or ''),
+                               6, IMAP_NAME)
+                    
+                    
+            mpkt.set_cfield('username', sess.data[1])
+            sessions.delete_session(sess)
+            return
+                
     return imap
 
 
