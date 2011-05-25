@@ -19,6 +19,7 @@
 
 import os
 import sys
+import gtk
 
 sys.plugins_path = []
 
@@ -30,6 +31,9 @@ from umit.pm.gui.plugins.atoms import Version, DepDict
 from umit.pm.gui.plugins.core import Core
 
 from umit.pm.manager.auditmanager import PassiveAudit, ActiveAudit
+
+from umit.pm.gui.plugins.depsolver import DepDialog
+
 
 from distutils.sysconfig import get_config_vars
 
@@ -280,7 +284,7 @@ class PluginsTree(object):
         # Adds plugin to global list
         self.pkg_lst.append(pkg)
 
-    def load_plugin(self, pkg, force=False, graph=None):
+    def load_plugin(self, pkg, force=False, graph=None, engine=None):
         """
         Load a plugin
 
@@ -293,12 +297,7 @@ class PluginsTree(object):
             raise PluginException(pkg, _("Plugin already loaded."))
 
         if not force:
-
-            # First check in graph if have conflicts
-            if graph:
-                log.debug("Dependences are %s" % \
-                          str(graph.get_dep_for(pkg.name)))
-
+          
             # 1) Check for conflicts
             ret = self.check_conflicts(pkg)
 
@@ -322,20 +321,39 @@ class PluginsTree(object):
             # 2) Check for needs
             ret = self.check_needs(pkg)
 
-            if ret:
-                reasons = []
-                for (n_name, n_op, n_ver) in ret:
-                    reasons.append( \
-                        "-3- Plugin '%s' needs %s, which actually is not " \
-                        "provided by any plugin." % \
-                        ( \
-                            pkg, \
-                            Version.stringify_version(n_name, n_op, n_ver) \
-                        ) \
-                    )
-
-                raise PluginException(pkg, "\n".join(reasons))
-
+            if ret:    
+                if graph:
+                    #dep_list = []
+                    #for node in graph.get_dep_for(pkg.name):
+                        #if node.pkg not in self.pkg_lst:
+                            #dep_list.append(node)
+                     
+                    dep_list = graph.get_dep_for(pkg.name)
+                    depdialog = DepDialog(dep_list)
+                    response = depdialog.run()
+                    depdialog.destroy()
+                    
+                    if response == gtk.RESPONSE_NO:
+                        reasons = []
+                        for (n_name, n_op, n_ver) in ret:
+                            reasons.append( \
+                                "-3- Plugin '%s' needs %s, which actually is not " \
+                                "provided by any plugin." % \
+                                ( \
+                                     pkg, \
+                                     str(dep_list) \
+                                ) \
+                            )
+                               
+                            raise PluginException(pkg, "\n".join(reasons))
+             
+                    dep_list.reverse()
+                    for node in dep_list:
+                        if node.name == pkg.name:
+                            continue 
+                        
+                        engine(node.path)
+                                
         self.__load_hook(pkg)
 
         # Export to cache
