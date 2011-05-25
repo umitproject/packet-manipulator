@@ -23,9 +23,46 @@
 Module for managing dependencies among plugins
 """
 
+import gtk
 from collections import deque
 from umit.pm.core.logger import log
 from umit.pm.gui.plugins.atoms import Version
+from umit.pm.higwidgets import HIGDialogLabel, HIGEntryLabel
+
+
+class DepDialog(gtk.Dialog):
+    """
+    A class to show depences for plugin in a window
+    """
+    
+    def __init__(self, load_list):
+        super(DepDialog, self).__init__(
+            'Dependences', None, 0, 
+            (gtk.STOCK_YES, gtk.RESPONSE_YES, gtk.STOCK_NO, gtk.RESPONSE_NO)
+        )
+        self.set_border_width(5)
+        self.vbox.set_border_width(2)
+        self.vbox.set_spacing(6)
+        self.set_size_request(300, 300) 
+        #self.set_position(gtk.WIN_POS_CENTER)
+        self.get_focus()
+        
+        self.store = gtk.TreeStore(str)
+        for node in load_list:
+            self.store.append(None, ['%s' % node.name])
+           
+        self.tree = gtk.TreeView(self.store)     
+       
+        self.col = gtk.TreeViewColumn('Following plugins will be activated:')
+                
+        self.tree.append_column(self.col)  
+        self.cell = gtk.CellRendererText()
+        self.col.pack_start(self.cell, True)
+        self.col.add_attribute(self.cell, 'text', 0)
+        self.tree.show()
+        self.vbox.pack_start(self.tree)
+
+
 
 class Graph():
     """
@@ -190,30 +227,23 @@ class Graph():
         return load_list
 
 class Node(object):
-    def __init__(self, name, conflicts, needs, provides):
+    def __init__(self, name, conflicts, needs, provides, path):
         """
         @param name an identification string for the plugin
         @param conflicts a list of conflict VersionString ['=ftp-lib-1.0', ..]
         @param needs a list of need VersionString
         @param provides a list of provide VersionString
+        @param path a path for plugin
         """
         self.name = name
         self.conflicts = [Version.extract_version(item) for item in conflicts]
         self.provides  = [Version.extract_version(item) for item in provides]
         self.needs   = [Version.extract_version(item) for item in needs]
+        self.path = path
 
     def __repr__(self):
         return "Node: %s %s" % (self.name, str(self.provides))
 
 if __name__ == '__main__':
-    #import doctest
-    #doctest.testmod()
-    graph = Graph()
-    graph.append(
-        Node('ETHDissector', [], ['ipdissector'], ['=ethdissector-1.1'])
-    )
-    graph.append(
-        Node('IPDissector', [], [], ['=ipdissector-1.1'])
-    )
-    
-    graph.get_dep_for("ETHDissector")
+    import doctest
+    doctest.testmod()
