@@ -234,7 +234,7 @@ class PluginEngine(Singleton):
             for k, v in plug_path.plugins.items():
                 self.available_plugins.append(v)
                 self.graph.append(
-                    Node(v.name, v.conflict, v.need, v.provide)
+                    Node(v.name, v.conflict, v.need, v.provide, v.get_path())
                 )
 
             idx += 1
@@ -303,7 +303,7 @@ class PluginEngine(Singleton):
             if file not in d:
                 return (False, "Plugin does not exists anymore (%s)" % plugin)
 
-            self.tree.load_plugin(d[file], force, graph=graph)
+            self.tree.load_plugin(d[file], force, graph=graph, engine=self.load_plugin_from_path)
 
             # Setting enabled field for PluginReader to
             # mark a clean startup
