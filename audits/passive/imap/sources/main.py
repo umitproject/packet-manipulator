@@ -17,11 +17,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+"""
+IMAP protocol dissector (Passive audit).
+
+This module uses TCP reassembler exposed in TCP decoder.
+>>> from umit.pm.core.auditutils import audit_unittest
+>>> audit_unittest('-f ethernet,ip,tcp,imap', 'imap.pcap')
+dissector.imap.info IMAP CRAM-MD5 : 10.0.1.102:143 -> USER: hemmingway Digest: 29f20b669347aa081749065d903a49e4
+dissector.imap.info IMAP : 127.0.0.1:143 -> USER: fred PASS: flinstone
+"""
+
 from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 from umit.pm.manager.sessionmanager import SessionManager
-import base64
+import base64 
 
 
 def imap_dissector():
@@ -46,7 +56,7 @@ def imap_dissector():
         
         sess = sessions.lookup_session(mpkt, IMAP_PORTS, IMAP_NAME, True)
         
-        if str[0].upper() == 'A0001' or str[0].upper() == 'A001' or str[0].upper() == 'A00001':
+        if isinstance(str, list) and str[0].upper() == 'A0001' or str[0].upper() == 'A001' or str[0].upper() == 'A00001':
             
             if str[1] == 'AUTHENTICATE' and str[2] == 'CRAM-MD5' :
                 sess.data = ['AUTHENTICATE CRAM-MD5', None,None]
@@ -69,7 +79,8 @@ def imap_dissector():
             str = base64.decodestring(payload)
             str = str.split(' ')
             sess.data[1] = str[0]
-            manager.user_msg('IMAP CRAM-MD5 : %s:%d -> USER: %s PASS: %s' % \
+            sess.data[2] = str[1]
+            manager.user_msg('IMAP CRAM-MD5 : %s:%d -> USER: %s Digest: %s' % \
                               (mpkt.l3_dst, mpkt.l4_dst,
                                sess.data[1] or '',
                                sess.data[2] or ''),
@@ -77,6 +88,7 @@ def imap_dissector():
                     
                     
             mpkt.set_cfield('username', sess.data[1])
+            mpkt.set_cfield('password', sess.data[1])
             sessions.delete_session(sess)
             return
                 
