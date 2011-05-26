@@ -58,7 +58,7 @@ def imap_dissector():
         
         if isinstance(str, list) and str[0].upper() == 'A0001' or str[0].upper() == 'A001' or str[0].upper() == 'A00001':
             
-            if str[1] == 'AUTHENTICATE' and str[2] == 'CRAM-MD5' :
+            if str[1].upper() == 'AUTHENTICATE' and str[2].upper() == 'CRAM-MD5' :
                 sess.data = ['AUTHENTICATE CRAM-MD5', None,None]
                 return
             
