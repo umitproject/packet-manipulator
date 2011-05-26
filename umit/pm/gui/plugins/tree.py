@@ -284,7 +284,7 @@ class PluginsTree(object):
         # Adds plugin to global list
         self.pkg_lst.append(pkg)
 
-    def load_plugin(self, pkg, force=False, graph=None, engine=None):
+    def load_plugin(self, pkg, force=False, graph=None, load_callback=None):
         """
         Load a plugin
 
@@ -323,36 +323,37 @@ class PluginsTree(object):
 
             if ret:    
                 if graph:
-                    #dep_list = []
-                    #for node in graph.get_dep_for(pkg.name):
-                        #if node.pkg not in self.pkg_lst:
-                            #dep_list.append(node)
+                    dep_list = []
+                    for node in graph.get_dep_for(pkg.name):
+                        if node.plugin not in self.pkg_lst:
+                            dep_list.append(node)
                      
-                    dep_list = graph.get_dep_for(pkg.name)
                     depdialog = DepDialog(dep_list)
                     response = depdialog.run()
                     depdialog.destroy()
                     
                     if response == gtk.RESPONSE_NO:
-                        reasons = []
-                        for (n_name, n_op, n_ver) in ret:
-                            reasons.append( \
-                                "-3- Plugin '%s' needs %s, which actually is not " \
-                                "provided by any plugin." % \
-                                ( \
-                                     pkg, \
-                                     str(dep_list) \
-                                ) \
-                            )
-                               
-                            raise PluginException(pkg, "\n".join(reasons))
-             
+                        raise PluginException(pkg, "Dependencies not loaded")
+                    
                     dep_list.reverse()
                     for node in dep_list:
                         if node.name == pkg.name:
                             continue 
                         
-                        engine(node.path)
+                        load_callback(node.plugin, True)
+                else:
+                    reasons = []
+                    for (n_name, n_op, n_ver) in ret:
+                        reasons.append( \
+                            "-3- Plugin '%s' needs %s, which actually is not " \
+                            "provided by any plugin." % \
+                            ( \
+                                pkg, \
+                                Version.stringify_version(n_name, n_op, n_ver) \
+                            )
+                        )
+                                
+                        raise PluginException(pkg, "\n".join(reasons))
                                 
         self.__load_hook(pkg)
 

@@ -227,19 +227,19 @@ class Graph():
         return load_list
 
 class Node(object):
-    def __init__(self, name, conflicts, needs, provides, path):
+    def __init__(self, name, conflicts, needs, provides, plugin):
         """
         @param name an identification string for the plugin
         @param conflicts a list of conflict VersionString ['=ftp-lib-1.0', ..]
         @param needs a list of need VersionString
         @param provides a list of provide VersionString
-        @param path a path for plugin
+        @param plugin the plugin structure
         """
         self.name = name
         self.conflicts = [Version.extract_version(item) for item in conflicts]
         self.provides  = [Version.extract_version(item) for item in provides]
         self.needs   = [Version.extract_version(item) for item in needs]
-        self.path = path
+        self.plugin = plugin
 
     def __repr__(self):
         return "Node: %s %s" % (self.name, str(self.provides))
