@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright (C) 2008 Adriano Monteiro Marques
-#Author: Tiago Serra <pwerspire@gmail.com>
+# Author: Tiago Serra <pwerspire@gmail.com>
 # Based in FTP audit code by Francesco Piccinno <stack.box@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -17,6 +17,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+"""
+POP3 protocol dissector (Passive audit).
+
+This module uses TCP reassembler exposed in TCP decoder.
+>>> from umit.pm.core.auditutils import audit_unittest
+>>> audit_unittest('-f ethernet,ip,tcp,pop3', 'pop3.pcap')
+dissector.pop3.info POP3 : 192.168.7.140:110 -> USER: test PASS: testing123
+dissector.pop3.info POP3 CRAM-MD5: 127.0.0.1:110 -> USER:  Digest: 1ae0dcf86f1147802ab636f75e10ff8e
+
+"""
 from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
@@ -41,19 +51,19 @@ def pop3_dissector():
         payload = mpkt.data.strip()
         
         sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
-        manager.user_msg(payload)
         
         if payload.upper() == 'AUTH CRAM-MD5' :
             sess.data = ['AUTH CRAM-MD5', None,None]
             return
        
        
-        if sess.data and sess.data[0] == 'AUTH CRAM-MD5' :
+        if isinstance(sess.data, list) and sess.data[0].upper() == 'AUTH CRAM-MD5' :
             str = base64.decodestring(payload)
             str = str.split(' ')
             sess.data[1] = str[0]
+            sess.data[2] = str[1]
             
-            manager.user_msg('POP3 CRAM-MD5: %s:%d -> USER: %s PASS: %s' % \
+            manager.user_msg('POP3 CRAM-MD5: %s:%d -> USER: %s Digest: %s' % \
                              (mpkt.l3_dst, mpkt.l4_dst,
                               sess.data[1] or '',
                               sess.data[2] or ''),
@@ -63,15 +73,13 @@ def pop3_dissector():
             return
 
         if payload[:5].upper() == 'USER ':
-            #sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
-
+            
             if isinstance(sess.data, list):
                 sess.data[0] = payload[5:]
             else:
                 sess.data = [payload[5:], None]
         elif payload[:5].upper() == 'PASS ':
-            #sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
-
+            
             if isinstance(sess.data, list):
                 sess.data[1] = payload[5:]
             else:
