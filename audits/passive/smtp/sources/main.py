@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Copyright (C) 2008 Adriano Monteiro Marques
-#
 # Author: Tiago Serra <pwerspire@gmail.com>
-#Based in FTP audit code by Francesco Piccinno <stack.box@gmail.com>
+# Based in FTP audit code by Francesco Piccinno <stack.box@gmail.com>
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -69,26 +68,25 @@ def smtp_dissector():
             sess.data = ['AUTH CRAM-MD5', None,None]
             return
        
-        if sess.data and sess.data[0] == 'AUTH CRAM-MD5' :
+        if isinstance(sess.data, list) and sess.data[0].upper() == 'AUTH CRAM-MD5' :
             str = base64.decodestring(payload)
             str = str.split(' ')
+            
             sess.data[1] = str[0]
-            manager.user_msg('SMTP CRAM-MD5: %s:%d -> USER: %s PASS: %s' % \
+            sess.data[2] = str[1]
+            manager.user_msg('SMTP CRAM-MD5: %s:%d -> USER: %s Digest: %s' % \
                              (mpkt.l3_dst, mpkt.l4_dst,
                               sess.data[1] or '',
                               sess.data[2] or ''),
                               6, SMTP_NAME)
             mpkt.set_cfield('username', sess.data[1])
+            mpkt.set_cfield('password', sess.data[1])
             sessions.delete_session(sess)
             return
        
        
-       
-       
-       
-       
-       
-        if payload[:10].upper() == 'AUTH PLAIN':
+        if payload[:10].upper() == 'AUTH PLAIN' :
+            
             login = base64.decodestring((payload[11:]))
             login = login.split('\x00')
             
@@ -116,12 +114,12 @@ def smtp_dissector():
             sess.data = ['AUTH LOGIN', None, None]
             return
         
-        elif sess.data  and sess.data[0] == 'AUTH LOGIN' and not sess.data[1] :
+        elif isinstance(sess.data, list)  and sess.data[0].upper() == 'AUTH LOGIN' and not sess.data[1] :
             sess.data[1] = base64.decodestring(payload)
             return
            
             
-        elif sess.data  and sess.data[0] == 'AUTH LOGIN' and  sess.data[1] : 
+        elif isinstance(sess.data, list)  and sess.data[0].upper() == 'AUTH LOGIN' and  sess.data[1] : 
             sess.data[2] = base64.decodestring(payload)
             
             manager.user_msg('SMTP : %s:%d -> USER: %s PASS: %s' % \
@@ -135,11 +133,6 @@ def smtp_dissector():
                 
             sessions.delete_session(sess)
             return
-            
-        
-                
-            
-            
     return smtp
 
 
