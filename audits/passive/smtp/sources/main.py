@@ -16,7 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+"""
+SMTP protocol dissector (Passive audit).
 
+This module uses TCP reassembler exposed in TCP decoder.
+>>> from umit.pm.core.auditutils import audit_unittest
+>>> audit_unittest('-f ethernet,ip,tcp,smtp', 'smtp.pcap')
+dissector.smtp.info SMTP : 127.0.0.1:25 banner: ESMTMP okay
+dissector.smtp.info SMTP CRAM-MD5: 127.0.0.1:25 -> USER: username Digest: 06d0a325f054648646e072cd4feb17c4
+dissector.smtp.info SMTP : 192.168.1.104:25 -> USER: tiago PASS: 12345
+
+"""
 from umit.pm.core.logger import log    
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
