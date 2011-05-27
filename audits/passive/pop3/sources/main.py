@@ -24,7 +24,8 @@ This module uses TCP reassembler exposed in TCP decoder.
 >>> from umit.pm.core.auditutils import audit_unittest
 >>> audit_unittest('-f ethernet,ip,tcp,pop3', 'pop3.pcap')
 dissector.pop3.info POP3 : 192.168.7.140:110 -> USER: test PASS: testing123
-dissector.pop3.info POP3 CRAM-MD5: 127.0.0.1:110 -> USER:  Digest: 1ae0dcf86f1147802ab636f75e10ff8e
+dissector.pop3.info POP3 CRAM-MD5: 127.0.0.1:110 -> USER:
+Digest: 1ae0dcf86f1147802ab636f75e10ff8e
 
 """
 from umit.pm.core.logger import log
@@ -49,20 +50,21 @@ def pop3_dissector():
             return
 
         payload = mpkt.data.strip()
-        
+
         sess = sessions.lookup_session(mpkt, POP3_PORTS, POP3_NAME, True)
-        
+
         if payload.upper() == 'AUTH CRAM-MD5' :
             sess.data = ['AUTH CRAM-MD5', None,None]
             return
-       
-       
-        if isinstance(sess.data, list) and sess.data[0].upper() == 'AUTH CRAM-MD5' :
+
+
+        if isinstance(sess.data, list) and \
+        sess.data[0].upper() == 'AUTH CRAM-MD5' :
             str = base64.decodestring(payload)
             str = str.split(' ')
             sess.data[1] = str[0]
             sess.data[2] = str[1]
-            
+
             manager.user_msg('POP3 CRAM-MD5: %s:%d -> USER: %s Digest: %s' % \
                              (mpkt.l3_dst, mpkt.l4_dst,
                               sess.data[1] or '',
@@ -73,13 +75,13 @@ def pop3_dissector():
             return
 
         if payload[:5].upper() == 'USER ':
-            
+
             if isinstance(sess.data, list):
                 sess.data[0] = payload[5:]
             else:
                 sess.data = [payload[5:], None]
         elif payload[:5].upper() == 'PASS ':
-            
+
             if isinstance(sess.data, list):
                 sess.data[1] = payload[5:]
             else:
@@ -99,13 +101,8 @@ def pop3_dissector():
     return pop3
 
 
-
-
-
-
-
 class POP3Dissector(Plugin, PassiveAudit):
-    
+
     def start(self, reader):
         self.dissector =pop3_dissector()
 
@@ -114,15 +111,19 @@ class POP3Dissector(Plugin, PassiveAudit):
 
     def stop(self):
         AuditManager().remove_dissector(APP_LAYER_TCP, 110, self.dissector)
-        
-        
+
+
 __plugins__ = [POP3Dissector]
-__plugins_deps__ = [('POP3Dissector', ['TCPDecoder'], ['POP3Dissector-0.1'], []),]
+__plugins_deps__ = [('POP3Dissector', ['TCPDecoder'], ['POP3Dissector-0.1'],
+                      []),]
 
 __audit_type__ = 0
 __protocols__ = (('tcp', 110), ('pop3', None))
 __vulnerabilities__ = (('POP3 dissector', {
-    'description' : 'n computing, the Post Office Protocol (POP) is an application-layer Internet standard protocol used by local e-mail clients to retrieve e-mail from a remote server over a TCP/IP connection',
-    'references' : ((None, 'http://en.wikipedia.org/wiki/Post_Office_Protocol'), )
+    'description' : 'n computing, the Post Office Protocol (POP) is an '
+    'application-layer Internet standard protocol used by local e-mail '
+    'clients to retrieve e-mail from a remote server over a TCP/IP connection',
+    'references' : ((None, 'http://en.wikipedia.org/wiki/'
+                            'Post_Office_Protocol'), )
     }),
 )
