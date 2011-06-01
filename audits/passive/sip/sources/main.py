@@ -49,32 +49,58 @@ class SipSession(object):
                self.sess.data = dict(
                     map(lambda x: (x, 'None'), sip_fields.split(','))
                )
+                         
+          #remove first line from payload    
+          end = self.payload.find('\r\n')
+          self.payload = self.payload[end +2:]
+          
+          end = self.payload.find('\r\n')
+
+          while end is not -1:
+               tmp = self.payload[:end].split(': ')
+               if tmp[0] in self.sess.data:
+                    if self.sess.data[tmp[0]] is 'None':
+                         self.sess.data[tmp[0]] = tmp[1]
+                         print '%s => %s' % (tmp[0], tmp[1])
+
+
+               self.payload = self.payload[end + 2:]
+               end = self.payload.find('\r\n')
                
-          print self.sess.data
           
           if sip_type == SIP_REQUEST:
                return self.sip_request(mpkt)
           else: 
                return self.sip_response(mpkt)
+          
+         
+
             
      def sip_request(self, mpkt):
-                        
+          req_type = ''  
           if self.payload.startswith('REGISTER'):
-               print 'REGISTER'
+               req_type = 'REGISTER'
                               
           elif self.payload.startswith('INVITE'):
-               print 'INVITE'
+               req_type = 'INVITE'
                
-          end = self.payload.find('\n')
-          while end is not -1:
-               print "DATA: %s" % self.payload[:end]
-               self.payload = self.payload[end + 1:]
-               end = self.payload.find('\n')
-
+              
+          """
+          #test.....
+          for k, v in self.sess.data.iteritems():
+               if v is 'None':
+                    start = self.payload.find(k)
+                    print start
+                    a = self.payload[start:]
+                    print a
+                    end = a.find('\n')
+                    print end
+                    print self.payload[start:end]
+          """
 
                
-          self.manager.user_msg('SIP REQUEST: %s:%d' % \
-                           (mpkt.l3_src, mpkt.l4_src), 6, SIP_NAME)
+          self.manager.user_msg('SIP REQUEST %s: %s:%d' % \
+                           (req_type, mpkt.l3_src, mpkt.l4_src), 6, SIP_NAME)
 
      def sip_response(self, mpkt):
        
@@ -121,26 +147,25 @@ class SIPMonitor(Plugin, PassiveAudit):
           
           #print payload
 
-          if payload.startswith('SIP/'):
+          pos = payload.find('SIP/')
+          
+          if pos == 0:
                sip_type = SIP_RESPONSE
-          elif payload.find('SIP/'):
+          elif pos != -1:
                sip_type = SIP_REQUEST
           else:
                return None
-
-               
+          
           obj = SipSession(mpkt, self.manager, self.sessions, sip_type)
 
-          
-               
-               
+                 
 __plugins__ = [SIPMonitor]
 __plugins_deps__ = [('SIPDissector', ['UDPDecoder'], ['SIPDissector-1.0'], []),]
 __author__ = ['Guilherme Rezende']
 __audit_type__ = 0
 __protocols__ = (('udp', 5060), ('udp', 5061), ('sip', None))
 __configurations__ = ((SIP_NAME, {
-    'sip_fields' : ["contact,to,via,from,user-agent,server,authorization,www-authenticate",
+    'sip_fields' : ["Contact,To,Via,From,User-Agent,Server,Authorization,WWW-Authenticate",
 
                     'A coma separated string of sip fields'],
     }),
