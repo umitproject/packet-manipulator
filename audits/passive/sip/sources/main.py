@@ -41,6 +41,7 @@ class SipSession(object):
      def __init__(self, mpkt, manager, sessions, sip_type):
           self.manager = manager
           self.payload = mpkt.data
+          self.sip_ua = 'CLIENT'
            
           self.sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME)
           
@@ -62,50 +63,44 @@ class SipSession(object):
                     if self.sess.data[tmp[0]] is 'None':
                          self.sess.data[tmp[0]] = tmp[1]
                          print '%s => %s' % (tmp[0], tmp[1])
-
+                         mpkt.set_cfield(tmp[0], tmp[1])
 
                self.payload = self.payload[end + 2:]
                end = self.payload.find('\r\n')
+             
+          if 'None' not in self.sess.data.values():  
+               sessions.delete_session(self.sess)
+
+          if mpkt.l4_src in SIP_PORTS:
+               self.sip_ua = 'SERVER'
                
+          self.payload = mpkt.data
           
           if sip_type == SIP_REQUEST:
                return self.sip_request(mpkt)
           else: 
                return self.sip_response(mpkt)
           
-         
-
-            
+               
      def sip_request(self, mpkt):
           req_type = ''  
+
           if self.payload.startswith('REGISTER'):
-               req_type = 'REGISTER'
-                              
+               req_type = 'REGISTER'           
           elif self.payload.startswith('INVITE'):
                req_type = 'INVITE'
+          elif self.payload.startswith('OPTIONS'):
+               req_type = 'OPTIONS'
                
-              
-          """
-          #test.....
-          for k, v in self.sess.data.iteritems():
-               if v is 'None':
-                    start = self.payload.find(k)
-                    print start
-                    a = self.payload[start:]
-                    print a
-                    end = a.find('\n')
-                    print end
-                    print self.payload[start:end]
-          """
-
                
-          self.manager.user_msg('SIP REQUEST %s: %s:%d' % \
-                           (req_type, mpkt.l3_src, mpkt.l4_src), 6, SIP_NAME)
+          
+          self.manager.user_msg('SIP REQUEST %s FROM %s: %s:%d' % \
+                           (req_type, self.sip_ua, mpkt.l3_src, mpkt.l4_src), 6, SIP_NAME)
 
-     def sip_response(self, mpkt):
-       
-          self.manager.user_msg('SIP RESPONSE: %s:%d'  % \
-                           (mpkt.l3_src, mpkt.l4_src),
+                   
+     def sip_response(self, mpkt):          
+          self.manager.user_msg('SIP RESPONSE FROM %s: %s:%d'  % \
+                           (self.sip_ua, mpkt.l3_src, mpkt.l4_src),
                            6, SIP_NAME)
    
     
