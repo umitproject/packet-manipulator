@@ -31,158 +31,125 @@ from umit.pm.manager.sessionmanager import SessionManager
 SIP_NAME = 'dissector.sip'
 SIP_PORTS = (5060, 5061)
 
-SIP_REQUEST  = 0
-SIP_RESPONSE = 1
 
-sip_fields = None
+def sip_dissector():
+    manager = AuditManager()
+    sessions = SessionManager()
 
-class SipSession(object):
-     
-     def __init__(self, mpkt, manager, sessions, sip_type):
-          self.manager = manager
-          self.payload = mpkt.data
-          self.sip_ua = 'CLIENT'
-           
-          self.sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME)
-          
-          if not self.sess:
-               self.sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, True)
-               self.sess.data = dict(
-                    map(lambda x: (x, 'None'), sip_fields.split(','))
-               )
-                         
-          #remove first line from payload    
-          end = self.payload.find('\r\n')
-          self.payload = self.payload[end +2:]
-          
-          end = self.payload.find('\r\n')
+    def sip(mpkt):
 
-          while end is not -1:
-               tmp = self.payload[:end].split(': ')
-               if tmp[0] in self.sess.data:
-                    if self.sess.data[tmp[0]] is 'None':
-                         self.sess.data[tmp[0]] = tmp[1]
-                         print '%s => %s' % (tmp[0], tmp[1])
-                         mpkt.set_cfield(tmp[0], tmp[1])
+        sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, True)
 
-               self.payload = self.payload[end + 2:]
-               end = self.payload.find('\r\n')
-             
-          if 'None' not in self.sess.data.values():  
-               sessions.delete_session(self.sess)
+        conf = manager.get_configuration(SIP_NAME)
+        sip_fields = conf['sip_fields']
 
-          if mpkt.l4_src in SIP_PORTS:
-               self.sip_ua = 'SERVER'
-               
-          self.payload = mpkt.data
-          
-          if sip_type == SIP_REQUEST:
-               return self.sip_request(mpkt)
-          else: 
-               return self.sip_response(mpkt)
-          
-               
-     def sip_request(self, mpkt):
-          req_type = ''  
+        payload = mpkt.data
+        payload.strip()
 
-          if self.payload.startswith('REGISTER'):
-               req_type = 'REGISTER'           
-          elif self.payload.startswith('INVITE'):
-               req_type = 'INVITE'
-          elif self.payload.startswith('OPTIONS'):
-               req_type = 'OPTIONS'
-               
-               
-          
-          self.manager.user_msg('SIP REQUEST %s FROM %s: %s:%d' % \
-                           (req_type, self.sip_ua, mpkt.l3_src, mpkt.l4_src), 6, SIP_NAME)
+        pos = payload.find('Authorization')
+        if pos != -1:
+            found = 1
+            val = payload[pos+13:]
+            end = val.find('\r\n')
+            val = val[:end]
+            val = val.strip(':').strip()
+            val = val.strip('Digest').strip()
 
-                   
-     def sip_response(self, mpkt):          
-          self.manager.user_msg('SIP RESPONSE FROM %s: %s:%d'  % \
-                           (self.sip_ua, mpkt.l3_src, mpkt.l4_src),
-                           6, SIP_NAME)
-   
-    
+            for value in val.split(','):
+                ret = value.strip().split('=', 1)
+
+                if isinstance(ret, list) and len(ret) == 2:
+                    k, v = ret
+
+                    if v[0] == v[-1] and (v[0] == '"' or v[0] == '\''):
+                        v = v[1:-1]
+
+                    if k.upper() == 'USERNAME':
+                        mpkt.set_cfield(SIP_NAME + '.username', v)
+                    elif k.upper() == 'REALM':
+                        mpkt.set_cfield(SIP_NAME + '.realm', v)
+                    elif k.upper() == 'NONCE':
+                        mpkt.set_cfield(SIP_NAME + '.nonce', v)
+                    elif k.upper() == 'URI':
+                        mpkt.set_cfield(SIP_NAME + '.uri', v)
+                    elif k.upper() == 'ALGORITHM':
+                        mpkt.set_cfield(SIP_NAME + '.algorithm', v)
+                    elif k.upper() == 'RESPONSE':
+                        mpkt.set_cfield(SIP_NAME + '.response', v)
+
+            #Here check for sip_fields
+
+
+            if found:
+                manager.user_msg('SIP: %s:%d FOUND %s' % \
+                                      (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
+
+
+
+    return sip
+
 class SIPMonitor(Plugin, PassiveAudit):
-     def start(self, reader):
-          self.manager = AuditManager()
-          self.sessions = SessionManager()
-       
-          conf = self.manager.get_configuration(SIP_NAME)
-          
-          global sip_fields
-                         
-          sip_fields = conf['sip_fields']
-          
+    def start(self, reader):
+        self.manager = AuditManager()
+        self.dissector = sip_dissector()
 
-     def register_decoders(self):
+    def register_decoders(self):
 
-          self.manager.register_hook_point('sip')
+        self.manager.register_hook_point('sip')
 
-          for port in SIP_PORTS:
-               self.manager.add_dissector(APP_LAYER_UDP, port,
-                                          self.__sip_dissector)
-        
+        for port in SIP_PORTS:
+            self.manager.add_dissector(APP_LAYER_UDP, port,
+                                       self.dissector)
 
-     def stop(self):
-          for port in SIP_PORTS:
-               self.manager.remove_dissector(APP_LAYER_UDP, port,
-                                             self.__sip_dissector)
-               
-               self.manager.deregister_hook_point('sip')
-               
-     def __sip_dissector(self, mpkt):
-          
-          payload = mpkt.data
 
-          
-          if not payload:
-               return None
-          
-          #print payload
+    def stop(self):
+        for port in SIP_PORTS:
+            self.manager.remove_dissector(APP_LAYER_UDP, port,
+                                          self.dissector)
 
-          pos = payload.find('SIP/')
-          
-          if pos == 0:
-               sip_type = SIP_RESPONSE
-          elif pos != -1:
-               sip_type = SIP_REQUEST
-          else:
-               return None
-          
-          obj = SipSession(mpkt, self.manager, self.sessions, sip_type)
+            self.manager.deregister_hook_point('sip')
 
-                 
+
 __plugins__ = [SIPMonitor]
 __plugins_deps__ = [('SIPDissector', ['UDPDecoder'], ['SIPDissector-1.0'], []),]
 __author__ = ['Guilherme Rezende']
 __audit_type__ = 0
 __protocols__ = (('udp', 5060), ('udp', 5061), ('sip', None))
-__configurations__ = ((SIP_NAME, {
-    'sip_fields' : ["Contact,To,Via,From,User-Agent,Server,Authorization,WWW-Authenticate",
+__configurations__ = (('global.cfields', {
+    SIP_NAME + '.username' : (PM_TYPE_STR, 'SIP username'),
+    SIP_NAME + '.request_useragent' : (PM_TYPE_STR, 'SIP request user-agent'),
+    SIP_NAME + '.response_useragent' : (PM_TYPE_STR, 'SIP response user-agent'),
+    SIP_NAME + '.algorithm' : (PM_TYPE_STR, 'SIP hash algorithm'),
+    SIP_NAME + '.realm' : (PM_TYPE_STR, 'SIP authorization param to calculate hash'),
+    SIP_NAME + '.nonce' : (PM_TYPE_STR, 'SIP authorization'),
+    SIP_NAME + '.uri' : (PM_TYPE_STR, 'SIP field URI requested by the client'),
+    SIP_NAME + '.response' : (PM_TYPE_STR, 'SIP password hash'),
+    }),
 
-                    'A coma separated string of sip fields'],
+    (SIP_NAME, {
+        'sip_fields' : ["Contact,To,Via,From,User-Agent,Server",
+
+                        'A coma separated string of sip fields'],
     }),
 )
 __vulnerabilities__ = (('SIP dissector', {
     'description' : 'SIP Monitor plugin'
-        'The Session Initiation Protocol (SIP) is an IETF-defined signaling protocol,'
-        'widely used for controlling multimedia communication sessions'
-        'such as voice and video calls over' 
-        'Internet Protocol (IP). The protocol can be used for creating,'
-        'modifying and terminating two-party (unicast) or multiparty (multicast)'
-        'sessions consisting of one or several media streams.'
-        'The modification can involve changing addresses or ports, inviting more' 
-        'participants, and adding or deleting media streams. Other feasible'
-        'application examples include video conferencing, streaming multimedia distribution,'
-        'instant messaging, presence information, file transfer and online games.'
-        'SIP was originally designed by Henning Schulzrinne and Mark Handley starting in 1996.'
-        'The latest version of the specification is RFC 3261 from the IETF Network Working'
-        'Group. In November 2000, SIP was accepted as a 3GPP signaling protocol and permanent'
-        'element of the IP Multimedia Subsystem (IMS) architecture for IP-based streaming'
-        'multimedia services in cellular systems.',
+    'The Session Initiation Protocol (SIP) is an IETF-defined signaling protocol,'
+    'widely used for controlling multimedia communication sessions'
+    'such as voice and video calls over'
+    'Internet Protocol (IP). The protocol can be used for creating,'
+    'modifying and terminating two-party (unicast) or multiparty (multicast)'
+    'sessions consisting of one or several media streams.'
+    'The modification can involve changing addresses or ports, inviting more'
+    'participants, and adding or deleting media streams. Other feasible'
+    'application examples include video conferencing, streaming multimedia distribution,'
+    'instant messaging, presence information, file transfer and online games.'
+    'SIP was originally designed by Henning Schulzrinne and Mark Handley starting in 1996.'
+    'The latest version of the specification is RFC 3261 from the IETF Network Working'
+    'Group. In November 2000, SIP was accepted as a 3GPP signaling protocol and permanent'
+    'element of the IP Multimedia Subsystem (IMS) architecture for IP-based streaming'
+    'multimedia services in cellular systems.',
     'references' : ((None, 'http://en.wikipedia.org/wiki/'
-                            'Session_Initiation_Protocol'), )
+                     'Session_Initiation_Protocol'), )
     }),
 )
