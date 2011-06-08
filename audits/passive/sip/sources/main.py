@@ -48,12 +48,8 @@ def sip_dissector():
 
         pos = payload.find('Authorization')
         if pos != -1:
-            found = 1
-            val = payload[pos+13:]
-            end = val.find('\r\n')
-            val = val[:end]
-            val = val.strip(':').strip()
-            val = val.strip('Digest').strip()
+            stop = payload.find('\r\n', pos + 13)
+            val = payload[pos + 13 + 1:stop].strip()
 
             for value in val.split(','):
                 ret = value.strip().split('=', 1)
@@ -64,7 +60,7 @@ def sip_dissector():
                     if v[0] == v[-1] and (v[0] == '"' or v[0] == '\''):
                         v = v[1:-1]
 
-                    if k.upper() == 'USERNAME':
+                    if k.upper().rfind('USERNAME') > -1:
                         mpkt.set_cfield(SIP_NAME + '.username', v)
                     elif k.upper() == 'REALM':
                         mpkt.set_cfield(SIP_NAME + '.realm', v)
@@ -75,14 +71,27 @@ def sip_dissector():
                     elif k.upper() == 'ALGORITHM':
                         mpkt.set_cfield(SIP_NAME + '.algorithm', v)
                     elif k.upper() == 'RESPONSE':
-                        mpkt.set_cfield(SIP_NAME + '.response', v)
+                        sess.data = v
+
+            manager.user_msg('SIP: %s:%d FOUND %s' % \
+                             (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
 
             #Here check for sip_fields
 
 
-            if found:
-                manager.user_msg('SIP: %s:%d FOUND %s' % \
-                                      (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
+        if sess.data:
+            if payload.startswith('SIP/2.0 200 '):
+                mpkt.set_cfield(SIP_NAME + '.response', sess.data)
+                manager.user_msg('SIP: PASS OK %s' % \
+                                 (sess.data), 6, SIP_NAME)
+                sessions.delete_session(sess)
+
+
+            elif payload.startswith('SIP/2.0 403 '):
+                mpkt.set_cfield(SIP_NAME + '.bad_attempt', sess.data)
+                manager.user_msg('SIP: BAD AUTH %s' % \
+                                 (sess.data), 6, SIP_NAME)
+                sessions.delete_session(sess)
 
 
 
@@ -95,7 +104,7 @@ class SIPMonitor(Plugin, PassiveAudit):
 
     def register_decoders(self):
 
-        self.manager.register_hook_point('sip')
+        #self.manager.register_hook_point('sip')
 
         for port in SIP_PORTS:
             self.manager.add_dissector(APP_LAYER_UDP, port,
@@ -107,7 +116,7 @@ class SIPMonitor(Plugin, PassiveAudit):
             self.manager.remove_dissector(APP_LAYER_UDP, port,
                                           self.dissector)
 
-            self.manager.deregister_hook_point('sip')
+            #self.manager.deregister_hook_point('sip')
 
 
 __plugins__ = [SIPMonitor]
@@ -124,6 +133,8 @@ __configurations__ = (('global.cfields', {
     SIP_NAME + '.nonce' : (PM_TYPE_STR, 'SIP authorization'),
     SIP_NAME + '.uri' : (PM_TYPE_STR, 'SIP field URI requested by the client'),
     SIP_NAME + '.response' : (PM_TYPE_STR, 'SIP password hash'),
+    SIP_NAME + '.bad_attempt' : (PM_TYPE_STR, 'SIP wrong password hash'),
+
     }),
 
     (SIP_NAME, {
