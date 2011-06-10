@@ -40,9 +40,6 @@ def sip_dissector():
 
         sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, True)
 
-        conf = manager.get_configuration(SIP_NAME)
-        sip_fields = conf['sip_fields']
-
         payload = mpkt.data
         payload.strip()
 
@@ -76,7 +73,27 @@ def sip_dissector():
             manager.user_msg('SIP: %s:%d FOUND %s' % \
                              (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
 
-            #Here check for sip_fields
+        #Here check for sip_fields
+        conf = manager.get_configuration(SIP_NAME)
+        sip_fields = conf['sip_fields']
+        if sip_fields:
+            stop = payload.find('\r\n\r\n')
+            end = payload.find('\r\n')
+            pos = end + 2
+
+            while end != stop:
+                end = payload.find('\r\n', pos)
+                ret = payload[pos:end].split(':', 1)
+
+                if isinstance(ret, list) and len(ret) == 2:
+                    k, v = ret
+
+                for value in sip_fields.split(','):
+                        if k.upper().strip() == value.upper():
+                            mpkt.set_cfield(SIP_NAME + '.' + value.lower(), v.strip()) # Need dynamic create this
+
+
+                pos = end +2
 
 
         if sess.data:
