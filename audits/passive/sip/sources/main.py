@@ -73,7 +73,7 @@ def sip_dissector():
             manager.user_msg('SIP: %s:%d FOUND %s' % \
                              (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
 
-        #Here check for sip_fields
+        #Here check for extra sip_fields
         conf = manager.get_configuration(SIP_NAME)
         sip_fields = conf['sip_fields']
         if sip_fields:
@@ -90,13 +90,13 @@ def sip_dissector():
 
                 for value in sip_fields.split(','):
                         if k.upper().strip() == value.upper():
-                            mpkt.set_cfield(SIP_NAME + '.' + value.lower(), v.strip()) # Need dynamic create this
-
+                            mpkt.set_cfield(SIP_NAME + '.' + value.lower(), v.strip())
 
                 pos = end +2
 
 
         if sess.data:
+
             if payload.startswith('SIP/2.0 200 '):
                 mpkt.set_cfield(SIP_NAME + '.response', sess.data)
                 manager.user_msg('SIP: PASS OK %s' % \
@@ -104,13 +104,12 @@ def sip_dissector():
                 sessions.delete_session(sess)
 
 
+
             elif payload.startswith('SIP/2.0 403 '):
                 mpkt.set_cfield(SIP_NAME + '.bad_attempt', sess.data)
                 manager.user_msg('SIP: BAD AUTH %s' % \
                                  (sess.data), 6, SIP_NAME)
                 sessions.delete_session(sess)
-
-
 
     return sip
 
@@ -157,7 +156,7 @@ __configurations__ = (('global.cfields', {
     (SIP_NAME, {
         'sip_fields' : ["Contact,To,Via,From,User-Agent,Server",
 
-                        'A coma separated string of sip fields'],
+                        'A coma separated string of extra sip fields'],
     }),
 )
 __vulnerabilities__ = (('SIP dissector', {
