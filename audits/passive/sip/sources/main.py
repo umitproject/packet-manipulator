@@ -77,14 +77,14 @@ def sip_dissector():
                             elif k.upper() == 'RESPONSE':
                                 sess.data[2] = v
 
-                            manager.user_msg('SIP: %s:%d FOUND %s' % \
+                manager.user_msg('SIP: %s:%d FOUND %s' % \
                                              (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
 
 
 
         def parse_response(mpkt, sess):
             if sess and sess.data is not None:
-                if mpkt.l3_src == sess.data[0]:
+                if mpkt.l3_src == sess.data[0] and sess.data[2] is not None:
 
                     if mpkt.data.startswith('SIP/2.0 200 '):
                         mpkt.set_cfield(SIP_NAME + '.response', sess.data[2])
