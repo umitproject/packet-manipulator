@@ -816,9 +816,19 @@ class ActiveAudit(AuditPlugin):
                                         digits=0)
 
             elif isinstance(opt_val, float):
-                widget = gtk.SpinButton(gtk.Adjustment(opt_val, -sys.maxint,
-                                                       sys.maxint, 1, 10),
+                widget = gtk.SpinButton(gtk.Adjustment(opt_val),
                                         digits=4)
+
+            elif isinstance(opt_val, (list, tuple)):
+                widget = gtk.ComboBox()
+                store = gtk.ListStore(str)
+                for i in opt_val:
+                    store.append([i])
+                widget.set_model(store)
+                cell = gtk.CellRendererText()
+                widget.pack_start(cell, True)
+                widget.add_attribute(cell, 'text', 0)
+                widget.set_active(0)
 
             lbl.props.has_tooltip = True
             widget.props.has_tooltip = True
@@ -869,6 +879,14 @@ class ActiveAudit(AuditPlugin):
 
             elif isinstance(widget, gtk.ToggleButton):
                 value = widget.get_active()
+
+            elif isinstance(widget, gtk.ComboBox):
+                model = widget.get_model()
+                active = widget.get_active()
+                if active < 0:
+                    value = None
+                value = model[active][0]
+
             else:
                 value = widget.get_text()
 

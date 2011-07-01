@@ -43,23 +43,60 @@ from umit.pm.backend import MetaPacket
 
 AUDIT_NAME = 'sip-portscan'
 
+
+class SipPortscanOperation(AuditOperation):
+    def __init__(self, target_ip, remote_port, type_of_msg, user_agent):
+        AuditOperation.__init__(self)
+
+        self.target_ip = target_ip
+        self.remote_port = remote_port
+        self.type_of_msg = type_of_msg
+        self.user_agent = user_agent
+
+    def start(self):
+        if self.state == self.RUNNING:
+            return False
+
+        self.state = self.RUNNING
+
+        #run sip_assemble
+        #send sip packages
+        #parse response and get data
+
+    def stop(self):
+        self.state = self.NOT_RUNNING
+
+
 class SipPortscan(Plugin, ActiveAudit):
     __inputs__ = (
+        ('target ip', ('0.0.0.0', _('A ip or CIDR/wildcard expression to perform a multihost scan'))),
+        ('remote port', ('5060', _('A port list to scan'))),
+        ('type of message', (['INVITE','OPTIONS', 'REGISTER', 'PHRACK', 'INFO'], _('Which kind of headers the message will include'))),
+        ('user agent', (['Cisco', 'Linksys', 'Grandstream', 'Yate', 'Xlite', 'Asterisk'], _('A list of user-agents to scan spoofed'))),
     )
 
     def start(self, reader):
+        a, self.item = self.add_menu_entry('SIPPortscan',
+                                           _('Sip Portscan'),
+                                           _('SIP Portscan test'),
+                                           gtk.STOCK_EXECUTE)
 
 
     def stop(self):
+        self.remove_menu_entry(self.item)
 
     def execute_audit(self, sess, inp_dict):
+        target_ip = inp_dict['target ip']
+        remote_port = inp_dict['remote port']
+        type_of_msg = inp_dict['type of message']
+        user_agent = inp_dict['user agent']
 
-
-
-
+        return SipPortscanOperation(
+            target_ip, remote_port, type_of_msg, user_agent
+        )
 
 __plugins__ = [SipPortscan]
-__plugins_deps__ = []
+__plugins_deps__ = [('SIPPortscan', ['IPDecoder'], ['=SIPPortscan-1.0'], [])]
 
 __audit_type__ = 1
 __protocols__ = (('udp', 5060), ('udp', 5061), ('sip', None))
