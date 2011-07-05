@@ -26,6 +26,8 @@ SIP Portscan (Active audit)
 
 import gtk
 import gobject
+import random
+
 
 from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
@@ -43,6 +45,43 @@ from umit.pm.backend import MetaPacket
 
 AUDIT_NAME = 'sip-portscan'
 
+class SipPack(object):
+
+    def __init__(self, destip, srcip, srcport=5060, remote_port, type_of_msg, useragent, extension='101', caller='101', tag=None, cseq=1):
+
+        self.header = dict()
+
+        if type_of_msg == 'REGISTER':
+            uri = '<sip:%s>' % destip
+            fromaddr = '<sip:%s@%s>' % (caller, destip)
+
+        elif type_of_msg == 'INVITE':
+            uri = '<sip:%s@%s>' % (extension, destip)
+            fromaddr = '"%s" <sip:%s@%s>' % (caller, caller, destip)
+
+        if tag is not None:
+            fromaddr += ';tag=%s' % tag
+
+        branch = '%s' % random.getrandbits(32)
+
+        self.head = '%s %s SIP/2.0\r\n' % (type_of_msg, uri)
+        self.header['Contact'] = 'sip:%s@%s:%s' % (caller,srcip,srcport)
+        self.header['To'] = '<sip:%s@%s:%s>' % (extension, destip, remote_port)
+        self.header['Via'] = 'SIP/2,0/UDP %s:%s;rport;branch=%s' % (srcip, remote_port, branch)
+        self.header['From'] = fromaddr
+        self.header['Call-ID'] = '%s' % random.getrandbits(80)
+        self.header['CSeq'] = '%s %s' % (cseq, type_of_msg)
+        self.header['Max-Forwards'] = 60
+        self.header['Content-Length'] = 0
+        self.header['User-Agent'] = useragent
+
+
+    def prepare(self):
+        sip = '%s\r\n' % self.head
+        for h in self.header.iteritems():
+            sip += '%s: %s\r\n' % h
+        sip += '\r\n'
+        return(sip)
 
 class SipPortscanOperation(AuditOperation):
     def __init__(self, target_ip, remote_port, type_of_msg, user_agent):
@@ -59,8 +98,15 @@ class SipPortscanOperation(AuditOperation):
 
         self.state = self.RUNNING
 
+        #parse target_ip and remote_port
         #run sip_assemble
+        sipmsg = SipPack(self.target_ip, srcip, srcport, self.remote_port, self.type_of_msg, self.user_agent)
         #send sip packages
+        #send_packet(sipmsg.prepare())
+
+        pkt = MetaPacket.new('ip') / MetaPacket.new('udp')
+
+
         #parse response and get data
 
     def stop(self):
@@ -71,7 +117,7 @@ class SipPortscan(Plugin, ActiveAudit):
     __inputs__ = (
         ('target ip', ('0.0.0.0', _('A ip or CIDR/wildcard expression to perform a multihost scan'))),
         ('remote port', ('5060', _('A port list to scan'))),
-        ('type of message', (['INVITE','OPTIONS', 'REGISTER', 'PHRACK', 'INFO'], _('Which kind of headers the message will include'))),
+        ('type of message', (['INVITE','OPTIONS', 'REGISTER', 'PHRACK', 'INFO'], _('Which headers that the message will include'))),
         ('user agent', (['Cisco', 'Linksys', 'Grandstream', 'Yate', 'Xlite', 'Asterisk'], _('A list of user-agents to scan spoofed'))),
     )
 
