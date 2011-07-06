@@ -47,7 +47,7 @@ AUDIT_NAME = 'sip-portscan'
 
 class SipPack(object):
 
-    def __init__(self, destip, srcip, srcport=5060, remote_port, type_of_msg, useragent, extension='101', caller='101', tag=None, cseq=1):
+    def __init__(self, destip, srcip, srcport, remote_port, type_of_msg, useragent, extension='101', caller='101', tag=None, cseq=1):
 
         self.header = dict()
 
@@ -64,7 +64,7 @@ class SipPack(object):
 
         branch = '%s' % random.getrandbits(32)
 
-        self.head = '%s %s SIP/2.0\r\n' % (type_of_msg, uri)
+        self.head = '%s %s SIP/2.0' % (type_of_msg, uri)
         self.header['Contact'] = 'sip:%s@%s:%s' % (caller,srcip,srcport)
         self.header['To'] = '<sip:%s@%s:%s>' % (extension, destip, remote_port)
         self.header['Via'] = 'SIP/2,0/UDP %s:%s;rport;branch=%s' % (srcip, remote_port, branch)
@@ -84,13 +84,16 @@ class SipPack(object):
         return(sip)
 
 class SipPortscanOperation(AuditOperation):
-    def __init__(self, target_ip, remote_port, type_of_msg, user_agent):
+    def __init__(self, session,  target_ip, remote_port, type_of_msg, user_agent, source):
         AuditOperation.__init__(self)
 
+        self.session = session
         self.target_ip = target_ip
         self.remote_port = remote_port
         self.type_of_msg = type_of_msg
         self.user_agent = user_agent
+        self.srcip = source
+        self.srcport = 5060
 
     def start(self):
         if self.state == self.RUNNING:
@@ -98,26 +101,76 @@ class SipPortscanOperation(AuditOperation):
 
         self.state = self.RUNNING
 
-        #parse target_ip and remote_port
-        #run sip_assemble
-        sipmsg = SipPack(self.target_ip, srcip, srcport, self.remote_port, self.type_of_msg, self.user_agent)
-        #send sip packages
-        #send_packet(sipmsg.prepare())
+        if self.target_ip.find(','):
+            for dstip in self.target_ip.split(','):
+                if self.remote_port.find(','):
+                    for dstport in self.remote_port.split(','):
+                        sipmsg = SipPack(dstip, self.srcip, self.srcport, dstport, self.type_of_msg, self.user_agent)
+                        self.sip_send(self.srcip, dstip, self.srcport, int(dstport), sipmsg.prepare())
 
-        pkt = MetaPacket.new('ip') / MetaPacket.new('udp')
+                else:
+                    sipmsg = SipPack(dstip, self.srcip, self.srcport, self.remote_port, self.type_of_msg, self.user_agent)
+                    self.sip_send(self.srcip, dstip, self.srcport, int(self.remote_port), sipmsg.prepare())
 
 
-        #parse response and get data
+        elif self.remote_port.find(','):
+            for dstport in self.remote_port.split(','):
+                sipmsg = SipPack(self.target_ip, self.srcip, self.srcport, dstport, self.type_of_msg, self.user_agent)
+                self.sip_send(self.srcip, self.target_ip, self.srcport, int(dstport), sipmsg.prepare())
+
+
+        else:
+            sipmsg = SipPack(self.target_ip, self.srcip, self.srcport, self.remote_port, self.type_of_msg, self.user_agent)
+            self.sip_send(self.srcip, self.target_ip, self.srcport, int(self.remote_port), sipmsg.prepare())
+
+
+        self.percentage = 100.0
+        self.state = self.NOT_RUNNING
+
 
     def stop(self):
         self.state = self.NOT_RUNNING
+
+    def sip_send(self, srcip, dstip, srcport, dstport, data):
+        pkt = MetaPacket.new('ip') / MetaPacket.new('udp')
+        pkt.set_fields('ip', {
+            'dst' : dstip,
+            'src' : srcip})
+
+        pkt.set_fields('udp', {
+            'sport' : srcport,
+            'dport' : dstport,
+            'payload' : data})
+
+        self.sender = self.session.context.sr_l3(
+            pkt, timeout=4,
+      #      onerror=self.on_error,
+            onreply=self.on_resolved,
+            onsend=self.on_send)
+
+
+    def on_send(self, send, mpkt, udata):
+        self.session.output_page.user_msg(
+            _('SIP Request FROM %s to %s ') % (send.mpkts[0].get_field('ip.src'), send.mpkts[0].get_field('ip.dst')),
+            STATUS_INFO, AUDIT_NAME)
+
+    def on_resolved(self, send, mpkt, reply, udata):
+
+        payload = reply.data
+        print payload
+        self.session.output_page.user_msg(
+            _('SIP Reply FROM %s TO %s') % \
+            (reply.get_field('ip.src'),
+             reply.get_field('ip.dst'),
+             ), STATUS_INFO, AUDIT_NAME
+        )
 
 
 class SipPortscan(Plugin, ActiveAudit):
     __inputs__ = (
         ('target ip', ('0.0.0.0', _('A ip or CIDR/wildcard expression to perform a multihost scan'))),
         ('remote port', ('5060', _('A port list to scan'))),
-        ('type of message', (['INVITE','OPTIONS', 'REGISTER', 'PHRACK', 'INFO'], _('Which headers that the message will include'))),
+        ('type of message', (['REGISTER','OPTIONS', 'INVITE', 'PHRACK', 'INFO'], _('Which headers that the message will include'))),
         ('user agent', (['Cisco', 'Linksys', 'Grandstream', 'Yate', 'Xlite', 'Asterisk'], _('A list of user-agents to scan spoofed'))),
     )
 
@@ -137,8 +190,11 @@ class SipPortscan(Plugin, ActiveAudit):
         type_of_msg = inp_dict['type of message']
         user_agent = inp_dict['user agent']
 
+        source = sess.context.get_ip1()
+
+
         return SipPortscanOperation(
-            target_ip, remote_port, type_of_msg, user_agent
+            sess, target_ip, remote_port, type_of_msg, user_agent, source
         )
 
 __plugins__ = [SipPortscan]
