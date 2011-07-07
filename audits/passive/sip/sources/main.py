@@ -47,9 +47,16 @@ def sip_dissector():
             if type is 'REQUEST' and sess.data[3] is None:
                 sip_fields = conf['request_fields']
                 sess.data[3] = 'OK'
+                mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
+                manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
+                                 (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
+
             elif type is 'RESPONSE' and sess.data[4] is None:
                 sip_fields = conf['response_fields']
                 sess.data[4] = 'OK'
+                mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
+                manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
+                                 (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
 
 
             if sip_fields:
@@ -67,7 +74,7 @@ def sip_dissector():
                         for value in sip_fields.split(','):
                             if k.upper().strip() == value.upper():
                                 mpkt.set_cfield(SIP_NAME + '.' + value.lower(), v.strip())
-                                manager.user_msg('SIP: %s:%d FOUND TYPE %s: %s Value: %s' % \
+                                manager.user_msg('SIP: %s:%d %s: FOUND %s: %s' % \
                                                  (mpkt.l3_src, mpkt.l4_src, type, k.strip(), v.strip()), 6, SIP_NAME)
 
                             pos = end +2
@@ -105,7 +112,7 @@ def sip_dissector():
                                     sess.data[2] = v
 
                     manager.user_msg('SIP: %s:%d FOUND %s' % \
-                                                 (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
+                                     (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
 
             parse_user_fields(mpkt, sess)
 
@@ -127,10 +134,9 @@ def sip_dissector():
                                          (sess.data[2]), 6, SIP_NAME)
                         sessions.delete_session(sess)
 
-            parse_user_fields(mpkt, sess, 'RESPONSE')
+                parse_user_fields(mpkt, sess, 'RESPONSE')
 
-
-#start here
+        #start here
         sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME)
 
         if sess and sess.data and sess.data[0] == (mpkt.l3_src, mpkt.l4_src):
@@ -143,20 +149,11 @@ def sip_dissector():
             sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, True)
             if mpkt.data.startswith('SIP/2.0'):
                 sess.data = [(mpkt.l3_src, mpkt.l4_src), (mpkt.l3_dst, mpkt.l4_dst), None, None, None]
-                mpkt.set_cfield(SIP_NAME + '.server', mpkt.l3_src)
-                mpkt.set_cfield(SIP_NAME + '.client', mpkt.l3_dst)
                 parse_response(mpkt, sess)
 
             else:
                 sess.data = [(mpkt.l3_dst, mpkt.l4_dst), (mpkt.l3_src, mpkt.l4_src), None, None, None]
-                mpkt.set_cfield(SIP_NAME + '.server', mpkt.l3_dst)
-                mpkt.set_cfield(SIP_NAME + '.client', mpkt.l3_src)
                 parse_request(mpkt, sess)
-
-            manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
-                             (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
-            manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
-                             (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
 
 
     return sip
@@ -184,7 +181,7 @@ class SIPMonitor(Plugin, PassiveAudit):
 
 
 __plugins__ = [SIPMonitor]
-__plugins_deps__ = [('SIPDissector', ['UDPDecoder'], ['SIPDissector-1.0'], []),]
+__plugins_deps__ = [('SIPMonitor', ['UDPDecoder'], ['SIPMonitor-0.1'], []),]
 __author__ = ['Guilherme Rezende']
 __audit_type__ = 0
 __protocols__ = (('udp', 5060), ('udp', 5061), ('sip', None))

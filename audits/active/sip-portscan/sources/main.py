@@ -84,7 +84,7 @@ class SipPack(object):
         return(sip)
 
 class SipPortscanOperation(AuditOperation):
-    def __init__(self, session,  target_ip, remote_port, type_of_msg, user_agent, source):
+    def __init__(self, session,  target_ip, remote_port, source_port, type_of_msg, user_agent, source_ip):
         AuditOperation.__init__(self)
 
         self.session = session
@@ -92,8 +92,8 @@ class SipPortscanOperation(AuditOperation):
         self.remote_port = remote_port
         self.type_of_msg = type_of_msg
         self.user_agent = user_agent
-        self.srcip = source
-        self.srcport = 5060
+        self.srcip = source_ip
+        self.srcport = source_port
 
     def start(self):
         if self.state == self.RUNNING:
@@ -144,9 +144,9 @@ class SipPortscanOperation(AuditOperation):
 
         self.sender = self.session.context.sr_l3(
             pkt, timeout=4,
-      #      onerror=self.on_error,
             onreply=self.on_resolved,
-            onsend=self.on_send)
+            onsend=self.on_send
+        )
 
 
     def on_send(self, send, mpkt, udata):
@@ -155,29 +155,25 @@ class SipPortscanOperation(AuditOperation):
             STATUS_INFO, AUDIT_NAME)
 
     def on_resolved(self, send, mpkt, reply, udata):
-
-        payload = reply.data
-        print payload
         self.session.output_page.user_msg(
             _('SIP Reply FROM %s TO %s') % \
             (reply.get_field('ip.src'),
              reply.get_field('ip.dst'),
-             ), STATUS_INFO, AUDIT_NAME
-        )
+             ), STATUS_INFO, AUDIT_NAME)
 
 
 class SipPortscan(Plugin, ActiveAudit):
     __inputs__ = (
         ('target ip', ('0.0.0.0', _('A ip or CIDR/wildcard expression to perform a multihost scan'))),
         ('remote port', ('5060', _('A port list to scan'))),
+        ('source port', (5060, _('A port to send sip packet'))),
         ('type of message', (['REGISTER','OPTIONS', 'INVITE', 'PHRACK', 'INFO'], _('Which headers that the message will include'))),
         ('user agent', (['Cisco', 'Linksys', 'Grandstream', 'Yate', 'Xlite', 'Asterisk'], _('A list of user-agents to scan spoofed'))),
     )
 
     def start(self, reader):
-        a, self.item = self.add_menu_entry('SIPPortscan',
-                                           _('Sip Portscan'),
-                                           _('SIP Portscan test'),
+        a, self.item = self.add_menu_entry('SIPPortscan', 'Sip Portscan...',
+                                           _('A SIP Portscan'),
                                            gtk.STOCK_EXECUTE)
 
 
@@ -187,18 +183,18 @@ class SipPortscan(Plugin, ActiveAudit):
     def execute_audit(self, sess, inp_dict):
         target_ip = inp_dict['target ip']
         remote_port = inp_dict['remote port']
+        source_port = inp_dict['source port']
         type_of_msg = inp_dict['type of message']
         user_agent = inp_dict['user agent']
-
-        source = sess.context.get_ip1()
+        source_ip = sess.context.get_ip1()
 
 
         return SipPortscanOperation(
-            sess, target_ip, remote_port, type_of_msg, user_agent, source
+            sess, target_ip, remote_port, source_port, type_of_msg, user_agent, source_ip
         )
 
 __plugins__ = [SipPortscan]
-__plugins_deps__ = [('SIPPortscan', ['IPDecoder'], ['=SIPPortscan-1.0'], [])]
+__plugins_deps__ = [('SIPPortscan', ['SIPMonitor'], ['SIPPortscan-0.1'], [])]
 
 __audit_type__ = 1
 __protocols__ = (('udp', 5060), ('udp', 5061), ('sip', None))
