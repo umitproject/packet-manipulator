@@ -27,7 +27,9 @@ SIP Portscan (Active audit)
 import gtk
 import gobject
 import random
+
 from time import sleep
+from threading import Thread
 
 from umit.pm.core.i18n import _
 from umit.pm.core.logger import log
@@ -48,28 +50,18 @@ AUDIT_MSG = '<tt><b>' + AUDIT_NAME + ':</b> %s</tt>'
 
 
 class SipPack(object):
-    class Packet(object):
-	def __init__(self, dstip, dstport, srcip, srcport, head, header):
-	    self.dstip = dstip
-	    self.dstport = dstport
-	    self.srcip = srcip
-	    self.srcport = srcport
-	    self.head = head
-	    self.header = header
-
-	def prepare(self):
-	    sip = '%s\r\n' % self.head
-	    for h in self.header.iteritems():
-		sip += '%s: %s\r\n' % h
-	    sip += '\r\n'
-	    return sip
-
-    def __init__(self):
-	self.packets =  []
-	self.current_item = 0
+    def __init__(self, target_ip, remote_port, srcip, srcport, type_of_msg, user_agent):
+	self.target_ip = target_ip
+	self.remote_port = remote_port
+	self.srcip = srcip
+	self.srcport = srcport
+	self.type_of_msg = type_of_msg
+	self.user_agent = user_agent
+	self.counter_pack = 0
+	self.t_packs = 0
 
 
-    def create(self, destip, srcip, srcport, remote_port, type_of_msg, useragent, extension='101', caller='101', tag=None, cseq=1):
+    def create(self, destip, srcip, srcport, remote_port, type_of_msg, useragent, extension='101', caller='101', tag=None, cseq=1, percent=0):
 
         header = dict()
 
@@ -97,20 +89,41 @@ class SipPack(object):
         header['Content-Length'] = 0
         header['User-Agent'] = useragent
 
-	self.packets.append(self.Packet(destip, remote_port, srcip, srcport, head, header))
+
+	sip = '%s\r\n' % head
+	for h in header.iteritems():
+	    sip += '%s: %s\r\n' % h
+	sip += '\r\n'
+
+	pkt = MetaPacket.new('ip') / MetaPacket.new('udp')
+	pkt.set_fields('ip', {
+	    'dst' : destip,
+	    'src' : srcip})
+
+	pkt.set_fields('udp', {
+	    'sport' : srcport,
+	    'dport' : int(remote_port),
+	    'payload' : sip})
+
+	percent = (self.counter_pack/self.t_packs) * 100.0
+	status = 'Sending message %d of %d...' % (self.counter_pack, self.t_packs)
+
+	return pkt, percent, status
+
 
     def __iter__(self):
-	return self
+        return self.messages()
 
-    def next(self):
-	if (self.current_item == len(self.packets)):
-	    raise StopIteration
-	else:
-	    pack = self.packets[self.current_item]
-	    self.current_item += 1
-	    return pack
+    def messages(self):
+        ports = self.remote_port.split(',')
 
-	return self.data
+	self.t_packs = len(self.target_ip) * len(ports)
+
+        for dstip in self.target_ip:
+            for dstport in ports:
+		self.counter_pack += 1
+                yield self.create(dstip, self.srcip, self.srcport, dstport, self.type_of_msg, self.user_agent,)
+
 
 
 
@@ -136,81 +149,56 @@ class SipPortscanOperation(AuditOperation):
 
         self.state = self.RUNNING
 
-	sipmsg = SipPack()
+	thread = Thread(target=self.__thread_main, name='SIPSCAN')
+        thread.setDaemon(True)
+        thread.start()
 
-        if self.target_ip.find(','):
-            for dstip in self.target_ip.split(','):
-                if self.remote_port.find(','):
-                    for dstport in self.remote_port.split(','):
-                        sipmsg.create(dstip, self.srcip, self.srcport, dstport, self.type_of_msg, self.user_agent)
-
-                else:
-                    sipmsg.create(dstip, self.srcip, self.srcport, self.remote_port, self.type_of_msg, self.user_agent)
-
-
-        elif self.remote_port.find(','):
-            for dstport in self.remote_port.split(','):
-                sipmsg.create(self.target_ip, self.srcip, self.srcport, dstport, self.type_of_msg, self.user_agent)
-
-
-        else:
-            sipmsg.create(self.target_ip, self.srcip, self.srcport, self.remote_port, self.type_of_msg, self.user_agent)
-
-
-	self.sip_send(sipmsg)
-
-        self.percentage = 100.0
-        self.state = self.NOT_RUNNING
-        self.summary = AUDIT_MSG % _('Finished')
-
+        return True
 
 
     def stop(self):
         self.state = self.NOT_RUNNING
         self.summary = AUDIT_MSG % _('Stopped')
 
+    def __thread_main(self):
+        try:
+	    log.debug('Entered in __thread_main')
 
-    def sip_send(self, packets):
+	    sippack = SipPack(self.target_ip, self.remote_port, self.srcip, self.srcport, self.type_of_msg, self.user_agent)
 
-	self.summary = AUDIT_MSG % _('Sending...')
-	n_pack = 0
-	t_pack = len(packets.packets)
-
-	for sipmsg in packets:
-	    pkt = MetaPacket.new('ip') / MetaPacket.new('udp')
-	    pkt.set_fields('ip', {
-	        'dst' : sipmsg.dstip,
-	        'src' : sipmsg.srcip})
-
-	    pkt.set_fields('udp', {
-	        'sport' : sipmsg.srcport,
-	        'dport' : int(sipmsg.dstport),
-	        'payload' : sipmsg.prepare()})
-
-	    self.sender = self.session.context.sr_l3(pkt, onreply=self.on_resolved)
-	    self.session.output_page.user_msg(
-	        _('SIP Request FROM %s to %s ') % (pkt.get_field('ip.src'), pkt.get_field('ip.dst')),
-	        STATUS_INFO, AUDIT_NAME)
-
-	    n_pack += 1
-	    self.percentage = (n_pack / t_pack) * 100.0
+	    for sipmsg, percent, status in sippack.messages():
+		self.sip_send(sipmsg)
+		self.summary = AUDIT_MSG % _('%s' % status)
+		self.percentage = percent
+		sleep(self.delay)
 
 
-	    sleep(self.delay)
+	    self.state = self.NOT_RUNNING
+	    self.summary = AUDIT_MSG % _('Finished')
+	    self.percentage = 100.0
 
+
+	except Exception, err:
+            log.error(generate_traceback())
+
+    def sip_send(self, pkt):
+	self.sender = self.session.context.sr_l3(pkt, timeout=4, onreply=self.on_resolved)
+	self.session.output_page.user_msg(
+	    _('SIP Request FROM %s:%s to %s:%s ') % (pkt.get_field('ip.src'), pkt.get_field('udp.sport'), pkt.get_field('ip.dst'), pkt.get_field('udp.dport')),
+	    STATUS_INFO, AUDIT_NAME)
 
     def on_resolved(self, send, mpkt, reply, udata):
         self.session.output_page.user_msg(
-            _('SIP Reply FROM %s TO %s') % \
-            (reply.get_field('ip.src'),
-             reply.get_field('ip.dst'),
+            _('SIP Reply FROM %s:%s TO %s:%s') % \
+            (reply.get_field('ip.src'), reply.get_field('udp.sport'),
+             reply.get_field('ip.dst'), reply.get_field('udp.dport')
              ), STATUS_INFO, AUDIT_NAME)
 
 
 class SipPortscan(Plugin, ActiveAudit):
     __inputs__ = (
         ('target ip', ('0.0.0.0', _('A ip or CIDR/wildcard expression to perform a multihost scan'))),
-        ('remote port', ('5060', _('A port list to scan'))),
+        ('remote port', ('5060,5061', _('A port list to scan'))),
         ('source port', (5060, _('A port to send sip packet'))),
         ('delay', (300, _('Time delay betwen send packets'))),
         ('type of message', (['REGISTER','OPTIONS', 'INVITE', 'PHRACK', 'INFO'], _('Which headers that the message will include'))),
@@ -235,6 +223,22 @@ class SipPortscan(Plugin, ActiveAudit):
         delay = inp_dict['delay']
         source_ip = sess.context.get_ip1()
 
+	resolve = lambda x: is_ip(x) and x or '0.0.0.0'
+
+	targets = target_ip.split(',')
+	target_ip = []
+
+	for dip in targets:
+	    dstip = resolve(dip)
+	    if dstip == '0.0.0.0':
+		sess.output_page.user_msg(_('IP %s not valid') % (dip) ,
+		                          STATUS_ERR, AUDIT_NAME)
+		pass
+	    else:
+		target_ip.append(dstip)
+
+	if len(target_ip) == 0:
+	    return False
 
         return SipPortscanOperation(
             sess, target_ip, remote_port, source_port, type_of_msg, user_agent, delay, source_ip
