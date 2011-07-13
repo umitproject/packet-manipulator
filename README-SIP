@@ -1,0 +1,50 @@
+Steps to test Sip Audits
+
+1 - Sip Monitor (Passive Audit):
+
+To test passive plugins, first run a run-tester.sh script and a pcap file.
+
+$ cd audits
+$ ./run-tester.sh -f ethernet,ip,udp,sip  pcap-tests/sip_register.pcap
+$ ./run-tester.sh -f ethernet,ip,udp,sip  pcap-tests/sip_register2.pcap
+
+2 - Sip Portscan (Active Audit):
+
+To test active plugins need run packet-manipulator with compiled plugins.
+
+$ cd audits
+$ sudo python2.6 setup-autogen.py  active/sip-portscan/
+$ sudo python2.6 setup-autogen.py -b active/sip-portscan/
+$ cd ..
+$ sudo python2.6 PacketManipulator
+
+In PacketManipulator GUI, go to menu Options > Plugins;
+Go to Paths and add a path to packet-manipulator/audits/compiled, then click in Save;
+Still in Plugins windows and goto Audits;
+Expand Active Audits and select SipPortscan plugin;
+Close the Plugins windows;
+Go to menu File > New Audit, select the interface and click in New button;
+Now Audits menu is enable, go to Audits and select Sip PortscanÉ;
+For now the target-ip inputs only accept a simple host or list host (separated by a comma), the same for remote-port.
+
+3 - Sip Portscan with Sip Monitor:
+
+Sip Portscan only send a packet, don't parse the answer.
+To a complete scan, follow the step 2 and:
+
+$ cd audits
+$ sudo python2.6 setup-autogen.py  passive/
+$ sudo python2.6 setup-autogen.py -b passive/
+$ cd ..
+$ sudo python2.6 PacketManipulator
+
+Go to menu Options > Plugins and select in Audits the following Passive Audits (in sequence):
+ 1) EthDecoder
+ 2) IPDecoder
+ 3) UDPDecoder
+ 4) SIPMonitor
+
+Create a New Audit in File menu and start Sip Portscan.
+
+
+
