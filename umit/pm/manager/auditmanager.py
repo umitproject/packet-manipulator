@@ -25,6 +25,8 @@ Audit manager module
 import sys
 import os.path
 
+from collections import Callable
+
 from xml.sax import handler, make_parser
 from xml.sax.saxutils import XMLGenerator
 from xml.sax.xmlreader import AttributesImpl
@@ -830,6 +832,9 @@ class ActiveAudit(AuditPlugin):
                 widget.add_attribute(cell, 'text', 0)
                 widget.set_active(0)
 
+            elif isinstance(opt_val, Callable):
+                widget = opt_val()
+
             lbl.props.has_tooltip = True
             widget.props.has_tooltip = True
 
@@ -886,6 +891,9 @@ class ActiveAudit(AuditPlugin):
                 if active < 0:
                     value = None
                 value = model[active][0]
+
+            elif isinstance(widget, gtk.Button):
+                value = None
 
             else:
                 value = widget.get_text()
