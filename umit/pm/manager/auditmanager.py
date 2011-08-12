@@ -895,6 +895,9 @@ class ActiveAudit(AuditPlugin):
             elif isinstance(widget, gtk.Button):
                 value = None
 
+            elif isinstance(widget, gtk.FileChooserButton):
+                value = widget.get_filename()
+
             else:
                 value = widget.get_text()
 

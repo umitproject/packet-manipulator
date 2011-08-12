@@ -41,6 +41,7 @@ from umit.pm.manager.auditmanager import *
 
 from umit.pm.backend import MetaPacket
 
+
 class SipGuiUtils(Plugin):
     def start(self, reader):
         self.__inputs__ = (

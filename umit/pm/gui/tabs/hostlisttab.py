@@ -144,6 +144,14 @@ class HostListDetails(gtk.TreeView):
                 self.store.append(acc_child, [_('IP address:'),
                                               account.ip_addr])
 
+            acc_child = self.store.append(child, [_('Data:'), \
+                                                  str(len(port.data))])
+
+            for data in port.data:
+                for field, value in data:
+                    self.store.append(acc_child, [field, value])
+
+
         self.expand_all()
 
 class HostListTab(UmitView):

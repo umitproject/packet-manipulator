@@ -32,6 +32,17 @@ HOST_NONLOCAL_TYPE = 2
 GATEWAY_TYPE       = 3
 ROUTER_TYPE        = 4
 
+class DataProvider(object):
+    def __init__(self):
+        "@implement Data Structure"
+
+    def __iter__(self):
+        return self.print_info()
+
+    def print_info(self):
+        "@return a field, value to print in hostlisttab"
+        raise Exception('Not implemented')
+
 class AccountProvider(object):
     def __init__(self):
         self.username = None
@@ -46,8 +57,13 @@ class PortProvider(object):
         self.port = None
         self.banner = None
         self.accounts = []
+        self.data = []
 
     def get_account(self, user, pwd):
+        "@return a AccountProvider object or None"
+        raise Exception('Not implemented')
+
+    def get_data(self, *data):
         "@return a AccountProvider object or None"
         raise Exception('Not implemented')
 
