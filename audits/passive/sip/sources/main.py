@@ -27,176 +27,46 @@ from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 from umit.pm.manager.sessionmanager import SessionManager
-
-from umit.pm.core.bus import unbind_function, implements
-from umit.pm.core.providers import AccountProvider, PortProvider, \
-     ProfileProvider, DataProvider, \
-     UNKNOWN_TYPE, HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
-     GATEWAY_TYPE, ROUTER_TYPE
-
+from umit.pm.core.providers import DataProvider
 
 
 SIP_NAME = 'dissector.sip'
 SIP_PORTS = (5060, 5061)
 
+
 class SipData(DataProvider):
     def __init__(self):
+        self.field_value = None
         self.username = None
         self.realm = None
         self.nonce = None
         self.uri = None
         self.response = None
         self.bad_attempt = None
+        self.user_agent = None
+        self.is_server = False
 
     def print_info(self):
-        self.field_value = [('Username:', self.user), \
+        self.field_value = [('Username:', self.username), \
                             ('Realm:', self.realm), \
                             ('Nonce:', self.nonce), \
                             ('Uri:', self.uri), \
                             ('Response:', self.response), \
-                            ('Bad_attempt:', self.bad_attempt)]
+                            ('Bad_attempt:', self.bad_attempt), \
+                            ('User-agent:', self.user_agent), \
+                            ('Server:', self.is_server)]
 
         for field, value in self.field_value:
             yield field, value
 
 
-class Port(PortProvider):
-    def get_data(self, user):
-        for u in self.data:
-            if u.user == user:
-                return u
-        u = SipData()
-        u.user = user
-        self.data.append(u)
-        return u
+def sip_dissector(sipdata):
 
-class Profile(ProfileProvider):
-    def get_port(self, proto, port):
-        for p in self.ports:
-            if p.proto == proto and p.port == port:
-                return p
+    manager = AuditManager()
+    sessions = SessionManager()
 
-        p = Port()
-        p.port = port
-        p.proto = proto
-        self.ports.append(p)
-        return p
-
-    def __str__(self):
-        s = ''
-
-        if self.l2_addr:
-            s += "MAC: %s " % self.l2_addr
-        if self.l3_addr:
-            s += "IP: %s " % self.l3_addr
-        if self.ports:
-            s += "%d service(s) " % len(self.ports)
-
-            for p in self.ports:
-                s += "(%d sip data for port %d) " % (len(p.data), p.port)
-
-        return s[:-1]
-
-
-@implements('pm.hostlist')
-class SIPMonitor(Plugin, PassiveAudit):
-    def start(self, reader):
-        self.manager = AuditManager()
-        #self.dissector = sip_dissector()
-        self.profiles = defaultdict(list)
-
-    @unbind_function('pm.hostlist', ('get', 'info', 'populate', 'get_target'))
-    def stop(self):
-        for port in SIP_PORTS:
-            self.manager.remove_dissector(APP_LAYER_UDP, port,
-                                          self.dissector)
-
-            #self.manager.deregister_hook_point('sip')
-
-    def __impl_info(self, intf, ip, mac):
-        """
-        @return a ProfileProvider object or None if not found
-        """
-
-        for prof in self.profiles[ip]:
-            if prof.l2_addr == mac:
-                log.debug('Profile: %s' % prof)
-                return prof
-
-    def __impl_populate(self, interface):
-        # This signal is triggered when the user change the interface
-        # combobox selection and we have to repopulate the tree
-
-        log.debug('Sip-monitor is going to repopulate the hostlist for %s intf' % \
-                  interface)
-
-        ret = []
-
-        for ip in self.profiles:
-            for prof in self.profiles[ip]:
-                ret.append((ip, prof.l2_addr, prof.hostname))
-
-        return ret
-
-    def __impl_get(self):
-        return self.profiles
-
-    def __impl_get_target(self, **kwargs):
-        ret = []
-        l2_addr, l3_addr, hostname, netmask = None, None, None, None
-
-        if 'l2_addr' in kwargs:
-            l2_addr = kwargs.pop('l2_addr')
-        if 'l3_addr' in kwargs:
-            l3_addr = kwargs.pop('l3_addr')
-        if 'hostname' in kwargs:
-            hostname = kwargs.pop('hostname')
-        if 'netmask' in kwargs:
-            netmask = kwargs.pop('netmask')
-
-        log.debug('Looking for a profile matching l2_addr=%s l3_addr=%s '
-                  'hostname=%s netmask=%s' % \
-                  (l2_addr, l3_addr, hostname, netmask))
-
-        check_validity = lambda prof: \
-               (not l2_addr or (l2_addr and prof.l2_addr == l2_addr)) and \
-               (not hostname or (hostname and prof.hostname == hostname))
-
-        if l3_addr:
-            if l3_addr not in self.profiles:
-                return None
-
-            for prof in self.profiles[l3_addr]:
-                if check_validity(prof):
-                    ret.append(prof)
-        else:
-            if netmask:
-                valid_ip = filter(netmask.match_strict, self.profiles.keys())
-            else:
-                valid_ip = self.profiles.keys()
-
-            for ip in valid_ip:
-                for prof in self.profiles[ip]:
-                    if check_validity(prof):
-                        ret.append(prof)
-
-        log.debug('Returning %s' % ret)
-        return ret
-
-    def register_decoders(self):
-
-        #self.manager.register_hook_point('sip')
-
-        for port in SIP_PORTS:
-            self.manager.add_dissector(APP_LAYER_UDP, port,
-                                       self.sip_dissector)
-
-    def sip_dissector(self, mpkt):
-
-        manager = self.manager
-        sessions = SessionManager()
-
-        def parse_user_fields(self, mpkt, sess, type='REQUEST'):
+    def sip(mpkt):
+        def parse_user_fields(mpkt, sess, type='REQUEST'):
             #Here check for extra sip_fields
             payload = mpkt.data
             sip_fields = None
@@ -205,16 +75,7 @@ class SIPMonitor(Plugin, PassiveAudit):
             if type is 'REQUEST' and sess.data[3] is None:
                 sip_fields = conf['request_fields']
                 sess.data[3] = 'OK'
-                #mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
-                prof = Profile()
-                prof.l2_addr = sess.data[6]
-                prof.l3_addr = sess.data[1][0]
-
-                port = prof.get_port(APP_LAYER_UDP, sess.data[1][1])
-                sipdata = port.get_data('1000')
-
-                self.profiles[sess.data[1][0]].append(prof)
-
+                mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
 
                 manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
                                  (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
@@ -222,16 +83,7 @@ class SIPMonitor(Plugin, PassiveAudit):
             elif type is 'RESPONSE' and sess.data[4] is None:
                 sip_fields = conf['response_fields']
                 sess.data[4] = 'OK'
-                #mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
-                prof = Profile()
-                prof.l2_addr = sess.data[5]
-                prof.l3_addr = sess.data[0][0]
-
-                port = prof.get_port(APP_LAYER_UDP, sess.data[0][1])
-                sipdata = port.get_data('1000')
-
-                self.profiles[sess.data[0][0]].append(prof)
-
+                mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
 
                 manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
                                  (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
@@ -257,7 +109,7 @@ class SIPMonitor(Plugin, PassiveAudit):
 
                             pos = end +2
 
-        def parse_request(self, mpkt, sess):
+        def parse_request(mpkt, sess):
             payload = mpkt.data
             payload.strip()
 
@@ -278,49 +130,58 @@ class SIPMonitor(Plugin, PassiveAudit):
 
                                 if k.upper().rfind('USERNAME') > -1:
                                     mpkt.set_cfield(SIP_NAME + '.username', v)
+                                    sipdata.username = v
                                     manager.user_msg('SIP: %s:%d username FOUND %s' % \
                                                      (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'REALM':
                                     mpkt.set_cfield(SIP_NAME + '.realm', v)
+                                    sipdata.realm = v
                                     manager.user_msg('SIP: %s:%d realm FOUND %s' % \
                                                      (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'NONCE':
                                     mpkt.set_cfield(SIP_NAME + '.nonce', v)
+                                    sipdata.nonce = v
                                     manager.user_msg('SIP: %s:%d nonce FOUND %s' % \
                                                      (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'URI':
                                     mpkt.set_cfield(SIP_NAME + '.uri', v)
+                                    sipdata.uri = v
                                     manager.user_msg('SIP: %s:%d uri FOUND %s' % \
                                                      (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'ALGORITHM':
                                     mpkt.set_cfield(SIP_NAME + '.algorithm', v)
+                                    sipdata.algorithm = v
                                     manager.user_msg('SIP: %s:%d algorithm FOUND %s' % \
                                                      (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'RESPONSE':
                                     sess.data[2] = v
 
-                    manager.user_msg('SIP: %s:%d FOUND %s' % \
-                                     (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
-
-            parse_user_fields(self, mpkt, sess)
+            parse_user_fields(mpkt, sess)
 
 
 
-        def parse_response(self, mpkt, sess):
+        def parse_response(mpkt, sess):
             payload = mpkt.data
 
+
             if sess and sess.data[2] is not None:
+
                 if mpkt.data.startswith('SIP/2.0 200 '):
                     mpkt.set_cfield(SIP_NAME + '.response', sess.data[2])
+                    sipdata.response = sess.data[2]
                     manager.user_msg('SIP: PASSWORD OK %s' % \
                                      (sess.data[2]), 6, SIP_NAME)
-                    sessions.delete_session(sess)
 
                 elif mpkt.data.startswith('SIP/2.0 403 '):
                     mpkt.set_cfield(SIP_NAME + '.bad_attempt', sess.data[2])
+                    sipdata.bad_attempt = sess.data[2]
                     manager.user_msg('SIP: BAD AUTH %s' % \
                                      (sess.data[2]), 6, SIP_NAME)
-                    sessions.delete_session(sess)
+
+
+                manager.run_hook_point('dataprovider-request', sipdata, mpkt)
+
+                sessions.delete_session(sess)
 
             elif mpkt.data.startswith('SIP/2.0 407 '):
                 pos = payload.find('Proxy-Authenticate')
@@ -362,26 +223,47 @@ class SIPMonitor(Plugin, PassiveAudit):
                                          (mpkt.l3_src, mpkt.l4_src, val), 6, SIP_NAME)
 
 
-            parse_user_fields(self, mpkt, sess, 'RESPONSE')
+            parse_user_fields(mpkt, sess, 'RESPONSE')
 
         #start here
         sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME)
 
         if sess and sess.data and sess.data[0] == (mpkt.l3_src, mpkt.l4_src):
-            parse_response(self, mpkt, sess)
+            parse_response(mpkt, sess)
 
         elif sess and sess.data and sess.data[0] == (mpkt.l3_dst, mpkt.l4_dst):
-            parse_request(self, mpkt, sess)
+            parse_request(mpkt, sess)
 
         elif not sess:
             sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, True)
+
             if mpkt.data.startswith('SIP/2.0'):
-                sess.data = [(mpkt.l3_src, mpkt.l4_src), (mpkt.l3_dst, mpkt.l4_dst), None, None, None, mpkt.l2_src, mpkt.l2_dst]
-                parse_response(self, mpkt, sess)
+                sess.data = [(mpkt.l3_src, mpkt.l4_src), (mpkt.l3_dst, mpkt.l4_dst), None, None, None, None]
+                parse_response(mpkt, sess)
 
             else:
-                sess.data = [(mpkt.l3_dst, mpkt.l4_dst), (mpkt.l3_src, mpkt.l4_src), None, None, None, mpkt.l2_dst, mpkt.l2_src]
-                parse_request(self, mpkt, sess)
+                sess.data = [(mpkt.l3_dst, mpkt.l4_dst), (mpkt.l3_src, mpkt.l4_src), None, None, None, None]
+                parse_request(mpkt, sess)
+
+    return sip
+
+
+
+class SIPMonitor(Plugin, PassiveAudit):
+    def start(self, reader):
+        self.manager = AuditManager()
+        self.dissector = sip_dissector(SipData())
+
+
+    def stop(self):
+        for port in SIP_PORTS:
+            self.manager.remove_dissector(APP_LAYER_UDP, port,
+                                          self.dissector)
+
+    def register_decoders(self):
+        for port in SIP_PORTS:
+            self.manager.add_dissector(APP_LAYER_UDP, port,
+                                       self.dissector)
 
 
 __plugins__ = [SIPMonitor]

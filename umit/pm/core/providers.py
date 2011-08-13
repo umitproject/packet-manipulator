@@ -34,14 +34,17 @@ ROUTER_TYPE        = 4
 
 class DataProvider(object):
     def __init__(self):
-        "@implement Data Structure"
+        self.field_value = None
+        self.username = None
+
+        "@implement overwrite data"
 
     def __iter__(self):
         return self.print_info()
 
     def print_info(self):
-        "@return a field, value to print in hostlisttab"
-        raise Exception('Not implemented')
+        for field, value in self.field_value:
+            yield field, value
 
 class AccountProvider(object):
     def __init__(self):

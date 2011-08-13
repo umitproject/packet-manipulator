@@ -45,7 +45,7 @@ from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
 
 from umit.pm.core.bus import unbind_function, implements
-from umit.pm.core.providers import AccountProvider, PortProvider, \
+from umit.pm.core.providers import DataProvider, AccountProvider, PortProvider, \
      ProfileProvider, \
      UNKNOWN_TYPE, HOST_LOCAL_TYPE, HOST_NONLOCAL_TYPE, \
      GATEWAY_TYPE, ROUTER_TYPE
@@ -55,6 +55,7 @@ from umit.pm.core.providers import AccountProvider, PortProvider, \
 ################################################################################
 
 Account = AccountProvider
+Data = DataProvider
 
 class Port(PortProvider):
     def get_account(self, user, pwd):
@@ -65,6 +66,14 @@ class Port(PortProvider):
         a = Account()
         self.accounts.append(a)
         return a
+
+    def get_data(self, dataobj):
+        for u in self.data:
+            if u.username == dataobj.username:
+                return u
+
+        self.data.append(dataobj)
+        return dataobj
 
 class Profile(ProfileProvider):
     def get_port(self, proto, port):
@@ -96,6 +105,10 @@ class Profile(ProfileProvider):
 
             for p in self.ports:
                 s += "(%d accounts for port %d) " % (len(p.accounts), p.port)
+
+            for p in self.ports:
+                s += "(%d data for port %d) " % (len(p.data), p.port)
+
 
         return s[:-1]
 
@@ -142,19 +155,19 @@ class Profiler(Plugin, PassiveAudit):
     @unbind_function('pm.hostlist', ('get', 'info', 'populate', 'get_target'))
     def stop(self):
         try:
-            manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
+            manager.remove_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
                                      self._parse_tcp, 1)
         except:
             pass
 
         try:
-            manager.add_decoder_hook(NET_LAYER, LL_TYPE_ARP,
+            manager.remove_decoder_hook(NET_LAYER, LL_TYPE_ARP,
                                      self._parse_arp, 1)
         except:
             pass
 
         try:
-            manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_ICMP,
+            manager.remove_decoder_hook(PROTO_LAYER, NL_TYPE_ICMP,
                                      self._parse_icmp, 1)
         except:
             pass
@@ -231,7 +244,6 @@ class Profiler(Plugin, PassiveAudit):
     def register_hooks(self):
         manager = AuditManager()
 
-        # TODO: also handle UDP when UDP dissectors will be ready.
         manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_TCP,
                                  self._parse_tcp, 1)
 
@@ -240,6 +252,10 @@ class Profiler(Plugin, PassiveAudit):
 
         manager.add_decoder_hook(PROTO_LAYER, NL_TYPE_ICMP,
                                  self._parse_icmp, 1)
+
+        manager.register_hook_point('dataprovider-request')
+        manager.add_to_hook_point('dataprovider-request',
+                                  self._parse_dataprovider_request)
 
     def _parse_tcp(self, mpkt):
         if mpkt.flags & MPKT_FORWARDED or \
@@ -336,6 +352,13 @@ class Profiler(Plugin, PassiveAudit):
              icmp_type == ICMP_TYPE_TIME_EXCEEDED:
 
             prof.type = ROUTER_TYPE
+
+    def _parse_dataprovider_request(self, dataobj, mpkt):
+
+        prof = self.get_or_create(mpkt)
+        port = prof.get_port(APP_LAYER_UDP, mpkt.l4_src)
+        data = port.get_data(dataobj)
+
 
     def cleanup(self):
         # Yes this is really a mess. But it is for performance :)
