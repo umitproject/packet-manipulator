@@ -34,17 +34,8 @@ ROUTER_TYPE        = 4
 
 class DataProvider(object):
     def __init__(self):
-        self.field_value = None
-        self.username = None
+        "@implement data"
 
-        "@implement overwrite data"
-
-    def __iter__(self):
-        return self.print_info()
-
-    def print_info(self):
-        for field, value in self.field_value:
-            yield field, value
 
 class AccountProvider(object):
     def __init__(self):

@@ -262,7 +262,7 @@ class SipEnumeration(Plugin, ActiveAudit):
         cfields = AuditManager().get_configuration('global.cfields').__getitem__('dissector.sip.server')
         print cfields
 
-        #target_ip = ["189.50.126.39:5060"]
+        target_ip = ["189.50.126.39:5060"]
         source_port = inp_dict['source port']
         source_ip = sess.context.get_ip1()
 

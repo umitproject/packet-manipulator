@@ -353,10 +353,10 @@ class Profiler(Plugin, PassiveAudit):
 
             prof.type = ROUTER_TYPE
 
-    def _parse_dataprovider_request(self, dataobj, mpkt):
+    def _parse_dataprovider_request(self, dataobj, mpkt, PROTO, PORT_NUMBER):
 
         prof = self.get_or_create(mpkt)
-        port = prof.get_port(APP_LAYER_UDP, mpkt.l4_src)
+        port = prof.get_port(PROTO, PORT_NUMBER)
         data = port.get_data(dataobj)
 
 
