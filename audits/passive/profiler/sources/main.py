@@ -71,9 +71,10 @@ class Port(PortProvider):
         for u in self.data:
             if u.username == dataobj.username:
                 return u
-
-        self.data.append(dataobj)
-        return dataobj
+        if dataobj.username:
+            self.data.append(dataobj)
+            return dataobj
+        return None
 
 class Profile(ProfileProvider):
     def get_port(self, proto, port):

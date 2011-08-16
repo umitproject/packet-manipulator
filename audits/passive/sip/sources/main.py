@@ -26,12 +26,52 @@ SIP protocol dissector (Passive audit)
 from umit.pm.core.logger import log
 from umit.pm.gui.plugins.engine import Plugin
 from umit.pm.manager.auditmanager import *
-from umit.pm.manager.sessionmanager import SessionManager
+from umit.pm.manager.sessionmanager import SessionManager, DissectIdent, Session
 from umit.pm.core.providers import DataProvider
 
 
 SIP_NAME = 'dissector.sip'
 SIP_PORTS = (5060, 5061)
+
+class SIPIdent(object):
+    magic = None
+
+    def __init__(self, l3src, l3dst, l4src, l4dst):
+        self.l3_src = l3src
+        self.l3_dst = l3dst
+        self.l4_src = l4src
+        self.l4_dst = l4dst
+        self.callid = None
+
+    @classmethod
+    def create(self, mpkt):
+        return SIPIdent(mpkt.l3_src, mpkt.l3_dst,
+                        mpkt.l4_src, mpkt.l4_dst)
+
+    @classmethod
+    def mkhash(self, ident):
+        return hash(ident.l3_src) ^ hash(ident.l3_dst) ^ \
+               ident.l4_src ^ ident.l4_dst ^ hash(ident.callid)
+
+    def __eq__(self, other):
+        if self.magic != other.magic:
+            return False
+
+        if self.l3_src == other.l3_src and \
+           self.l3_dst == other.l3_dst and \
+           self.l4_src == other.l4_src and \
+           self.l4_dst == other.l4_dst and \
+           self.callid == other.callid:
+            return True
+
+        if self.l3_src == other.l3_dst and \
+           self.l3_dst == other.l3_src and \
+           self.l4_src == other.l4_dst and \
+           self.l4_dst == other.l4_src and \
+           self.callid == other.callid:
+            return True
+
+        return False
 
 
 class SipData(DataProvider):
@@ -91,39 +131,53 @@ def sip_dissector():
             return None
 
 
-        def parse_user_fields(mpkt, sess, type='REQUEST'):
+        def parse_user_fields(mpkt, sess, siptype='REQUEST'):
             #Here check for extra sip_fields
             payload = mpkt.data
             sip_fields = None
             sipdata = sess.data[6]
 
-
             conf = manager.get_configuration(SIP_NAME)
-            if type is 'REQUEST' and sess.data[3] is None:
+            if sess.data[3] is None and siptype is 'REQUEST':
                 sip_fields = conf['request_fields']
                 sess.data[3] = 'OK'
-                mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
+                if sess.data[0] == (mpkt.l3_dst, mpkt.l4_dst):
+                    mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
+                    manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
+                                     (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
 
-                manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
-                                 (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
+                else:
+                    mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
+                    sipdata.is_server = True
+                    manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
+                                     (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
 
-            elif type is 'RESPONSE' and sess.data[4] is None:
+
+            elif sess.data[4] is None and siptype is 'RESPONSE':
                 sip_fields = conf['response_fields']
                 sess.data[4] = 'OK'
-                mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
-                sipdata.is_server = True
-
-                manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
-                                 (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
-
+                if sess.data[0] == (mpkt.l3_src, mpkt.l4_src):
+                    mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
+                    sipdata.is_server = True
+                    manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
+                                     (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
+                else:
+                    mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
+                    manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
+                                     (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
 
             if sip_fields:
                 for field in sip_fields.split(','):
                     value = get_field(mpkt, field)
                     if value is not None:
                         mpkt.set_cfield(SIP_NAME + '.' + field.lower(), value)
-                        manager.user_msg('SIP: %s:%d %s: FOUND %s: %s' % \
-                                         (mpkt.l3_src, mpkt.l4_src, type, field, value), 6, SIP_NAME)
+
+                        if sess.data[0] == (mpkt.l3_src, mpkt.l4_src) and field.lower() == 'from':
+                            sipdata.username = value[value.find('<sip:')+5:value.find('@')]
+
+                        elif sess.data[0] == (mpkt.l3_src, mpkt.l4_src) and field.lower() == 'user-agent':
+                            sipdata.user_agent = value
+
 
         def parse_request(mpkt, sess):
             payload = mpkt.data
@@ -189,10 +243,9 @@ def sip_dissector():
                 if mpkt.data.startswith('SIP/2.0 200 '):
                     mpkt.set_cfield(SIP_NAME + '.response', sess.data[2])
                     sipdata.response = sess.data[2]
-                    manager.user_msg('SIP: PASSWORD OK %s' % \
+                    manager.user_msg('SIP: PASSWORD: %s' % \
                                      (sess.data[2]), 6, SIP_NAME)
                     manager.run_hook_point('dataprovider-request', sipdata, mpkt, APP_LAYER_UDP, mpkt.l4_src)
-
                     sessions.delete_session(sess)
 
                 elif mpkt.data.startswith('SIP/2.0 403 '):
@@ -201,14 +254,16 @@ def sip_dissector():
                     manager.user_msg('SIP: BAD AUTH %s' % \
                                      (sess.data[2]), 6, SIP_NAME)
                     manager.run_hook_point('dataprovider-request', sipdata, mpkt, APP_LAYER_UDP, mpkt.l4_src)
-
                     sessions.delete_session(sess)
 
 
-            elif mpkt.data.startswith('SIP/2.0 501 '):
+
+
+            elif sess and mpkt.data.startswith('SIP/2.0 501 '):
+                manager.run_hook_point('dataprovider-request', sipdata, mpkt, APP_LAYER_UDP, mpkt.l4_src)
                 sessions.delete_session(sess)
 
-            elif mpkt.data.startswith('SIP/2.0 407 '):
+            elif sess and mpkt.data.startswith('SIP/2.0 407 '):
                 pos = payload.find('Proxy-Authenticate')
                 if pos != -1:
                     stop = payload.find('\r\n', pos + 18)
@@ -253,30 +308,48 @@ def sip_dissector():
                     #sessions.delete_session(sess)
 
 
+            elif sess and mpkt.data.startswith('SIP/2.0 200 '):
+                manager.run_hook_point('dataprovider-request', sipdata, mpkt, APP_LAYER_UDP, mpkt.l4_src)
+                sessions.delete_session(sess)
 
-
-            parse_user_fields(mpkt, sess, 'RESPONSE')
+            if sess:
+                parse_user_fields(mpkt, sess, 'RESPONSE')
 
         #start here
         callid = get_field(mpkt, 'call-id')
 
-        sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, unique=callid)
+        ident = SIPIdent.create(mpkt)
+        ident.magic = SIP_NAME
+        ident.callid = callid
+
+        sess = SessionManager().get_session(ident)
+
+        #sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, unique=callid)
 
 
         if sess:
-            if sess.data and sess.data[0] == (mpkt.l3_src, mpkt.l4_src):
+            if sess.data and mpkt.data.startswith('SIP/2.0'):
                 parse_response(mpkt, sess)
 
-            elif sess.data and sess.data[0] == (mpkt.l3_dst, mpkt.l4_dst):
+            elif sess.data:
                 parse_request(mpkt, sess)
 
+
+
         elif not sess:
-            sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, True, unique=callid)
+            sess = Session(ident)
+            SessionManager().put_session(sess)
+
+            #sess = sessions.lookup_session(mpkt, SIP_PORTS, SIP_NAME, True, unique=callid)
             sipdata = SipData()
 
             if mpkt.data.startswith('SIP/2.0'):
                 sess.data = [(mpkt.l3_src, mpkt.l4_src), (mpkt.l3_dst, mpkt.l4_dst), None, None, None, None, sipdata]
                 parse_response(mpkt, sess)
+
+            elif mpkt.data.startswith('NOTIFY') or mpkt.data.startswith('OPTIONS'):
+                sess.data = [(mpkt.l3_src, mpkt.l4_src), (mpkt.l3_dst, mpkt.l4_dst), None, None, None, None, sipdata]
+                parse_request(mpkt, sess)
 
             else:
                 sess.data = [(mpkt.l3_dst, mpkt.l4_dst), (mpkt.l3_src, mpkt.l4_src), None, None, None, None, sipdata]
@@ -320,15 +393,15 @@ __configurations__ = (('global.cfields', {
     SIP_NAME + '.client' : (PM_TYPE_STR, 'SIP client'),
     }),
 
-    (SIP_NAME, {
-        'request_fields' : ["Contact,To,Via,From,User-Agent",
+                      (SIP_NAME, {
+                          'request_fields' : ["Contact,To,Via,From,User-Agent",
 
-                            'A coma separated string of extra request sip fields'],
+                                              'A coma separated string of extra request sip fields'],
 
-        'response_fields' : ["Contact,To,Via,From,User-Agent,Server",
+                          'response_fields' : ["Contact,To,Via,From,User-Agent,Server",
 
-                             'A coma separated string of extra response sip fields'],
-    }),
+                                               'A coma separated string of extra response sip fields'],
+                          }),
 )
 __vulnerabilities__ = (('SIP dissector', {
     'description' : 'SIP Monitor plugin'

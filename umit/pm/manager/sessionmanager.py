@@ -30,7 +30,6 @@ from umit.pm.core.netconst import *
 
 class DissectIdent(object):
     magic = None
-    unique = None
 
     def __init__(self, l3src, l3dst, l4src, l4dst):
         self.l3_src = l3src
@@ -148,18 +147,17 @@ class SessionManager(Singleton):
 
         return None
 
-    def create_dissect_ident(self, mpkt, magic, unique):
+    def create_dissect_ident(self, mpkt, magic):
         """
         Create a session object starting from a mpkt instance
         """
         ident = DissectIdent.create(mpkt)
         ident.magic = magic
-        ident.unique = unique
 
         return ident
 
-    def lookup_session(self, mpkt, ports, decoder, create_on_fail=False, unique=None):
-        ident = self.create_dissect_ident(mpkt, decoder, unique)
+    def lookup_session(self, mpkt, ports, decoder, create_on_fail=False):
+        ident = self.create_dissect_ident(mpkt, decoder)
         sess = self.get_session(ident)
 
         if create_on_fail and not sess:
