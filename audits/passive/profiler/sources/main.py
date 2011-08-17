@@ -69,7 +69,8 @@ class Port(PortProvider):
 
     def get_data(self, dataobj):
         for u in self.data:
-            if u.username == dataobj.username:
+            if u.application_type == dataobj.application_type and \
+               u.username == dataobj.username:
                 return u
         if dataobj.username:
             self.data.append(dataobj)
@@ -429,6 +430,8 @@ class Profiler(Plugin, PassiveAudit):
             log.info('Adding a new profile -> %s' % prof)
 
             return prof
+    def get_profiles(self):
+        return self.profiles
 
 __plugins__ = [Profiler]
 __plugins_deps__ = [('Profiler', ['=TCPDecoder-1.0'], ['=Profiler-1.0'], [])]

@@ -65,29 +65,32 @@ class SipPack(object):
 
         header = dict()
 
+        if tag is None:
+            tag = '%s' % random.getrandbits(32)
+
         if type_of_msg == 'REGISTER':
-            uri = '<sip:%s>' % destip
-            fromaddr = '<sip:%s@%s>' % (caller, destip)
+            uri = 'sip:%s' % destip
+            fromaddr = '<sip:%s@%s>;tag=%s' % (caller, destip, tag)
+            header['Expires'] = 600
 
         elif type_of_msg == 'INVITE':
             uri = '<sip:%s@%s>' % (extension, destip)
-            fromaddr = '"%s" <sip:%s@%s>' % (caller, caller, destip)
-
-        if tag is not None:
-            fromaddr += ';tag=%s' % tag
+            fromaddr = '"%s" <sip:%s@%s>;tag=%s' % (caller, caller, destip, tag)
 
         branch = '%s' % random.getrandbits(32)
 
         head = '%s %s SIP/2.0' % (type_of_msg, uri)
-        header['Contact'] = 'sip:%s@%s:%s' % (caller,srcip,srcport)
+        header['Contact'] = '<sip:%s@%s:%s>' % (caller,srcip,srcport)
         header['To'] = '<sip:%s@%s:%s>' % (extension, destip, remote_port)
-        header['Via'] = 'SIP/2,0/UDP %s:%s;rport;branch=%s' % (srcip, remote_port, branch)
+        header['Via'] = 'SIP/2.0/UDP %s:%s;rport;branch=%s' % (srcip, remote_port, branch)
         header['From'] = fromaddr
-        header['Call-ID'] = '%s' % random.getrandbits(80)
+        header['Call-ID'] = '%s@%s' % (random.getrandbits(64), destip)
         header['CSeq'] = '%s %s' % (cseq, type_of_msg)
         header['Max-Forwards'] = 60
-        header['Content-Length'] = 0
         header['User-Agent'] = useragent
+        header['Content-Length'] = 0
+
+
 
 
         sip = '%s\r\n' % head
