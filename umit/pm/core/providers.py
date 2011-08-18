@@ -58,7 +58,7 @@ class PortProvider(object):
         raise Exception('Not implemented')
 
     def get_data(self, *data):
-        "@return a AccountProvider object or None"
+        "@return a DataProvider object or None"
         raise Exception('Not implemented')
 
 class ProfileProvider(object):

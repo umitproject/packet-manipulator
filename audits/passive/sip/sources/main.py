@@ -33,14 +33,11 @@ from umit.pm.core.providers import DataProvider
 SIP_NAME = 'dissector.sip'
 SIP_PORTS = (5060, 5061)
 
-class SIPIdent(object):
+class SIPIdent(DissectIdent):
     magic = None
 
     def __init__(self, l3src, l3dst, l4src, l4dst):
-        self.l3_src = l3src
-        self.l3_dst = l3dst
-        self.l4_src = l4src
-        self.l4_dst = l4dst
+        super(SIPIdent, self).__init__(l3src, l3dst, l4src, l4dst)
         self.callid = None
 
     @classmethod
@@ -50,28 +47,11 @@ class SIPIdent(object):
 
     @classmethod
     def mkhash(self, ident):
-        return hash(ident.l3_src) ^ hash(ident.l3_dst) ^ \
-               ident.l4_src ^ ident.l4_dst ^ hash(ident.callid)
+        return DissectIdent.mkhash(ident) ^ hash(ident.callid)
 
     def __eq__(self, other):
-        if self.magic != other.magic:
-            return False
-
-        if self.l3_src == other.l3_src and \
-           self.l3_dst == other.l3_dst and \
-           self.l4_src == other.l4_src and \
-           self.l4_dst == other.l4_dst and \
-           self.callid == other.callid:
-            return True
-
-        if self.l3_src == other.l3_dst and \
-           self.l3_dst == other.l3_src and \
-           self.l4_src == other.l4_dst and \
-           self.l4_dst == other.l4_src and \
-           self.callid == other.callid:
-            return True
-
-        return False
+        return super(SIPIdent, self).__eq__(other) and \
+               self.callid == other.callid
 
 
 class SipData(DataProvider):
@@ -99,8 +79,7 @@ class SipData(DataProvider):
                             ('Response:', self.response), \
                             ('Bad_attempt:', self.bad_attempt), \
                             ('User-agent:', self.user_agent), \
-                            ('Server:', self.is_server), \
-                            ('============','===========')]
+                            ('Server:', self.is_server),]
 
         for field, value in self.field_value:
             yield field, value

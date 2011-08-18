@@ -355,10 +355,10 @@ class Profiler(Plugin, PassiveAudit):
 
             prof.type = ROUTER_TYPE
 
-    def _parse_dataprovider_request(self, dataobj, mpkt, PROTO, PORT_NUMBER):
+    def _parse_dataprovider_request(self, dataobj, mpkt, proto, port_number):
 
         prof = self.get_or_create(mpkt)
-        port = prof.get_port(PROTO, PORT_NUMBER)
+        port = prof.get_port(proto, port_number)
         data = port.get_data(dataobj)
 
 
@@ -430,8 +430,7 @@ class Profiler(Plugin, PassiveAudit):
             log.info('Adding a new profile -> %s' % prof)
 
             return prof
-    def get_profiles(self):
-        return self.profiles
+
 
 __plugins__ = [Profiler]
 __plugins_deps__ = [('Profiler', ['=TCPDecoder-1.0'], ['=Profiler-1.0'], [])]
