@@ -41,8 +41,12 @@ from umit.pm.manager.auditmanager import *
 
 from umit.pm.backend import MetaPacket
 
+from umit.pm.core.bus import ServiceBus
+
+
 
 class SipGuiUtils(Plugin):
+    selected = []
     def start(self, reader):
         self.__inputs__ = (
         ('type of message', (['REGISTER','OPTIONS', 'INVITE', 'PHRACK', 'INFO'], _('Which headers that the message will include'))),
@@ -188,6 +192,78 @@ class SipGuiUtils(Plugin):
 
         dialog.hide()
         dialog.destroy()
+
+    def create_profiler_window(self, btn, *data):
+
+        self.response_back2 = data[0]
+
+        dialog = gtk.Dialog(_('Hostlist Profiles'),
+                            None,
+                            gtk.DIALOG_DESTROY_WITH_PARENT,
+                            (gtk.STOCK_OK, gtk.RESPONSE_ACCEPT))
+
+
+        dialog.set_position(gtk.WIN_POS_CENTER)
+        dialog.set_size_request(200, 150)
+        dialog.vbox.set_border_width(4)
+        dialog.vbox.set_spacing(2)
+
+        sw = gtk.ScrolledWindow()
+        sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+
+        store = gtk.ListStore(str, str)
+
+        self.tree = gtk.TreeView(store)
+
+        rend = gtk.CellRendererText()
+
+        self.tree.append_column(gtk.TreeViewColumn(_('IP'), rend, text=0))
+        self.tree.append_column(gtk.TreeViewColumn(_('Port'), rend, text=1))
+
+        self.tree.get_column(0).set_resizable(True)
+
+        # Enable multiple selection
+        self.tree.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+        self.tree.set_rubber_banding(True)
+
+        self.tree.set_rules_hint(True)
+
+        sw.add(self.tree)
+        dialog.vbox.pack_start(sw)
+
+        dialog.connect('response', self.on_dialog_profile_response)
+
+        dialog.show_all()
+
+        get_cb = ServiceBus().get_function('pm.hostlist', 'get')
+        profiles = get_cb()
+        for ip in profiles:
+            for prof in profiles[ip]:
+                for port in prof.ports:
+                    for data in port.data:
+                        if data.application_type == 'SIP':
+                            store.append([ip, port.port])
+
+
+    def on_dialog_profile_response(self, dialog, rid):
+
+        def add_to_string(model, path, iter, selected):
+            target = '%s:%s' % (model.get_value(iter, 0), model.get_value(iter, 1))
+            selected.append(target)
+
+        if rid == gtk.RESPONSE_ACCEPT:
+
+            self.tree.get_selection().selected_foreach(add_to_string, self.selected)
+
+            dialog.stop_emission('response')
+
+            dialog.hide()
+            dialog.destroy()
+
+            self.response_back2(self.selected)
+
+
 
 __plugins__ = [SipGuiUtils]
 __plugins_deps__ = [('SipGuiUtils', [], ['SipGuiUtils-0.1'], [])]

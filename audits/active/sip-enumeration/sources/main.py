@@ -77,7 +77,7 @@ class SipPack(object):
         head = '%s %s SIP/2.0' % (type_of_msg, uri)
         header['Contact'] = 'sip:%s@%s:%s' % (caller,srcip,srcport)
         header['To'] = '<sip:%s@%s:%s>' % (extension, destip, remote_port)
-        header['Via'] = 'SIP/2,0/UDP %s:%s;rport;branch=%s' % (srcip, remote_port, branch)
+        header['Via'] = 'SIP/2.0/UDP %s:%s;rport;branch=%s' % (srcip, remote_port, branch)
         header['From'] = fromaddr
         header['Call-ID'] = '%s' % random.getrandbits(80)
         header['CSeq'] = '%s %s' % (cseq, type_of_msg)
@@ -146,8 +146,19 @@ class SipExtra:
         filechooserbutton = gtk.FileChooserButton("Select A File", None)
         return filechooserbutton
 
+    def create_profiler_btn(self):
+        btn = gtk.Button("Select")
+        btn.connect('clicked', self.utils.create_profiler_window, self.on_response_profiler)
+        return btn
+
+    def on_response_profiler(self, profile_select):
+        self.profiles = profile_select
+
     def get_dict(self):
         return self.sip_dict
+
+    def get_profiles(self):
+        return self.profiles
 
 sipextra = SipExtra()
 
@@ -230,8 +241,8 @@ class SipEnumeration(Plugin, ActiveAudit):
                   ('source port', (5060, _('A port to send sip packet'))),
                   ('delay', (300, _('Time delay betwen send packets'))),
                   ('Sip Pack', (sipextra.create_sip_btn, _("SIP packet"))),
+                  ('IP List', (sipextra.create_profiler_btn, _("SIP hostlist select window"))),
                   )
-
 
     def start(self, reader):
         a, self.item = self.add_menu_entry('SipEnumeration', 'Sip Enumeration...',
@@ -257,12 +268,8 @@ class SipEnumeration(Plugin, ActiveAudit):
             else:
                 user_list.append(line)
 
-        #target_ip need take from cfield
-
-        cfields = AuditManager().get_configuration('global.cfields').__getitem__('dissector.sip.server')
-        print cfields
-
-        target_ip = ["189.50.126.39:5060"]
+        target_ip = sipextra.get_profiles()
+        print target_ip
         source_port = inp_dict['source port']
         source_ip = sess.context.get_ip1()
 
