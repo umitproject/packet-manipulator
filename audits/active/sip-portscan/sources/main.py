@@ -90,9 +90,6 @@ class SipPack(object):
         header['User-Agent'] = useragent
         header['Content-Length'] = 0
 
-
-
-
         sip = '%s\r\n' % head
         for h in header.iteritems():
             sip += '%s: %s\r\n' % h

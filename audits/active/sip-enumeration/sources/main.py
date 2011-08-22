@@ -155,10 +155,16 @@ class SipExtra:
         self.profiles = profile_select
 
     def get_dict(self):
-        return self.sip_dict
+        if self.sip_dict:
+            return self.sip_dict
+
+        return None
 
     def get_profiles(self):
-        return self.profiles
+        if self.profiles:
+            return self.profiles
+
+        return None
 
 sipextra = SipExtra()
 
@@ -226,7 +232,6 @@ class SipEnumOperation(AuditOperation):
             STATUS_INFO, AUDIT_NAME)
 
     def on_resolved(self, send, mpkt, reply, udata):
-        #print '%s' % reply.get_field('udp.payload')
         if mpkt is not None:
             self.session.output_page.user_msg(
                 _('SIP Reply FROM %s:%s TO %s:%s') % \
@@ -241,7 +246,7 @@ class SipEnumeration(Plugin, ActiveAudit):
                   ('source port', (5060, _('A port to send sip packet'))),
                   ('delay', (300, _('Time delay betwen send packets'))),
                   ('Sip Pack', (sipextra.create_sip_btn, _("SIP packet"))),
-                  ('IP List', (sipextra.create_profiler_btn, _("SIP hostlist select window"))),
+                  ('Host List', (sipextra.create_profiler_btn, _("SIP hostlist select window"))),
                   )
 
     def start(self, reader):
@@ -254,13 +259,21 @@ class SipEnumeration(Plugin, ActiveAudit):
 
 
     def execute_audit(self, sess, inp_dict):
-        sip_dict = sipextra.get_dict()
         user_list = []
+        sip_dict = sipextra.get_dict()
+        if sip_dict is None:
+            return
+
+        lines = open(inp_dict['User List'],'r').readlines()
+        if lines is None:
+            return
+
+        target_ip = sipextra.get_profiles()
+        if target_ip is None:
+            return
 
         user_agent = sip_dict['user agent']
         type_of_msg = sip_dict['type of message']
-        delay = inp_dict['delay']
-        lines = open(inp_dict['User List'],'r').readlines()
         for line in lines:
             col = line.find('\n')
             if col != -1:
@@ -268,11 +281,10 @@ class SipEnumeration(Plugin, ActiveAudit):
             else:
                 user_list.append(line)
 
-        target_ip = sipextra.get_profiles()
-        print target_ip
+
+        delay = inp_dict['delay']
         source_port = inp_dict['source port']
         source_ip = sess.context.get_ip1()
-
 
         return SipEnumOperation(
             sess, target_ip, source_port, type_of_msg, user_agent, delay, source_ip, user_list

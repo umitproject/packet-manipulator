@@ -186,7 +186,6 @@ class SipGuiUtils(Plugin):
                 value = widget.get_text()
 
             inp_dict[widget.get_name()] = value
-            print value
 
         self.response_back(inp_dict)
 

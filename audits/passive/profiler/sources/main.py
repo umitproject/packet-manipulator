@@ -69,10 +69,8 @@ class Port(PortProvider):
 
     def get_data(self, dataobj):
         for u in self.data:
-            if u.application_type == dataobj.application_type and \
-               u.username == dataobj.username:
-                return u
-        if dataobj.username:
+            if u == dataobj: return u
+        if dataobj.has_fields():
             self.data.append(dataobj)
             return dataobj
         return None

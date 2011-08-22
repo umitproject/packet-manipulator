@@ -65,7 +65,6 @@ class SipData(DataProvider):
         self.response = None
         self.bad_attempt = None
         self.user_agent = None
-        self.is_server = False
 
     def __iter__(self):
         return self.print_info()
@@ -78,12 +77,24 @@ class SipData(DataProvider):
                             ('Uri:', self.uri), \
                             ('Response:', self.response), \
                             ('Bad_attempt:', self.bad_attempt), \
-                            ('User-agent:', self.user_agent), \
-                            ('Server:', self.is_server),]
+                            ('User-agent:', self.user_agent),]
 
         for field, value in self.field_value:
             yield field, value
 
+
+    def has_fields(self):
+        if self.username:
+            return True
+
+        return False
+
+    def __eq__(self, other):
+        if self.application_type == other.application_type and \
+           self.username == other.username:
+            return True
+
+        return False
 
 def sip_dissector():
 
@@ -128,7 +139,6 @@ def sip_dissector():
         def parse_response_fields(mpkt, sess):
             payload = mpkt.data
             sip_fields = None
-            sipdata = sess.data[6]
 
             conf = manager.get_configuration(SIP_NAME)
             if sess and sess.data[4] is None:
@@ -136,20 +146,18 @@ def sip_dissector():
                 sess.data[4] = 'OK'
                 if sess.data[0] == (mpkt.l3_src, mpkt.l4_src):
                     mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
-                    sipdata.is_server = True
-                    manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
-                                     (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
+                    manager.user_msg('SIP: UAS %s:%d' % \
+                                     (sess.data[0][0], sess.data[0][1]), 6, SIP_NAME)
                 else:
                     mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
-                    manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
-                                     (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
+                    manager.user_msg('SIP: UAC %s:%d' % \
+                                     (sess.data[1][0], sess.data[1][1]), 6, SIP_NAME)
 
                 __parse_sip_fields(mpkt, sess, sip_fields)
 
         def parse_request_fields(mpkt, sess):
             payload = mpkt.data
             sip_fields = None
-            sipdata = sess.data[6]
 
             conf = manager.get_configuration(SIP_NAME)
             if sess and sess.data[3] is None:
@@ -157,14 +165,13 @@ def sip_dissector():
                 sess.data[3] = 'OK'
                 if sess.data[0] == (mpkt.l3_dst, mpkt.l4_dst):
                     mpkt.set_cfield(SIP_NAME + '.client', sess.data[1])
-                    manager.user_msg('SIP: %s:%d CLIENT FOUND %s' % \
-                                     (mpkt.l3_src, mpkt.l4_src, sess.data[1]), 6, SIP_NAME)
+                    manager.user_msg('SIP: UAC %s:%d' % \
+                                     (sess.data[1][0], sess.data[1][1]), 6, SIP_NAME)
 
                 else:
                     mpkt.set_cfield(SIP_NAME + '.server', sess.data[0])
-                    sipdata.is_server = True
-                    manager.user_msg('SIP: %s:%d SERVER FOUND %s' % \
-                                     (mpkt.l3_src, mpkt.l4_src, sess.data[0]), 6, SIP_NAME)
+                    manager.user_msg('SIP: UAS %s:%d' % \
+                                     (sess.data[0][0], sess.data[0][1]), 6, SIP_NAME)
 
                 __parse_sip_fields(mpkt, sess, sip_fields)
 
@@ -199,8 +206,6 @@ def sip_dissector():
                                 elif k.upper() == 'REALM':
                                     mpkt.set_cfield(SIP_NAME + '.realm', v)
                                     sipdata.realm = v
-                                    manager.user_msg('SIP: %s:%d realm FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'NONCE':
                                     mpkt.set_cfield(SIP_NAME + '.nonce', v)
                                     sipdata.nonce = v
@@ -209,13 +214,9 @@ def sip_dissector():
                                 elif k.upper() == 'URI':
                                     mpkt.set_cfield(SIP_NAME + '.uri', v)
                                     sipdata.uri = v
-                                    manager.user_msg('SIP: %s:%d uri FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'ALGORITHM':
                                     mpkt.set_cfield(SIP_NAME + '.algorithm', v)
                                     sipdata.algorithm = v
-                                    manager.user_msg('SIP: %s:%d algorithm FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
                                 elif k.upper() == 'RESPONSE':
                                     sess.data[2] = v
 
@@ -260,45 +261,41 @@ def sip_dissector():
             elif sess and mpkt.data.startswith('SIP/2.0 407 ') \
                  or mpkt.data.startswith('SIP/2.0 401 '):
 
-                pos = payload.find('Authenticate')
-                if pos != -1:
-                    stop = payload.find('\r\n', pos + 12)
-                    val = payload[pos + 12 + 1:stop].strip()
-                    for value in val.split(','):
-                        ret = value.strip().split('=', 1)
+                if sess and sess.data[5] is None:
+                    pos = payload.find('Authenticate')
+                    if pos != -1:
+                        stop = payload.find('\r\n', pos + 12)
+                        val = payload[pos + 12 + 1:stop].strip()
+                        for value in val.split(','):
+                            ret = value.strip().split('=', 1)
 
-                        if isinstance(ret, list) and len(ret) == 2:
-                            k, v = ret
+                            if isinstance(ret, list) and len(ret) == 2:
+                                k, v = ret
 
-                            if v[0] == v[-1] and (v[0] == '"' or v[0] == '\''):
-                                v = v[1:-1]
+                                if v[0] == v[-1] and (v[0] == '"' or v[0] == '\''):
+                                    v = v[1:-1]
 
-                                if k.upper().rfind('USERNAME') > -1:
-                                    mpkt.set_cfield(SIP_NAME + '.username', v)
-                                    sipdata.username = v
-                                    manager.user_msg('SIP: %s:%d username FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
-                                elif k.upper() == 'REALM':
-                                    mpkt.set_cfield(SIP_NAME + '.realm', v)
-                                    sipdata.realm = v
-                                    manager.user_msg('SIP: %s:%d realm FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
-                                elif k.upper() == 'NONCE':
-                                    mpkt.set_cfield(SIP_NAME + '.nonce', v)
-                                    sipdata.nonce = v
-                                    manager.user_msg('SIP: %s:%d nonce FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
-                                elif k.upper() == 'URI':
-                                    mpkt.set_cfield(SIP_NAME + '.uri', v)
-                                    sipdata.uri = v
-                                    manager.user_msg('SIP: %s:%d uri FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
-                                elif k.upper() == 'ALGORITHM':
-                                    mpkt.set_cfield(SIP_NAME + '.algorithm', v)
-                                    sipdata.algorithm = v
-                                    manager.user_msg('SIP: %s:%d algorithm FOUND %s' % \
-                                                     (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
+                                    if k.upper().rfind('USERNAME') > -1:
+                                        mpkt.set_cfield(SIP_NAME + '.username', v)
+                                        sipdata.username = v
+                                        manager.user_msg('SIP: %s:%d username FOUND %s' % \
+                                                         (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
+                                    elif k.upper() == 'REALM':
+                                        mpkt.set_cfield(SIP_NAME + '.realm', v)
+                                        sipdata.realm = v
+                                    elif k.upper() == 'NONCE':
+                                        mpkt.set_cfield(SIP_NAME + '.nonce', v)
+                                        sipdata.nonce = v
+                                        manager.user_msg('SIP: %s:%d nonce FOUND %s' % \
+                                                         (mpkt.l3_src, mpkt.l4_src, v), 6, SIP_NAME)
+                                    elif k.upper() == 'URI':
+                                        mpkt.set_cfield(SIP_NAME + '.uri', v)
+                                        sipdata.uri = v
+                                    elif k.upper() == 'ALGORITHM':
+                                        mpkt.set_cfield(SIP_NAME + '.algorithm', v)
+                                        sipdata.algorithm = v
 
+                        sess.data[5] = 'OK'
                     manager.run_hook_point('dataprovider-request', sipdata, mpkt, APP_LAYER_UDP, mpkt.l4_src)
                     #sessions.delete_session(sess)
 
@@ -323,7 +320,6 @@ def sip_dissector():
 
             elif sess.data:
                 parse_request(mpkt, sess)
-
 
 
         elif not sess:
