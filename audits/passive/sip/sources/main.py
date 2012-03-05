@@ -358,10 +358,10 @@ class SIPMonitor(Plugin, PassiveAudit):
 
 
 __plugins__ = [SIPMonitor]
-__plugins_deps__ = [('SIPMonitor', ['UDPDecoder'], ['SIPMonitor-0.1'], []),]
+__plugins_deps__ = [('SIPMonitor', ['UDPDecoder', 'Profiler'], ['SIPMonitor-0.1'], []),]
 __author__ = ['Guilherme Rezende']
 __audit_type__ = 0
-__protocols__ = (('udp', 5060), ('udp', 5061), ('sip', None))
+__protocols__ = (('udp', 5060), ('udp', 5061), ('sip', 5060))
 __configurations__ = (('global.cfields', {
     SIP_NAME + '.username' : (PM_TYPE_STR, 'SIP username'),
     SIP_NAME + '.algorithm' : (PM_TYPE_STR, 'SIP hash algorithm'),
