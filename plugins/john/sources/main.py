@@ -67,8 +67,9 @@ class John(Perspective):
             self.rules_combo.append_text(iter)
 
 
-        for label, widget in zip((_("Mode:"), _("Rules:")),
-                                 (self.mode_combo, self.rules_combo)):
+        for label, widget in zip((_("Mode:"), _("Format:"), _("Rules:")),
+                                 (self.mode_combo, self.format_combo, 
+                                  self.rules_combo)):
 
             item = gtk.ToolItem()
 
@@ -99,24 +100,33 @@ class John(Perspective):
         sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
 
         # TreeView with ListStore
-        self.store = gtk.ListStore(str, str, str)
+        self.store = gtk.ListStore(str, str, str, str, str)
         self.tree = gtk.TreeView(self.store)
 
-        self.tree.append_column(gtk.TreeViewColumn('USERNAME', 
-                                                   gtk.CellRendererText(),
-                                                   text=0))
-        self.tree.append_column(gtk.TreeViewColumn('HWPASSWORD', 
-                                                   gtk.CellRendererText(),
-                                                   text=1))
-        self.tree.append_column(gtk.TreeViewColumn('IP', 
-                                                   gtk.CellRendererText(),
-                                                   text=2))
-        self.tree.append_column(gtk.TreeViewColumn('MAC',
-                                                   gtk.CellRendererText(),
-                                                   text=3))
-        self.tree.append_column(gtk.TreeViewColumn('PROTO',
-                                                   gtk.CellRendererText(),
-                                                   text=4))
+        username = gtk.TreeViewColumn('Username', gtk.CellRendererText(), text=0)
+        username.set_resizable(True)
+        self.tree.append_column(username)
+
+        hash = gtk.TreeViewColumn('Hash', gtk.CellRendererText(), text=1)
+        hash.set_resizable(True)
+        self.tree.append_column(hash)
+
+        ip = gtk.TreeViewColumn('IP', gtk.CellRendererText(), text=2)
+        ip.set_resizable(True)
+        self.tree.append_column(ip)
+
+        mac = gtk.TreeViewColumn('MAC', gtk.CellRendererText(), text=3)
+        mac.set_resizable(True)
+        self.tree.append_column(mac)
+
+        proto = gtk.TreeViewColumn('PROTO', gtk.CellRendererText(), text=4)
+        proto.set_resizable(True)
+        self.tree.append_column(proto)
+
+        result = gtk.TreeViewColumn('Result', gtk.CellRendererText(), text=4)
+        result.set_resizable(True)
+        self.tree.append_column(result)
+
         sw.add(self.tree)
 
         # Add and show all
@@ -141,9 +151,11 @@ class John(Perspective):
         self.store.clear()
 
         host_info = self.get_host_info()
-        for host in host_info:
-            self.store.append(host)
+        #for host in host_info:
+        #    self.store.append(host)
 
+        self.session.context.set_crack(host_info)
+        gobject.idle_add(self.session.reload)
         #self.crack()
 
 
@@ -172,8 +184,8 @@ class John(Perspective):
             for port in prof.ports:
                 for account in port.accounts:
                     if account.password:
-                        host.append(password)
-                        host.append(username)
+                        host.append(account.username)
+                        host.append(account.password)
                         host.append(ip)
                         host.append(mac)
                         if port.proto == NL_TYPE_TCP:
@@ -188,7 +200,6 @@ class John(Perspective):
             
         return host_list
 
-
     def crack(self):
         log.warning("In crack")
         import time
@@ -201,22 +212,20 @@ class John(Perspective):
 
         # Let's enable the toolbar
         #self.session.context.unlock()
-
     
     def populate(self):
         log.warning("In populate")
         
+        result = self.session.context.data
         
-        out = self.session.context.data
-
-        log.warning(out)
-
-        if out is None:
+        if result is None:
             return
 
+        log.warning(result)
         self.store.clear()
-        
-        self.store.append(out[0])
+
+        for res in result[0]:
+            self.store.append(res)
 
 
 class JohnContext(StaticContext):
