@@ -9,7 +9,8 @@ LIBS = `pkg-config --libs gtk+-2.0`
 PYGTK_DEFS_DIR=`pkg-config --variable=defsdir pygtk-2.0`
 
 test: $(OBJECTS)
-	gcc $(LIBS) $(OBJECTS) -o test
+	#gcc $(LIBS) $(OBJECTS) -o test
+	gcc $(OBJECTS) -o test $(LIBS) $(CFLAGS)
 
 moomarshals.c: moomarshals.list
 	echo '#include "moomarshals.h"' > $@.tmp &&	\
