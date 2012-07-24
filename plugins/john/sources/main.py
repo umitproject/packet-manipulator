@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2008, 2009 Adriano Monteiro Marques
 #
-# Author: Francesco Piccinno <stack.box@gmail.com>
+# Author: Serdar Yigit <syigitisk@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,31 +23,44 @@ import sys, os, os.path
 import gtk
 import gobject
 
-from umit.pm.backend import StaticContext
+from time import sleep
 
-from umit.pm.core.bus import ServiceBus
-from umit.pm.core.netconst import *
 from umit.pm.core.logger import log
+from umit.pm.core.bus import ServiceBus
+from umit.pm.core.netconst import NL_TYPE_TCP, NL_TYPE_UDP
 
 from umit.pm.gui.core.app import PMApp
+from umit.pm.gui.core.views import UmitView
 from umit.pm.gui.plugins.engine import Plugin
-from umit.pm.gui.sessions.base import Session
-from umit.pm.gui.sessions import SessionType
-from umit.pm.gui.pages.base import Perspective
 
 
 _ = str
 
-class John(Perspective):
-    # icon = gtk.STOCK_INFO
-    title = _('John')
+class John(UmitView):
+    icon_name = gtk.STOCK_INFO
+    tab_position = gtk.POS_LEFT
+    label_text = _('John The Ripper')
+    name = 'John'
+
+    def delete(self):
+        pass
 
     def create_ui(self):
+
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
 
-        # Fill combo boxes with parsed information from John.conf
+        # Open Wordlist        
+        act = gtk.Action('Wordlist', 'Wordlist', _('Open'), gtk.STOCK_OPEN)
+        act.connect('activate', self.__on_open)
+        self.toolbar.insert(act.create_tool_item(), -1)
 
+        # John the Ripper logo
+        # Only for testing, may be I'll put it somewhere
+        self.logo = gtk.Image()
+        self.logo.set_from_file("/home/serdar/Desktop/john2.png")
+
+        # Fill combo boxes with parsed information from John.conf
         # Mode Combo
         mode_lst = ['single', 'incremental', 'external']
         self.mode_combo = gtk.combo_box_new_text()
@@ -67,8 +80,8 @@ class John(Perspective):
             self.rules_combo.append_text(iter)
 
 
-        for label, widget in zip((_("Mode:"), _("Format:"), _("Rules:")),
-                                 (self.mode_combo, self.format_combo, 
+        for label, widget in zip((_(""), _("Mode:"), _("Format:"), _("Rules:")),
+                                 (self.logo, self.mode_combo, self.format_combo, 
                                   self.rules_combo)):
 
             item = gtk.ToolItem()
@@ -78,6 +91,7 @@ class John(Perspective):
 
             hbox = gtk.HBox(False, 2)
             hbox.set_border_width(2)
+
 
             hbox.pack_start(lbl, False, False)
             hbox.pack_start(widget)
@@ -92,7 +106,7 @@ class John(Perspective):
         self.toolbar.insert(act.create_tool_item(), -1)
 
         # Add toolbar
-        self.pack_start(self.toolbar, False, False)
+        self._main_widget.pack_start(self.toolbar, False, False)
 
         # Scrolled Window
         sw = gtk.ScrolledWindow()
@@ -108,6 +122,9 @@ class John(Perspective):
         self.tree.append_column(username)
 
         hash = gtk.TreeViewColumn('Hash', gtk.CellRendererText(), text=1)
+        hash.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
+        #hash.set_fixed_width(200)
+        hash.set_min_width(200)
         hash.set_resizable(True)
         self.tree.append_column(hash)
 
@@ -129,34 +146,21 @@ class John(Perspective):
 
         sw.add(self.tree)
 
-        # Add and show all
-        self.pack_start(sw)
-        self.show_all()
-
-        # Register the lock/unlock callback
-        self.session.context.lock_callback = \
-            lambda: self.toolbar.set_sensitive(False)
-        self.session.context.unlock_callback = \
-            lambda: self.toolbar.set_sensitive(True)
+        # Add sw and show all
+        self._main_widget.pack_start(sw)
+        self._main_widget.show_all()
 
 
     def __on_crack(self, action):
 
         log.warning('__on_crack called')
         
-        # Let's disable the toolbar
-        #self.session.context.lock()
-
         # Clean our store list
         self.store.clear()
 
         host_info = self.get_host_info()
-        #for host in host_info:
-        #    self.store.append(host)
-
-        self.session.context.set_crack(host_info)
-        gobject.idle_add(self.session.reload)
-        #self.crack()
+        for host in host_info:
+            self.store.append(host)
 
 
     def get_host_info(self):
@@ -200,19 +204,49 @@ class John(Perspective):
             
         return host_list
 
+
+    def __on_open(self, act):
+        '''
+            a stupid function for testing wordlist file.
+        '''
+
+        # TODO: choose and load wordlist files of user for 
+        # using as a  parameter to john
+
+        # TEST CODE!
+
+        dialog = gtk.FileChooserDialog(
+            _('Select a wordlist file'),
+            PMApp().main_window,
+            gtk.FILE_CHOOSER_ACTION_OPEN,
+            (gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT,
+             gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT))
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            fname = dialog.get_filename()
+
+            if fname:
+                fd = open(fname, 'r')
+                self.wordlist_contents = fd.read()
+                fd.close()
+
+                for line in self.wordlist_contents.splitlines():
+                    line = line.strip()
+
+                    if line:
+                        log.warning(line)
+
+        dialog.hide()
+        dialog.destroy()
+
+
     def crack(self):
         log.warning("In crack")
-        import time
-        time.sleep(3)
+        sleep(3)
 
         # pseudo cracking
         # assume that we have a cracked data
-        self.session.context.set_crack(cracked_data)
-        gobject.idle_add(self.session.reload)
-
-        # Let's enable the toolbar
-        #self.session.context.unlock()
-    
+ 
     def populate(self):
         log.warning("In populate")
         
@@ -228,60 +262,12 @@ class John(Perspective):
             self.store.append(res)
 
 
-class JohnContext(StaticContext):
-    def __init__(self, fname=None):
-        StaticContext.__init__(self, 'John', fname)
-        self.status = self.SAVED
-
-        self.lock_callback = None
-        self.unlock_callback = None
-
-    def set_crack(self, output):
-        self.set_data([output])
-
-    def lock(self):
-        if callable(self.lock_callback):
-            self.lock_callback()
-
-    def unlock(self):
-        if callable(self.unlock_callback):
-            self.unlock_callback()
-
-
-class JohnSession(Session):
-    session_name = "JOHN"
-    session_menu = "John"
-
-    def create_ui(self):
-        self.crack_page = self.add_perspective(John, True, True)
-
-        self.editor_cbs.append(self.reload_editor)
-        self.container_cbs.append(self.reload_container)
-
-        super(JohnSession, self).create_ui()
-
-    def reload_editor(self):
-        #self.crack_page.__on_crack()
-        log.warning('JOHN - reload_editor is called')
-
-    def reload_container(self, packet=None):
-        self.crack_page.populate()
-        log.warning('JOHN - reload_container is called')
-
-
 class JohnPlugin(Plugin):
     def start(self, reader):
-        if reader:
-            catalog = reader.bind_translation("john")
-
-            if catalog:
-                global _
-                _ = catalog.gettext
-
-        id = PMApp().main_window.register_session(JohnSession, JohnContext)
-        log.debug("John session binded with id %d" % id)
+        self.john_tab = John()
+        PMApp().main_window.register_tab(self.john_tab, True)
 
     def stop(self):
-        PMApp().main_window.deregister_session(JohnSession)
+        PMApp().main_window.deregister_tab(self.john_tab)
 
 __plugins__ = [JohnPlugin]
