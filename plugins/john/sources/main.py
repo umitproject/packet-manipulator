@@ -19,9 +19,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 import sys, os, os.path
+import re
 
 import gtk
 import gobject
+import subprocess
 
 from time import sleep
 
@@ -42,47 +44,33 @@ class John(UmitView):
     label_text = _('John The Ripper')
     name = 'John'
 
-    def delete(self):
-        pass
-
     def create_ui(self):
 
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
 
-        # Open Wordlist        
-        act = gtk.Action('Wordlist', 'Wordlist', _('Open'), gtk.STOCK_OPEN)
-        act.connect('activate', self.__on_open)
+        # Wordlist Chooser
+        # TODO: Create this widget when wordlist mode is chosen! TODO #
+        act = gtk.Action('wordlist', 'wordlist', '', gtk.STOCK_OPEN)
+        act.connect('activate', self.__on_choose)
         self.toolbar.insert(act.create_tool_item(), -1)
+        self.wordlist = ''
+
 
         # John the Ripper logo
-        # Only for testing, may be I'll put it somewhere
-        self.logo = gtk.Image()
-        self.logo.set_from_file("/home/serdar/Desktop/john2.png")
+        # Only for testing, I may put it somewhere
+        #self.logo = gtk.Image()
+        #self.logo.set_from_file("/home/serdar/Desktop/john2.png")
 
-        # Fill combo boxes with parsed information from John.conf
-        # Mode Combo
-        mode_lst = ['single', 'incremental', 'external']
-        self.mode_combo = gtk.combo_box_new_text()
-        for iter in mode_lst:
-            self.mode_combo.append_text(iter)
-
-        # Format Combo
-        format_lst = ['raw-md5', 'des', 'sha1']
+        self.modes_combo = gtk.combo_box_new_text()
         self.format_combo = gtk.combo_box_new_text()
-        for iter in format_lst:
-            self.format_combo.append_text(iter)
+        self.rules_check = gtk.CheckButton("rules")
+        self.rules_check.set_active(False)
+        self.rules_check.unset_flags(gtk.CAN_FOCUS)
 
-        # Rules Combo
-        rules_lst = ['LinkedIN', 'myRules']
-        self.rules_combo = gtk.combo_box_new_text()
-        for iter in rules_lst:
-            self.rules_combo.append_text(iter)
-
-
-        for label, widget in zip((_(""), _("Mode:"), _("Format:"), _("Rules:")),
-                                 (self.logo, self.mode_combo, self.format_combo, 
-                                  self.rules_combo)):
+        for label, widget in zip( (_("Mode:"), _("Format:"), _("")),
+                                  (self.modes_combo, self.format_combo, 
+                                   self.rules_check) ):
 
             item = gtk.ToolItem()
 
@@ -100,12 +88,23 @@ class John(UmitView):
 
             self.toolbar.insert(item, -1) 
 
+        # Hash File Chooser
+        act = gtk.Action('hashfiles', 'hashfiles', '', gtk.STOCK_FILE)
+        act.connect('activate', self.__on_choose)
+        self.toolbar.insert(act.create_tool_item(), -1)
+        self.hashfiles = ''
+       
+        # Load Button
+        act = gtk.Action(None, None, _('Load Captured Information'), gtk.STOCK_GO_DOWN)
+        act.connect('activate', self.__on_load)
+        self.toolbar.insert(act.create_tool_item(), -1)
+
         # Start Button / Play
-        act = gtk.Action(None, None, _('Start cracking'), gtk.STOCK_MEDIA_PLAY)
+        act = gtk.Action(None, None, _('Start cracking'), gtk.STOCK_EXECUTE)
         act.connect('activate', self.__on_crack)
         self.toolbar.insert(act.create_tool_item(), -1)
 
-        # Add toolbar
+        # Toolbar
         self._main_widget.pack_start(self.toolbar, False, False)
 
         # Scrolled Window
@@ -128,6 +127,7 @@ class John(UmitView):
         hash.set_resizable(True)
         self.tree.append_column(hash)
 
+        # TreeView Items
         ip = gtk.TreeViewColumn('IP', gtk.CellRendererText(), text=2)
         ip.set_resizable(True)
         self.tree.append_column(ip)
@@ -146,21 +146,208 @@ class John(UmitView):
 
         sw.add(self.tree)
 
+        # Useless Menubar for showing output
+        #self.menubar = gtk.MenuBar()
+        #menu = gtk.Menu()
+        #john_item = gtk.MenuItem('John Output:')
+        #self.menubar.append(john_item) 
+
+        # John Output TextView
+        self.text = gtk.TextView()
+        self.text.set_wrap_mode(gtk.WRAP_WORD)
+
+        # John Output Scrolled Window
+        john_sw = gtk.ScrolledWindow()
+        john_sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        john_sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
+        john_sw.add(self.text)
+
+        # Adding sw's to vertical box
+        main_vbox = gtk.VBox(False, 15)
+        main_vbox.pack_start(sw)
+        #main_vbox.pack_start(self.menubar)
+        main_vbox.pack_start(john_sw)
+
         # Add sw and show all
-        self._main_widget.pack_start(sw)
+        self._main_widget.pack_start(main_vbox)
+
+        #self._main_widget.pack_start(self.john_status)
         self._main_widget.show_all()
 
+        # parse john.conf and fill widgets
+        self.parseConf()
 
-    def __on_crack(self, action):
 
-        log.warning('__on_crack called')
+    def __on_load(self, action):
+
+        log.warning('__on_load called')
         
         # Clean our store list
         self.store.clear()
 
         host_info = self.get_host_info()
-        for host in host_info:
-            self.store.append(host)
+        if host_info:
+            for host in host_info:
+                self.store.append(host)
+        else:
+            self.store.append(['No','useful','data','found','',''])
+
+
+    def __on_choose(self, act):
+        log.warning('__on_choose is called')
+
+        if act.get_name() == 'wordlist':
+            text = 'Select a wordlist file'
+        else:
+            text = 'Select hash file/s'
+            multiple = True
+            
+        dialog = gtk.FileChooserDialog(
+            _(text),
+            PMApp().main_window,
+            gtk.FILE_CHOOSER_ACTION_OPEN,
+            (gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT,
+             gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT))
+        dialog.set_select_multiple(multiple)
+
+        if dialog.run() == gtk.RESPONSE_ACCEPT:
+            if multiple:
+                self.hashfiles = dialog.get_filenames()
+                log.warning('self.hashfiles is assigned')
+            else:
+                self.wordlist = dialog.get_filename()
+                log.warning('self.wordlist is assigned')
+
+        dialog.hide()
+        dialog.destroy()
+
+
+    def __on_crack(self, action):
+
+        log.warning("\n__on_crack called")
+
+        #TODO: get john executable path automatically :TODO#
+        john = 'john'
+        params = ''
+        # get mode
+        index = self.modes_combo.get_active()
+        modes = self.modes_combo.get_model()
+        mode = modes[index]
+
+        # default - single cracking mode 
+        if index <= 0:
+            log.warning("running single cracking mode ")
+            params += ' --single '
+
+        # wordlist mode
+        elif mode == 'wordlist':
+            log.warning("running wordlist cracking mode")
+            if self.wordlist:
+                params += ' --wordlist=' + self.wordlist
+            else:
+                log.critical('Please choose a wordlist file!')
+                return  
+
+            # check if rules enabled
+            rules = self.rules_check.get_active()
+            if rules:
+                log.warning("word mangling is enabled")
+                params += ' --rules '
+
+        # incremental mode
+        elif mode == 'incremental':
+            log.warning("running incremental cracking mode")
+            pass
+            #TODO: Here we should get mode name from the combobox
+            # which will be generated when the incremental mode is 
+            # selected
+
+        # external mode
+        elif mode == 'external':
+            log.warning("running %s cracking mode" % self.modes_combo.get_acti)
+            pass
+            #TODO: Here we should get mode name from the combobox
+            # which will be generated when the incremental mode is 
+            # selected
+
+        # get format 
+        format = self.format_combo.get_active_text()
+        if format:
+            log.warning("format : %s" % format)
+            params += ' --format=' + format + ' '
+        else:
+            log.warning("format : default")
+
+        # get hash filenames
+        log.warning(self.hashfiles)
+        if self.hashfiles:
+            log.warning("hash files are chosen")
+            for hash in self.hashfiles:
+                params += ' ' + hash 
+        else:
+            log.critical("Please choose a hash file!")
+            return
+
+        # run john 
+        log.warning('running john with the follwing parameters : ')
+        log.warning(params)
+        process = subprocess.Popen(['john', params], 
+                                   shell=False, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE)
+
+        log.warning(process.communicate())
+            
+       
+    def parseConf(self, config_file='/etc/john/john.conf'):
+        '''
+            Parses john configuration file which is given with config_file
+            parameter.
+        '''
+        # Try to open file
+        try:
+            conf = open(config_file, 'r')
+            all = conf.read()
+            conf.close()
+        except IOError, e:
+            log.warning(e)
+            log.warning('Input Output Error.') # This could be printed from e
+            return
+
+        # ALL MODES
+        mode_lst = ['single', 'incremental', 'external']
+        for mode in mode_lst:
+            self.modes_combo.append_text(mode)
+
+        # Parse the text with regex and fill combo boxes
+
+        # INCREMENTAL MODE OPTIONS
+        log.warning('\nParsing incremental mode options:')
+        p = re.compile('\[Incremental\:(.*?)\]')
+        res = set(re.findall(p, all))
+        if res:
+            # fill the incremental mode combobox
+            for inc in res:
+                #self.inc_combo.append_text(format)
+                log.warning(inc)
+                
+        
+        # EXTERNAL MODE OPTIONS 
+        log.warning("\nParsing external mode options:")
+        p = re.compile('\[List\.External\:(.*?)\]')
+        res = set(re.findall(p, all))
+        if res:                                           
+            # fill the external mode combobox
+            for ext in res:
+                #self.rules_combo.append_text(rule)
+                log.warning(ext)
+
+
+        # HASH FORMAT OPTIONS
+        # TODO: Find a way to get supported hash types TODO #
+        format_lst = ['default','DES','BSDI','MD5','BF','AFS','LM','crypt']
+        for format in format_lst:
+            self.format_combo.append_text(format)
 
 
     def get_host_info(self):
@@ -204,62 +391,6 @@ class John(UmitView):
             
         return host_list
 
-
-    def __on_open(self, act):
-        '''
-            a stupid function for testing wordlist file.
-        '''
-
-        # TODO: choose and load wordlist files of user for 
-        # using as a  parameter to john
-
-        # TEST CODE!
-
-        dialog = gtk.FileChooserDialog(
-            _('Select a wordlist file'),
-            PMApp().main_window,
-            gtk.FILE_CHOOSER_ACTION_OPEN,
-            (gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT,
-             gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT))
-
-        if dialog.run() == gtk.RESPONSE_ACCEPT:
-            fname = dialog.get_filename()
-
-            if fname:
-                fd = open(fname, 'r')
-                self.wordlist_contents = fd.read()
-                fd.close()
-
-                for line in self.wordlist_contents.splitlines():
-                    line = line.strip()
-
-                    if line:
-                        log.warning(line)
-
-        dialog.hide()
-        dialog.destroy()
-
-
-    def crack(self):
-        log.warning("In crack")
-        sleep(3)
-
-        # pseudo cracking
-        # assume that we have a cracked data
- 
-    def populate(self):
-        log.warning("In populate")
-        
-        result = self.session.context.data
-        
-        if result is None:
-            return
-
-        log.warning(result)
-        self.store.clear()
-
-        for res in result[0]:
-            self.store.append(res)
 
 
 class JohnPlugin(Plugin):
