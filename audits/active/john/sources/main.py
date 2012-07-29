@@ -37,10 +37,11 @@ from umit.pm.gui.plugins.engine import Plugin
 
 
 _ = str
+AUDIT_NAME = 'John'
 
 class John(UmitView):
     icon_name = gtk.STOCK_INFO
-    tab_position = gtk.POS_LEFT
+    tab_position = gtk.POS_BOTTOM
     label_text = _('John The Ripper')
     name = 'John'
 
@@ -134,44 +135,38 @@ class John(UmitView):
 
         mac = gtk.TreeViewColumn('MAC', gtk.CellRendererText(), text=3)
         mac.set_resizable(True)
-        self.tree.append_column(mac)
-
         proto = gtk.TreeViewColumn('PROTO', gtk.CellRendererText(), text=4)
         proto.set_resizable(True)
         self.tree.append_column(proto)
 
-        result = gtk.TreeViewColumn('Result', gtk.CellRendererText(), text=4)
+        result = gtk.TreeViewColumn('Result', gtk.CellRendererText(), text=5)
         result.set_resizable(True)
         self.tree.append_column(result)
 
         sw.add(self.tree)
+       
+        # John Progress Bar
+        self.progressbar = gtk.ProgressBar()
 
         # Useless Menubar for showing output
-        #self.menubar = gtk.MenuBar()
-        #menu = gtk.Menu()
-        #john_item = gtk.MenuItem('John Output:')
-        #self.menubar.append(john_item) 
+        self.menubar = gtk.MenuBar()
+        menu = gtk.Menu()
+        john_item = gtk.MenuItem('John Output:')
+        self.menubar.append(john_item) 
 
         # John Output TextView
-        self.text = gtk.TextView()
-        self.text.set_wrap_mode(gtk.WRAP_WORD)
+        self.textview = gtk.TextView(buffer=None)
 
-        # John Output Scrolled Window
-        john_sw = gtk.ScrolledWindow()
-        john_sw.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        john_sw.set_shadow_type(gtk.SHADOW_ETCHED_IN)
-        john_sw.add(self.text)
-
-        # Adding sw's to vertical box
-        main_vbox = gtk.VBox(False, 15)
-        main_vbox.pack_start(sw)
-        #main_vbox.pack_start(self.menubar)
-        main_vbox.pack_start(john_sw)
+       
+        bottom_vbox = gtk.VBox(False, 5)
+        bottom_vbox.pack_start(self.progressbar, False, False, 2)
+        bottom_vbox.pack_start(self.menubar, False, False, 2)
+        bottom_vbox.pack_start(self.textview, False, False, 2)
 
         # Add sw and show all
-        self._main_widget.pack_start(main_vbox)
-
-        #self._main_widget.pack_start(self.john_status)
+        self._main_widget.pack_start(sw)
+        self._main_widget.pack_end(bottom_vbox, False, False)
+        
         self._main_widget.show_all()
 
         # parse john.conf and fill widgets
@@ -181,7 +176,7 @@ class John(UmitView):
     def __on_load(self, action):
 
         log.warning('__on_load called')
-        
+
         # Clean our store list
         self.store.clear()
 
@@ -190,7 +185,14 @@ class John(UmitView):
             for host in host_info:
                 self.store.append(host)
         else:
-            self.store.append(['No','useful','data','found','',''])
+            # No information found in hostlist
+            import umit.pm.gui.core.app
+            warn_dialog = gtk.MessageDialog(
+                          umit.pm.gui.core.app.PMApp().main_window,
+                          gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_WARNING,
+                          gtk.BUTTONS_CLOSE, "No information found")
+            warn_dialog.run()
+            warn_dialog.destroy()
 
 
     def __on_choose(self, act):
@@ -198,6 +200,7 @@ class John(UmitView):
 
         if act.get_name() == 'wordlist':
             text = 'Select a wordlist file'
+            multiple = False
         else:
             text = 'Select hash file/s'
             multiple = True
@@ -291,19 +294,27 @@ class John(UmitView):
         # run john 
         log.warning('running john with the follwing parameters : ')
         log.warning(params)
-        process = subprocess.Popen(['john', params], 
-                                   shell=False, 
-                                   stdout=subprocess.PIPE, 
-                                   stderr=subprocess.PIPE)
-
-        log.warning(process.communicate())
-            
+        try:
+            self.progressbar.pulse()
+            output, error = subprocess.Popen([john, params],
+                                         stdout=subprocess.PIPE, 
+                                         stderr=subprocess.PIPE).communicate()
+            #output = subprocess.check_output([john, params])
+            log.warning(output)
+            log.warning(error)
+        except subprocess.CalledProcessError, e:
+            print "John stdout output:\n", e.outp
+        
        
-    def parseConf(self, config_file='/etc/john/john.conf'):
+    def parseConf(self, config_file=None):
         '''
             Parses john configuration file which is given with config_file
             parameter.
         '''
+        if not config_file:
+            manager = AuditManager()
+            config_file = manager.get_configuration(AUDIT_NAME)['records']
+
         # Try to open file
         try:
             conf = open(config_file, 'r')
@@ -401,4 +412,30 @@ class JohnPlugin(Plugin):
     def stop(self):
         PMApp().main_window.deregister_tab(self.john_tab)
 
+
+
 __plugins__ = [JohnPlugin]
+
+__plugins_deps__ = [(AUDIT_NAME, ['Profiler'], [], [])]
+
+__audit_type__ = 1
+__protocols__ = (('tcp', None), )
+
+__configurations__ = ((AUDIT_NAME, {
+     'config_file' : '/etc/john/john.conf',
+    }),
+)
+__vulnerabilities__ = (('John The Ripper', {
+    'description' : 'John the Ripper is a fast password cracker, currently '
+                    'available for many flavors of Unix, Windows, DOS, BeOS '
+                    ', and OpenVMS. Its primary purpose is to detect weak '
+                    'Unix passwords. Besides several crypt(3) password hash '
+                    ' types most commonly found on various Unix systems, '
+                    'supported out of the box are Windows LM hashes, plus '
+                    'lots of other hashes and ciphers in the '
+                    'community-enhanced version. ',
+    'references' : ((None, 'http://www.openwall.com/john/'
+                           'Password_Cracking'),)
+
+    }),
+)
