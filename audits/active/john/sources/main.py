@@ -34,7 +34,7 @@ from umit.pm.core.netconst import NL_TYPE_TCP, NL_TYPE_UDP
 from umit.pm.gui.core.app import PMApp
 from umit.pm.gui.core.views import UmitView
 from umit.pm.gui.plugins.engine import Plugin
-
+from umit.pm.manager.auditmanager import AuditManager
 
 _ = str
 AUDIT_NAME = 'John'
@@ -45,65 +45,70 @@ class John(UmitView):
     label_text = _('John The Ripper')
     name = 'John'
 
+
     def create_ui(self):
 
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
 
-        # Wordlist Chooser
-        # TODO: Create this widget when wordlist mode is chosen! TODO #
-        act = gtk.Action('wordlist', 'wordlist', '', gtk.STOCK_OPEN)
-        act.connect('activate', self.__on_choose)
-        self.toolbar.insert(act.create_tool_item(), -1)
-        self.wordlist = ''
-
-
         # John the Ripper logo
         # Only for testing, I may put it somewhere
         #self.logo = gtk.Image()
         #self.logo.set_from_file("/home/serdar/Desktop/john2.png")
-
-        self.modes_combo = gtk.combo_box_new_text()
-        self.format_combo = gtk.combo_box_new_text()
-        self.rules_check = gtk.CheckButton("rules")
-        self.rules_check.set_active(False)
-        self.rules_check.unset_flags(gtk.CAN_FOCUS)
-
-        for label, widget in zip( (_("Mode:"), _("Format:"), _("")),
-                                  (self.modes_combo, self.format_combo, 
-                                   self.rules_check) ):
-
-            item = gtk.ToolItem()
-
-            lbl = gtk.Label(label)
-            lbl.set_alignment(0, 0.5)
-
-            hbox = gtk.HBox(False, 2)
-            hbox.set_border_width(2)
-
-
-            hbox.pack_start(lbl, False, False)
-            hbox.pack_start(widget)
-
-            item.add(hbox)
-
-            self.toolbar.insert(item, -1) 
-
-        # Hash File Chooser
-        act = gtk.Action('hashfiles', 'hashfiles', '', gtk.STOCK_FILE)
-        act.connect('activate', self.__on_choose)
-        self.toolbar.insert(act.create_tool_item(), -1)
-        self.hashfiles = ''
-       
-        # Load Button
+        
+        # Load Button/Action
         act = gtk.Action(None, None, _('Load Captured Information'), gtk.STOCK_GO_DOWN)
         act.connect('activate', self.__on_load)
         self.toolbar.insert(act.create_tool_item(), -1)
 
-        # Start Button / Play
-        act = gtk.Action(None, None, _('Start cracking'), gtk.STOCK_EXECUTE)
-        act.connect('activate', self.__on_crack)
+        self.modes_combo = gtk.combo_box_new_text()
+        self.modes_combo.connect('changed', self.__on_mode_change)
+        
+        self.format_combo = gtk.combo_box_new_text()
+
+        self.rules_check = gtk.CheckButton()
+        self.rules_check.set_active(False)
+        self.rules_check.unset_flags(gtk.CAN_FOCUS)
+
+        self.modes_item = self.create_toolbar_item(_("Mode:"), self.modes_combo)
+        self.format_item = self.create_toolbar_item(_("Format:"), self.format_combo)
+        self.rules_item = self.create_toolbar_item(_("Use Rules"), self.rules_check)
+        self.toolbar.insert(self.modes_item, -1) 
+        self.toolbar.insert(self.format_item, -1) 
+        self.toolbar.insert(self.rules_item, -1) 
+
+        # Wordlist Chooser
+        # Create but don't add to toolbar until wordlist mode is selected
+        self.wordlist_chooser = gtk.Action('wordlist', 
+                                           'wordlist', 
+                                           _('Choose wordlist file'), 
+                                           gtk.STOCK_FILE)
+        self.wordlist_chooser.connect('activate', self.__on_choose)
+        self.wordlist_item = self.wordlist_chooser.create_tool_item()
+
+        # Incremental Mode Options
+        self.inc_combo = gtk.combo_box_new_text()
+
+        # External Mode Options
+        self.ext_combo = gtk.combo_box_new_text()
+
+        # Hash File Chooser
+        act = gtk.Action('hashfiles', 'hashfiles', '', gtk.STOCK_OPEN)
+        act.connect('activate', self.__on_choose)
         self.toolbar.insert(act.create_tool_item(), -1)
+        self.hashfiles = ''
+       
+        # Start Button / EXECUTE
+        self.start_act = gtk.Action(None, None, _('Start cracking'), gtk.STOCK_EXECUTE)
+        self.start_act.connect('activate', self.__on_crack)
+        self.start_act_item = self.start_act.create_tool_item()
+        self.toolbar.insert(self.start_act_item, -1)
+
+        # Stop Button / KILL
+        self.stop_act = gtk.Action(None, None, _('Stop cracking'), gtk.STOCK_STOP)
+        self.stop_act.connect('activate', self.__off_crack)
+        self.stop_act_item = self.stop_act.create_tool_item()
+        #self.toolbar.insert(self.stop_act_item, -1)
 
         # Toolbar
         self._main_widget.pack_start(self.toolbar, False, False)
@@ -134,7 +139,6 @@ class John(UmitView):
         self.tree.append_column(ip)
 
         mac = gtk.TreeViewColumn('MAC', gtk.CellRendererText(), text=3)
-        mac.set_resizable(True)
         proto = gtk.TreeViewColumn('PROTO', gtk.CellRendererText(), text=4)
         proto.set_resizable(True)
         self.tree.append_column(proto)
@@ -144,7 +148,7 @@ class John(UmitView):
         self.tree.append_column(result)
 
         sw.add(self.tree)
-       
+
         # John Progress Bar
         self.progressbar = gtk.ProgressBar()
 
@@ -155,22 +159,37 @@ class John(UmitView):
         self.menubar.append(john_item) 
 
         # John Output TextView
-        self.textview = gtk.TextView(buffer=None)
+        self.textview = CommandTextView()
 
-       
         bottom_vbox = gtk.VBox(False, 5)
         bottom_vbox.pack_start(self.progressbar, False, False, 2)
-        bottom_vbox.pack_start(self.menubar, False, False, 2)
         bottom_vbox.pack_start(self.textview, False, False, 2)
 
-        # Add sw and show all
+        # Show all
         self._main_widget.pack_start(sw)
         self._main_widget.pack_end(bottom_vbox, False, False)
-        
         self._main_widget.show_all()
 
-        # parse john.conf and fill widgets
+        # before doing anything, parse john.conf and fill widgets
         self.parseConf()
+
+
+    def create_toolbar_item(self, label, widget):
+        
+        item = gtk.ToolItem()
+
+        lbl = gtk.Label(label)
+        lbl.set_alignment(5, 0.5)
+
+        hbox = gtk.HBox(False, 5)
+        hbox.set_border_width(2)
+
+        hbox.pack_start(lbl, False, False)
+        hbox.pack_start(widget)
+
+        item.add(hbox)
+
+        return item
 
 
     def __on_load(self, action):
@@ -225,28 +244,66 @@ class John(UmitView):
         dialog.destroy()
 
 
+    def __on_mode_change(self, action):
+        '''
+            get mode type and add widgets to toolbar dynamically
+        '''
+        log.warning('__on_mode_change is called')
+        index = self.modes_combo.get_active()
+        modes = self.modes_combo.get_model()
+        mode = modes[index][0]
+
+        log.warning(mode)
+
+        # by default remove the combobox from toolbar
+        if self.widget_swap:
+            log.warning('removing existing widget')
+            self.toolbar.remove(self.widget_swap)
+
+        # add appropriate widget
+        if mode == 'incremental':
+            log.warning('adding inc_item')
+            self.widget_swap = self.inc_item
+        elif mode == 'wordlist':
+            log.warning('adding wordlist_item')
+            self.widget_swap = self.wordlist_item
+        elif mode == 'external':
+            log.warning('adding external_item')
+            self.widget_swap = self.ext_item
+        # TODO: Not working, only wordlist object is added not others!
+        self.toolbar.insert(self.widget_swap, -1)
+
+
     def __on_crack(self, action):
 
         log.warning("\n__on_crack called")
+        
+        # Replace execute item with stop
+        self.toolbar.remove(self.start_act_item)
+        self.toolbar.insert(self.stop_act_item, -1)
 
-        #TODO: get john executable path automatically :TODO#
-        john = 'john'
-        params = ''
+        params = []
+        manager = AuditManager()
+        john = manager.get_configuration(AUDIT_NAME)['john_binary']
+        params.append(john)
+
         # get mode
         index = self.modes_combo.get_active()
         modes = self.modes_combo.get_model()
-        mode = modes[index]
+        mode = modes[index][0]
+
+        log.warning(mode)
 
         # default - single cracking mode 
         if index <= 0:
             log.warning("running single cracking mode ")
-            params += ' --single '
+            params.append('--single')
 
         # wordlist mode
         elif mode == 'wordlist':
             log.warning("running wordlist cracking mode")
             if self.wordlist:
-                params += ' --wordlist=' + self.wordlist
+                params.append('--wordlist=' + self.wordlist)
             else:
                 log.critical('Please choose a wordlist file!')
                 return  
@@ -255,7 +312,7 @@ class John(UmitView):
             rules = self.rules_check.get_active()
             if rules:
                 log.warning("word mangling is enabled")
-                params += ' --rules '
+                params.append('--rules')
 
         # incremental mode
         elif mode == 'incremental':
@@ -267,7 +324,7 @@ class John(UmitView):
 
         # external mode
         elif mode == 'external':
-            log.warning("running %s cracking mode" % self.modes_combo.get_acti)
+            log.warning("running %s cracking mode" % self.modes_combo.get_active_text())
             pass
             #TODO: Here we should get mode name from the combobox
             # which will be generated when the incremental mode is 
@@ -277,7 +334,7 @@ class John(UmitView):
         format = self.format_combo.get_active_text()
         if format:
             log.warning("format : %s" % format)
-            params += ' --format=' + format + ' '
+            params.append(' --format=' + format)
         else:
             log.warning("format : default")
 
@@ -286,7 +343,7 @@ class John(UmitView):
         if self.hashfiles:
             log.warning("hash files are chosen")
             for hash in self.hashfiles:
-                params += ' ' + hash 
+                params.append(hash)
         else:
             log.critical("Please choose a hash file!")
             return
@@ -296,15 +353,26 @@ class John(UmitView):
         log.warning(params)
         try:
             self.progressbar.pulse()
-            output, error = subprocess.Popen([john, params],
-                                         stdout=subprocess.PIPE, 
-                                         stderr=subprocess.PIPE).communicate()
-            #output = subprocess.check_output([john, params])
-            log.warning(output)
-            log.warning(error)
+            self.textview.command = params
+            self.textview.start()
+            #process = subprocess.Popen(params, 
+            #                           stdout=subprocess.PIPE, 
+            #                           stderr=subprocess.PIPE)
+            ##output = subprocess.check_output([john, params])
+            ##output = process.communicate()
+            #log.warning(output)
         except subprocess.CalledProcessError, e:
             print "John stdout output:\n", e.outp
-        
+
+
+    def __off_crack(self, action):
+
+        log.warning("\n__off_crack called")
+        self.textview.stop()
+        self.progressbar.set_fraction(0)
+        self.toolbar.remove(self.stop_act_item)
+        self.toolbar.insert(self.start_act_item, -1)
+       
        
     def parseConf(self, config_file=None):
         '''
@@ -313,7 +381,8 @@ class John(UmitView):
         '''
         if not config_file:
             manager = AuditManager()
-            config_file = manager.get_configuration(AUDIT_NAME)['records']
+            config_file = manager.get_configuration(AUDIT_NAME)['config_file']
+            log.warning(config_file)
 
         # Try to open file
         try:
@@ -326,37 +395,43 @@ class John(UmitView):
             return
 
         # ALL MODES
-        mode_lst = ['single', 'incremental', 'external']
+        mode_lst = manager.get_configuration(AUDIT_NAME)['modes'].split()
         for mode in mode_lst:
             self.modes_combo.append_text(mode)
 
-        # Parse the text with regex and fill combo boxes
+        '''
+            Parsing the conf file with regex and filling the combo boxes
+        '''
+
+        self.widget_swap = None
 
         # INCREMENTAL MODE OPTIONS
-        log.warning('\nParsing incremental mode options:')
         p = re.compile('\[Incremental\:(.*?)\]')
-        res = set(re.findall(p, all))
-        if res:
-            # fill the incremental mode combobox
-            for inc in res:
-                #self.inc_combo.append_text(format)
-                log.warning(inc)
-                
-        
-        # EXTERNAL MODE OPTIONS 
-        log.warning("\nParsing external mode options:")
-        p = re.compile('\[List\.External\:(.*?)\]')
-        res = set(re.findall(p, all))
-        if res:                                           
-            # fill the external mode combobox
-            for ext in res:
-                #self.rules_combo.append_text(rule)
-                log.warning(ext)
+        inc_opts = re.findall(p, all)
 
+        for inc in inc_opts:
+            self.inc_combo.append_text(inc)
+
+        self.inc_item = self.create_toolbar_item(_("options:"), self.inc_combo)
+
+        log.warning('Incremental Options')
+        log.warning(inc_opts)
+
+        # EXTERNAL MODE OPTIONS 
+        p = re.compile('\[List\.External\:(.*?)\]')
+        ext_opts = re.findall(p, all)
+
+        for ext in ext_opts:
+            self.ext_combo.append_text(ext)
+
+        self.ext_item = self.create_toolbar_item(_("options:"), self.ext_combo)
+
+        log.warning('External Options')
+        log.warning(ext_opts)
 
         # HASH FORMAT OPTIONS
-        # TODO: Find a way to get supported hash types TODO #
-        format_lst = ['default','DES','BSDI','MD5','BF','AFS','LM','crypt']
+        # TODO: Find a way to get supported hash types
+        format_lst = manager.get_configuration(AUDIT_NAME)['hash_formats'].split()
         for format in format_lst:
             self.format_combo.append_text(format)
 
@@ -365,6 +440,7 @@ class John(UmitView):
         # should we change the definition of pm.hostlist service 
         # callbacks : info and populate, intf looks unnecessary
 
+        #TODO: Get interface automatically! 
         intf = "wlan0"
         host_list = []
         populate_cb = ServiceBus().get_function('pm.hostlist', 'populate')
@@ -403,6 +479,37 @@ class John(UmitView):
         return host_list
 
 
+class CommandTextView(gtk.TextView):
+        command = None
+        def __init__(self,command=None):
+            super(CommandTextView,self).__init__()
+
+            self.command = command
+
+        def start(self):
+            if self.command:
+                self.proc = subprocess.Popen(self.command,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                gobject.io_add_watch(self.proc.stdout,
+                                  gobject.IO_IN,
+                                  self.write_to_buffer)
+            else:
+                log.critical("Subprocess command is not assigned\n")
+
+        def stop(self):
+            log.warning("sorry killing the process\n")
+            self.proc.kill()
+
+        def write_to_buffer(self, fd, condition):
+            if condition == gobject.IO_IN:
+                char = fd.read(1)
+                buf = self.get_buffer()
+                buf.insert_at_cursor(char)
+                return True
+            else:
+                return False
+
 
 class JohnPlugin(Plugin):
     def start(self, reader):
@@ -419,23 +526,31 @@ __plugins__ = [JohnPlugin]
 __plugins_deps__ = [(AUDIT_NAME, ['Profiler'], [], [])]
 
 __audit_type__ = 1
-__protocols__ = (('tcp', None), )
+__protocols__ = (('tcp', None),)
 
 __configurations__ = ((AUDIT_NAME, {
-     'config_file' : '/etc/john/john.conf',
+     'config_file' : ['/etc/john/john.conf', 
+                      'john configuration file'],
+     'john_binary' : ['/usr/sbin/john', 
+                      'john binary full path'],
+     'hash_formats': ['default DES BSDI MD5 BF AFS LM crypt',
+                      'password hash formats'],
+     'modes':        ['single wordlist incremental external', 
+                      'running mode options']
     }),
 )
+
 __vulnerabilities__ = (('John The Ripper', {
     'description' : 'John the Ripper is a fast password cracker, currently '
-                    'available for many flavors of Unix, Windows, DOS, BeOS '
+                    'available for many flavors of Unix, Windows, DOS, BeOS'
                     ', and OpenVMS. Its primary purpose is to detect weak '
                     'Unix passwords. Besides several crypt(3) password hash '
-                    ' types most commonly found on various Unix systems, '
+                    'types most commonly found on various Unix systems, '
                     'supported out of the box are Windows LM hashes, plus '
-                    'lots of other hashes and ciphers in the '
-                    'community-enhanced version. ',
+                    'lots of other hashes and ciphers in the community-en'
+                    'hanced version. ',
     'references' : ((None, 'http://www.openwall.com/john/'
-                           'Password_Cracking'),)
-
+                            'Password_Cracking'),)
     }),
 )
+

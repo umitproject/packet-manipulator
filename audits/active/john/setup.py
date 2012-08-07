@@ -6,10 +6,10 @@ from umit.pm.gui.plugins.containers import setup
 setup(
     name='JohnPlugin',
     version='1.0',
-    author=['Serdar Yigit'],
+    author=['Francesco Piccinno'],
     license=['GPL'],
     copyright=['2009 Adriano Monteiro Marques'],
-    url='http://umitproject.org',
+    url='http://blog.archpwn.org',
     scripts=['sources/main.py'],
     start_file='main',
     data_files=[],
@@ -20,6 +20,6 @@ setup(
     output='johnplugin.ump',
     audit_type=1,
     protocols=(('tcp', None),),
-    configurations=(('John', {'config_file': '/etc/john/john.conf'}),),
-    vulnerabilities=('John The Ripper', {'references': (None, 'http://www.openwall.com/john/Password_Cracking'), 'description': 'John the Ripper is a fast password cracker, currently available for many flavors of Unix, Windows, DOS, BeOS , and OpenVMS. Its primary purpose is to detect weak Unix passwords. Besides several crypt(3) password hash  types most commonly found on various Unix systems, supported out of the box are Windows LM hashes, plus lots of other hashes and ciphers in the community-enhanced version. '}),
+    configurations=(('John', {'config_file': ['/etc/john/john.conf', 'john configuration file'], 'hash_formats': ['default DES BSDI MD5 BF AFS LM crypt', 'password hash formats'], 'john_binary': ['/usr/sbin/john', 'john binary full path'], 'modes': ['single wordlist incremental external', 'running mode options']}),),
+    vulnerabilities=(('John The Ripper', {'references': ((None, 'http://www.openwall.com/john/Password_Cracking'),), 'description': 'John the Ripper is a fast password cracker, currently available for many flavors of Unix, Windows, DOS, BeOS, and OpenVMS. Its primary purpose is to detect weak Unix passwords. Besides several crypt(3) password hash types most commonly found on various Unix systems, supported out of the box are Windows LM hashes, plus lots of other hashes and ciphers in the community-enhanced version. '}),),
 )
