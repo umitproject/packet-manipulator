@@ -6,10 +6,10 @@ from umit.pm.gui.plugins.containers import setup
 setup(
     name='JohnPlugin',
     version='1.0',
-    author=['Francesco Piccinno'],
+    author=['Serdar Yigit'],
     license=['GPL'],
     copyright=['2009 Adriano Monteiro Marques'],
-    url='http://blog.archpwn.org',
+    url='http://umitproject.org',
     scripts=['sources/main.py'],
     start_file='main',
     data_files=[],
