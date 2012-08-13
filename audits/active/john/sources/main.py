@@ -27,6 +27,7 @@ import subprocess
 
 from time import sleep
 
+from umit.pm.gui.core import app
 from umit.pm.core.logger import log
 from umit.pm.core.bus import ServiceBus
 from umit.pm.core.netconst import NL_TYPE_TCP, NL_TYPE_UDP
@@ -48,68 +49,62 @@ class John(UmitView):
 
     def create_ui(self):
 
+        # Toolbar
         self.toolbar = gtk.Toolbar()
         self.toolbar.set_style(gtk.TOOLBAR_ICONS)
 
-        # John the Ripper logo
-        # Only for testing, I may put it somewhere
-        #self.logo = gtk.Image()
-        #self.logo.set_from_file("/home/serdar/Desktop/john2.png")
-        
         # Load Button/Action
-        act = gtk.Action(None, None, _('Load Captured Information'), gtk.STOCK_GO_DOWN)
+        act = gtk.Action('hostlist', 
+                         'hostlist', 
+                         _('Load Captured Information'), 
+                         gtk.STOCK_GO_DOWN)
         act.connect('activate', self.__on_load)
         self.toolbar.insert(act.create_tool_item(), -1)
 
+        # Hash File Chooser
+        act = gtk.Action('hashfiles', 
+                         'hashfiles', 
+                         _('Load A Hash File'), 
+                         gtk.STOCK_OPEN)
+        act.connect('activate', self.__on_choose)
+        self.toolbar.insert(act.create_tool_item(), -1)
+        self.hashfile = ''
+ 
+        # Modes Checkbox
         self.modes_combo = gtk.combo_box_new_text()
         self.modes_combo.connect('changed', self.__on_mode_change)
-        
-        self.format_combo = gtk.combo_box_new_text()
+        self.modes_item = self.create_toolbar_item(_("Mode:"), 
+                                                   self.modes_combo)
+        self.toolbar.insert(self.modes_item, -1) 
 
+        # Format Checkbox
+        self.format_combo = gtk.combo_box_new_text()
+        self.format_item = self.create_toolbar_item(_("Format:"), 
+                                                    self.format_combo)
+        self.toolbar.insert(self.format_item, -1) 
+
+        # Rules Check 
         self.rules_check = gtk.CheckButton()
         self.rules_check.set_active(False)
         self.rules_check.unset_flags(gtk.CAN_FOCUS)
-
-        self.modes_item = self.create_toolbar_item(_("Mode:"), self.modes_combo)
-        self.format_item = self.create_toolbar_item(_("Format:"), self.format_combo)
-        self.rules_item = self.create_toolbar_item(_("Use Rules"), self.rules_check)
-        self.toolbar.insert(self.modes_item, -1) 
-        self.toolbar.insert(self.format_item, -1) 
+        self.rules_item = self.create_toolbar_item(_("Use Rules"), 
+                                                   self.rules_check)
         self.toolbar.insert(self.rules_item, -1) 
 
+        # Incremental Mode Options Checkbox 
+        self.inc_combo = gtk.combo_box_new_text()
+
+        # External Mode Options Checkbox
+        self.ext_combo = gtk.combo_box_new_text()
+
         # Wordlist Chooser
-        # Create but don't add to toolbar until wordlist mode is selected
-        self.wordlist_chooser = gtk.Action('wordlist', 
-                                           'wordlist', 
+        self.wordlist_chooser = gtk.Action('wordlist', 'wordlist', 
                                            _('Choose wordlist file'), 
                                            gtk.STOCK_FILE)
         self.wordlist_chooser.connect('activate', self.__on_choose)
         self.wordlist_item = self.wordlist_chooser.create_tool_item()
 
-        # Incremental Mode Options
-        self.inc_combo = gtk.combo_box_new_text()
-
-        # External Mode Options
-        self.ext_combo = gtk.combo_box_new_text()
-
-        # Hash File Chooser
-        act = gtk.Action('hashfiles', 'hashfiles', '', gtk.STOCK_OPEN)
-        act.connect('activate', self.__on_choose)
-        self.toolbar.insert(act.create_tool_item(), -1)
-        self.hashfiles = ''
-       
-        # Start Button / EXECUTE
-        self.start_act = gtk.Action(None, None, _('Start cracking'), gtk.STOCK_EXECUTE)
-        self.start_act.connect('activate', self.__on_crack)
-        self.start_act_item = self.start_act.create_tool_item()
-        self.toolbar.insert(self.start_act_item, -1)
-
-        # Stop Button / KILL
-        self.stop_act = gtk.Action(None, None, _('Stop cracking'), gtk.STOCK_STOP)
-        self.stop_act.connect('activate', self.__off_crack)
-        self.stop_act_item = self.stop_act.create_tool_item()
-        #self.toolbar.insert(self.stop_act_item, -1)
-
+              
         # Toolbar
         self._main_widget.pack_start(self.toolbar, False, False)
 
@@ -122,18 +117,17 @@ class John(UmitView):
         self.store = gtk.ListStore(str, str, str, str, str)
         self.tree = gtk.TreeView(self.store)
 
+        # TreeView Items
         username = gtk.TreeViewColumn('Username', gtk.CellRendererText(), text=0)
         username.set_resizable(True)
         self.tree.append_column(username)
 
         hash = gtk.TreeViewColumn('Hash', gtk.CellRendererText(), text=1)
         hash.set_sizing(gtk.TREE_VIEW_COLUMN_FIXED)
-        #hash.set_fixed_width(200)
         hash.set_min_width(200)
         hash.set_resizable(True)
         self.tree.append_column(hash)
 
-        # TreeView Items
         ip = gtk.TreeViewColumn('IP', gtk.CellRendererText(), text=2)
         ip.set_resizable(True)
         self.tree.append_column(ip)
@@ -147,16 +141,17 @@ class John(UmitView):
         result.set_resizable(True)
         self.tree.append_column(result)
 
+        # Start Button / EXECUTE
+        self.execute = gtk.ToggleToolButton(gtk.STOCK_EXECUTE)
+        self.execute.set_tooltip_text(_('Start cracking'))
+        self.execute.connect("toggled", self.__on_crack)
+        self.toolbar.insert(self.execute, -1)
+
+        # Add treeview to sw
         sw.add(self.tree)
 
         # John Progress Bar
         self.progressbar = gtk.ProgressBar()
-
-        # Useless Menubar for showing output
-        self.menubar = gtk.MenuBar()
-        menu = gtk.Menu()
-        john_item = gtk.MenuItem('John Output:')
-        self.menubar.append(john_item) 
 
         # John Output TextView
         self.textview = CommandTextView()
@@ -205,9 +200,8 @@ class John(UmitView):
                 self.store.append(host)
         else:
             # No information found in hostlist
-            import umit.pm.gui.core.app
             warn_dialog = gtk.MessageDialog(
-                          umit.pm.gui.core.app.PMApp().main_window,
+                          PMApp().main_window,
                           gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_WARNING,
                           gtk.BUTTONS_CLOSE, "No information found")
             warn_dialog.run()
@@ -219,10 +213,10 @@ class John(UmitView):
 
         if act.get_name() == 'wordlist':
             text = 'Select a wordlist file'
-            multiple = False
+            flag = False
         else:
-            text = 'Select hash file/s'
-            multiple = True
+            text = 'Select a hash file'
+            flag = True
             
         dialog = gtk.FileChooserDialog(
             _(text),
@@ -230,12 +224,14 @@ class John(UmitView):
             gtk.FILE_CHOOSER_ACTION_OPEN,
             (gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT,
              gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT))
-        dialog.set_select_multiple(multiple)
 
         if dialog.run() == gtk.RESPONSE_ACCEPT:
-            if multiple:
-                self.hashfiles = dialog.get_filenames()
-                log.warning('self.hashfiles is assigned')
+            if flag:
+                # TODO: It should get more than one file 
+                # and combine them into one file.
+                self.hashfile = dialog.get_filename()
+                log.warning('self.hashfile is assigned')
+                self.parseHashFile(self.hashfile)
             else:
                 self.wordlist = dialog.get_filename()
                 log.warning('self.wordlist is assigned')
@@ -255,32 +251,38 @@ class John(UmitView):
 
         log.warning(mode)
 
-        # by default remove the combobox from toolbar
+        # remove existing object from the toolbar
         if self.widget_swap:
             log.warning('removing existing widget')
             self.toolbar.remove(self.widget_swap)
 
-        # add appropriate widget
+        # TODO: only wordlist object is working not combo items!
         if mode == 'incremental':
             log.warning('adding inc_item')
             self.widget_swap = self.inc_item
+            self.toolbar.insert(self.widget_swap, 3)
         elif mode == 'wordlist':
             log.warning('adding wordlist_item')
             self.widget_swap = self.wordlist_item
+            self.toolbar.insert(self.widget_swap, 3)
         elif mode == 'external':
             log.warning('adding external_item')
             self.widget_swap = self.ext_item
-        # TODO: Not working, only wordlist object is added not others!
-        self.toolbar.insert(self.widget_swap, -1)
-
+            self.toolbar.insert(self.widget_swap, 3)
+        
 
     def __on_crack(self, action):
-
-        log.warning("\n__on_crack called")
-        
-        # Replace execute item with stop
-        self.toolbar.remove(self.start_act_item)
-        self.toolbar.insert(self.stop_act_item, -1)
+        log.warning("__on_crack")
+        if not self.execute.get_active():
+            self.execute.set_stock_id(gtk.STOCK_EXECUTE)
+            self.execute.set_tooltip_text(_('Start cracking'))
+            self.progressbar.set_fraction(0)
+            self.textview.stop()
+            return
+        else:
+            self.execute.set_stock_id(gtk.STOCK_STOP)
+            self.execute.set_tooltip_text(_('Stop cracking'))
+            self.execute.set_active(True)
 
         params = []
         manager = AuditManager()
@@ -291,8 +293,6 @@ class John(UmitView):
         index = self.modes_combo.get_active()
         modes = self.modes_combo.get_model()
         mode = modes[index][0]
-
-        log.warning(mode)
 
         # default - single cracking mode 
         if index <= 0:
@@ -339,18 +339,15 @@ class John(UmitView):
             log.warning("format : default")
 
         # get hash filenames
-        log.warning(self.hashfiles)
-        if self.hashfiles:
-            log.warning("hash files are chosen")
-            for hash in self.hashfiles:
-                params.append(hash)
+        if self.hashfile:
+            params.append(self.hashfile)
         else:
             log.critical("Please choose a hash file!")
             return
 
         # run john 
-        log.warning('running john with the follwing parameters : ')
-        log.warning(params)
+        log.info('running john with the following parameters : ')
+        log.info(params)
         try:
             self.progressbar.pulse()
             self.textview.command = params
@@ -364,25 +361,61 @@ class John(UmitView):
         except subprocess.CalledProcessError, e:
             print "John stdout output:\n", e.outp
 
+    
+    def parseHashFile(self, hash_file=None):
+        '''
+            Parses password hash file which consists of username:password
+            fields. 
+        '''
+        self.hashlist = []
 
-    def __off_crack(self, action):
+        # Try to open file
+        try:
+            hashfile = open(hash_file, 'r')
+        except IOError, e:
+            log.critical(e)
+            # No information found in hostlist
+            warn_dialog = gtk.MessageDialog(
+                          PMApp().main_window,
+                          gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_WARNING,
+                          gtk.BUTTONS_CLOSE, "Couldn't open hash file")
+            warn_dialog.run()
+            warn_dialog.destroy()
+            log.critical(e) # This could be printed from e
+            return
+        
+        # Clean our store list
+        self.store.clear()
 
-        log.warning("\n__off_crack called")
-        self.textview.stop()
-        self.progressbar.set_fraction(0)
-        self.toolbar.remove(self.stop_act_item)
-        self.toolbar.insert(self.start_act_item, -1)
-       
-       
-    def parseConf(self, config_file=None):
+        for line in hashfile:
+            try:
+                username, password = (line.split('\n'))[0].split(':')
+                self.hashlist.append({username:password})
+                self.store.append([username,password,'','',''])
+            except Exception,e:
+                log.critical(e)
+                warn_dialog = gtk.MessageDialog(
+                          PMApp().main_window,
+                          gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_WARNING,
+                          gtk.BUTTONS_CLOSE, "Hash File Parse Error!")
+                warn_dialog.run()
+                warn_dialog.destroy()
+                log.critical(e)
+                return
+
+        hashfile.close()
+
+
+    def parseConf(self):
         '''
             Parses john configuration file which is given with config_file
             parameter.
         '''
-        if not config_file:
-            manager = AuditManager()
-            config_file = manager.get_configuration(AUDIT_NAME)['config_file']
-            log.warning(config_file)
+
+        #TODO: enable config file assignment with a parameter
+        manager = AuditManager()
+        config_file = manager.get_configuration(AUDIT_NAME)['config_file']
+        log.warning(config_file)
 
         # Try to open file
         try:
@@ -391,7 +424,8 @@ class John(UmitView):
             conf.close()
         except IOError, e:
             log.warning(e)
-            log.warning('Input Output Error.') # This could be printed from e
+            #TODO: This could be extracted from exception
+            log.warning('John Config File Error.') 
             return
 
         # ALL MODES
@@ -440,8 +474,8 @@ class John(UmitView):
         # should we change the definition of pm.hostlist service 
         # callbacks : info and populate, intf looks unnecessary
 
-        #TODO: Get interface automatically! 
-        intf = "wlan0"
+        #TODO: Get interface automatically! or never use??
+        intf = ""
         host_list = []
         populate_cb = ServiceBus().get_function('pm.hostlist', 'populate')
         info_cb = ServiceBus().get_function('pm.hostlist', 'info')
@@ -499,16 +533,25 @@ class CommandTextView(gtk.TextView):
 
         def stop(self):
             log.warning("sorry killing the process\n")
-            self.proc.kill()
+            #self.proc.kill()
 
         def write_to_buffer(self, fd, condition):
-            if condition == gobject.IO_IN:
-                char = fd.read(1)
-                buf = self.get_buffer()
-                buf.insert_at_cursor(char)
-                return True
+            data = fd.recv(12)
+            print len(data)
+            if len(data) > 0:
+                return True #run forever
             else:
-                return False
+                gobject.io_add_watch(fd, gobject.IO_IN, self.write_to_buffer)
+                log.info('gobject stop looping.')
+                return False # stop looping
+
+            #if condition == gobject.IO_IN:
+            #    char = fd.read(12)
+            #    buf = self.get_buffer()
+            #    buf.insert_at_cursor(char)
+            #    return True
+            #else:
+            #    return False
 
 
 class JohnPlugin(Plugin):
