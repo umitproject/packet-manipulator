@@ -861,7 +861,7 @@ class SequenceConsumer(Interruptable):
         self.inter = inter
         self.strict = strict
         self.iface = iface
-        self.timeout = 10
+        self.timeout = None
         self.capmethod = capmethod
 
         self.procs = {}
@@ -1279,8 +1279,10 @@ class SequenceConsumer(Interruptable):
 
             else:
                 log.debug("Last packet of this level")
+                self.__notify_recv(None, None, False)
         else:
             log.debug("Last packet sent")
+            self.__notify_recv(None, None, False)
 
     def __notify_exc(self, exc):
         self.scallback = None
