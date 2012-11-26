@@ -27,7 +27,7 @@ import subprocess
 
 from datetime import datetime
 from threading import Thread, Lock, Condition
-
+from select import select
 from umit.pm.core.logger import log
 from umit.pm.core.atoms import Node, ThreadPool, Interruptable, \
                           with_decorator, defaultdict
