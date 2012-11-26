@@ -38,7 +38,7 @@ from umit.pm.backend import VirtualIFace
 from umit.pm.backend.scapy.wrapper import *
 from umit.pm.backend.scapy.packet import MetaPacket
 
-import select
+from select import select
 
 if not WINDOWS:
     import fcntl
