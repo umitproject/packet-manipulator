@@ -32,7 +32,7 @@ import StringIO
 import traceback
 
 from HTMLParser import HTMLParser
-
+from select import select
 from umit.pm.core.logger import log
 
 try:

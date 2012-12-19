@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2008, 2009 Adriano Monteiro Marques
 #
-# Author: Francesco Piccinno <stack.box@gmail.com>
+# Authors: Francesco Piccinno <stack.box@gmail.com>
+#          Luís A. Bastião Silva <luis.kop@gmail.com> 
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,16 +22,20 @@
 import os, os.path
 from threading import Thread
 
-import umpa
-import umpa.utils.security
+import umit.umpa
+import umit.umpa.utils.security
 
-from umpa import protocols
-from umpa import Packet
-from umpa.protocols._protocols import Protocol
-from umpa.protocols._fields import *
+from umit.umpa import protocols
 
-from umpa.extensions.XML import load as xml_load
-from umpa.extensions.XML import save as xml_save
+from umit.umpa.protocols._protocols import Protocol
+from umit.umpa.protocols._fields import *
+
+from umit.umpa.extensions.XML import load as xml_load
+from umit.umpa.extensions.XML import save as xml_save
+
+from umit.pm.backend.umpa.utils import *
+from umit.pm.backend.umpa.wrapper import *
+from umit.pm.backend.umpa.packet import *
 
 from inspect import isclass
 
@@ -42,7 +47,7 @@ lprotos = []
 
 # We need to get all the protocols from the __path__
 # of protocols and also import the protocols defined
-# by the user from the .umit/umpa/ directory
+# by the user from the .umit/umit.umpa/ directory
 
 def load_gprotocols():
     path = protocols.__path__[0]
@@ -76,11 +81,7 @@ gprotos = load_gprotocols()
 def get_protocols():
     return gprotos
 
-def get_proto_class_name(protok):
-    return protok.__name__
 
-def get_proto_name(proto_inst):
-    return get_proto_class_name(proto_inst.__class__)
 
 def get_proto(proto_name):
     for proto in gprotos:
@@ -191,54 +192,13 @@ def is_proto(proto):
 def implements(obj, klass):
     return isinstance(obj, klass)
 
-class MetaPacket:
-    def __init__(self, proto=None):
-        self.root = Packet(proto, strict=False)
-
-    def insert(self, proto, layer):
-        # Only append for the moment
-        if layer == -1:
-            self.root.include(proto.root.protos[0])
-            return True
-
-        return False
-
-    def get_raw(self):
-        return get_packet_raw(self)
-
-    def complete(self):
-        return False
-
-    def get_protocol_str(self):
-        assert self.root.protos, "No procols in Packet"
-        return get_proto_name(self.root.protos[0])
-
-    def summary(self):
-        # We need to ask for a method here
-        return "%s packet" % self.get_protocol_str()
-
-    def get_time(self):
-        # We need to ask for a method here
-        return "N/A"
-
-    def get_dest(self):
-        # We need to ask for a method here
-        return "N/A"
-
-    def get_source(self):
-        # We need to ask for a method here
-        return "N/A"
-
-    def get_protocols(self):
-        return self.root.protos
-
 ###############################################################################
 # Functions used by Contexts
 ###############################################################################
 
 def _send_packet(metapacket, count, inter, callback, udata):
     try:
-        sock = umpa.utils.security.super_priviliges(umpa.Socket)
+        sock = umit.umpa.utils.security.super_priviliges(umit.umpa.Socket)
         packet = metapacket.root
 
         while count > 0:
@@ -277,8 +237,6 @@ def send_packet(metapacket, count, inter, callback, udata=None):
 # Functions used by dialogs but not defined
 ###############################################################################
 
-def find_all_devs():
-    return []
 
 def route_resync():
     pass
@@ -296,7 +254,9 @@ PMField = Field
 PMFlagsField = Flags
 
 PMBitField          = BitField
+PMMACField          = MACAddrField
 PMIPField           = IPv4AddrField
+PMIP6Field          = None
 PMByteField         = None
 PMShortField        = None
 PMLEShortField      = None
