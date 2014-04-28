@@ -1,0 +1,2 @@
+scapy==2.2.0-dev
+-e git://github.com/nopper/pygtkhex.git#egg=pygtkhex
