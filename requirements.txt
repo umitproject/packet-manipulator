@@ -1,2 +1,2 @@
 scapy==2.2.0-dev
--e git://github.com/nopper/pygtkhex.git#egg=pygtkhex
+#-e git://github.com/nopper/pygtkhex.git@05f59d2dae158948539fd8b376d07bf9ab20b77e#egg=pygtkhex
